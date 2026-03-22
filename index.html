@@ -9,8 +9,6 @@
 :root{--navy:#003C71;--blue:#5B9BD5;--blue-light:#A8C8E8;--bg:#FFFFFF;--panel:#F4F6F9;--border:#D0D7E0;--text:#000000;--text-on-dark:#FFFFFF;--text-sec:#5A6A7A;--success:#2E7D52;--warning:#8B6914;--danger:#8B2A2A;--highlight-gray:#C8D0D8;--radius:6px;--shadow:0 2px 8px rgba(0,0,0,0.06);}
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
 html,body{font-family:Arial,Helvetica,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;font-size:13px;line-height:1.5;}
-
-/* ═══ TOPBAR ═══ */
 .topbar{background:var(--navy);display:flex;align-items:center;justify-content:space-between;padding:0 28px;height:54px;position:sticky;top:0;z-index:100;}
 .logo{color:var(--text-on-dark);font-size:16px;font-weight:700;letter-spacing:.3px;display:flex;align-items:center;gap:10px;}
 .logo-icon{width:28px;height:28px;background:var(--blue);border-radius:4px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:15px;color:var(--text-on-dark);}
@@ -28,39 +26,27 @@ html,body{font-family:Arial,Helvetica,sans-serif;background:var(--bg);color:var(
 .nav-child{color:var(--text-on-dark);font-size:12.5px;font-weight:500;padding:12px 22px;display:block;cursor:pointer;transition:all .15s;white-space:nowrap;}
 .nav-child:hover{background:rgba(91,155,213,.2);}
 .nav-child.active{background:rgba(91,155,213,.15);font-weight:700;}
-
-/* ═══ PAGES ═══ */
 .page{display:none;}.page.active{display:block;}
-.content-wrap{max-width:1280px;margin:0 auto;padding:24px 28px 56px;}
-
-/* ═══ CARDS ═══ */
+.content-wrap{max-width:1400px;margin:0 auto;padding:24px 28px 56px;}
 .card{background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);margin-bottom:20px;overflow:hidden;}
 .card-title{background:var(--navy);color:var(--text-on-dark);font-size:14px;font-weight:700;padding:11px 18px;}
 .card-body{padding:20px;}
 .card-sources{background:var(--panel);border-top:1px solid var(--border);padding:8px 18px;font-size:11px;color:var(--text-sec);line-height:1.7;}
 .card-sources strong{color:var(--navy);font-weight:600;}
-
-/* ═══ METRICS ═══ */
-.metrics-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;margin-bottom:22px;}
-.metric-card{background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);padding:18px 20px;box-shadow:var(--shadow);}
-.metric-label{font-size:11px;font-weight:600;color:var(--text-sec);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;}
-.metric-value{font-size:24px;font-weight:700;color:var(--navy);line-height:1.2;}
-.metric-sub{font-size:12px;font-weight:600;margin-top:4px;}
-
-/* ═══ GRIDS ═══ */
+.metrics-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(155px,1fr));gap:14px;margin-bottom:22px;}
+.metric-card{background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);padding:16px 18px;box-shadow:var(--shadow);}
+.metric-label{font-size:10px;font-weight:600;color:var(--text-sec);text-transform:uppercase;letter-spacing:.5px;margin-bottom:5px;}
+.metric-value{font-size:20px;font-weight:700;color:var(--navy);line-height:1.2;}
+.metric-sub{font-size:11px;font-weight:600;margin-top:3px;}
 .grid-2{display:grid;grid-template-columns:1fr 1fr;gap:20px;}
 .grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:20px;}
 @media(max-width:900px){.grid-2,.grid-3{grid-template-columns:1fr;}}
-
-/* ═══ DONUTS ═══ */
 .donut-wrap{display:flex;align-items:center;gap:20px;flex-wrap:wrap;}
 .donut-canvas-wrap{width:180px;height:180px;flex-shrink:0;}
 .donut-legend{flex:1;min-width:150px;}
 .legend-row{display:flex;align-items:center;gap:8px;margin-bottom:5px;font-size:12px;}
 .legend-dot{width:10px;height:10px;border-radius:2px;flex-shrink:0;}
 .legend-label{flex:1;color:var(--text);}.legend-val{font-weight:600;color:var(--text);}
-
-/* ═══ BUTTONS ═══ */
 .btn{background:var(--blue);color:var(--text-on-dark);font-family:Arial,Helvetica,sans-serif;font-size:12px;font-weight:600;border:none;border-radius:4px;padding:8px 16px;cursor:pointer;transition:all .15s;}
 .btn:hover{background:#4A87BF;}.btn:disabled{background:var(--blue-light);cursor:default;}
 .btn-sm{padding:5px 12px;font-size:11px;}
@@ -69,29 +55,21 @@ html,body{font-family:Arial,Helvetica,sans-serif;background:var(--bg);color:var(
 .btn-outline:hover{background:var(--blue-light);color:var(--text-on-dark);border-color:var(--blue-light);}
 .btn-outline.active{background:var(--blue);color:var(--text-on-dark);border-color:var(--blue);}
 .btn-group{display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap;}
-
-/* ═══ TABLES ═══ */
 table{width:100%;border-collapse:collapse;font-family:Arial,Helvetica,sans-serif;}
-th{background:var(--navy);color:var(--text-on-dark);font-size:11.5px;font-weight:600;padding:10px 12px;text-align:left;white-space:nowrap;}
-td{font-size:12px;color:var(--text);padding:9px 12px;border-bottom:1px solid var(--border);}
+th{background:var(--navy);color:var(--text-on-dark);font-size:11px;font-weight:600;padding:9px 10px;text-align:left;white-space:nowrap;}
+td{font-size:11.5px;color:var(--text);padding:8px 10px;border-bottom:1px solid var(--border);}
 tr:nth-child(even) td{background:var(--panel);}
 tr:hover td{background:#EAF1F9;}
 .table-wrap{overflow-x:auto;}
-
-/* ═══ FORMS ═══ */
 .form-row{display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;margin-bottom:16px;}
 .form-group{display:flex;flex-direction:column;gap:4px;}
 .form-group label{font-size:11px;font-weight:600;color:var(--text-sec);text-transform:uppercase;letter-spacing:.4px;}
 .form-group input,.form-group select{font-family:Arial,Helvetica,sans-serif;font-size:13px;padding:8px 12px;border:1px solid var(--border);border-radius:4px;background:var(--bg);color:var(--text);outline:none;transition:border .15s;}
 .form-group input:focus,.form-group select:focus{border-color:var(--blue);}
 .form-group input::placeholder{color:var(--highlight-gray);}
-
-/* ═══ HERO ═══ */
 .hero{background:var(--navy);border-radius:var(--radius);padding:48px 40px;margin-bottom:28px;color:var(--text-on-dark);}
 .hero h1{font-size:28px;font-weight:700;margin-bottom:10px;}
 .hero p{font-size:14px;color:var(--blue-light);max-width:640px;line-height:1.6;}
-
-/* ═══ FEATURES ═══ */
 .feature-card{background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);padding:22px 24px;box-shadow:var(--shadow);cursor:pointer;transition:all .2s;}
 .feature-card:hover{border-color:var(--blue);box-shadow:0 4px 16px rgba(0,60,113,.1);transform:translateY(-2px);}
 .feature-card.disabled{cursor:default;opacity:.7;}
@@ -100,8 +78,6 @@ tr:hover td{background:#EAF1F9;}
 .feature-tag.soon{background:var(--highlight-gray);color:var(--text-sec);}
 .feature-title{font-size:15px;font-weight:700;color:var(--navy);margin-bottom:6px;}
 .feature-desc{font-size:12px;color:var(--text-sec);line-height:1.5;}
-
-/* ═══ ABOUT ═══ */
 .about-section{margin-bottom:28px;}
 .about-section h3{font-size:15px;font-weight:700;color:var(--navy);margin-bottom:8px;padding-bottom:6px;border-bottom:2px solid var(--blue);display:inline-block;}
 .about-section p{font-size:13px;color:var(--text);line-height:1.65;max-width:780px;}
@@ -109,67 +85,44 @@ tr:hover td{background:#EAF1F9;}
 .product-item{background:var(--panel);border:1px solid var(--border);border-radius:var(--radius);padding:18px 20px;}
 .product-item h4{font-size:13px;font-weight:700;color:var(--navy);margin-bottom:4px;}
 .product-item p{font-size:12px;color:var(--text-sec);line-height:1.5;}
-
-/* ═══ RESEARCH OUTPUT ═══ */
 .research-output{background:var(--panel);border:1px solid var(--border);border-radius:var(--radius);padding:16px 20px;min-height:100px;font-size:12px;color:var(--text);white-space:pre-wrap;overflow-y:auto;max-height:500px;line-height:1.6;}
-
-/* ═══ CHART ═══ */
-.chart-wrap{height:320px;position:relative;}
-
-/* ═══ STATUS ═══ */
+.chart-wrap{height:360px;position:relative;}
 .spinner{display:inline-block;width:16px;height:16px;border:2px solid var(--blue-light);border-top-color:var(--blue);border-radius:50%;animation:spin .6s linear infinite;vertical-align:middle;margin-right:6px;}
 @keyframes spin{to{transform:rotate(360deg);}}
 .status-bar{padding:10px 16px;border-radius:4px;font-size:12px;margin-bottom:16px;display:none;}
 .status-bar.info{display:block;background:#e8f0fa;color:var(--navy);border:1px solid var(--blue-light);}
 .status-bar.error{display:block;background:#f9e8e8;color:var(--danger);border:1px solid #d4a0a0;}
 .status-bar.success{display:block;background:#e8f5ee;color:var(--success);border:1px solid #a0d4b4;}
-
-/* ═══ EMPTY STATE ═══ */
 .empty-state{text-align:center;padding:48px 20px;color:var(--text-sec);}
 .empty-state-icon{font-size:40px;margin-bottom:12px;opacity:.4;}
 .empty-state h3{font-size:16px;font-weight:700;color:var(--navy);margin-bottom:6px;}
 .empty-state p{font-size:13px;max-width:400px;margin:0 auto 16px;}
-
-/* ═══ AUTH GATE ═══ */
 .auth-gate{background:var(--panel);border:1px solid var(--border);border-radius:var(--radius);padding:40px 32px;text-align:center;margin-bottom:24px;}
 .auth-gate h3{font-size:16px;font-weight:700;color:var(--navy);margin-bottom:8px;}
 .auth-gate p{font-size:13px;color:var(--text-sec);margin-bottom:16px;max-width:480px;margin-left:auto;margin-right:auto;line-height:1.5;}
-
-/* ═══ HOLDING ITEM ═══ */
-.holding-row{display:flex;align-items:center;gap:16px;padding:12px 0;border-bottom:1px solid var(--border);}
-.holding-row:last-child{border-bottom:none;}
-.holding-ticker{font-size:14px;font-weight:700;color:var(--navy);min-width:70px;}
-.holding-name{font-size:12px;color:var(--text-sec);flex:1;min-width:100px;}
-.holding-detail{font-size:12px;color:var(--text);min-width:80px;text-align:right;}
-
-/* ═══ FOOTER ═══ */
 .footer{background:var(--panel);border-top:1px solid var(--border);padding:16px 28px;font-size:11px;color:var(--text-sec);}
-.footer-inner{max-width:1280px;margin:0 auto;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;}
+.footer-inner{max-width:1400px;margin:0 auto;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;}
 .connection-status{display:flex;gap:20px;align-items:center;}
 .conn-item{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--text-sec);}
 .conn-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;}
 .conn-dot.green{background:var(--success);}.conn-dot.red{background:var(--danger);}
+/* Morningstar Style Box */
+.mstar-grid{display:grid;grid-template-columns:1fr 1fr 1fr;grid-template-rows:1fr 1fr 1fr;width:240px;height:240px;border:2px solid var(--navy);border-radius:4px;position:relative;margin:0 auto;}
+.mstar-cell{border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:600;color:var(--text-sec);text-align:center;line-height:1.2;padding:4px;}
+.mstar-dot{position:absolute;width:18px;height:18px;background:var(--blue);border:3px solid var(--navy);border-radius:50%;transform:translate(-50%,-50%);z-index:10;box-shadow:0 2px 6px rgba(0,0,0,.25);}
+.mstar-labels-top{display:grid;grid-template-columns:1fr 1fr 1fr;width:240px;margin:0 auto;text-align:center;font-size:10px;font-weight:700;color:var(--navy);margin-bottom:4px;}
+.mstar-labels-left{position:absolute;left:-60px;top:0;height:240px;display:flex;flex-direction:column;justify-content:space-around;font-size:10px;font-weight:700;color:var(--navy);text-align:right;width:54px;}
+.mstar-container{position:relative;width:240px;margin:12px auto 0;padding-left:64px;}
 </style>
 </head>
 <body>
 
-<!-- ═══════════ TOPBAR ═══════════ -->
 <div class="topbar">
   <div class="logo"><div class="logo-icon">P</div>Perry Asset Management</div>
   <div class="nav">
-    <div class="nav-group">
-      <div class="nav-parent active" data-page="home" onclick="navigateTo('home')">Home <span class="arrow">&#9660;</span></div>
-      <div class="nav-dropdown"><div class="nav-child" data-page="about" onclick="navigateTo('about')">About Us</div></div>
-    </div>
-    <div class="nav-group">
-      <div class="nav-parent" data-page="portfolio" onclick="navigateTo('portfolio')">Portfolio <span class="arrow">&#9660;</span></div>
-      <div class="nav-dropdown">
-        <div class="nav-child" data-page="holdings" onclick="navigateTo('holdings')">Manage Holdings</div>
-      </div>
-    </div>
-    <div class="nav-group">
-      <div class="nav-parent" data-page="research" onclick="navigateTo('research')">Research</div>
-    </div>
+    <div class="nav-group"><div class="nav-parent active" data-page="home" onclick="navigateTo('home')">Home <span class="arrow">&#9660;</span></div><div class="nav-dropdown"><div class="nav-child" data-page="about" onclick="navigateTo('about')">About Us</div></div></div>
+    <div class="nav-group"><div class="nav-parent" data-page="portfolio" onclick="navigateTo('portfolio')">Portfolio <span class="arrow">&#9660;</span></div><div class="nav-dropdown"><div class="nav-child" data-page="holdings" onclick="navigateTo('holdings')">Manage Holdings</div></div></div>
+    <div class="nav-group"><div class="nav-parent" data-page="research" onclick="navigateTo('research')">Research</div></div>
   </div>
   <div class="topbar-right">
     <span class="user-badge" id="userBadge"></span>
@@ -178,55 +131,77 @@ tr:hover td{background:#EAF1F9;}
   </div>
 </div>
 
-<!-- ═══════════ HOME ═══════════ -->
-<div class="page active" id="page-home">
-<div class="content-wrap">
+<!-- HOME -->
+<div class="page active" id="page-home"><div class="content-wrap">
   <div class="hero"><h1>Institutional-Grade Investment Intelligence</h1><p>Perry Asset Management delivers macro-driven portfolio analytics, quantitative modeling, and real-time regime analysis to support disciplined, data-grounded investment decisions.</p></div>
   <div style="margin-bottom:8px;font-size:12px;font-weight:600;color:var(--text-sec);text-transform:uppercase;letter-spacing:.5px;">Platform Capabilities</div>
   <div class="grid-3" id="featureGrid"></div>
 </div></div>
 
-<!-- ═══════════ ABOUT ═══════════ -->
-<div class="page" id="page-about">
-<div class="content-wrap">
+<!-- ABOUT -->
+<div class="page" id="page-about"><div class="content-wrap">
   <div class="hero" style="padding:36px 40px;"><h1>About Perry Asset Management</h1><p>A disciplined, research-driven approach to portfolio management — built on macro intelligence, quantitative rigor, and institutional-grade analytics.</p></div>
   <div class="about-section"><h3>Our Approach</h3><p>Perry Asset Management combines top-down macro regime analysis with bottom-up fundamental and quantitative research. Our investment process begins with a proprietary six-pillar macro framework covering Real Economic Activity, Labor Markets, Inflation, Monetary Policy, Fiscal Policy, and International Dynamics.</p></div>
-  <div class="about-section"><h3>Products &amp; Services</h3>
-    <div class="product-grid">
-      <div class="product-item"><h4>Macro Regime Analysis</h4><p>Real-time economic scorecard and sector rotation signals built on a CFA-based regime classification framework.</p></div>
-      <div class="product-item"><h4>Portfolio Construction</h4><p>Optimized allocation across equities, fixed income, alternatives, and cash — calibrated to current market conditions.</p></div>
-      <div class="product-item"><h4>Risk Analytics</h4><p>Value at Risk, Monte-Carlo stress testing, tracking error analysis, and scenario modeling across VIX and macro regimes.</p></div>
-      <div class="product-item"><h4>Quantitative Research</h4><p>ML models including regression, random forest, gradient boosting, and time-series forecasting for alpha generation.</p></div>
-      <div class="product-item"><h4>Thematic Research</h4><p>Deep dives into emerging investment themes — AI, crypto, energy transition, space — that adapt as opportunities evolve.</p></div>
-      <div class="product-item"><h4>Fundamental &amp; Technical Analysis</h4><p>DCF valuation, ratio analysis, MACD, RSI, momentum indicators, and sector-level profitability and leverage scoring.</p></div>
-    </div></div>
+  <div class="about-section"><h3>Products &amp; Services</h3><div class="product-grid">
+    <div class="product-item"><h4>Macro Regime Analysis</h4><p>Real-time economic scorecard and sector rotation signals built on a CFA-based regime classification framework.</p></div>
+    <div class="product-item"><h4>Portfolio Construction</h4><p>Optimized allocation across equities, fixed income, alternatives, and cash — calibrated to current market conditions.</p></div>
+    <div class="product-item"><h4>Risk Analytics</h4><p>Value at Risk, Monte-Carlo stress testing, tracking error analysis, and scenario modeling across VIX and macro regimes.</p></div>
+    <div class="product-item"><h4>Quantitative Research</h4><p>ML models including regression, random forest, gradient boosting, and time-series forecasting for alpha generation.</p></div>
+    <div class="product-item"><h4>Thematic Research</h4><p>Deep dives into emerging investment themes — AI, crypto, energy transition, space — that adapt as opportunities evolve.</p></div>
+    <div class="product-item"><h4>Fundamental &amp; Technical Analysis</h4><p>DCF valuation, ratio analysis, MACD, RSI, momentum indicators, and sector-level profitability and leverage scoring.</p></div>
+  </div></div>
 </div></div>
 
-<!-- ═══════════ PORTFOLIO OVERVIEW ═══════════ -->
-<div class="page" id="page-portfolio">
-<div class="content-wrap">
+<!-- PORTFOLIO -->
+<div class="page" id="page-portfolio"><div class="content-wrap">
   <div id="portfolioAuth" class="auth-gate"><h3>Sign In to View Portfolio</h3><p>Connect with your Google account to access your portfolio holdings and analytics.</p><button class="btn" onclick="handleLogin()">Sign In with Google</button></div>
   <div id="portfolioEmpty" style="display:none;"><div class="empty-state"><div class="empty-state-icon">&#128202;</div><h3>No Holdings Yet</h3><p>Add your first holding to start building your portfolio.</p><button class="btn" onclick="navigateTo('holdings')">Add Holdings</button></div></div>
   <div id="portfolioLive" style="display:none;">
+    <!-- Timeframe selector -->
+    <div class="btn-group" id="pfTimeframeBtns">
+      <button class="btn-outline" data-range="1mo">1M</button>
+      <button class="btn-outline" data-range="3mo">3M</button>
+      <button class="btn-outline" data-range="6mo">6M</button>
+      <button class="btn-outline" data-range="ytd">YTD</button>
+      <button class="btn-outline active" data-range="1y">1Y</button>
+      <button class="btn-outline" data-range="3y">3Y</button>
+      <button class="btn-outline" data-range="5y">5Y</button>
+    </div>
+    <!-- Metric cards row 1: Portfolio -->
     <div class="metrics-row" id="metricsRow"></div>
-    <div class="card"><div class="card-title">Portfolio Holdings</div><div class="card-body"><div class="table-wrap" id="portfolioTableWrap"></div></div><div class="card-sources"><strong>Sources:</strong><br>&#8226; Yahoo Finance via Cloudflare Worker proxy &#8226; Firebase Firestore (user holdings)</div></div>
-    <div class="grid-2"><div id="donut-mktcap"></div><div id="donut-weight"></div></div>
+    <!-- Metric cards row 2: Benchmarks -->
+    <div class="metrics-row" id="benchmarkRow"></div>
+    <!-- History chart with compare -->
+    <div class="card"><div class="card-title">Portfolio Value Over Time</div><div class="card-body">
+      <div class="form-row" style="margin-bottom:12px;">
+        <div class="form-group"><label>Compare Benchmark 1</label><input type="text" id="compare1" placeholder="e.g. SPY" style="width:100px;text-transform:uppercase;"></div>
+        <div class="form-group"><label>Compare Benchmark 2</label><input type="text" id="compare2" placeholder="e.g. QQQ" style="width:100px;text-transform:uppercase;"></div>
+        <button class="btn btn-sm" onclick="renderPortfolioChart()">Update Chart</button>
+      </div>
+      <div class="chart-wrap"><canvas id="portfolioLineChart"></canvas></div>
+    </div><div class="card-sources"><strong>Sources:</strong><br>&#8226; Yahoo Finance via Cloudflare Worker proxy &#8226; Firebase Firestore (user holdings)</div></div>
+    <!-- Holdings table -->
+    <div class="card"><div class="card-title">Portfolio Holdings</div><div class="card-body"><div class="table-wrap" id="portfolioTableWrap"></div></div><div class="card-sources"><strong>Sources:</strong><br>&#8226; Yahoo Finance via Cloudflare Worker proxy &#8226; Firebase Firestore</div></div>
+    <!-- Pie charts -->
+    <div class="grid-3"><div id="donut-sector"></div><div id="donut-industry"></div><div id="donut-mktcap"></div></div>
+    <div class="grid-2"><div id="donut-weight"></div>
+    <!-- Morningstar Style Box -->
+    <div id="mstar-card"></div></div>
   </div>
 </div></div>
 
-<!-- ═══════════ MANAGE HOLDINGS ═══════════ -->
-<div class="page" id="page-holdings">
-<div class="content-wrap">
-  <div class="hero" style="padding:32px 40px;"><h1>Manage Holdings</h1><p>Add, view, and remove portfolio holdings. Market data is fetched live from Yahoo Finance via Cloudflare Worker. All holdings are saved to your Firebase account.</p></div>
-  <div id="holdingsAuth" class="auth-gate"><h3>Sign In to Manage Holdings</h3><p>Connect with your Google account to create and manage your portfolio.</p><button class="btn" onclick="handleLogin()">Sign In with Google</button></div>
+<!-- HOLDINGS -->
+<div class="page" id="page-holdings"><div class="content-wrap">
+  <div class="hero" style="padding:32px 40px;"><h1>Manage Holdings</h1><p>Add, view, and remove portfolio holdings. Market data is fetched live from Yahoo Finance. All holdings saved to your Firebase account.</p></div>
+  <div id="holdingsAuth" class="auth-gate"><h3>Sign In to Manage Holdings</h3><p>Connect with your Google account to manage your portfolio.</p><button class="btn" onclick="handleLogin()">Sign In with Google</button></div>
   <div id="holdingsPanel" style="display:none;">
     <div class="card"><div class="card-title">Add New Holding</div><div class="card-body">
       <div id="addStatus" class="status-bar"></div>
       <div class="form-row">
-        <div class="form-group" style="min-width:120px;"><label>Ticker Symbol</label><input type="text" id="inputTicker" placeholder="e.g. AAPL" style="text-transform:uppercase;"></div>
+        <div class="form-group" style="min-width:110px;"><label>Ticker</label><input type="text" id="inputTicker" placeholder="AAPL" style="text-transform:uppercase;"></div>
         <div class="form-group"><label>Date Purchased</label><input type="date" id="inputDate"></div>
-        <div class="form-group" style="min-width:100px;"><label>Shares</label><input type="number" id="inputQty" placeholder="e.g. 50" min="0.0001" step="any"></div>
-        <div class="form-group" style="min-width:110px;"><label>Cost Per Share</label><input type="number" id="inputCost" placeholder="e.g. 150.00" min="0" step="0.01"></div>
+        <div class="form-group" style="min-width:90px;"><label>Shares</label><input type="number" id="inputQty" placeholder="50" min="0.0001" step="any"></div>
+        <div class="form-group" style="min-width:100px;"><label>Cost/Share</label><input type="number" id="inputCost" placeholder="150.00" min="0" step="0.01"></div>
         <button class="btn" id="addBtn" onclick="addHolding()">Add Holding</button>
       </div>
     </div></div>
@@ -234,490 +209,433 @@ tr:hover td{background:#EAF1F9;}
       <div id="holdingsStatus" class="status-bar"></div>
       <div class="table-wrap" id="holdingsTableWrap"></div>
       <div style="margin-top:12px;"><button class="btn" onclick="refreshAllPrices()" id="refreshBtn">Refresh All Prices</button></div>
-    </div><div class="card-sources"><strong>Sources:</strong><br>&#8226; Yahoo Finance via Cloudflare Worker proxy &#8226; Firebase Firestore (user holdings)</div></div>
+    </div><div class="card-sources"><strong>Sources:</strong><br>&#8226; Yahoo Finance via Cloudflare Worker &#8226; Firebase Firestore</div></div>
   </div>
 </div></div>
 
-<!-- ═══════════ RESEARCH ═══════════ -->
-<div class="page" id="page-research">
-<div class="content-wrap">
-  <div class="hero" style="padding:32px 40px;"><h1>Market Research</h1><p>Look up real-time quotes, historical charts, and ticker information powered by Yahoo Finance data through the Cloudflare Worker proxy.</p></div>
+<!-- RESEARCH -->
+<div class="page" id="page-research"><div class="content-wrap">
+  <div class="hero" style="padding:32px 40px;"><h1>Market Research</h1><p>Real-time quotes, historical price charts, and ticker search powered by Yahoo Finance via Cloudflare Worker proxy.</p></div>
   <div class="card"><div class="card-title">Ticker Lookup</div><div class="card-body">
     <div class="form-row">
-      <div class="form-group" style="min-width:140px;"><label>Ticker Symbol</label><input type="text" id="researchTicker" placeholder="e.g. AAPL" style="text-transform:uppercase;"></div>
-      <div class="form-group"><label>Data Type</label>
-        <select id="researchType"><option value="quote">Real-Time Quote</option><option value="chart">Historical Chart</option><option value="search">Ticker Search</option></select>
-      </div>
-      <div class="form-group" id="rangeGroup"><label>Range</label>
-        <select id="researchRange"><option value="1mo">1 Month</option><option value="3mo">3 Months</option><option value="6mo">6 Months</option><option value="1y" selected>1 Year</option><option value="2y">2 Years</option><option value="5y">5 Years</option></select>
-      </div>
+      <div class="form-group" style="min-width:140px;"><label>Ticker</label><input type="text" id="researchTicker" placeholder="AAPL" style="text-transform:uppercase;"></div>
+      <div class="form-group"><label>Type</label><select id="researchType"><option value="quote">Quote</option><option value="chart">Chart</option><option value="search">Search</option></select></div>
+      <div class="form-group" id="rangeGroup" style="display:none;"><label>Range</label><select id="researchRange"><option value="1mo">1M</option><option value="3mo">3M</option><option value="6mo">6M</option><option value="1y" selected>1Y</option><option value="2y">2Y</option><option value="5y">5Y</option></select></div>
       <button class="btn" onclick="runResearch()">Fetch Data</button>
     </div>
   </div></div>
   <div id="researchResults"></div>
-  <div class="card" id="researchChartCard" style="display:none;"><div class="card-title" id="researchChartTitle">Price Chart</div><div class="card-body"><div class="chart-wrap"><canvas id="researchChart"></canvas></div></div><div class="card-sources"><strong>Sources:</strong><br>&#8226; Yahoo Finance via Cloudflare Worker proxy</div></div>
-  <div class="card" id="researchRawCard" style="display:none;"><div class="card-title">Raw Data</div><div class="card-body"><div class="research-output" id="researchOutput"></div></div><div class="card-sources"><strong>Sources:</strong><br>&#8226; Yahoo Finance via Cloudflare Worker proxy</div></div>
+  <div class="card" id="researchChartCard" style="display:none;"><div class="card-title" id="researchChartTitle">Price Chart</div><div class="card-body"><div class="chart-wrap"><canvas id="researchChart"></canvas></div></div><div class="card-sources"><strong>Sources:</strong><br>&#8226; Yahoo Finance via Cloudflare Worker</div></div>
+  <div class="card" id="researchRawCard" style="display:none;"><div class="card-title">Raw Data</div><div class="card-body"><div class="research-output" id="researchOutput"></div></div><div class="card-sources"><strong>Sources:</strong><br>&#8226; Yahoo Finance via Cloudflare Worker</div></div>
 </div></div>
 
-<!-- ═══════════ FOOTER ═══════════ -->
-<div class="footer">
-  <div class="footer-inner">
-    <div>&copy; 2026 Perry Asset Management. All data shown is for informational purposes only. Not investment advice.</div>
-    <div class="connection-status">
-      <div class="conn-item"><span id="firebase-status-dot" class="conn-dot red"></span><span id="firebase-status-text">Firebase: Not Connected</span></div>
-      <div class="conn-item"><span id="worker-status-dot" class="conn-dot red"></span><span id="worker-status-text">Data Proxy: Not Connected</span></div>
-    </div>
+<!-- FOOTER -->
+<div class="footer"><div class="footer-inner">
+  <div>&copy; 2026 Perry Asset Management. Not investment advice.</div>
+  <div class="connection-status">
+    <div class="conn-item"><span id="firebase-status-dot" class="conn-dot red"></span><span id="firebase-status-text">Firebase: Not Connected</span></div>
+    <div class="conn-item"><span id="worker-status-dot" class="conn-dot red"></span><span id="worker-status-text">Data Proxy: Not Connected</span></div>
   </div>
-</div>
+</div></div>
 
-<!-- ═══════════ FIREBASE SDK ═══════════ -->
+<!-- FIREBASE -->
 <script type="module">
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-import { getAuth, signInWithPopup, signOut, GoogleAuthProvider, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-import { getFirestore, collection, addDoc, getDocs, deleteDoc, doc, query, where, orderBy, serverTimestamp, updateDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
-
-const firebaseConfig = {
-  apiKey: "AIzaSyA4_lv0YrI3haIhfKRVIRqgPAYBWbo7hfI",
-  authDomain: "perry-asset-management-w-aa049.firebaseapp.com",
-  projectId: "perry-asset-management-w-aa049",
-  storageBucket: "perry-asset-management-w-aa049.firebasestorage.app",
-  messagingSenderId: "346583395966",
-  appId: "1:346583395966:web:63ce7775adf5f3d876b22f",
-  measurementId: "G-EJXQWCKNBD"
-};
-
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-const db = getFirestore(app);
-const provider = new GoogleAuthProvider();
-
-// Status: Firebase connected
+import{initializeApp}from"https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import{getAuth,signInWithPopup,signOut,GoogleAuthProvider,onAuthStateChanged}from"https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+import{getFirestore,collection,addDoc,getDocs,deleteDoc,doc,query,where,orderBy,serverTimestamp,updateDoc}from"https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+const firebaseConfig={apiKey:"AIzaSyA4_lv0YrI3haIhfKRVIRqgPAYBWbo7hfI",authDomain:"perry-asset-management-w-aa049.firebaseapp.com",projectId:"perry-asset-management-w-aa049",storageBucket:"perry-asset-management-w-aa049.firebasestorage.app",messagingSenderId:"346583395966",appId:"1:346583395966:web:63ce7775adf5f3d876b22f",measurementId:"G-EJXQWCKNBD"};
+const app=initializeApp(firebaseConfig);const auth=getAuth(app);const db=getFirestore(app);const provider=new GoogleAuthProvider();
 document.getElementById("firebase-status-dot").classList.replace("red","green");
-document.getElementById("firebase-status-text").textContent = "Firebase: Connected";
-
-// ── Auth ──
-window.handleLogin = async function() {
-  try { await signInWithPopup(auth, provider); }
-  catch(e) { console.error("Login failed:", e); alert("Login failed: " + e.message); }
-};
-window.handleLogout = async function() { await signOut(auth); };
-
-onAuthStateChanged(auth, (user) => {
-  window._currentUser = user;
-  if (user) {
-    document.getElementById('userBadge').textContent = user.email;
-    document.getElementById('loginBtn').style.display = 'none';
-    document.getElementById('logoutBtn').style.display = '';
-    // Show authenticated panels
-    document.querySelectorAll('.auth-gate').forEach(el => el.style.display = 'none');
-    document.getElementById('holdingsPanel').style.display = '';
-    loadHoldings();
-  } else {
-    document.getElementById('userBadge').textContent = '';
-    document.getElementById('loginBtn').style.display = '';
-    document.getElementById('logoutBtn').style.display = 'none';
-    document.querySelectorAll('.auth-gate').forEach(el => el.style.display = '');
-    document.getElementById('holdingsPanel').style.display = 'none';
-    document.getElementById('portfolioLive').style.display = 'none';
-    document.getElementById('portfolioEmpty').style.display = 'none';
-    window._holdings = [];
-  }
+document.getElementById("firebase-status-text").textContent="Firebase: Connected";
+window.handleLogin=async function(){try{await signInWithPopup(auth,provider);}catch(e){console.error(e);alert("Login failed: "+e.message);}};
+window.handleLogout=async function(){await signOut(auth);};
+onAuthStateChanged(auth,(user)=>{
+  window._currentUser=user;
+  if(user){document.getElementById('userBadge').textContent=user.email;document.getElementById('loginBtn').style.display='none';document.getElementById('logoutBtn').style.display='';document.querySelectorAll('.auth-gate').forEach(el=>el.style.display='none');document.getElementById('holdingsPanel').style.display='';loadHoldings();}
+  else{document.getElementById('userBadge').textContent='';document.getElementById('loginBtn').style.display='';document.getElementById('logoutBtn').style.display='none';document.querySelectorAll('.auth-gate').forEach(el=>el.style.display='');document.getElementById('holdingsPanel').style.display='none';document.getElementById('portfolioLive').style.display='none';document.getElementById('portfolioEmpty').style.display='none';window._holdings=[];}
 });
-
-// ── Firestore: Add holding ──
-window.addHolding = async function() {
-  const user = window._currentUser;
-  if (!user) { alert("Please sign in first."); return; }
-  const ticker = document.getElementById('inputTicker').value.trim().toUpperCase();
-  const date = document.getElementById('inputDate').value;
-  const qty = parseFloat(document.getElementById('inputQty').value);
-  const cost = parseFloat(document.getElementById('inputCost').value);
-  if (!ticker) { showStatus('addStatus','Enter a ticker symbol.','error'); return; }
-  if (!date) { showStatus('addStatus','Select a purchase date.','error'); return; }
-  if (!qty || qty <= 0) { showStatus('addStatus','Enter a valid quantity.','error'); return; }
-  if (!cost || cost < 0) { showStatus('addStatus','Enter cost per share.','error'); return; }
-
-  const btn = document.getElementById('addBtn');
-  btn.disabled = true; btn.innerHTML = '<span class="spinner"></span>Adding...';
-  showStatus('addStatus','<span class="spinner"></span> Fetching quote and saving...','info');
-
-  try {
-    // Fetch current price from Cloudflare Worker
-    const quoteData = await fetchQuote(ticker);
-    await addDoc(collection(db, "holdings"), {
-      uid: user.uid,
-      ticker: ticker,
-      companyName: quoteData.name || ticker,
-      datePurchased: date,
-      quantity: qty,
-      costBasis: cost,
-      currentPrice: quoteData.price || 0,
-      previousClose: quoteData.previousClose || 0,
-      marketCap: 0,
-      lastUpdated: new Date().toISOString(),
-      createdAt: serverTimestamp()
-    });
-    showStatus('addStatus','&#10003; Added ' + ticker + ' to your portfolio.','success');
-    document.getElementById('inputTicker').value = '';
-    document.getElementById('inputDate').value = '';
-    document.getElementById('inputQty').value = '';
-    document.getElementById('inputCost').value = '';
+window.addHolding=async function(){
+  const user=window._currentUser;if(!user){alert("Sign in first.");return;}
+  const ticker=document.getElementById('inputTicker').value.trim().toUpperCase();
+  const date=document.getElementById('inputDate').value;
+  const qty=parseFloat(document.getElementById('inputQty').value);
+  const cost=parseFloat(document.getElementById('inputCost').value);
+  if(!ticker){showStatus('addStatus','Enter a ticker.','error');return;}
+  if(!date){showStatus('addStatus','Select date.','error');return;}
+  if(!qty||qty<=0){showStatus('addStatus','Enter valid quantity.','error');return;}
+  if(isNaN(cost)||cost<0){showStatus('addStatus','Enter cost/share.','error');return;}
+  const btn=document.getElementById('addBtn');btn.disabled=true;btn.innerHTML='<span class="spinner"></span>Adding...';
+  showStatus('addStatus','<span class="spinner"></span> Fetching quote & saving...','info');
+  try{
+    const q=await fetchQuote(ticker);
+    const meta=classifyHolding(ticker,q);
+    await addDoc(collection(db,"holdings"),{uid:user.uid,ticker,companyName:q.name||ticker,datePurchased:date,quantity:qty,costBasis:cost,currentPrice:q.price||0,previousClose:q.previousClose||0,sector:meta.sector,industry:meta.industry,assetClass:meta.assetClass,marketCap:meta.marketCap,mktCapCategory:meta.mktCapCategory,lastUpdated:new Date().toISOString(),createdAt:serverTimestamp()});
+    showStatus('addStatus','&#10003; Added '+ticker,'success');
+    document.getElementById('inputTicker').value='';document.getElementById('inputDate').value='';document.getElementById('inputQty').value='';document.getElementById('inputCost').value='';
     await loadHoldings();
-  } catch(e) {
-    showStatus('addStatus','Error: ' + e.message,'error');
-  }
-  btn.disabled = false; btn.textContent = 'Add Holding';
+  }catch(e){showStatus('addStatus','Error: '+e.message,'error');}
+  btn.disabled=false;btn.textContent='Add Holding';
 };
-
-// ── Firestore: Load holdings ──
-window.loadHoldings = async function() {
-  const user = window._currentUser;
-  if (!user) return;
-  try {
-    const q = query(collection(db, "holdings"), where("uid", "==", user.uid), orderBy("createdAt", "desc"));
-    const snapshot = await getDocs(q);
-    const holdings = [];
-    snapshot.forEach(d => { holdings.push({ id: d.id, ...d.data() }); });
-    window._holdings = holdings;
-    renderHoldingsTable(holdings);
-    document.getElementById('holdingsCount').textContent = holdings.length > 0 ? '(' + holdings.length + ' positions)' : '';
-  } catch(e) {
-    console.error("Load holdings error:", e);
-    showStatus('holdingsStatus','Error loading holdings: ' + e.message,'error');
-  }
+window.loadHoldings=async function(){
+  const user=window._currentUser;if(!user)return;
+  try{const q=query(collection(db,"holdings"),where("uid","==",user.uid),orderBy("createdAt","desc"));const snap=await getDocs(q);const h=[];snap.forEach(d=>h.push({id:d.id,...d.data()}));window._holdings=h;renderHoldingsTable(h);document.getElementById('holdingsCount').textContent=h.length?'('+h.length+' positions)':'';}
+  catch(e){console.error(e);showStatus('holdingsStatus','Error: '+e.message,'error');}
 };
-
-// ── Firestore: Delete holding ──
-window.deleteHolding = async function(docId) {
-  if (!confirm('Remove this holding?')) return;
-  try {
-    await deleteDoc(doc(db, "holdings", docId));
-    await loadHoldings();
-  } catch(e) { alert("Delete failed: " + e.message); }
-};
-
-// ── Firestore: Update price for a holding ──
-window.updateHoldingPrice = async function(docId, price, prevClose, name) {
-  try {
-    await updateDoc(doc(db, "holdings", docId), {
-      currentPrice: price,
-      previousClose: prevClose,
-      companyName: name,
-      lastUpdated: new Date().toISOString()
-    });
-  } catch(e) { console.error("Update failed:", e); }
-};
-
-// ── Refresh all prices ──
-window.refreshAllPrices = async function() {
-  const holdings = window._holdings || [];
-  if (!holdings.length) return;
-  const btn = document.getElementById('refreshBtn');
-  btn.disabled = true; btn.innerHTML = '<span class="spinner"></span>Refreshing...';
-  showStatus('holdingsStatus','<span class="spinner"></span> Refreshing prices for ' + holdings.length + ' holdings...','info');
-  let updated = 0;
-  for (const h of holdings) {
-    try {
-      const q = await fetchQuote(h.ticker);
-      await updateHoldingPrice(h.id, q.price || h.currentPrice, q.previousClose || h.previousClose, q.name || h.companyName);
-      updated++;
-    } catch(e) { console.warn("Could not refresh " + h.ticker, e); }
-  }
-  showStatus('holdingsStatus','&#10003; Refreshed ' + updated + ' of ' + holdings.length + ' holdings.','success');
-  await loadHoldings();
-  btn.disabled = false; btn.textContent = 'Refresh All Prices';
+window.deleteHolding=async function(docId){if(!confirm('Remove?'))return;try{await deleteDoc(doc(db,"holdings",docId));await loadHoldings();}catch(e){alert(e.message);}};
+window.updateHoldingDoc=async function(docId,data){try{await updateDoc(doc(db,"holdings",docId),data);}catch(e){console.error(e);}};
+window.refreshAllPrices=async function(){
+  const holdings=window._holdings||[];if(!holdings.length)return;
+  const btn=document.getElementById('refreshBtn');btn.disabled=true;btn.innerHTML='<span class="spinner"></span>Refreshing...';
+  showStatus('holdingsStatus','<span class="spinner"></span> Refreshing '+holdings.length+' holdings...','info');
+  let n=0;
+  for(const h of holdings){try{const q=await fetchQuote(h.ticker);const meta=classifyHolding(h.ticker,q);await updateHoldingDoc(h.id,{currentPrice:q.price||h.currentPrice,previousClose:q.previousClose||h.previousClose,companyName:q.name||h.companyName,sector:meta.sector,industry:meta.industry,assetClass:meta.assetClass,marketCap:meta.marketCap,mktCapCategory:meta.mktCapCategory,lastUpdated:new Date().toISOString()});n++;}catch(e){console.warn(h.ticker,e);}}
+  showStatus('holdingsStatus','&#10003; Refreshed '+n+'/'+holdings.length,'success');
+  await loadHoldings();btn.disabled=false;btn.textContent='Refresh All Prices';
 };
 </script>
 
-<!-- ═══════════ APP LOGIC ═══════════ -->
+<!-- APP LOGIC -->
 <script>
-const WORKER_URL = "https://perry-finance-proxy.zachperrybusiness.workers.dev";
-const C = {navy:"#003C71",blue:"#5B9BD5",blueLight:"#A8C8E8",bg:"#FFFFFF",panel:"#F4F6F9",border:"#D0D7E0",text:"#000000",textOnDark:"#FFFFFF",textSec:"#5A6A7A",success:"#2E7D52",warning:"#8B6914",danger:"#8B2A2A",highlightGray:"#C8D0D8"};
-const PALETTE = [C.navy, C.blue, C.blueLight, C.success, C.warning, C.danger, C.highlightGray, "#6A4C93", "#3A7CA5", "#D4A373"];
+const WORKER_URL="https://perry-finance-proxy.zachperrybusiness.workers.dev";
+const C={navy:"#003C71",blue:"#5B9BD5",blueLight:"#A8C8E8",bg:"#FFFFFF",panel:"#F4F6F9",border:"#D0D7E0",text:"#000000",textOnDark:"#FFFFFF",textSec:"#5A6A7A",success:"#2E7D52",warning:"#8B6914",danger:"#8B2A2A",highlightGray:"#C8D0D8"};
+const PALETTE=[C.navy,C.blue,C.blueLight,C.success,C.warning,C.danger,C.highlightGray,"#6A4C93","#3A7CA5","#D4A373"];
+Chart.defaults.font.family='Arial, Helvetica, sans-serif';Chart.defaults.color=C.textSec;
+const chartTooltip={backgroundColor:C.bg,titleColor:C.text,bodyColor:C.text,borderColor:C.border,borderWidth:1,titleFont:{family:'Arial',size:12,weight:'600'},bodyFont:{family:'Arial',size:12},padding:10};
+const chartGrid={color:'rgba(208,215,224,0.5)',drawBorder:false};
+const chartTicks={font:{family:'Arial',size:11},color:C.textSec};
 
-// ── Worker health check ──
-(async function() {
-  try {
-    const res = await fetch(WORKER_URL + "/health");
-    const data = await res.json();
-    if (data.status === "ok") {
-      document.getElementById("worker-status-dot").classList.replace("red","green");
-      document.getElementById("worker-status-text").textContent = "Data Proxy: Connected";
-    }
-  } catch(e) { console.warn("Worker health check failed:", e); }
-})();
+// Worker health check
+(async()=>{try{const r=await fetch(WORKER_URL+"/health");const d=await r.json();if(d.status==="ok"){document.getElementById("worker-status-dot").classList.replace("red","green");document.getElementById("worker-status-text").textContent="Data Proxy: Connected";}}catch(e){}})();
 
-// ── Fetch from Worker ──
-async function fetchQuote(ticker) {
-  const res = await fetch(WORKER_URL + "/quote?symbol=" + encodeURIComponent(ticker));
-  const data = await res.json();
-  if (data.error) throw new Error(data.error);
-  return data;
+// ── Worker fetch helpers ──
+async function fetchQuote(t){const r=await fetch(WORKER_URL+"/quote?symbol="+encodeURIComponent(t));const d=await r.json();if(d.error)throw new Error(d.error);return d;}
+async function fetchChart(t,range,interval){const r=await fetch(WORKER_URL+"/chart?symbol="+encodeURIComponent(t)+"&range="+range+"&interval="+(interval||"1d"));const d=await r.json();if(d.error)throw new Error(d.error);return d;}
+async function fetchSearch(q){const r=await fetch(WORKER_URL+"/search?q="+encodeURIComponent(q));const d=await r.json();if(d.error)throw new Error(d.error);return d;}
+window.fetchQuote=fetchQuote;
+
+// ── Holding classification ──
+const ETF_MAP={
+  SPY:{sector:"Broad Market",industry:"S&P 500 Index",focus:"Large Cap Blend"},
+  QQQ:{sector:"Technology",industry:"Semiconductors & Software",focus:"Large Cap Growth"},
+  IWM:{sector:"Broad Market",industry:"Russell 2000 Index",focus:"Small Cap Blend"},
+  DIA:{sector:"Broad Market",industry:"Dow Jones Industrial",focus:"Large Cap Value"},
+  VTI:{sector:"Broad Market",industry:"Total US Market",focus:"All Cap Blend"},
+  VOO:{sector:"Broad Market",industry:"S&P 500 Index",focus:"Large Cap Blend"},
+  ARKK:{sector:"Technology",industry:"Disruptive Innovation",focus:"Mid Cap Growth"},
+  XLF:{sector:"Financials",industry:"Financial Select",focus:"Large Cap Value"},
+  XLE:{sector:"Energy",industry:"Energy Select",focus:"Large Cap Value"},
+  XLK:{sector:"Technology",industry:"Technology Select",focus:"Large Cap Growth"},
+  XLV:{sector:"Healthcare",industry:"Health Care Select",focus:"Large Cap Blend"},
+  XLI:{sector:"Industrials",industry:"Industrial Select",focus:"Large Cap Blend"},
+  XLP:{sector:"Consumer Staples",industry:"Consumer Staples Select",focus:"Large Cap Value"},
+  XLY:{sector:"Consumer Discretionary",industry:"Consumer Discretionary Select",focus:"Large Cap Growth"},
+  XLU:{sector:"Utilities",industry:"Utilities Select",focus:"Large Cap Value"},
+  XLB:{sector:"Materials",industry:"Materials Select",focus:"Large Cap Blend"},
+  XLRE:{sector:"Real Estate",industry:"Real Estate Select",focus:"Large Cap Blend"},
+  VGT:{sector:"Technology",industry:"Information Technology",focus:"Large Cap Growth"},
+  VIG:{sector:"Broad Market",industry:"Dividend Appreciation",focus:"Large Cap Blend"},
+  BND:{sector:"Fixed Income",industry:"US Aggregate Bond",focus:"Intermediate Bond"},
+  TLT:{sector:"Fixed Income",industry:"20+ Year Treasury",focus:"Long Duration Bond"},
+  GLD:{sector:"Commodities",industry:"Gold",focus:"Commodity"},
+  SLV:{sector:"Commodities",industry:"Silver",focus:"Commodity"},
+  VNQ:{sector:"Real Estate",industry:"Real Estate Investment Trusts",focus:"Large Cap Blend"},
+  EEM:{sector:"International",industry:"Emerging Markets",focus:"Large Cap Blend"},
+  EFA:{sector:"International",industry:"Developed Markets ex-US",focus:"Large Cap Blend"},
+  VWO:{sector:"International",industry:"Emerging Markets",focus:"Large Cap Blend"},
+  VXUS:{sector:"International",industry:"International ex-US",focus:"All Cap Blend"},
+  IBIT:{sector:"Crypto",industry:"Bitcoin",focus:"Digital Asset"},
+  MSTR:{sector:"Technology",industry:"Bitcoin Treasury",focus:"Large Cap Growth"},
+};
+const SECTOR_MAP={AAPL:"Technology",MSFT:"Technology",GOOGL:"Technology",GOOG:"Technology",AMZN:"Consumer Discretionary",META:"Technology",NVDA:"Technology",TSLA:"Consumer Discretionary",BRK:"Financials","BRK.B":"Financials",JPM:"Financials",JNJ:"Healthcare",V:"Financials",UNH:"Healthcare",HD:"Consumer Discretionary",PG:"Consumer Staples",MA:"Financials",DIS:"Communication Services",BAC:"Financials",XOM:"Energy",CVX:"Energy",NFLX:"Communication Services",COST:"Consumer Staples",ABBV:"Healthcare",KO:"Consumer Staples",PEP:"Consumer Staples",MRK:"Healthcare",AVGO:"Technology",LLY:"Healthcare",TMO:"Healthcare",WMT:"Consumer Staples",CRM:"Technology",AMD:"Technology",INTC:"Technology",CSCO:"Technology",ADBE:"Technology",ORCL:"Technology",ACN:"Technology",NOW:"Technology",IBM:"Technology",QCOM:"Technology",TXN:"Technology",AMAT:"Technology",MU:"Technology",PLTR:"Technology",COIN:"Financials",SQ:"Financials",PYPL:"Financials",SNOW:"Technology",NET:"Technology",CRWD:"Technology",ZS:"Technology",DDOG:"Technology",PANW:"Technology",SHOP:"Technology",SE:"Technology",MELI:"Consumer Discretionary",NKE:"Consumer Discretionary",SBUX:"Consumer Discretionary",MCD:"Consumer Discretionary",LOW:"Consumer Discretionary",TGT:"Consumer Discretionary",F:"Consumer Discretionary",GM:"Consumer Discretionary",BA:"Industrials",CAT:"Industrials",GE:"Industrials",MMM:"Industrials",UPS:"Industrials",FDX:"Industrials",RTX:"Industrials",LMT:"Industrials",PFE:"Healthcare",BMY:"Healthcare",GILD:"Healthcare",AMGN:"Healthcare",BIIB:"Healthcare",MRNA:"Healthcare",NEE:"Utilities",DUK:"Utilities",SO:"Utilities",D:"Utilities"};
+const INDUSTRY_MAP={AAPL:"Consumer Electronics",MSFT:"Software",GOOGL:"Internet Services",AMZN:"E-Commerce",META:"Social Media",NVDA:"Semiconductors",TSLA:"Electric Vehicles",JPM:"Banking",JNJ:"Pharmaceuticals",V:"Payment Processing",UNH:"Health Insurance",HD:"Home Improvement",PG:"Household Products",MA:"Payment Processing",DIS:"Entertainment",NFLX:"Streaming",XOM:"Oil & Gas",CVX:"Oil & Gas",COST:"Retail",WMT:"Retail",CRM:"Enterprise Software",AMD:"Semiconductors",INTC:"Semiconductors",AVGO:"Semiconductors",LLY:"Pharmaceuticals",ABBV:"Pharmaceuticals",MRK:"Pharmaceuticals",ADBE:"Software",ORCL:"Enterprise Software",NOW:"Enterprise Software",PLTR:"Data Analytics",COIN:"Crypto Exchange",CRWD:"Cybersecurity",PANW:"Cybersecurity",ZS:"Cybersecurity",BA:"Aerospace",CAT:"Heavy Equipment",GE:"Industrial Conglomerate",NEE:"Renewable Utilities",PFE:"Pharmaceuticals",MRNA:"Biotechnology",AMGN:"Biotechnology"};
+
+function classifyHolding(ticker, quoteData) {
+  const etf = ETF_MAP[ticker];
+  if (etf) return { sector: etf.sector, industry: etf.industry, assetClass: "ETF", marketCap: 0, mktCapCategory: etf.focus };
+  // Check for bond/commodity keywords
+  const name = (quoteData.name || "").toLowerCase();
+  let assetClass = "Equity";
+  if (name.includes("bond") || name.includes("treasury") || name.includes("fixed income")) assetClass = "Fixed Income";
+  else if (name.includes("gold") || name.includes("silver") || name.includes("commodity")) assetClass = "Commodity";
+  else if (name.includes("reit") || name.includes("real estate")) assetClass = "Real Estate";
+  const sector = SECTOR_MAP[ticker] || "Other";
+  const industry = INDUSTRY_MAP[ticker] || "Other";
+  const mc = quoteData.intradayHigh && quoteData.volume ? estimateMarketCap(quoteData) : 0;
+  return { sector, industry, assetClass, marketCap: mc, mktCapCategory: classifyMktCap(mc) };
 }
-async function fetchChart(ticker, range, interval) {
-  const res = await fetch(WORKER_URL + "/chart?symbol=" + encodeURIComponent(ticker) + "&range=" + range + "&interval=" + (interval || "1d"));
-  const data = await res.json();
-  if (data.error) throw new Error(data.error);
-  return data;
-}
-async function fetchSearch(q) {
-  const res = await fetch(WORKER_URL + "/search?q=" + encodeURIComponent(q));
-  const data = await res.json();
-  if (data.error) throw new Error(data.error);
-  return data;
-}
-// Make available to module scope
-window.fetchQuote = fetchQuote;
+function estimateMarketCap(q) { return 0; } // We'll use stored marketCap from Firestore
+function classifyMktCap(mc) { if (!mc || mc === 0) return "N/A"; if (mc >= 200e9) return "Mega Cap"; if (mc >= 10e9) return "Large Cap"; if (mc >= 2e9) return "Mid Cap"; if (mc >= 300e6) return "Small Cap"; return "Micro Cap"; }
 
 // ── Helpers ──
-const fmt = v => "$" + Number(v).toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:2});
-const fmtInt = v => "$" + Number(v).toLocaleString("en-US",{maximumFractionDigits:0});
-const pctStr = (v,d) => (v>=0?"+":"") + v.toFixed(d||2) + "%";
-const pctColor = v => v >= 0 ? C.success : C.danger;
+const fmt=v=>"$"+Number(v).toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:2});
+const fmtInt=v=>"$"+Number(v).toLocaleString("en-US",{maximumFractionDigits:0});
+const fmtPct=(v)=>(v>=0?"+":"")+v.toFixed(2)+"%";
+const pctColor=v=>v>=0?C.success:C.danger;
 function showStatus(id,msg,type){const el=document.getElementById(id);if(!el)return;el.className='status-bar '+type;el.innerHTML=msg;}
 
+// ── State ──
+let currentRange = "1y";
+let portfolioLineChart = null;
+let donutCharts = {};
+
 // ── Nav ──
-const parentMap = {home:'home',about:'home',portfolio:'portfolio',holdings:'portfolio',research:'research'};
-function navigateTo(p) {
-  document.activeElement.blur();
-  document.querySelectorAll('.page').forEach(x=>x.classList.remove('active'));
-  document.querySelectorAll('.nav-parent,.nav-child').forEach(x=>x.classList.remove('active'));
-  document.getElementById('page-'+p).classList.add('active');
-  const pp = parentMap[p]||p;
-  const pe = document.querySelector('.nav-parent[data-page="'+pp+'"]'); if(pe) pe.classList.add('active');
-  const ce = document.querySelector('.nav-child[data-page="'+p+'"]'); if(ce) ce.classList.add('active');
-  window.scrollTo(0,0);
-  if (p === 'portfolio') renderPortfolioOverview();
-}
+const parentMap={home:'home',about:'home',portfolio:'portfolio',holdings:'portfolio',research:'research'};
+function navigateTo(p){document.activeElement.blur();document.querySelectorAll('.page').forEach(x=>x.classList.remove('active'));document.querySelectorAll('.nav-parent,.nav-child').forEach(x=>x.classList.remove('active'));document.getElementById('page-'+p).classList.add('active');const pp=parentMap[p]||p;const pe=document.querySelector('.nav-parent[data-page="'+pp+'"]');if(pe)pe.classList.add('active');const ce=document.querySelector('.nav-child[data-page="'+p+'"]');if(ce)ce.classList.add('active');window.scrollTo(0,0);if(p==='portfolio')renderPortfolioOverview();}
 
 // ── Home Features ──
-const FEATURES = [
-  {title:"Portfolio Overview",desc:"Live portfolio valuation, allocation breakdown, and performance metrics backed by Yahoo Finance data.",page:"portfolio",tag:"Active"},
-  {title:"Manage Holdings",desc:"Add and remove holdings stored in Firebase Firestore. Prices refresh from Yahoo Finance via Cloudflare Worker.",page:"holdings",tag:"Active"},
-  {title:"Market Research",desc:"Real-time quotes, historical price charts, and ticker search powered by the Cloudflare data proxy.",page:"research",tag:"Active"},
+const FEATURES=[
+  {title:"Portfolio Overview",desc:"Live valuation, benchmark comparison, allocation charts, Morningstar style box, and performance history.",page:"portfolio",tag:"Active"},
+  {title:"Manage Holdings",desc:"Add/remove holdings stored in Firebase. Prices refresh from Yahoo Finance via Cloudflare Worker.",page:"holdings",tag:"Active"},
+  {title:"Market Research",desc:"Real-time quotes, historical charts, and ticker search via Cloudflare data proxy.",page:"research",tag:"Active"},
   {title:"Macro Regime Analysis",desc:"Six-pillar macro scorecard: Real Activity, Labor, Inflation, Monetary, Fiscal, International.",page:null,tag:"Coming Soon"},
-  {title:"Risk & Stress Testing",desc:"VaR, Monte-Carlo simulation, tracking error, and scenario analysis across VIX and macro regimes.",page:null,tag:"Coming Soon"},
-  {title:"Quantitative Models",desc:"ML models — regression, random forest, XGBoost, LSTM time series — for alpha generation.",page:null,tag:"Coming Soon"}
+  {title:"Risk & Stress Testing",desc:"VaR, Monte-Carlo simulation, tracking error, and scenario analysis.",page:null,tag:"Coming Soon"},
+  {title:"Quantitative Models",desc:"ML models — regression, random forest, XGBoost, LSTM — for alpha generation.",page:null,tag:"Coming Soon"}
 ];
-document.getElementById('featureGrid').innerHTML = FEATURES.map(f =>
-  '<div class="feature-card '+(f.page?'':'disabled')+'" '+(f.page?'onclick="navigateTo(\''+f.page+'\')"':'')+'>'+
-  '<div class="feature-tag '+(f.tag==='Coming Soon'?'soon':'')+'">'+f.tag+'</div>'+
-  '<div class="feature-title">'+f.title+'</div>'+
-  '<div class="feature-desc">'+f.desc+'</div></div>'
-).join('');
+document.getElementById('featureGrid').innerHTML=FEATURES.map(f=>'<div class="feature-card '+(f.page?'':'disabled')+'" '+(f.page?'onclick="navigateTo(\''+f.page+'\')"':'')+'><div class="feature-tag '+(f.tag==='Coming Soon'?'soon':'')+'">'+f.tag+'</div><div class="feature-title">'+f.title+'</div><div class="feature-desc">'+f.desc+'</div></div>').join('');
 
-// ── Holdings Table ──
+// ── Timeframe buttons ──
+document.querySelectorAll('#pfTimeframeBtns .btn-outline').forEach(b => {
+  b.onclick = function() {
+    document.querySelectorAll('#pfTimeframeBtns .btn-outline').forEach(x => x.classList.remove('active'));
+    this.classList.add('active');
+    currentRange = this.dataset.range;
+    renderPortfolioOverview();
+  };
+});
+
+// ── Holdings Table (Manage page) ──
 function renderHoldingsTable(holdings) {
   const wrap = document.getElementById('holdingsTableWrap');
-  if (!holdings || !holdings.length) {
-    wrap.innerHTML = '<div class="empty-state" style="padding:24px;"><div class="empty-state-icon">&#128203;</div><h3>No Holdings Yet</h3><p>Use the form above to add your first holding.</p></div>';
-    return;
-  }
-  const tv = holdings.reduce((s,h) => s + (h.currentPrice||0) * h.quantity, 0);
-  let html = '<table><thead><tr><th>Ticker</th><th>Company</th><th>Shares</th><th>Cost Basis</th><th>Current Price</th><th>Market Value</th><th>Gain/Loss</th><th>% of Portfolio</th><th>Last Updated</th><th></th></tr></thead><tbody>';
+  if (!holdings || !holdings.length) { wrap.innerHTML = '<div class="empty-state" style="padding:24px;"><h3>No Holdings Yet</h3><p>Use the form above to add your first holding.</p></div>'; return; }
+  const tv = holdings.reduce((s,h) => s + (h.currentPrice||0)*h.quantity, 0);
+  let html = '<table><thead><tr><th>Ticker</th><th>Company</th><th>Shares</th><th>Cost</th><th>Price</th><th>Value</th><th>G/L</th><th>Sector</th><th>Industry</th><th>Asset</th><th>Mkt Cap</th><th></th></tr></thead><tbody>';
   holdings.forEach(h => {
-    const mv = (h.currentPrice||0) * h.quantity;
-    const cost = h.costBasis * h.quantity;
-    const gl = mv - cost;
-    const glp = cost > 0 ? (gl/cost)*100 : 0;
-    const pp = tv > 0 ? (mv/tv)*100 : 0;
-    const gc = gl >= 0 ? C.success : C.danger;
-    html += '<tr>'+
-      '<td style="font-weight:700;color:'+C.navy+';">'+h.ticker+'</td>'+
-      '<td>'+h.companyName+'</td>'+
-      '<td>'+h.quantity.toLocaleString()+'</td>'+
-      '<td>'+fmt(h.costBasis)+'</td>'+
-      '<td>'+fmt(h.currentPrice||0)+'</td>'+
-      '<td style="font-weight:600;">'+fmt(mv)+'</td>'+
-      '<td style="color:'+gc+';font-weight:600;">'+pctStr(glp)+' ('+fmt(gl)+')</td>'+
-      '<td>'+pp.toFixed(1)+'%</td>'+
-      '<td style="font-size:11px;color:'+C.textSec+';">'+(h.lastUpdated ? new Date(h.lastUpdated).toLocaleString() : '—')+'</td>'+
-      '<td><button class="btn btn-danger btn-sm" onclick="deleteHolding(\''+h.id+'\')" title="Remove">&#10005;</button></td></tr>';
+    const mv=(h.currentPrice||0)*h.quantity,cost=h.costBasis*h.quantity,gl=mv-cost,glp=cost>0?(gl/cost)*100:0,gc=gl>=0?C.success:C.danger;
+    html+='<tr><td style="font-weight:700;color:'+C.navy+';">'+h.ticker+'</td><td>'+h.companyName+'</td><td>'+h.quantity+'</td><td>'+fmt(h.costBasis)+'</td><td>'+fmt(h.currentPrice||0)+'</td><td style="font-weight:600;">'+fmt(mv)+'</td><td style="color:'+gc+';font-weight:600;">'+fmtPct(glp)+'</td><td>'+(h.sector||'—')+'</td><td>'+(h.industry||'—')+'</td><td>'+(h.assetClass||'Equity')+'</td><td>'+(h.mktCapCategory||'—')+'</td><td><button class="btn btn-danger btn-sm" onclick="deleteHolding(\''+h.id+'\')">&#10005;</button></td></tr>';
   });
-  // Total row
-  const totalMV = holdings.reduce((s,h) => s + (h.currentPrice||0)*h.quantity, 0);
-  const totalCost = holdings.reduce((s,h) => s + h.costBasis*h.quantity, 0);
-  const totalGL = totalMV - totalCost;
-  const totalGLP = totalCost > 0 ? (totalGL/totalCost)*100 : 0;
-  html += '<tr style="font-weight:700;background:var(--panel);"><td colspan="2" style="font-weight:700;color:'+C.navy+';">TOTAL</td><td></td><td>'+fmt(totalCost)+'</td><td></td><td style="font-weight:700;color:'+C.navy+';">'+fmt(totalMV)+'</td><td style="color:'+(totalGL>=0?C.success:C.danger)+';font-weight:700;">'+pctStr(totalGLP)+' ('+fmt(totalGL)+')</td><td>100.0%</td><td></td><td></td></tr>';
   html += '</tbody></table>';
   wrap.innerHTML = html;
 }
 
-// ── Portfolio Overview ──
-let donutCharts = {};
-function renderPortfolioOverview() {
+// ══════════════════════════════════════
+// PORTFOLIO OVERVIEW (the big one)
+// ══════════════════════════════════════
+async function renderPortfolioOverview() {
   const holdings = window._holdings || [];
   const user = window._currentUser;
-  if (!user) {
-    document.getElementById('portfolioAuth').style.display = '';
-    document.getElementById('portfolioEmpty').style.display = 'none';
-    document.getElementById('portfolioLive').style.display = 'none';
-    return;
-  }
-  document.getElementById('portfolioAuth').style.display = 'none';
-  if (!holdings.length) {
-    document.getElementById('portfolioEmpty').style.display = '';
-    document.getElementById('portfolioLive').style.display = 'none';
-    return;
-  }
-  document.getElementById('portfolioEmpty').style.display = 'none';
-  document.getElementById('portfolioLive').style.display = '';
+  if (!user) { document.getElementById('portfolioAuth').style.display='';document.getElementById('portfolioEmpty').style.display='none';document.getElementById('portfolioLive').style.display='none';return; }
+  document.getElementById('portfolioAuth').style.display='none';
+  if (!holdings.length) { document.getElementById('portfolioEmpty').style.display='';document.getElementById('portfolioLive').style.display='none';return; }
+  document.getElementById('portfolioEmpty').style.display='none';
+  document.getElementById('portfolioLive').style.display='';
 
-  const tv = holdings.reduce((s,h) => s + (h.currentPrice||0)*h.quantity, 0);
-  const tc = holdings.reduce((s,h) => s + h.costBasis*h.quantity, 0);
-  const tgl = tv - tc;
-  const tglp = tc > 0 ? (tgl/tc)*100 : 0;
-  const tpv = holdings.reduce((s,h) => s + (h.previousClose||0)*h.quantity, 0);
-  const dayChange = tv - tpv;
-  const dayPct = tpv > 0 ? (dayChange/tpv)*100 : 0;
+  const tv=holdings.reduce((s,h)=>s+(h.currentPrice||0)*h.quantity,0);
+  const tc=holdings.reduce((s,h)=>s+h.costBasis*h.quantity,0);
+  const tgl=tv-tc,tglp=tc>0?(tgl/tc)*100:0;
+  const tpv=holdings.reduce((s,h)=>s+(h.previousClose||0)*h.quantity,0);
+  const dayChg=tv-tpv,dayPct=tpv>0?(dayChg/tpv)*100:0;
 
-  document.getElementById('metricsRow').innerHTML =
-    '<div class="metric-card"><div class="metric-label">Total Portfolio Value</div><div class="metric-value">'+fmtInt(tv)+'</div><div class="metric-sub" style="color:'+pctColor(dayPct)+';">'+pctStr(dayPct)+' today</div></div>'+
-    '<div class="metric-card"><div class="metric-label">Total Gain/Loss</div><div class="metric-value" style="font-size:20px;color:'+pctColor(tglp)+';">'+pctStr(tglp)+'</div><div class="metric-sub" style="color:'+pctColor(tgl)+';">'+fmt(tgl)+'</div></div>'+
-    '<div class="metric-card"><div class="metric-label">Total Cost Basis</div><div class="metric-value" style="font-size:20px;">'+fmtInt(tc)+'</div><div class="metric-sub" style="color:var(--text-sec);">'+holdings.length+' positions</div></div>'+
-    '<div class="metric-card"><div class="metric-label">Day Change</div><div class="metric-value" style="font-size:20px;color:'+pctColor(dayPct)+';">'+fmt(dayChange)+'</div><div class="metric-sub" style="color:'+pctColor(dayPct)+';">'+pctStr(dayPct)+'</div></div>';
+  // Row 1: Portfolio metrics
+  document.getElementById('metricsRow').innerHTML=
+    mc('Total Portfolio Value',fmtInt(tv),fmtPct(dayPct)+' today',pctColor(dayPct))+
+    mc('Total Gain/Loss',fmtPct(tglp),fmt(tgl),pctColor(tgl))+
+    mc('Total Cost Basis',fmtInt(tc),holdings.length+' positions',C.textSec)+
+    mc('Day Change',fmt(dayChg),fmtPct(dayPct),pctColor(dayPct));
 
-  // Portfolio table
-  let ct = '<table><thead><tr><th>Ticker</th><th>Company</th><th>Shares</th><th>Price</th><th>Market Value</th><th>Weight</th><th>Gain/Loss</th></tr></thead><tbody>';
-  holdings.forEach(h => {
-    const mv = (h.currentPrice||0)*h.quantity;
-    const cost = h.costBasis*h.quantity;
-    const gl = mv-cost;
-    const glp = cost>0?(gl/cost)*100:0;
-    const pp = tv>0?(mv/tv)*100:0;
-    const gc = gl>=0?C.success:C.danger;
-    ct += '<tr><td style="font-weight:700;color:'+C.navy+';">'+h.ticker+'</td><td>'+h.companyName+'</td><td>'+h.quantity.toLocaleString()+'</td><td>'+fmt(h.currentPrice||0)+'</td><td style="font-weight:600;">'+fmt(mv)+'</td><td>'+pp.toFixed(1)+'%</td><td style="color:'+gc+';font-weight:600;">'+pctStr(glp)+'</td></tr>';
-  });
-  ct += '</tbody></table>';
-  document.getElementById('portfolioTableWrap').innerHTML = ct;
+  // Row 2: Benchmark returns (async)
+  document.getElementById('benchmarkRow').innerHTML=
+    mc('SPY ('+rangeLabel()+')','<span class="spinner"></span>','Loading...',C.textSec)+
+    mc('QQQ ('+rangeLabel()+')','<span class="spinner"></span>','Loading...',C.textSec)+
+    mc('IWM ('+rangeLabel()+')','<span class="spinner"></span>','Loading...',C.textSec)+
+    mc('VIX ('+rangeLabel()+')','<span class="spinner"></span>','Loading...',C.textSec);
+  fetchBenchmarks();
 
-  // Donut: by weight
-  const weightData = holdings.map(h => ({
-    label: h.ticker,
-    value: tv > 0 ? Math.round(((h.currentPrice||0)*h.quantity/tv)*100) : 0
-  })).sort((a,b) => b.value - a.value);
-  renderDonut('donut-weight','Portfolio Allocation by Holding', weightData);
+  // Portfolio table with all columns
+  renderPortfolioTable(holdings, tv);
 
-  // Donut: gain vs loss
-  const gainHoldings = holdings.filter(h => (h.currentPrice||0)*h.quantity >= h.costBasis*h.quantity);
-  const lossHoldings = holdings.filter(h => (h.currentPrice||0)*h.quantity < h.costBasis*h.quantity);
-  const gainVal = gainHoldings.reduce((s,h) => s+(h.currentPrice||0)*h.quantity,0);
-  const lossVal = lossHoldings.reduce((s,h) => s+(h.currentPrice||0)*h.quantity,0);
-  const glDonut = [];
-  if (gainVal > 0) glDonut.push({label:'Gain Positions', value: tv>0?Math.round(gainVal/tv*100):0});
-  if (lossVal > 0) glDonut.push({label:'Loss Positions', value: tv>0?Math.round(lossVal/tv*100):0});
-  if (glDonut.length) renderDonut('donut-mktcap','Portfolio Split: Gain vs Loss Positions', glDonut);
+  // Donut charts
+  const group=(key)=>{const g={};holdings.forEach(h=>{const mv=(h.currentPrice||0)*h.quantity;const k=h[key]||'Other';g[k]=(g[k]||0)+mv;});return Object.entries(g).map(([l,v])=>({label:l,value:tv>0?Math.round(v/tv*100):0})).sort((a,b)=>b.value-a.value);};
+  renderDonut('donut-sector','Portfolio Allocation by Sector',group('sector'));
+  renderDonut('donut-industry','Portfolio Allocation by Industry',group('industry').slice(0,8));
+  renderDonut('donut-mktcap','Portfolio by Market Cap / Style',group('mktCapCategory'));
+  const weightData=holdings.map(h=>({label:h.ticker,value:tv>0?Math.round(((h.currentPrice||0)*h.quantity/tv)*100):0})).sort((a,b)=>b.value-a.value);
+  renderDonut('donut-weight','Portfolio Allocation by Holding',weightData);
+
+  // Morningstar Style Box
+  renderMorningstarBox(holdings);
+
+  // Portfolio chart
+  renderPortfolioChart();
 }
 
-// ── Research ──
-let researchChart = null;
-document.getElementById('researchType').addEventListener('change', function() {
-  document.getElementById('rangeGroup').style.display = this.value === 'chart' ? '' : 'none';
-});
-document.getElementById('rangeGroup').style.display = 'none';
+function mc(label,value,sub,subColor){return '<div class="metric-card"><div class="metric-label">'+label+'</div><div class="metric-value" style="font-size:18px;">'+value+'</div><div class="metric-sub" style="color:'+subColor+';">'+sub+'</div></div>';}
+function rangeLabel(){const m={"1mo":"1M","3mo":"3M","6mo":"6M","ytd":"YTD","1y":"1Y","3y":"3Y","5y":"5Y"};return m[currentRange]||currentRange;}
 
-window.runResearch = async function() {
-  const ticker = document.getElementById('researchTicker').value.trim().toUpperCase();
-  const type = document.getElementById('researchType').value;
-  if (!ticker && type !== 'search') { alert('Enter a ticker symbol.'); return; }
-
-  document.getElementById('researchRawCard').style.display = '';
-  document.getElementById('researchOutput').textContent = 'Fetching...';
-  document.getElementById('researchChartCard').style.display = 'none';
-  document.getElementById('researchResults').innerHTML = '';
-
-  try {
-    if (type === 'quote') {
-      const data = await fetchQuote(ticker);
-      // Show quote card
-      const chg = data.change || 0;
-      const chgPct = data.changePercent || 0;
-      const cc = chg >= 0 ? C.success : C.danger;
-      document.getElementById('researchResults').innerHTML =
-        '<div class="metrics-row" style="margin-bottom:20px;">'+
-        '<div class="metric-card"><div class="metric-label">'+data.symbol+'</div><div class="metric-value">'+fmt(data.price)+'</div><div class="metric-sub" style="color:'+cc+';">'+pctStr(chgPct)+' ('+fmt(chg)+')</div></div>'+
-        '<div class="metric-card"><div class="metric-label">Previous Close</div><div class="metric-value" style="font-size:18px;">'+fmt(data.previousClose)+'</div></div>'+
-        '<div class="metric-card"><div class="metric-label">Day Range</div><div class="metric-value" style="font-size:16px;">'+(data.intradayLow?fmt(data.intradayLow):'—')+' — '+(data.intradayHigh?fmt(data.intradayHigh):'—')+'</div></div>'+
-        '<div class="metric-card"><div class="metric-label">Volume</div><div class="metric-value" style="font-size:18px;">'+(data.volume?Number(data.volume).toLocaleString():'—')+'</div></div></div>';
-      document.getElementById('researchOutput').textContent = JSON.stringify(data, null, 2);
-
-    } else if (type === 'chart') {
-      const range = document.getElementById('researchRange').value;
-      const data = await fetchChart(ticker, range, '1d');
-      const points = (data.points || []).filter(p => p.close !== null);
-      // Render chart
-      document.getElementById('researchChartCard').style.display = '';
-      document.getElementById('researchChartTitle').textContent = ticker + ' Price History (' + range + ')';
-      const ctx = document.getElementById('researchChart').getContext('2d');
-      if (researchChart) researchChart.destroy();
-      researchChart = new Chart(ctx, {
-        type: 'line',
-        data: {
-          labels: points.map(p => p.date.slice(0,10)),
-          datasets: [{
-            label: ticker,
-            data: points.map(p => p.close),
-            borderColor: C.navy,
-            backgroundColor: 'rgba(0,60,113,.06)',
-            borderWidth: 2.5,
-            pointRadius: 0,
-            pointHoverRadius: 5,
-            pointHoverBackgroundColor: C.navy,
-            fill: true,
-            tension: .3
-          }]
-        },
-        options: {
-          responsive: true, maintainAspectRatio: false,
-          plugins: { legend: { display: false },
-            tooltip: { backgroundColor: C.bg, titleColor: C.text, bodyColor: C.text, borderColor: C.border, borderWidth: 1,
-              titleFont:{family:'Arial',size:12,weight:'600'}, bodyFont:{family:'Arial',size:12}, padding:10,
-              callbacks: { label: c => ' ' + fmt(c.parsed.y) } } },
-          scales: {
-            x: { grid:{color:'rgba(208,215,224,0.5)',drawBorder:false}, ticks:{font:{family:'Arial',size:11},color:C.textSec,maxTicksLimit:12}, border:{display:false} },
-            y: { grid:{color:'rgba(208,215,224,0.5)',drawBorder:false}, ticks:{font:{family:'Arial',size:11},color:C.textSec,callback:v=>'$'+v.toFixed(2)}, border:{display:false} }
-          }
-        }
-      });
-      document.getElementById('researchOutput').textContent = points.length + ' data points loaded.\n\n' + JSON.stringify(data.points?.slice(0,5), null, 2) + '\n...';
-
-    } else if (type === 'search') {
-      const q = ticker || document.getElementById('researchTicker').value.trim();
-      const data = await fetchSearch(q);
-      let html = '<div class="card"><div class="card-title">Search Results for "'+q+'"</div><div class="card-body"><div class="table-wrap"><table><thead><tr><th>Symbol</th><th>Name</th><th>Type</th><th>Exchange</th></tr></thead><tbody>';
-      (data.results||[]).forEach(r => {
-        html += '<tr><td style="font-weight:700;color:'+C.navy+';">'+r.symbol+'</td><td>'+r.name+'</td><td>'+r.type+'</td><td>'+r.exchange+'</td></tr>';
-      });
-      html += '</tbody></table></div></div><div class="card-sources"><strong>Sources:</strong><br>&#8226; Yahoo Finance via Cloudflare Worker proxy</div></div>';
-      document.getElementById('researchResults').innerHTML = html;
-      document.getElementById('researchOutput').textContent = JSON.stringify(data, null, 2);
-    }
-  } catch(e) {
-    document.getElementById('researchOutput').textContent = 'Error: ' + e.message;
+// ── Benchmark fetch ──
+async function fetchBenchmarks() {
+  const tickers = ["SPY","QQQ","IWM","^VIX"];
+  const labels = ["SPY","QQQ","IWM","VIX"];
+  const results = [];
+  for (let i = 0; i < tickers.length; i++) {
+    try {
+      const data = await fetchChart(tickers[i], currentRange, "1d");
+      const pts = (data.points||[]).filter(p=>p.close!==null);
+      if (pts.length >= 2) {
+        const first = pts[0].close, last = pts[pts.length-1].close;
+        const ret = ((last-first)/first)*100;
+        results.push({label:labels[i],ret,last});
+      } else { results.push({label:labels[i],ret:0,last:0}); }
+    } catch(e) { results.push({label:labels[i],ret:0,last:0}); }
   }
+  document.getElementById('benchmarkRow').innerHTML = results.map(r => {
+    const isVix = r.label === "VIX";
+    return mc(r.label+' ('+rangeLabel()+')', isVix ? r.last.toFixed(2) : fmtPct(r.ret), isVix ? fmtPct(r.ret)+' change' : fmt(r.last), pctColor(isVix ? -r.ret : r.ret));
+  }).join('');
+}
+
+// ── Portfolio Table (Portfolio page - enriched) ──
+function renderPortfolioTable(holdings, tv) {
+  let html='<table><thead><tr><th>Ticker</th><th>Company</th><th>Shares</th><th>Price</th><th>Value</th><th>Weight</th><th>G/L</th><th>Sector</th><th>Industry</th><th>Asset</th><th>Mkt Cap Tier</th></tr></thead><tbody>';
+  holdings.forEach(h=>{
+    const mv=(h.currentPrice||0)*h.quantity,cost=h.costBasis*h.quantity,gl=mv-cost,glp=cost>0?(gl/cost)*100:0,pp=tv>0?(mv/tv)*100:0,gc=gl>=0?C.success:C.danger;
+    html+='<tr><td style="font-weight:700;color:'+C.navy+';">'+h.ticker+'</td><td>'+h.companyName+'</td><td>'+h.quantity+'</td><td>'+fmt(h.currentPrice||0)+'</td><td style="font-weight:600;">'+fmt(mv)+'</td><td>'+pp.toFixed(1)+'%</td><td style="color:'+gc+';font-weight:600;">'+fmtPct(glp)+'</td><td>'+(h.sector||'—')+'</td><td>'+(h.industry||'—')+'</td><td>'+(h.assetClass||'Equity')+'</td><td>'+(h.mktCapCategory||'—')+'</td></tr>';
+  });
+  html+='</tbody></table>';
+  document.getElementById('portfolioTableWrap').innerHTML=html;
+}
+
+// ── Portfolio History Chart with Compare ──
+window.renderPortfolioChart = async function() {
+  const holdings = window._holdings || [];
+  if (!holdings.length) return;
+  const datasets = [];
+  // Fetch chart data for each holding and sum
+  const allSeries = {};
+  let fetched = 0;
+  for (const h of holdings) {
+    try {
+      const data = await fetchChart(h.ticker, currentRange, "1d");
+      const pts = (data.points||[]).filter(p=>p.close!==null);
+      pts.forEach(p => {
+        const d = p.date.slice(0,10);
+        if (!allSeries[d]) allSeries[d] = 0;
+        allSeries[d] += (p.close / (pts[0]?.close||1)) * h.costBasis * h.quantity; // normalized to cost basis
+      });
+      fetched++;
+    } catch(e) { console.warn("Chart fetch failed for",h.ticker); }
+  }
+  if (!fetched) return;
+  const dates = Object.keys(allSeries).sort();
+  const vals = dates.map(d => allSeries[d]);
+  // Normalize to % return
+  const base = vals[0] || 1;
+  datasets.push({ label:'Portfolio', data:dates.map((_,i)=>((vals[i]-base)/base)*100), borderColor:C.navy, backgroundColor:'rgba(0,60,113,.06)', borderWidth:2.5, pointRadius:0, pointHoverRadius:4, pointHoverBackgroundColor:C.navy, fill:false, tension:.3 });
+
+  // Compare benchmarks
+  const compColors = [C.blue, C.blueLight];
+  const compInputs = [document.getElementById('compare1').value.trim().toUpperCase(), document.getElementById('compare2').value.trim().toUpperCase()].filter(Boolean);
+  for (let i=0; i<compInputs.length; i++) {
+    try {
+      const data = await fetchChart(compInputs[i], currentRange, "1d");
+      const pts = (data.points||[]).filter(p=>p.close!==null);
+      if (pts.length > 1) {
+        const bBase = pts[0].close;
+        // Align to portfolio dates
+        const ptsMap = {};
+        pts.forEach(p => ptsMap[p.date.slice(0,10)] = p.close);
+        const aligned = dates.map(d => { const v = ptsMap[d]; return v != null ? ((v-bBase)/bBase)*100 : null; });
+        datasets.push({ label:compInputs[i], data:aligned, borderColor:compColors[i], borderWidth:2, pointRadius:0, fill:false, tension:.3, spanGaps:true });
+      }
+    } catch(e) {}
+  }
+
+  const ctx = document.getElementById('portfolioLineChart').getContext('2d');
+  if (portfolioLineChart) portfolioLineChart.destroy();
+  portfolioLineChart = new Chart(ctx, {
+    type:'line',
+    data:{ labels:dates, datasets },
+    options:{
+      responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{ display:datasets.length>1, labels:{font:{family:'Arial',size:11},color:C.textSec,boxWidth:10,padding:16} }, tooltip:{...chartTooltip, callbacks:{label:c=>' '+c.dataset.label+': '+c.parsed.y.toFixed(2)+'%'}} },
+      scales:{
+        x:{grid:chartGrid,ticks:{...chartTicks,maxTicksLimit:12},border:{display:false}},
+        y:{grid:chartGrid,ticks:{...chartTicks,callback:v=>v.toFixed(1)+'%'},border:{display:false}}
+      }
+    }
+  });
 };
 
-// ── Donuts ──
-function renderDonut(id, title, data) {
-  const el = document.getElementById(id); if(!el) return;
-  const cid = id+'-c';
-  el.innerHTML = '<div class="card"><div class="card-title">'+title+'</div><div class="card-body"><div class="donut-wrap"><div class="donut-canvas-wrap"><canvas id="'+cid+'"></canvas></div><div class="donut-legend">'+
-    data.map((d,i) => '<div class="legend-row"><span class="legend-dot" style="background:'+PALETTE[i%PALETTE.length]+'"></span><span class="legend-label">'+d.label+'</span><span class="legend-val">'+d.value+'%</span></div>').join('')+
-    '</div></div></div><div class="card-sources"><strong>Sources:</strong><br>&#8226; Yahoo Finance via Cloudflare Worker &#8226; Firebase Firestore</div></div>';
-  const ctx = document.getElementById(cid).getContext('2d');
-  if(donutCharts[id]) donutCharts[id].destroy();
-  donutCharts[id] = new Chart(ctx, {
-    type:'doughnut',
-    data:{ labels:data.map(d=>d.label), datasets:[{data:data.map(d=>d.value), backgroundColor:data.map((_,i)=>PALETTE[i%PALETTE.length]), borderWidth:2, borderColor:C.bg}] },
-    options:{ responsive:true, maintainAspectRatio:false, cutout:'62%',
-      plugins:{ legend:{display:false}, tooltip:{backgroundColor:C.bg,titleColor:C.text,bodyColor:C.text,borderColor:C.border,borderWidth:1,titleFont:{family:'Arial',size:12,weight:'600'},bodyFont:{family:'Arial',size:12},padding:10,callbacks:{label:c=>' '+c.label+': '+c.parsed+'%'}} } }
+// ── Morningstar Style Box ──
+function renderMorningstarBox(holdings) {
+  const el = document.getElementById('mstar-card');
+  if (!el) return;
+  // Compute weighted average position
+  // X-axis: Value(0) - Blend(1) - Growth(2) based on sector tilt
+  // Y-axis: Large(0) - Mid(1) - Small(2) based on mktCap
+  const tv = holdings.reduce((s,h) => s + (h.currentPrice||0)*h.quantity, 0);
+  if (tv === 0) { el.innerHTML = ''; return; }
+  let xSum=0, ySum=0;
+  const growthSectors = new Set(["Technology","Consumer Discretionary","Communication Services"]);
+  const valueSectors = new Set(["Financials","Energy","Utilities","Consumer Staples","Real Estate"]);
+  const largeCats = new Set(["Mega Cap","Large Cap","Large Cap Growth","Large Cap Value","Large Cap Blend"]);
+  const midCats = new Set(["Mid Cap","Mid Cap Growth","Mid Cap Value","Mid Cap Blend"]);
+  const smallCats = new Set(["Small Cap","Small Cap Growth","Small Cap Value","Small Cap Blend","Micro Cap"]);
+
+  holdings.forEach(h => {
+    const w = tv > 0 ? ((h.currentPrice||0)*h.quantity)/tv : 0;
+    // X: 0=value, 1=blend, 2=growth
+    let x = 1;
+    if (growthSectors.has(h.sector)) x = 2;
+    else if (valueSectors.has(h.sector)) x = 0;
+    // Y: 0=large, 1=mid, 2=small
+    let y = 0;
+    const cat = h.mktCapCategory || '';
+    if (largeCats.has(cat)) y = 0;
+    else if (midCats.has(cat)) y = 1;
+    else if (smallCats.has(cat)) y = 2;
+    else if (cat === 'N/A' || cat === 'ETF') y = 0; // default ETFs to large
+    xSum += x * w;
+    ySum += y * w;
   });
+
+  // Position as % within 3x3 grid (0-100%)
+  const xPct = (xSum / 2) * 100; // 0=left, 100=right
+  const yPct = (ySum / 2) * 100; // 0=top, 100=bottom
+  // Convert to pixel position within 240x240 grid
+  const dotLeft = Math.max(9, Math.min(231, (xPct/100)*240));
+  const dotTop = Math.max(9, Math.min(231, (yPct/100)*240));
+
+  el.innerHTML = '<div class="card"><div class="card-title">Morningstar Style Box</div><div class="card-body">'+
+    '<div class="mstar-labels-top"><span>Value</span><span>Blend</span><span>Growth</span></div>'+
+    '<div class="mstar-container">'+
+      '<div class="mstar-labels-left"><span>Large</span><span>Mid</span><span>Small</span></div>'+
+      '<div class="mstar-grid">'+
+        '<div class="mstar-cell">Large<br>Value</div><div class="mstar-cell">Large<br>Blend</div><div class="mstar-cell">Large<br>Growth</div>'+
+        '<div class="mstar-cell">Mid<br>Value</div><div class="mstar-cell">Mid<br>Blend</div><div class="mstar-cell">Mid<br>Growth</div>'+
+        '<div class="mstar-cell">Small<br>Value</div><div class="mstar-cell">Small<br>Blend</div><div class="mstar-cell">Small<br>Growth</div>'+
+        '<div class="mstar-dot" style="left:'+dotLeft+'px;top:'+dotTop+'px;" title="Your Portfolio"></div>'+
+      '</div>'+
+    '</div>'+
+    '<div style="text-align:center;margin-top:12px;font-size:11px;color:'+C.textSec+';">Your portfolio weighted position</div>'+
+  '</div><div class="card-sources"><strong>Sources:</strong><br>&#8226; Perry Asset Management — Morningstar-style classification based on holdings sector &amp; market cap</div></div>';
 }
 
-// ── Chart.js defaults ──
-Chart.defaults.font.family = 'Arial, Helvetica, sans-serif';
-Chart.defaults.color = C.textSec;
+// ── Donuts ──
+function renderDonut(id,title,data){const el=document.getElementById(id);if(!el)return;const cid=id+'-c';el.innerHTML='<div class="card"><div class="card-title">'+title+'</div><div class="card-body"><div class="donut-wrap"><div class="donut-canvas-wrap"><canvas id="'+cid+'"></canvas></div><div class="donut-legend">'+data.map((d,i)=>'<div class="legend-row"><span class="legend-dot" style="background:'+PALETTE[i%PALETTE.length]+'"></span><span class="legend-label">'+d.label+'</span><span class="legend-val">'+d.value+'%</span></div>').join('')+'</div></div></div><div class="card-sources"><strong>Sources:</strong><br>&#8226; Yahoo Finance &#8226; Firebase Firestore</div></div>';const ctx=document.getElementById(cid).getContext('2d');if(donutCharts[id])donutCharts[id].destroy();donutCharts[id]=new Chart(ctx,{type:'doughnut',data:{labels:data.map(d=>d.label),datasets:[{data:data.map(d=>d.value),backgroundColor:data.map((_,i)=>PALETTE[i%PALETTE.length]),borderWidth:2,borderColor:C.bg}]},options:{responsive:true,maintainAspectRatio:false,cutout:'62%',plugins:{legend:{display:false},tooltip:{...chartTooltip,callbacks:{label:c=>' '+c.label+': '+c.parsed+'%'}}}}});}
+
+// ── Research ──
+let researchChart=null;
+document.getElementById('researchType').addEventListener('change',function(){document.getElementById('rangeGroup').style.display=this.value==='chart'?'':'none';});
+window.runResearch=async function(){
+  const ticker=document.getElementById('researchTicker').value.trim().toUpperCase();const type=document.getElementById('researchType').value;
+  if(!ticker&&type!=='search'){alert('Enter a ticker.');return;}
+  document.getElementById('researchRawCard').style.display='';document.getElementById('researchOutput').textContent='Fetching...';document.getElementById('researchChartCard').style.display='none';document.getElementById('researchResults').innerHTML='';
+  try{
+    if(type==='quote'){const d=await fetchQuote(ticker);const chg=d.change||0,chgPct=d.changePercent||0,cc=chg>=0?C.success:C.danger;document.getElementById('researchResults').innerHTML='<div class="metrics-row" style="margin-bottom:20px;">'+mc(d.symbol,fmt(d.price),fmtPct(chgPct)+' ('+fmt(chg)+')',cc)+mc('Prev Close',fmt(d.previousClose),'','#5A6A7A')+mc('Day Range',(d.intradayLow?fmt(d.intradayLow):'—')+' — '+(d.intradayHigh?fmt(d.intradayHigh):'—'),'','#5A6A7A')+mc('Volume',d.volume?Number(d.volume).toLocaleString():'—','','#5A6A7A')+'</div>';document.getElementById('researchOutput').textContent=JSON.stringify(d,null,2);}
+    else if(type==='chart'){const range=document.getElementById('researchRange').value;const d=await fetchChart(ticker,range,'1d');const pts=(d.points||[]).filter(p=>p.close!==null);document.getElementById('researchChartCard').style.display='';document.getElementById('researchChartTitle').textContent=ticker+' Price ('+range+')';const ctx=document.getElementById('researchChart').getContext('2d');if(researchChart)researchChart.destroy();researchChart=new Chart(ctx,{type:'line',data:{labels:pts.map(p=>p.date.slice(0,10)),datasets:[{label:ticker,data:pts.map(p=>p.close),borderColor:C.navy,backgroundColor:'rgba(0,60,113,.06)',borderWidth:2.5,pointRadius:0,pointHoverRadius:5,pointHoverBackgroundColor:C.navy,fill:true,tension:.3}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{...chartTooltip,callbacks:{label:c=>' '+fmt(c.parsed.y)}}},scales:{x:{grid:chartGrid,ticks:{...chartTicks,maxTicksLimit:12},border:{display:false}},y:{grid:chartGrid,ticks:{...chartTicks,callback:v=>'$'+v.toFixed(2)},border:{display:false}}}}});document.getElementById('researchOutput').textContent=pts.length+' points.\n'+JSON.stringify(d.points?.slice(0,3),null,2)+'\n...';}
+    else if(type==='search'){const d=await fetchSearch(ticker||document.getElementById('researchTicker').value.trim());let html='<div class="card"><div class="card-title">Search: "'+ticker+'"</div><div class="card-body"><table><thead><tr><th>Symbol</th><th>Name</th><th>Type</th><th>Exchange</th></tr></thead><tbody>';(d.results||[]).forEach(r=>{html+='<tr><td style="font-weight:700;color:'+C.navy+';">'+r.symbol+'</td><td>'+r.name+'</td><td>'+r.type+'</td><td>'+r.exchange+'</td></tr>';});html+='</tbody></table></div><div class="card-sources"><strong>Sources:</strong><br>&#8226; Yahoo Finance</div></div>';document.getElementById('researchResults').innerHTML=html;document.getElementById('researchOutput').textContent=JSON.stringify(d,null,2);}
+  }catch(e){document.getElementById('researchOutput').textContent='Error: '+e.message;}
+};
 </script>
 </body>
 </html>
