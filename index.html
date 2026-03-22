@@ -1,345 +1,723 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Perry Asset Management</title>
-    <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body {
-            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
-            background: #0a0f1c;
-            color: #e2e8f0;
-            min-height: 100vh;
-        }
-        .header {
-            background: linear-gradient(135deg, #1a1f3a 0%, #0d1117 100%);
-            border-bottom: 1px solid #2d3748;
-            padding: 20px 32px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        .header h1 {
-            font-size: 1.5rem;
-            font-weight: 600;
-            background: linear-gradient(135deg, #60a5fa, #a78bfa);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-        }
-        .auth-section { display: flex; gap: 12px; align-items: center; }
-        .btn {
-            padding: 8px 20px;
-            border: none;
-            border-radius: 6px;
-            cursor: pointer;
-            font-size: 0.875rem;
-            font-weight: 500;
-            transition: all 0.2s;
-        }
-        .btn-primary {
-            background: #3b82f6;
-            color: white;
-        }
-        .btn-primary:hover { background: #2563eb; }
-        .btn-outline {
-            background: transparent;
-            border: 1px solid #4b5563;
-            color: #9ca3af;
-        }
-        .btn-outline:hover {
-            border-color: #60a5fa;
-            color: #60a5fa;
-        }
-        .btn-research {
-            background: linear-gradient(135deg, #10b981, #059669);
-            color: white;
-            padding: 10px 24px;
-            font-size: 1rem;
-        }
-        .btn-research:hover { opacity: 0.9; }
-        .main-content {
-            max-width: 1200px;
-            margin: 40px auto;
-            padding: 0 32px;
-        }
-        .status-bar {
-            background: #1a1f3a;
-            border: 1px solid #2d3748;
-            border-radius: 8px;
-            padding: 16px 24px;
-            margin-bottom: 24px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        .status-dot {
-            width: 8px; height: 8px;
-            border-radius: 50%;
-            display: inline-block;
-            margin-right: 8px;
-        }
-        .status-dot.green { background: #10b981; }
-        .status-dot.red { background: #ef4444; }
-        .card-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
-            gap: 24px;
-            margin-top: 24px;
-        }
-        .card {
-            background: #1a1f3a;
-            border: 1px solid #2d3748;
-            border-radius: 12px;
-            padding: 24px;
-        }
-        .card h3 {
-            font-size: 1.1rem;
-            margin-bottom: 16px;
-            color: #94a3b8;
-        }
-        #research-output {
-            background: #0d1117;
-            border: 1px solid #2d3748;
-            border-radius: 8px;
-            padding: 16px;
-            min-height: 120px;
-            font-family: 'Fira Code', monospace;
-            font-size: 0.85rem;
-            color: #a5f3fc;
-            white-space: pre-wrap;
-            overflow-y: auto;
-            max-height: 400px;
-        }
-        #user-data-output {
-            background: #0d1117;
-            border: 1px solid #2d3748;
-            border-radius: 8px;
-            padding: 16px;
-            min-height: 80px;
-            font-size: 0.9rem;
-        }
-        .hidden { display: none; }
-        .user-email { color: #60a5fa; font-size: 0.875rem; }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Perry Asset Management</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+:root{--navy:#003C71;--blue:#5B9BD5;--blue-light:#A8C8E8;--bg:#FFFFFF;--panel:#F4F6F9;--border:#D0D7E0;--text:#000000;--text-on-dark:#FFFFFF;--text-sec:#5A6A7A;--success:#2E7D52;--warning:#8B6914;--danger:#8B2A2A;--highlight-gray:#C8D0D8;--radius:6px;--shadow:0 2px 8px rgba(0,0,0,0.06);}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+html,body{font-family:Arial,Helvetica,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;font-size:13px;line-height:1.5;}
+
+/* ═══ TOPBAR ═══ */
+.topbar{background:var(--navy);display:flex;align-items:center;justify-content:space-between;padding:0 28px;height:54px;position:sticky;top:0;z-index:100;}
+.logo{color:var(--text-on-dark);font-size:16px;font-weight:700;letter-spacing:.3px;display:flex;align-items:center;gap:10px;}
+.logo-icon{width:28px;height:28px;background:var(--blue);border-radius:4px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:15px;color:var(--text-on-dark);}
+.topbar-right{display:flex;align-items:center;gap:16px;}
+.user-badge{color:var(--blue-light);font-size:12px;font-weight:500;}
+.nav{display:flex;height:100%;align-items:stretch;}
+.nav-group{position:relative;height:100%;display:flex;align-items:stretch;}
+.nav-parent{color:var(--text-on-dark);font-size:13px;font-weight:600;padding:0 22px;display:flex;align-items:center;gap:6px;cursor:pointer;border-bottom:3px solid transparent;transition:all .2s;white-space:nowrap;user-select:none;height:100%;}
+.nav-parent:hover{background:rgba(91,155,213,.12);}
+.nav-parent.active{border-bottom-color:var(--blue);background:rgba(91,155,213,.12);}
+.nav-parent .arrow{font-size:8px;opacity:.7;transition:transform .2s;}
+.nav-group:hover .arrow{transform:rotate(180deg);}
+.nav-dropdown{display:none;position:absolute;top:100%;left:0;min-width:200px;background:var(--navy);border-radius:0 0 var(--radius) var(--radius);box-shadow:0 8px 24px rgba(0,0,0,.25);overflow:hidden;z-index:200;border-top:1px solid rgba(91,155,213,.25);}
+.nav-group:hover .nav-dropdown{display:block;}
+.nav-child{color:var(--text-on-dark);font-size:12.5px;font-weight:500;padding:12px 22px;display:block;cursor:pointer;transition:all .15s;white-space:nowrap;}
+.nav-child:hover{background:rgba(91,155,213,.2);}
+.nav-child.active{background:rgba(91,155,213,.15);font-weight:700;}
+
+/* ═══ PAGES ═══ */
+.page{display:none;}.page.active{display:block;}
+.content-wrap{max-width:1280px;margin:0 auto;padding:24px 28px 56px;}
+
+/* ═══ CARDS ═══ */
+.card{background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);margin-bottom:20px;overflow:hidden;}
+.card-title{background:var(--navy);color:var(--text-on-dark);font-size:14px;font-weight:700;padding:11px 18px;}
+.card-body{padding:20px;}
+.card-sources{background:var(--panel);border-top:1px solid var(--border);padding:8px 18px;font-size:11px;color:var(--text-sec);line-height:1.7;}
+.card-sources strong{color:var(--navy);font-weight:600;}
+
+/* ═══ METRICS ═══ */
+.metrics-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;margin-bottom:22px;}
+.metric-card{background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);padding:18px 20px;box-shadow:var(--shadow);}
+.metric-label{font-size:11px;font-weight:600;color:var(--text-sec);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;}
+.metric-value{font-size:24px;font-weight:700;color:var(--navy);line-height:1.2;}
+.metric-sub{font-size:12px;font-weight:600;margin-top:4px;}
+
+/* ═══ GRIDS ═══ */
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:20px;}
+.grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:20px;}
+@media(max-width:900px){.grid-2,.grid-3{grid-template-columns:1fr;}}
+
+/* ═══ DONUTS ═══ */
+.donut-wrap{display:flex;align-items:center;gap:20px;flex-wrap:wrap;}
+.donut-canvas-wrap{width:180px;height:180px;flex-shrink:0;}
+.donut-legend{flex:1;min-width:150px;}
+.legend-row{display:flex;align-items:center;gap:8px;margin-bottom:5px;font-size:12px;}
+.legend-dot{width:10px;height:10px;border-radius:2px;flex-shrink:0;}
+.legend-label{flex:1;color:var(--text);}.legend-val{font-weight:600;color:var(--text);}
+
+/* ═══ BUTTONS ═══ */
+.btn{background:var(--blue);color:var(--text-on-dark);font-family:Arial,Helvetica,sans-serif;font-size:12px;font-weight:600;border:none;border-radius:4px;padding:8px 16px;cursor:pointer;transition:all .15s;}
+.btn:hover{background:#4A87BF;}.btn:disabled{background:var(--blue-light);cursor:default;}
+.btn-sm{padding:5px 12px;font-size:11px;}
+.btn-danger{background:var(--danger);}.btn-danger:hover{background:#6e2222;}
+.btn-outline{background:var(--panel);color:var(--text-sec);border:1px solid var(--border);border-radius:4px;padding:6px 14px;font-size:12px;font-weight:600;cursor:pointer;font-family:Arial,Helvetica,sans-serif;transition:all .15s;}
+.btn-outline:hover{background:var(--blue-light);color:var(--text-on-dark);border-color:var(--blue-light);}
+.btn-outline.active{background:var(--blue);color:var(--text-on-dark);border-color:var(--blue);}
+.btn-group{display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap;}
+
+/* ═══ TABLES ═══ */
+table{width:100%;border-collapse:collapse;font-family:Arial,Helvetica,sans-serif;}
+th{background:var(--navy);color:var(--text-on-dark);font-size:11.5px;font-weight:600;padding:10px 12px;text-align:left;white-space:nowrap;}
+td{font-size:12px;color:var(--text);padding:9px 12px;border-bottom:1px solid var(--border);}
+tr:nth-child(even) td{background:var(--panel);}
+tr:hover td{background:#EAF1F9;}
+.table-wrap{overflow-x:auto;}
+
+/* ═══ FORMS ═══ */
+.form-row{display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;margin-bottom:16px;}
+.form-group{display:flex;flex-direction:column;gap:4px;}
+.form-group label{font-size:11px;font-weight:600;color:var(--text-sec);text-transform:uppercase;letter-spacing:.4px;}
+.form-group input,.form-group select{font-family:Arial,Helvetica,sans-serif;font-size:13px;padding:8px 12px;border:1px solid var(--border);border-radius:4px;background:var(--bg);color:var(--text);outline:none;transition:border .15s;}
+.form-group input:focus,.form-group select:focus{border-color:var(--blue);}
+.form-group input::placeholder{color:var(--highlight-gray);}
+
+/* ═══ HERO ═══ */
+.hero{background:var(--navy);border-radius:var(--radius);padding:48px 40px;margin-bottom:28px;color:var(--text-on-dark);}
+.hero h1{font-size:28px;font-weight:700;margin-bottom:10px;}
+.hero p{font-size:14px;color:var(--blue-light);max-width:640px;line-height:1.6;}
+
+/* ═══ FEATURES ═══ */
+.feature-card{background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);padding:22px 24px;box-shadow:var(--shadow);cursor:pointer;transition:all .2s;}
+.feature-card:hover{border-color:var(--blue);box-shadow:0 4px 16px rgba(0,60,113,.1);transform:translateY(-2px);}
+.feature-card.disabled{cursor:default;opacity:.7;}
+.feature-card.disabled:hover{border-color:var(--border);box-shadow:var(--shadow);transform:none;}
+.feature-tag{display:inline-block;background:var(--navy);color:var(--text-on-dark);font-size:10px;font-weight:700;padding:3px 8px;border-radius:3px;margin-bottom:10px;text-transform:uppercase;letter-spacing:.5px;}
+.feature-tag.soon{background:var(--highlight-gray);color:var(--text-sec);}
+.feature-title{font-size:15px;font-weight:700;color:var(--navy);margin-bottom:6px;}
+.feature-desc{font-size:12px;color:var(--text-sec);line-height:1.5;}
+
+/* ═══ ABOUT ═══ */
+.about-section{margin-bottom:28px;}
+.about-section h3{font-size:15px;font-weight:700;color:var(--navy);margin-bottom:8px;padding-bottom:6px;border-bottom:2px solid var(--blue);display:inline-block;}
+.about-section p{font-size:13px;color:var(--text);line-height:1.65;max-width:780px;}
+.product-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px;margin-top:12px;}
+.product-item{background:var(--panel);border:1px solid var(--border);border-radius:var(--radius);padding:18px 20px;}
+.product-item h4{font-size:13px;font-weight:700;color:var(--navy);margin-bottom:4px;}
+.product-item p{font-size:12px;color:var(--text-sec);line-height:1.5;}
+
+/* ═══ RESEARCH OUTPUT ═══ */
+.research-output{background:var(--panel);border:1px solid var(--border);border-radius:var(--radius);padding:16px 20px;min-height:100px;font-size:12px;color:var(--text);white-space:pre-wrap;overflow-y:auto;max-height:500px;line-height:1.6;}
+
+/* ═══ CHART ═══ */
+.chart-wrap{height:320px;position:relative;}
+
+/* ═══ STATUS ═══ */
+.spinner{display:inline-block;width:16px;height:16px;border:2px solid var(--blue-light);border-top-color:var(--blue);border-radius:50%;animation:spin .6s linear infinite;vertical-align:middle;margin-right:6px;}
+@keyframes spin{to{transform:rotate(360deg);}}
+.status-bar{padding:10px 16px;border-radius:4px;font-size:12px;margin-bottom:16px;display:none;}
+.status-bar.info{display:block;background:#e8f0fa;color:var(--navy);border:1px solid var(--blue-light);}
+.status-bar.error{display:block;background:#f9e8e8;color:var(--danger);border:1px solid #d4a0a0;}
+.status-bar.success{display:block;background:#e8f5ee;color:var(--success);border:1px solid #a0d4b4;}
+
+/* ═══ EMPTY STATE ═══ */
+.empty-state{text-align:center;padding:48px 20px;color:var(--text-sec);}
+.empty-state-icon{font-size:40px;margin-bottom:12px;opacity:.4;}
+.empty-state h3{font-size:16px;font-weight:700;color:var(--navy);margin-bottom:6px;}
+.empty-state p{font-size:13px;max-width:400px;margin:0 auto 16px;}
+
+/* ═══ AUTH GATE ═══ */
+.auth-gate{background:var(--panel);border:1px solid var(--border);border-radius:var(--radius);padding:40px 32px;text-align:center;margin-bottom:24px;}
+.auth-gate h3{font-size:16px;font-weight:700;color:var(--navy);margin-bottom:8px;}
+.auth-gate p{font-size:13px;color:var(--text-sec);margin-bottom:16px;max-width:480px;margin-left:auto;margin-right:auto;line-height:1.5;}
+
+/* ═══ HOLDING ITEM ═══ */
+.holding-row{display:flex;align-items:center;gap:16px;padding:12px 0;border-bottom:1px solid var(--border);}
+.holding-row:last-child{border-bottom:none;}
+.holding-ticker{font-size:14px;font-weight:700;color:var(--navy);min-width:70px;}
+.holding-name{font-size:12px;color:var(--text-sec);flex:1;min-width:100px;}
+.holding-detail{font-size:12px;color:var(--text);min-width:80px;text-align:right;}
+
+/* ═══ FOOTER ═══ */
+.footer{background:var(--panel);border-top:1px solid var(--border);padding:16px 28px;font-size:11px;color:var(--text-sec);}
+.footer-inner{max-width:1280px;margin:0 auto;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;}
+.connection-status{display:flex;gap:20px;align-items:center;}
+.conn-item{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--text-sec);}
+.conn-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;}
+.conn-dot.green{background:var(--success);}.conn-dot.red{background:var(--danger);}
+</style>
 </head>
 <body>
 
-    <!-- HEADER -->
-    <div class="header">
-        <h1>Perry Asset Management</h1>
-        <div class="auth-section">
-            <span id="user-display" class="user-email"></span>
-            <button id="login-btn" class="btn btn-primary" onclick="handleLogin()">Sign In</button>
-            <button id="logout-btn" class="btn btn-outline hidden" onclick="handleLogout()">Sign Out</button>
-        </div>
+<!-- ═══════════ TOPBAR ═══════════ -->
+<div class="topbar">
+  <div class="logo"><div class="logo-icon">P</div>Perry Asset Management</div>
+  <div class="nav">
+    <div class="nav-group">
+      <div class="nav-parent active" data-page="home" onclick="navigateTo('home')">Home <span class="arrow">&#9660;</span></div>
+      <div class="nav-dropdown"><div class="nav-child" data-page="about" onclick="navigateTo('about')">About Us</div></div>
     </div>
-
-    <!-- MAIN -->
-    <div class="main-content">
-
-        <!-- STATUS BAR -->
-        <div class="status-bar">
-            <div>
-                <span id="firebase-status-dot" class="status-dot red"></span>
-                <span id="firebase-status-text">Firebase: Not Connected</span>
-            </div>
-            <div>
-                <span id="worker-status-dot" class="status-dot red"></span>
-                <span id="worker-status-text">Data Proxy: Not Connected</span>
-            </div>
-        </div>
-
-        <!-- CARDS -->
-        <div class="card-grid">
-
-            <!-- RESEARCH CARD -->
-            <div class="card">
-                <h3>📊 Market Research</h3>
-                <div style="display: flex; gap: 12px; margin-bottom: 16px;">
-                    <input type="text" id="ticker-input" placeholder="Enter ticker (e.g. AAPL)"
-                        style="flex:1; padding: 10px; background: #0d1117; border: 1px solid #4b5563;
-                        border-radius: 6px; color: #e2e8f0; font-size: 0.95rem;">
-                    <button class="btn btn-research" onclick="handleResearch()">Research</button>
-                </div>
-                <div id="research-output">Waiting for research query...</div>
-            </div>
-
-            <!-- USER DATA CARD -->
-            <div class="card">
-                <h3>💾 Saved Data</h3>
-                <div style="margin-bottom: 16px; display: flex; gap: 12px;">
-                    <input type="text" id="note-input" placeholder="Add a research note..."
-                        style="flex:1; padding: 10px; background: #0d1117; border: 1px solid #4b5563;
-                        border-radius: 6px; color: #e2e8f0; font-size: 0.95rem;">
-                    <button class="btn btn-primary" onclick="saveNote()">Save</button>
-                </div>
-                <div id="user-data-output">Sign in to view saved data.</div>
-            </div>
-
-        </div>
+    <div class="nav-group">
+      <div class="nav-parent" data-page="portfolio" onclick="navigateTo('portfolio')">Portfolio <span class="arrow">&#9660;</span></div>
+      <div class="nav-dropdown">
+        <div class="nav-child" data-page="holdings" onclick="navigateTo('holdings')">Manage Holdings</div>
+      </div>
     </div>
+    <div class="nav-group">
+      <div class="nav-parent" data-page="research" onclick="navigateTo('research')">Research</div>
+    </div>
+  </div>
+  <div class="topbar-right">
+    <span class="user-badge" id="userBadge"></span>
+    <button class="btn btn-sm" id="loginBtn" onclick="handleLogin()">Sign In</button>
+    <button class="btn btn-sm btn-danger" id="logoutBtn" onclick="handleLogout()" style="display:none;">Sign Out</button>
+  </div>
+</div>
 
-    <!-- ============================================================ -->
-    <!-- FIREBASE SDK (loaded from CDN) -->
-    <!-- ============================================================ -->
-    <script type="module">
+<!-- ═══════════ HOME ═══════════ -->
+<div class="page active" id="page-home">
+<div class="content-wrap">
+  <div class="hero"><h1>Institutional-Grade Investment Intelligence</h1><p>Perry Asset Management delivers macro-driven portfolio analytics, quantitative modeling, and real-time regime analysis to support disciplined, data-grounded investment decisions.</p></div>
+  <div style="margin-bottom:8px;font-size:12px;font-weight:600;color:var(--text-sec);text-transform:uppercase;letter-spacing:.5px;">Platform Capabilities</div>
+  <div class="grid-3" id="featureGrid"></div>
+</div></div>
 
-        // -------------------------------------------------------
-        // STEP A: Import Firebase modules (CDN versions)
-        // -------------------------------------------------------
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-        import { getAuth, signInWithPopup, signOut, GoogleAuthProvider, onAuthStateChanged }
-            from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-        import { getFirestore, collection, addDoc, getDocs, query, where, orderBy, serverTimestamp }
-            from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+<!-- ═══════════ ABOUT ═══════════ -->
+<div class="page" id="page-about">
+<div class="content-wrap">
+  <div class="hero" style="padding:36px 40px;"><h1>About Perry Asset Management</h1><p>A disciplined, research-driven approach to portfolio management — built on macro intelligence, quantitative rigor, and institutional-grade analytics.</p></div>
+  <div class="about-section"><h3>Our Approach</h3><p>Perry Asset Management combines top-down macro regime analysis with bottom-up fundamental and quantitative research. Our investment process begins with a proprietary six-pillar macro framework covering Real Economic Activity, Labor Markets, Inflation, Monetary Policy, Fiscal Policy, and International Dynamics.</p></div>
+  <div class="about-section"><h3>Products &amp; Services</h3>
+    <div class="product-grid">
+      <div class="product-item"><h4>Macro Regime Analysis</h4><p>Real-time economic scorecard and sector rotation signals built on a CFA-based regime classification framework.</p></div>
+      <div class="product-item"><h4>Portfolio Construction</h4><p>Optimized allocation across equities, fixed income, alternatives, and cash — calibrated to current market conditions.</p></div>
+      <div class="product-item"><h4>Risk Analytics</h4><p>Value at Risk, Monte-Carlo stress testing, tracking error analysis, and scenario modeling across VIX and macro regimes.</p></div>
+      <div class="product-item"><h4>Quantitative Research</h4><p>ML models including regression, random forest, gradient boosting, and time-series forecasting for alpha generation.</p></div>
+      <div class="product-item"><h4>Thematic Research</h4><p>Deep dives into emerging investment themes — AI, crypto, energy transition, space — that adapt as opportunities evolve.</p></div>
+      <div class="product-item"><h4>Fundamental &amp; Technical Analysis</h4><p>DCF valuation, ratio analysis, MACD, RSI, momentum indicators, and sector-level profitability and leverage scoring.</p></div>
+    </div></div>
+</div></div>
 
-        // -------------------------------------------------------
-        // STEP B: Your Firebase config
-        // -------------------------------------------------------
-        const firebaseConfig = {
-            apiKey: "AIzaSyA4_lv0YrI3haIhfKRVIRqgPAYBWbo7hfI",
-            authDomain: "perry-asset-management-w-aa049.firebaseapp.com",
-            projectId: "perry-asset-management-w-aa049",
-            storageBucket: "perry-asset-management-w-aa049.firebasestorage.app",
-            messagingSenderId: "346583395966",
-            appId: "1:346583395966:web:63ce7775adf5f3d876b22f",
-            measurementId: "G-EJXQWCKNBD"
-        };
+<!-- ═══════════ PORTFOLIO OVERVIEW ═══════════ -->
+<div class="page" id="page-portfolio">
+<div class="content-wrap">
+  <div id="portfolioAuth" class="auth-gate"><h3>Sign In to View Portfolio</h3><p>Connect with your Google account to access your portfolio holdings and analytics.</p><button class="btn" onclick="handleLogin()">Sign In with Google</button></div>
+  <div id="portfolioEmpty" style="display:none;"><div class="empty-state"><div class="empty-state-icon">&#128202;</div><h3>No Holdings Yet</h3><p>Add your first holding to start building your portfolio.</p><button class="btn" onclick="navigateTo('holdings')">Add Holdings</button></div></div>
+  <div id="portfolioLive" style="display:none;">
+    <div class="metrics-row" id="metricsRow"></div>
+    <div class="card"><div class="card-title">Portfolio Holdings</div><div class="card-body"><div class="table-wrap" id="portfolioTableWrap"></div></div><div class="card-sources"><strong>Sources:</strong><br>&#8226; Yahoo Finance via Cloudflare Worker proxy &#8226; Firebase Firestore (user holdings)</div></div>
+    <div class="grid-2"><div id="donut-mktcap"></div><div id="donut-weight"></div></div>
+  </div>
+</div></div>
 
-        // -------------------------------------------------------
-        // STEP C: Initialize Firebase
-        // -------------------------------------------------------
-        const app  = initializeApp(firebaseConfig);
-        const auth = getAuth(app);
-        const db   = getFirestore(app);
+<!-- ═══════════ MANAGE HOLDINGS ═══════════ -->
+<div class="page" id="page-holdings">
+<div class="content-wrap">
+  <div class="hero" style="padding:32px 40px;"><h1>Manage Holdings</h1><p>Add, view, and remove portfolio holdings. Market data is fetched live from Yahoo Finance via Cloudflare Worker. All holdings are saved to your Firebase account.</p></div>
+  <div id="holdingsAuth" class="auth-gate"><h3>Sign In to Manage Holdings</h3><p>Connect with your Google account to create and manage your portfolio.</p><button class="btn" onclick="handleLogin()">Sign In with Google</button></div>
+  <div id="holdingsPanel" style="display:none;">
+    <div class="card"><div class="card-title">Add New Holding</div><div class="card-body">
+      <div id="addStatus" class="status-bar"></div>
+      <div class="form-row">
+        <div class="form-group" style="min-width:120px;"><label>Ticker Symbol</label><input type="text" id="inputTicker" placeholder="e.g. AAPL" style="text-transform:uppercase;"></div>
+        <div class="form-group"><label>Date Purchased</label><input type="date" id="inputDate"></div>
+        <div class="form-group" style="min-width:100px;"><label>Shares</label><input type="number" id="inputQty" placeholder="e.g. 50" min="0.0001" step="any"></div>
+        <div class="form-group" style="min-width:110px;"><label>Cost Per Share</label><input type="number" id="inputCost" placeholder="e.g. 150.00" min="0" step="0.01"></div>
+        <button class="btn" id="addBtn" onclick="addHolding()">Add Holding</button>
+      </div>
+    </div></div>
+    <div class="card"><div class="card-title">Your Holdings <span style="font-weight:400;font-size:12px;opacity:.7;" id="holdingsCount"></span></div><div class="card-body">
+      <div id="holdingsStatus" class="status-bar"></div>
+      <div class="table-wrap" id="holdingsTableWrap"></div>
+      <div style="margin-top:12px;"><button class="btn" onclick="refreshAllPrices()" id="refreshBtn">Refresh All Prices</button></div>
+    </div><div class="card-sources"><strong>Sources:</strong><br>&#8226; Yahoo Finance via Cloudflare Worker proxy &#8226; Firebase Firestore (user holdings)</div></div>
+  </div>
+</div></div>
 
-        // Update status indicator
-        document.getElementById("firebase-status-dot").classList.replace("red", "green");
-        document.getElementById("firebase-status-text").textContent = "Firebase: Connected";
+<!-- ═══════════ RESEARCH ═══════════ -->
+<div class="page" id="page-research">
+<div class="content-wrap">
+  <div class="hero" style="padding:32px 40px;"><h1>Market Research</h1><p>Look up real-time quotes, historical charts, and ticker information powered by Yahoo Finance data through the Cloudflare Worker proxy.</p></div>
+  <div class="card"><div class="card-title">Ticker Lookup</div><div class="card-body">
+    <div class="form-row">
+      <div class="form-group" style="min-width:140px;"><label>Ticker Symbol</label><input type="text" id="researchTicker" placeholder="e.g. AAPL" style="text-transform:uppercase;"></div>
+      <div class="form-group"><label>Data Type</label>
+        <select id="researchType"><option value="quote">Real-Time Quote</option><option value="chart">Historical Chart</option><option value="search">Ticker Search</option></select>
+      </div>
+      <div class="form-group" id="rangeGroup"><label>Range</label>
+        <select id="researchRange"><option value="1mo">1 Month</option><option value="3mo">3 Months</option><option value="6mo">6 Months</option><option value="1y" selected>1 Year</option><option value="2y">2 Years</option><option value="5y">5 Years</option></select>
+      </div>
+      <button class="btn" onclick="runResearch()">Fetch Data</button>
+    </div>
+  </div></div>
+  <div id="researchResults"></div>
+  <div class="card" id="researchChartCard" style="display:none;"><div class="card-title" id="researchChartTitle">Price Chart</div><div class="card-body"><div class="chart-wrap"><canvas id="researchChart"></canvas></div></div><div class="card-sources"><strong>Sources:</strong><br>&#8226; Yahoo Finance via Cloudflare Worker proxy</div></div>
+  <div class="card" id="researchRawCard" style="display:none;"><div class="card-title">Raw Data</div><div class="card-body"><div class="research-output" id="researchOutput"></div></div><div class="card-sources"><strong>Sources:</strong><br>&#8226; Yahoo Finance via Cloudflare Worker proxy</div></div>
+</div></div>
 
-        // -------------------------------------------------------
-        // STEP D: Authentication handlers
-        // -------------------------------------------------------
-        const provider = new GoogleAuthProvider();
+<!-- ═══════════ FOOTER ═══════════ -->
+<div class="footer">
+  <div class="footer-inner">
+    <div>&copy; 2026 Perry Asset Management. All data shown is for informational purposes only. Not investment advice.</div>
+    <div class="connection-status">
+      <div class="conn-item"><span id="firebase-status-dot" class="conn-dot red"></span><span id="firebase-status-text">Firebase: Not Connected</span></div>
+      <div class="conn-item"><span id="worker-status-dot" class="conn-dot red"></span><span id="worker-status-text">Data Proxy: Not Connected</span></div>
+    </div>
+  </div>
+</div>
 
-        window.handleLogin = async function() {
-            try {
-                await signInWithPopup(auth, provider);
-            } catch (err) {
-                console.error("Login failed:", err);
-                alert("Login failed: " + err.message);
-            }
-        };
+<!-- ═══════════ FIREBASE SDK ═══════════ -->
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getAuth, signInWithPopup, signOut, GoogleAuthProvider, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+import { getFirestore, collection, addDoc, getDocs, deleteDoc, doc, query, where, orderBy, serverTimestamp, updateDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
-        window.handleLogout = async function() {
-            await signOut(auth);
-        };
+const firebaseConfig = {
+  apiKey: "AIzaSyA4_lv0YrI3haIhfKRVIRqgPAYBWbo7hfI",
+  authDomain: "perry-asset-management-w-aa049.firebaseapp.com",
+  projectId: "perry-asset-management-w-aa049",
+  storageBucket: "perry-asset-management-w-aa049.firebasestorage.app",
+  messagingSenderId: "346583395966",
+  appId: "1:346583395966:web:63ce7775adf5f3d876b22f",
+  measurementId: "G-EJXQWCKNBD"
+};
 
-        // Listen for auth state changes
-        onAuthStateChanged(auth, (user) => {
-            if (user) {
-                document.getElementById("user-display").textContent = user.email;
-                document.getElementById("login-btn").classList.add("hidden");
-                document.getElementById("logout-btn").classList.remove("hidden");
-                loadNotes(user.uid);
-            } else {
-                document.getElementById("user-display").textContent = "";
-                document.getElementById("login-btn").classList.remove("hidden");
-                document.getElementById("logout-btn").classList.add("hidden");
-                document.getElementById("user-data-output").textContent = "Sign in to view saved data.";
-            }
-        });
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+const provider = new GoogleAuthProvider();
 
-        // -------------------------------------------------------
-        // STEP E: Firestore data operations
-        // -------------------------------------------------------
-        window.saveNote = async function() {
-            const user = auth.currentUser;
-            if (!user) { alert("Please sign in first."); return; }
+// Status: Firebase connected
+document.getElementById("firebase-status-dot").classList.replace("red","green");
+document.getElementById("firebase-status-text").textContent = "Firebase: Connected";
 
-            const noteText = document.getElementById("note-input").value.trim();
-            if (!noteText) { alert("Enter a note first."); return; }
+// ── Auth ──
+window.handleLogin = async function() {
+  try { await signInWithPopup(auth, provider); }
+  catch(e) { console.error("Login failed:", e); alert("Login failed: " + e.message); }
+};
+window.handleLogout = async function() { await signOut(auth); };
 
-            try {
-                await addDoc(collection(db, "notes"), {
-                    uid:       user.uid,
-                    text:      noteText,
-                    createdAt: serverTimestamp()
-                });
-                document.getElementById("note-input").value = "";
-                loadNotes(user.uid);
-            } catch (err) {
-                console.error("Save failed:", err);
-                alert("Save failed: " + err.message);
-            }
-        };
+onAuthStateChanged(auth, (user) => {
+  window._currentUser = user;
+  if (user) {
+    document.getElementById('userBadge').textContent = user.email;
+    document.getElementById('loginBtn').style.display = 'none';
+    document.getElementById('logoutBtn').style.display = '';
+    // Show authenticated panels
+    document.querySelectorAll('.auth-gate').forEach(el => el.style.display = 'none');
+    document.getElementById('holdingsPanel').style.display = '';
+    loadHoldings();
+  } else {
+    document.getElementById('userBadge').textContent = '';
+    document.getElementById('loginBtn').style.display = '';
+    document.getElementById('logoutBtn').style.display = 'none';
+    document.querySelectorAll('.auth-gate').forEach(el => el.style.display = '');
+    document.getElementById('holdingsPanel').style.display = 'none';
+    document.getElementById('portfolioLive').style.display = 'none';
+    document.getElementById('portfolioEmpty').style.display = 'none';
+    window._holdings = [];
+  }
+});
 
-        async function loadNotes(uid) {
-            try {
-                const q = query(
-                    collection(db, "notes"),
-                    where("uid", "==", uid),
-                    orderBy("createdAt", "desc")
-                );
-                const snapshot = await getDocs(q);
-                const output = document.getElementById("user-data-output");
+// ── Firestore: Add holding ──
+window.addHolding = async function() {
+  const user = window._currentUser;
+  if (!user) { alert("Please sign in first."); return; }
+  const ticker = document.getElementById('inputTicker').value.trim().toUpperCase();
+  const date = document.getElementById('inputDate').value;
+  const qty = parseFloat(document.getElementById('inputQty').value);
+  const cost = parseFloat(document.getElementById('inputCost').value);
+  if (!ticker) { showStatus('addStatus','Enter a ticker symbol.','error'); return; }
+  if (!date) { showStatus('addStatus','Select a purchase date.','error'); return; }
+  if (!qty || qty <= 0) { showStatus('addStatus','Enter a valid quantity.','error'); return; }
+  if (!cost || cost < 0) { showStatus('addStatus','Enter cost per share.','error'); return; }
 
-                if (snapshot.empty) {
-                    output.textContent = "No saved notes yet.";
-                    return;
-                }
+  const btn = document.getElementById('addBtn');
+  btn.disabled = true; btn.innerHTML = '<span class="spinner"></span>Adding...';
+  showStatus('addStatus','<span class="spinner"></span> Fetching quote and saving...','info');
 
-                output.innerHTML = "";
-                snapshot.forEach((doc) => {
-                    const data = doc.data();
-                    const date = data.createdAt
-                        ? new Date(data.createdAt.seconds * 1000).toLocaleString()
-                        : "just now";
-                    const div = document.createElement("div");
-                    div.style.cssText = "padding: 8px 0; border-bottom: 1px solid #2d3748;";
-                    div.innerHTML = `<span style="color:#94a3b8;font-size:0.75rem;">${date}</span>
-                                     <br/>${data.text}`;
-                    output.appendChild(div);
-                });
-            } catch (err) {
-                console.error("Load failed:", err);
-            }
+  try {
+    // Fetch current price from Cloudflare Worker
+    const quoteData = await fetchQuote(ticker);
+    await addDoc(collection(db, "holdings"), {
+      uid: user.uid,
+      ticker: ticker,
+      companyName: quoteData.name || ticker,
+      datePurchased: date,
+      quantity: qty,
+      costBasis: cost,
+      currentPrice: quoteData.price || 0,
+      previousClose: quoteData.previousClose || 0,
+      marketCap: 0,
+      lastUpdated: new Date().toISOString(),
+      createdAt: serverTimestamp()
+    });
+    showStatus('addStatus','&#10003; Added ' + ticker + ' to your portfolio.','success');
+    document.getElementById('inputTicker').value = '';
+    document.getElementById('inputDate').value = '';
+    document.getElementById('inputQty').value = '';
+    document.getElementById('inputCost').value = '';
+    await loadHoldings();
+  } catch(e) {
+    showStatus('addStatus','Error: ' + e.message,'error');
+  }
+  btn.disabled = false; btn.textContent = 'Add Holding';
+};
+
+// ── Firestore: Load holdings ──
+window.loadHoldings = async function() {
+  const user = window._currentUser;
+  if (!user) return;
+  try {
+    const q = query(collection(db, "holdings"), where("uid", "==", user.uid), orderBy("createdAt", "desc"));
+    const snapshot = await getDocs(q);
+    const holdings = [];
+    snapshot.forEach(d => { holdings.push({ id: d.id, ...d.data() }); });
+    window._holdings = holdings;
+    renderHoldingsTable(holdings);
+    document.getElementById('holdingsCount').textContent = holdings.length > 0 ? '(' + holdings.length + ' positions)' : '';
+  } catch(e) {
+    console.error("Load holdings error:", e);
+    showStatus('holdingsStatus','Error loading holdings: ' + e.message,'error');
+  }
+};
+
+// ── Firestore: Delete holding ──
+window.deleteHolding = async function(docId) {
+  if (!confirm('Remove this holding?')) return;
+  try {
+    await deleteDoc(doc(db, "holdings", docId));
+    await loadHoldings();
+  } catch(e) { alert("Delete failed: " + e.message); }
+};
+
+// ── Firestore: Update price for a holding ──
+window.updateHoldingPrice = async function(docId, price, prevClose, name) {
+  try {
+    await updateDoc(doc(db, "holdings", docId), {
+      currentPrice: price,
+      previousClose: prevClose,
+      companyName: name,
+      lastUpdated: new Date().toISOString()
+    });
+  } catch(e) { console.error("Update failed:", e); }
+};
+
+// ── Refresh all prices ──
+window.refreshAllPrices = async function() {
+  const holdings = window._holdings || [];
+  if (!holdings.length) return;
+  const btn = document.getElementById('refreshBtn');
+  btn.disabled = true; btn.innerHTML = '<span class="spinner"></span>Refreshing...';
+  showStatus('holdingsStatus','<span class="spinner"></span> Refreshing prices for ' + holdings.length + ' holdings...','info');
+  let updated = 0;
+  for (const h of holdings) {
+    try {
+      const q = await fetchQuote(h.ticker);
+      await updateHoldingPrice(h.id, q.price || h.currentPrice, q.previousClose || h.previousClose, q.name || h.companyName);
+      updated++;
+    } catch(e) { console.warn("Could not refresh " + h.ticker, e); }
+  }
+  showStatus('holdingsStatus','&#10003; Refreshed ' + updated + ' of ' + holdings.length + ' holdings.','success');
+  await loadHoldings();
+  btn.disabled = false; btn.textContent = 'Refresh All Prices';
+};
+</script>
+
+<!-- ═══════════ APP LOGIC ═══════════ -->
+<script>
+const WORKER_URL = "https://perry-finance-proxy.zachperrybusiness.workers.dev";
+const C = {navy:"#003C71",blue:"#5B9BD5",blueLight:"#A8C8E8",bg:"#FFFFFF",panel:"#F4F6F9",border:"#D0D7E0",text:"#000000",textOnDark:"#FFFFFF",textSec:"#5A6A7A",success:"#2E7D52",warning:"#8B6914",danger:"#8B2A2A",highlightGray:"#C8D0D8"};
+const PALETTE = [C.navy, C.blue, C.blueLight, C.success, C.warning, C.danger, C.highlightGray, "#6A4C93", "#3A7CA5", "#D4A373"];
+
+// ── Worker health check ──
+(async function() {
+  try {
+    const res = await fetch(WORKER_URL + "/health");
+    const data = await res.json();
+    if (data.status === "ok") {
+      document.getElementById("worker-status-dot").classList.replace("red","green");
+      document.getElementById("worker-status-text").textContent = "Data Proxy: Connected";
+    }
+  } catch(e) { console.warn("Worker health check failed:", e); }
+})();
+
+// ── Fetch from Worker ──
+async function fetchQuote(ticker) {
+  const res = await fetch(WORKER_URL + "/quote?symbol=" + encodeURIComponent(ticker));
+  const data = await res.json();
+  if (data.error) throw new Error(data.error);
+  return data;
+}
+async function fetchChart(ticker, range, interval) {
+  const res = await fetch(WORKER_URL + "/chart?symbol=" + encodeURIComponent(ticker) + "&range=" + range + "&interval=" + (interval || "1d"));
+  const data = await res.json();
+  if (data.error) throw new Error(data.error);
+  return data;
+}
+async function fetchSearch(q) {
+  const res = await fetch(WORKER_URL + "/search?q=" + encodeURIComponent(q));
+  const data = await res.json();
+  if (data.error) throw new Error(data.error);
+  return data;
+}
+// Make available to module scope
+window.fetchQuote = fetchQuote;
+
+// ── Helpers ──
+const fmt = v => "$" + Number(v).toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:2});
+const fmtInt = v => "$" + Number(v).toLocaleString("en-US",{maximumFractionDigits:0});
+const pctStr = (v,d) => (v>=0?"+":"") + v.toFixed(d||2) + "%";
+const pctColor = v => v >= 0 ? C.success : C.danger;
+function showStatus(id,msg,type){const el=document.getElementById(id);if(!el)return;el.className='status-bar '+type;el.innerHTML=msg;}
+
+// ── Nav ──
+const parentMap = {home:'home',about:'home',portfolio:'portfolio',holdings:'portfolio',research:'research'};
+function navigateTo(p) {
+  document.activeElement.blur();
+  document.querySelectorAll('.page').forEach(x=>x.classList.remove('active'));
+  document.querySelectorAll('.nav-parent,.nav-child').forEach(x=>x.classList.remove('active'));
+  document.getElementById('page-'+p).classList.add('active');
+  const pp = parentMap[p]||p;
+  const pe = document.querySelector('.nav-parent[data-page="'+pp+'"]'); if(pe) pe.classList.add('active');
+  const ce = document.querySelector('.nav-child[data-page="'+p+'"]'); if(ce) ce.classList.add('active');
+  window.scrollTo(0,0);
+  if (p === 'portfolio') renderPortfolioOverview();
+}
+
+// ── Home Features ──
+const FEATURES = [
+  {title:"Portfolio Overview",desc:"Live portfolio valuation, allocation breakdown, and performance metrics backed by Yahoo Finance data.",page:"portfolio",tag:"Active"},
+  {title:"Manage Holdings",desc:"Add and remove holdings stored in Firebase Firestore. Prices refresh from Yahoo Finance via Cloudflare Worker.",page:"holdings",tag:"Active"},
+  {title:"Market Research",desc:"Real-time quotes, historical price charts, and ticker search powered by the Cloudflare data proxy.",page:"research",tag:"Active"},
+  {title:"Macro Regime Analysis",desc:"Six-pillar macro scorecard: Real Activity, Labor, Inflation, Monetary, Fiscal, International.",page:null,tag:"Coming Soon"},
+  {title:"Risk & Stress Testing",desc:"VaR, Monte-Carlo simulation, tracking error, and scenario analysis across VIX and macro regimes.",page:null,tag:"Coming Soon"},
+  {title:"Quantitative Models",desc:"ML models — regression, random forest, XGBoost, LSTM time series — for alpha generation.",page:null,tag:"Coming Soon"}
+];
+document.getElementById('featureGrid').innerHTML = FEATURES.map(f =>
+  '<div class="feature-card '+(f.page?'':'disabled')+'" '+(f.page?'onclick="navigateTo(\''+f.page+'\')"':'')+'>'+
+  '<div class="feature-tag '+(f.tag==='Coming Soon'?'soon':'')+'">'+f.tag+'</div>'+
+  '<div class="feature-title">'+f.title+'</div>'+
+  '<div class="feature-desc">'+f.desc+'</div></div>'
+).join('');
+
+// ── Holdings Table ──
+function renderHoldingsTable(holdings) {
+  const wrap = document.getElementById('holdingsTableWrap');
+  if (!holdings || !holdings.length) {
+    wrap.innerHTML = '<div class="empty-state" style="padding:24px;"><div class="empty-state-icon">&#128203;</div><h3>No Holdings Yet</h3><p>Use the form above to add your first holding.</p></div>';
+    return;
+  }
+  const tv = holdings.reduce((s,h) => s + (h.currentPrice||0) * h.quantity, 0);
+  let html = '<table><thead><tr><th>Ticker</th><th>Company</th><th>Shares</th><th>Cost Basis</th><th>Current Price</th><th>Market Value</th><th>Gain/Loss</th><th>% of Portfolio</th><th>Last Updated</th><th></th></tr></thead><tbody>';
+  holdings.forEach(h => {
+    const mv = (h.currentPrice||0) * h.quantity;
+    const cost = h.costBasis * h.quantity;
+    const gl = mv - cost;
+    const glp = cost > 0 ? (gl/cost)*100 : 0;
+    const pp = tv > 0 ? (mv/tv)*100 : 0;
+    const gc = gl >= 0 ? C.success : C.danger;
+    html += '<tr>'+
+      '<td style="font-weight:700;color:'+C.navy+';">'+h.ticker+'</td>'+
+      '<td>'+h.companyName+'</td>'+
+      '<td>'+h.quantity.toLocaleString()+'</td>'+
+      '<td>'+fmt(h.costBasis)+'</td>'+
+      '<td>'+fmt(h.currentPrice||0)+'</td>'+
+      '<td style="font-weight:600;">'+fmt(mv)+'</td>'+
+      '<td style="color:'+gc+';font-weight:600;">'+pctStr(glp)+' ('+fmt(gl)+')</td>'+
+      '<td>'+pp.toFixed(1)+'%</td>'+
+      '<td style="font-size:11px;color:'+C.textSec+';">'+(h.lastUpdated ? new Date(h.lastUpdated).toLocaleString() : '—')+'</td>'+
+      '<td><button class="btn btn-danger btn-sm" onclick="deleteHolding(\''+h.id+'\')" title="Remove">&#10005;</button></td></tr>';
+  });
+  // Total row
+  const totalMV = holdings.reduce((s,h) => s + (h.currentPrice||0)*h.quantity, 0);
+  const totalCost = holdings.reduce((s,h) => s + h.costBasis*h.quantity, 0);
+  const totalGL = totalMV - totalCost;
+  const totalGLP = totalCost > 0 ? (totalGL/totalCost)*100 : 0;
+  html += '<tr style="font-weight:700;background:var(--panel);"><td colspan="2" style="font-weight:700;color:'+C.navy+';">TOTAL</td><td></td><td>'+fmt(totalCost)+'</td><td></td><td style="font-weight:700;color:'+C.navy+';">'+fmt(totalMV)+'</td><td style="color:'+(totalGL>=0?C.success:C.danger)+';font-weight:700;">'+pctStr(totalGLP)+' ('+fmt(totalGL)+')</td><td>100.0%</td><td></td><td></td></tr>';
+  html += '</tbody></table>';
+  wrap.innerHTML = html;
+}
+
+// ── Portfolio Overview ──
+let donutCharts = {};
+function renderPortfolioOverview() {
+  const holdings = window._holdings || [];
+  const user = window._currentUser;
+  if (!user) {
+    document.getElementById('portfolioAuth').style.display = '';
+    document.getElementById('portfolioEmpty').style.display = 'none';
+    document.getElementById('portfolioLive').style.display = 'none';
+    return;
+  }
+  document.getElementById('portfolioAuth').style.display = 'none';
+  if (!holdings.length) {
+    document.getElementById('portfolioEmpty').style.display = '';
+    document.getElementById('portfolioLive').style.display = 'none';
+    return;
+  }
+  document.getElementById('portfolioEmpty').style.display = 'none';
+  document.getElementById('portfolioLive').style.display = '';
+
+  const tv = holdings.reduce((s,h) => s + (h.currentPrice||0)*h.quantity, 0);
+  const tc = holdings.reduce((s,h) => s + h.costBasis*h.quantity, 0);
+  const tgl = tv - tc;
+  const tglp = tc > 0 ? (tgl/tc)*100 : 0;
+  const tpv = holdings.reduce((s,h) => s + (h.previousClose||0)*h.quantity, 0);
+  const dayChange = tv - tpv;
+  const dayPct = tpv > 0 ? (dayChange/tpv)*100 : 0;
+
+  document.getElementById('metricsRow').innerHTML =
+    '<div class="metric-card"><div class="metric-label">Total Portfolio Value</div><div class="metric-value">'+fmtInt(tv)+'</div><div class="metric-sub" style="color:'+pctColor(dayPct)+';">'+pctStr(dayPct)+' today</div></div>'+
+    '<div class="metric-card"><div class="metric-label">Total Gain/Loss</div><div class="metric-value" style="font-size:20px;color:'+pctColor(tglp)+';">'+pctStr(tglp)+'</div><div class="metric-sub" style="color:'+pctColor(tgl)+';">'+fmt(tgl)+'</div></div>'+
+    '<div class="metric-card"><div class="metric-label">Total Cost Basis</div><div class="metric-value" style="font-size:20px;">'+fmtInt(tc)+'</div><div class="metric-sub" style="color:var(--text-sec);">'+holdings.length+' positions</div></div>'+
+    '<div class="metric-card"><div class="metric-label">Day Change</div><div class="metric-value" style="font-size:20px;color:'+pctColor(dayPct)+';">'+fmt(dayChange)+'</div><div class="metric-sub" style="color:'+pctColor(dayPct)+';">'+pctStr(dayPct)+'</div></div>';
+
+  // Portfolio table
+  let ct = '<table><thead><tr><th>Ticker</th><th>Company</th><th>Shares</th><th>Price</th><th>Market Value</th><th>Weight</th><th>Gain/Loss</th></tr></thead><tbody>';
+  holdings.forEach(h => {
+    const mv = (h.currentPrice||0)*h.quantity;
+    const cost = h.costBasis*h.quantity;
+    const gl = mv-cost;
+    const glp = cost>0?(gl/cost)*100:0;
+    const pp = tv>0?(mv/tv)*100:0;
+    const gc = gl>=0?C.success:C.danger;
+    ct += '<tr><td style="font-weight:700;color:'+C.navy+';">'+h.ticker+'</td><td>'+h.companyName+'</td><td>'+h.quantity.toLocaleString()+'</td><td>'+fmt(h.currentPrice||0)+'</td><td style="font-weight:600;">'+fmt(mv)+'</td><td>'+pp.toFixed(1)+'%</td><td style="color:'+gc+';font-weight:600;">'+pctStr(glp)+'</td></tr>';
+  });
+  ct += '</tbody></table>';
+  document.getElementById('portfolioTableWrap').innerHTML = ct;
+
+  // Donut: by weight
+  const weightData = holdings.map(h => ({
+    label: h.ticker,
+    value: tv > 0 ? Math.round(((h.currentPrice||0)*h.quantity/tv)*100) : 0
+  })).sort((a,b) => b.value - a.value);
+  renderDonut('donut-weight','Portfolio Allocation by Holding', weightData);
+
+  // Donut: gain vs loss
+  const gainHoldings = holdings.filter(h => (h.currentPrice||0)*h.quantity >= h.costBasis*h.quantity);
+  const lossHoldings = holdings.filter(h => (h.currentPrice||0)*h.quantity < h.costBasis*h.quantity);
+  const gainVal = gainHoldings.reduce((s,h) => s+(h.currentPrice||0)*h.quantity,0);
+  const lossVal = lossHoldings.reduce((s,h) => s+(h.currentPrice||0)*h.quantity,0);
+  const glDonut = [];
+  if (gainVal > 0) glDonut.push({label:'Gain Positions', value: tv>0?Math.round(gainVal/tv*100):0});
+  if (lossVal > 0) glDonut.push({label:'Loss Positions', value: tv>0?Math.round(lossVal/tv*100):0});
+  if (glDonut.length) renderDonut('donut-mktcap','Portfolio Split: Gain vs Loss Positions', glDonut);
+}
+
+// ── Research ──
+let researchChart = null;
+document.getElementById('researchType').addEventListener('change', function() {
+  document.getElementById('rangeGroup').style.display = this.value === 'chart' ? '' : 'none';
+});
+document.getElementById('rangeGroup').style.display = 'none';
+
+window.runResearch = async function() {
+  const ticker = document.getElementById('researchTicker').value.trim().toUpperCase();
+  const type = document.getElementById('researchType').value;
+  if (!ticker && type !== 'search') { alert('Enter a ticker symbol.'); return; }
+
+  document.getElementById('researchRawCard').style.display = '';
+  document.getElementById('researchOutput').textContent = 'Fetching...';
+  document.getElementById('researchChartCard').style.display = 'none';
+  document.getElementById('researchResults').innerHTML = '';
+
+  try {
+    if (type === 'quote') {
+      const data = await fetchQuote(ticker);
+      // Show quote card
+      const chg = data.change || 0;
+      const chgPct = data.changePercent || 0;
+      const cc = chg >= 0 ? C.success : C.danger;
+      document.getElementById('researchResults').innerHTML =
+        '<div class="metrics-row" style="margin-bottom:20px;">'+
+        '<div class="metric-card"><div class="metric-label">'+data.symbol+'</div><div class="metric-value">'+fmt(data.price)+'</div><div class="metric-sub" style="color:'+cc+';">'+pctStr(chgPct)+' ('+fmt(chg)+')</div></div>'+
+        '<div class="metric-card"><div class="metric-label">Previous Close</div><div class="metric-value" style="font-size:18px;">'+fmt(data.previousClose)+'</div></div>'+
+        '<div class="metric-card"><div class="metric-label">Day Range</div><div class="metric-value" style="font-size:16px;">'+(data.intradayLow?fmt(data.intradayLow):'—')+' — '+(data.intradayHigh?fmt(data.intradayHigh):'—')+'</div></div>'+
+        '<div class="metric-card"><div class="metric-label">Volume</div><div class="metric-value" style="font-size:18px;">'+(data.volume?Number(data.volume).toLocaleString():'—')+'</div></div></div>';
+      document.getElementById('researchOutput').textContent = JSON.stringify(data, null, 2);
+
+    } else if (type === 'chart') {
+      const range = document.getElementById('researchRange').value;
+      const data = await fetchChart(ticker, range, '1d');
+      const points = (data.points || []).filter(p => p.close !== null);
+      // Render chart
+      document.getElementById('researchChartCard').style.display = '';
+      document.getElementById('researchChartTitle').textContent = ticker + ' Price History (' + range + ')';
+      const ctx = document.getElementById('researchChart').getContext('2d');
+      if (researchChart) researchChart.destroy();
+      researchChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: points.map(p => p.date.slice(0,10)),
+          datasets: [{
+            label: ticker,
+            data: points.map(p => p.close),
+            borderColor: C.navy,
+            backgroundColor: 'rgba(0,60,113,.06)',
+            borderWidth: 2.5,
+            pointRadius: 0,
+            pointHoverRadius: 5,
+            pointHoverBackgroundColor: C.navy,
+            fill: true,
+            tension: .3
+          }]
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          plugins: { legend: { display: false },
+            tooltip: { backgroundColor: C.bg, titleColor: C.text, bodyColor: C.text, borderColor: C.border, borderWidth: 1,
+              titleFont:{family:'Arial',size:12,weight:'600'}, bodyFont:{family:'Arial',size:12}, padding:10,
+              callbacks: { label: c => ' ' + fmt(c.parsed.y) } } },
+          scales: {
+            x: { grid:{color:'rgba(208,215,224,0.5)',drawBorder:false}, ticks:{font:{family:'Arial',size:11},color:C.textSec,maxTicksLimit:12}, border:{display:false} },
+            y: { grid:{color:'rgba(208,215,224,0.5)',drawBorder:false}, ticks:{font:{family:'Arial',size:11},color:C.textSec,callback:v=>'$'+v.toFixed(2)}, border:{display:false} }
+          }
         }
+      });
+      document.getElementById('researchOutput').textContent = points.length + ' data points loaded.\n\n' + JSON.stringify(data.points?.slice(0,5), null, 2) + '\n...';
 
-        // -------------------------------------------------------
-        // STEP F: Research button (calls Cloudflare Worker)
-        // -------------------------------------------------------
-        // REPLACE this URL with your Cloudflare Worker URL from Phase 9
-        const WORKER_URL = "https://perry-finance-proxy.zachperrybusiness.workers.dev";
+    } else if (type === 'search') {
+      const q = ticker || document.getElementById('researchTicker').value.trim();
+      const data = await fetchSearch(q);
+      let html = '<div class="card"><div class="card-title">Search Results for "'+q+'"</div><div class="card-body"><div class="table-wrap"><table><thead><tr><th>Symbol</th><th>Name</th><th>Type</th><th>Exchange</th></tr></thead><tbody>';
+      (data.results||[]).forEach(r => {
+        html += '<tr><td style="font-weight:700;color:'+C.navy+';">'+r.symbol+'</td><td>'+r.name+'</td><td>'+r.type+'</td><td>'+r.exchange+'</td></tr>';
+      });
+      html += '</tbody></table></div></div><div class="card-sources"><strong>Sources:</strong><br>&#8226; Yahoo Finance via Cloudflare Worker proxy</div></div>';
+      document.getElementById('researchResults').innerHTML = html;
+      document.getElementById('researchOutput').textContent = JSON.stringify(data, null, 2);
+    }
+  } catch(e) {
+    document.getElementById('researchOutput').textContent = 'Error: ' + e.message;
+  }
+};
 
-        window.handleResearch = async function() {
-            const ticker = document.getElementById("ticker-input").value.trim().toUpperCase();
-            if (!ticker) { alert("Enter a ticker symbol."); return; }
+// ── Donuts ──
+function renderDonut(id, title, data) {
+  const el = document.getElementById(id); if(!el) return;
+  const cid = id+'-c';
+  el.innerHTML = '<div class="card"><div class="card-title">'+title+'</div><div class="card-body"><div class="donut-wrap"><div class="donut-canvas-wrap"><canvas id="'+cid+'"></canvas></div><div class="donut-legend">'+
+    data.map((d,i) => '<div class="legend-row"><span class="legend-dot" style="background:'+PALETTE[i%PALETTE.length]+'"></span><span class="legend-label">'+d.label+'</span><span class="legend-val">'+d.value+'%</span></div>').join('')+
+    '</div></div></div><div class="card-sources"><strong>Sources:</strong><br>&#8226; Yahoo Finance via Cloudflare Worker &#8226; Firebase Firestore</div></div>';
+  const ctx = document.getElementById(cid).getContext('2d');
+  if(donutCharts[id]) donutCharts[id].destroy();
+  donutCharts[id] = new Chart(ctx, {
+    type:'doughnut',
+    data:{ labels:data.map(d=>d.label), datasets:[{data:data.map(d=>d.value), backgroundColor:data.map((_,i)=>PALETTE[i%PALETTE.length]), borderWidth:2, borderColor:C.bg}] },
+    options:{ responsive:true, maintainAspectRatio:false, cutout:'62%',
+      plugins:{ legend:{display:false}, tooltip:{backgroundColor:C.bg,titleColor:C.text,bodyColor:C.text,borderColor:C.border,borderWidth:1,titleFont:{family:'Arial',size:12,weight:'600'},bodyFont:{family:'Arial',size:12},padding:10,callbacks:{label:c=>' '+c.label+': '+c.parsed+'%'}} } }
+  });
+}
 
-            const output = document.getElementById("research-output");
-            output.textContent = `Fetching data for ${ticker}...`;
-
-            try {
-                const res  = await fetch(`${WORKER_URL}/quote?symbol=${ticker}`);
-                const data = await res.json();
-
-                if (data.error) {
-                    output.textContent = `Error: ${data.error}`;
-                    return;
-                }
-
-                output.textContent = JSON.stringify(data, null, 2);
-
-                // Update worker status on success
-                document.getElementById("worker-status-dot").classList.replace("red", "green");
-                document.getElementById("worker-status-text").textContent = "Data Proxy: Connected";
-
-            } catch (err) {
-                output.textContent = `Fetch failed: ${err.message}\n\nMake sure your Cloudflare Worker is deployed (Phase 9).`;
-            }
-        };
-
-    </script>
+// ── Chart.js defaults ──
+Chart.defaults.font.family = 'Arial, Helvetica, sans-serif';
+Chart.defaults.color = C.textSec;
+</script>
 </body>
 </html>
