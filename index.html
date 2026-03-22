@@ -249,7 +249,8 @@ tr:hover td{background:#EAF1F9;}
         </div>
         <div id="scanStatus" class="status-bar"></div>
         <div id="validateArea" style="display:none;">
-          <div style="font-size:12px;font-weight:700;color:var(--navy);margin-bottom:8px;">Validate Before Submitting</div>
+          <div style="font-size:12px;font-weight:700;color:var(--navy);margin-bottom:4px;">Validate Before Submitting</div>
+          <div style="font-size:11px;color:var(--text-sec);margin-bottom:10px;">These holdings will be <strong>added</strong> to your existing portfolio. No current holdings will be removed or modified.</div>
           <div class="validate-wrap"><div class="table-wrap" id="validateTableWrap"></div></div>
           <div class="validate-actions">
             <button class="btn" id="submitBulkBtn" onclick="submitBulkHoldings()">Submit to Portfolio</button>
@@ -638,8 +639,8 @@ async function processFile(file) {
       showStatus('scanStatus', 'Unsupported file type: .' + ext, 'error');
       return;
     }
-    if (!_bulkRows.length) { showStatus('scanStatus', 'No valid rows found. Expected columns: Ticker, Date, Shares, Cost/Share', 'error'); return; }
-    showStatus('scanStatus', '&#10003; Found ' + _bulkRows.length + ' holdings. Review and edit below before submitting.', 'success');
+    if (!_bulkRows.length) { showStatus('scanStatus', 'No valid rows found. The file should contain columns for Ticker, Date, Shares, and Cost/Share in any order. Column headers are auto-detected.', 'error'); return; }
+    showStatus('scanStatus', '&#10003; Auto-detected ' + _bulkRows.length + ' holdings from <strong>' + file.name + '</strong>. Review below, edit if needed, then submit. This will only add new holdings — existing holdings are untouched.', 'success');
     renderValidationTable();
   } catch (e) {
     showStatus('scanStatus', 'Error reading file: ' + e.message, 'error');
@@ -653,37 +654,109 @@ function parseCSV(text) {
 
 function parseGrid(rows) {
   if (rows.length < 2) return [];
-  // Try to detect header row
-  const header = rows[0].map(c => String(c || '').toLowerCase().trim());
+  // Determine if row 0 is a header or data
+  const firstRow = rows[0].map(c => String(c || '').trim());
+  const hasHeader = firstRow.some(c => /^[a-zA-Z\s\/]+$/.test(c) && c.length > 1 && isNaN(parseFloat(c)));
+  const dataStartIdx = hasHeader ? 1 : 0;
+  const numCols = Math.max(...rows.map(r => (r || []).length));
+  
+  // Score each column by content type
+  // Types: ticker (1-5 uppercase letters), date, number, text
+  const colScores = [];
+  for (let col = 0; col < numCols; col++) {
+    let tickerScore = 0, dateScore = 0, numScore = 0, textScore = 0;
+    const sampleSize = Math.min(rows.length, 20);
+    for (let row = dataStartIdx; row < sampleSize; row++) {
+      const val = String((rows[row] || [])[col] || '').trim();
+      if (!val) continue;
+      // Ticker: 1-6 uppercase alpha chars, possibly with dots
+      if (/^[A-Za-z]{1,6}(\.[A-Za-z])?$/.test(val)) tickerScore++;
+      // Date: various formats
+      if (/\d{4}-\d{2}-\d{2}/.test(val) || /\d{1,2}\/\d{1,2}\/\d{2,4}/.test(val) || /\d{1,2}-\d{1,2}-\d{2,4}/.test(val) || /[A-Za-z]{3,9}\s+\d{1,2}/.test(val)) dateScore++;
+      // Number: digits with optional decimals, commas, dollar signs
+      const cleaned = val.replace(/[$,\s]/g, '');
+      if (/^-?\d+\.?\d*$/.test(cleaned) && !isNaN(parseFloat(cleaned))) numScore++;
+      else textScore++;
+    }
+    colScores.push({ col, tickerScore, dateScore, numScore, textScore });
+  }
+
+  // Also use header hints if available
+  const headerHints = {};
+  if (hasHeader) {
+    firstRow.forEach((h, i) => {
+      const hl = h.toLowerCase();
+      if (hl.includes('ticker') || hl.includes('symbol') || hl === 'stock' || hl === 'holding' || hl === 'name' || hl === 'security' || hl === 'asset') headerHints[i] = 'ticker';
+      if (hl.includes('date') || hl.includes('purchased') || hl.includes('acquired') || hl.includes('bought') || hl.includes('trade') || hl.includes('settlement') || hl.includes('open')) headerHints[i] = 'date';
+      if (hl.includes('share') || hl.includes('qty') || hl.includes('quantity') || hl.includes('units') || hl.includes('amount') || hl.includes('count') || hl.includes('lot')) headerHints[i] = 'shares';
+      if (hl.includes('cost') || hl.includes('price') || hl.includes('basis') || hl.includes('paid') || hl.includes('avg') || hl.includes('purchase price') || hl.includes('unit cost') || hl.includes('per share')) headerHints[i] = 'cost';
+    });
+  }
+
+  // Assign columns: prefer header hints, then fall back to content scoring
   let tickerCol = -1, dateCol = -1, sharesCol = -1, costCol = -1;
-  header.forEach((h, i) => {
-    if (h.includes('ticker') || h.includes('symbol') || h === 'stock') tickerCol = i;
-    if (h.includes('date') || h.includes('purchased') || h.includes('acquired')) dateCol = i;
-    if (h.includes('share') || h.includes('qty') || h.includes('quantity') || h.includes('units')) sharesCol = i;
-    if (h.includes('cost') || h.includes('price') || h.includes('basis') || h.includes('paid')) costCol = i;
+  
+  // Header-based assignment first
+  Object.entries(headerHints).forEach(([i, type]) => {
+    const idx = parseInt(i);
+    if (type === 'ticker' && tickerCol === -1) tickerCol = idx;
+    if (type === 'date' && dateCol === -1) dateCol = idx;
+    if (type === 'shares' && sharesCol === -1) sharesCol = idx;
+    if (type === 'cost' && costCol === -1) costCol = idx;
   });
-  // Fallback: assume columns in order
+  
+  // Content-based fallback for unassigned columns
+  const used = new Set([tickerCol, dateCol, sharesCol, costCol].filter(x => x >= 0));
+  if (tickerCol === -1) {
+    const best = colScores.filter(c => !used.has(c.col)).sort((a, b) => b.tickerScore - a.tickerScore)[0];
+    if (best && best.tickerScore > 0) { tickerCol = best.col; used.add(best.col); }
+  }
+  if (dateCol === -1) {
+    const best = colScores.filter(c => !used.has(c.col)).sort((a, b) => b.dateScore - a.dateScore)[0];
+    if (best && best.dateScore > 0) { dateCol = best.col; used.add(best.col); }
+  }
+  // For shares and cost, pick the two highest-scoring numeric columns
+  if (sharesCol === -1 || costCol === -1) {
+    const numCols2 = colScores.filter(c => !used.has(c.col) && c.numScore > 0).sort((a, b) => b.numScore - a.numScore);
+    if (sharesCol === -1 && numCols2.length > 0) { sharesCol = numCols2[0].col; used.add(numCols2[0].col); }
+    if (costCol === -1 && numCols2.length > 1) { costCol = numCols2[1].col; used.add(numCols2[1].col); }
+  }
+  
+  // Ultimate fallback: sequential
   if (tickerCol === -1) tickerCol = 0;
-  if (dateCol === -1) dateCol = 1;
-  if (sharesCol === -1) sharesCol = 2;
-  if (costCol === -1) costCol = 3;
+  if (dateCol === -1) dateCol = Math.min(1, numCols - 1);
+  if (sharesCol === -1) sharesCol = Math.min(2, numCols - 1);
+  if (costCol === -1) costCol = Math.min(3, numCols - 1);
+
   const result = [];
-  for (let i = 1; i < rows.length; i++) {
+  for (let i = dataStartIdx; i < rows.length; i++) {
     const r = rows[i];
-    if (!r || !r[tickerCol]) continue;
-    const ticker = String(r[tickerCol] || '').trim().toUpperCase();
-    if (!ticker || ticker.length > 10 || /[^A-Z0-9.\-]/.test(ticker)) continue;
+    if (!r || r.length === 0) continue;
+    let ticker = String(r[tickerCol] || '').trim().toUpperCase();
+    if (!ticker || ticker.length > 10) continue;
+    // Strip common prefixes/suffixes
+    ticker = ticker.replace(/[^A-Z0-9.]/g, '');
+    if (!ticker) continue;
+    
     let date = String(r[dateCol] || '').trim();
-    // Try to normalize date formats
+    // Normalize many date formats
     if (/^\d{1,2}\/\d{1,2}\/\d{2,4}$/.test(date)) {
       const parts = date.split('/');
       const yr = parts[2].length === 2 ? '20' + parts[2] : parts[2];
       date = yr + '-' + parts[0].padStart(2, '0') + '-' + parts[1].padStart(2, '0');
+    } else if (/^\d{1,2}-\d{1,2}-\d{2,4}$/.test(date)) {
+      const parts = date.split('-');
+      const yr = parts[2].length === 2 ? '20' + parts[2] : parts[2];
+      date = yr + '-' + parts[0].padStart(2, '0') + '-' + parts[1].padStart(2, '0');
+    } else if (/^[A-Za-z]+\s+\d{1,2},?\s*\d{4}$/.test(date)) {
+      const d = new Date(date);
+      if (!isNaN(d)) date = d.toISOString().slice(0, 10);
     }
     if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) date = new Date().toISOString().slice(0, 10);
-    const shares = parseFloat(String(r[sharesCol] || '').replace(/[,$]/g, '')) || 0;
-    const cost = parseFloat(String(r[costCol] || '').replace(/[,$]/g, '')) || 0;
-    if (shares > 0) result.push({ ticker, date, shares, cost });
+    
+    const shares = parseFloat(String(r[sharesCol] || '').replace(/[$,\s]/g, '')) || 0;
+    const cost = parseFloat(String(r[costCol] || '').replace(/[$,\s]/g, '')) || 0;
+    if (shares > 0) result.push({ ticker, date, shares, cost: cost || 0 });
   }
   return result;
 }
@@ -732,7 +805,7 @@ window.submitBulkHoldings = async function() {
       added++;
     } catch (e) { console.warn('Bulk add failed for', r.ticker, e); }
   }
-  showStatus('scanStatus', '&#10003; Successfully added ' + added + ' of ' + valid.length + ' holdings.', 'success');
+  showStatus('scanStatus', '&#10003; Successfully added ' + added + ' of ' + valid.length + ' new holdings. Your existing holdings were not modified.', 'success');
   cancelBulkImport();
   await loadHoldings();
   btn.disabled = false; btn.textContent = 'Submit to Portfolio';
