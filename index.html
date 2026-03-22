@@ -40,7 +40,6 @@ html,body{font-family:Arial,Helvetica,sans-serif;background:var(--bg);color:var(
 .metric-label{font-size:10px;font-weight:600;color:var(--text-sec);text-transform:uppercase;letter-spacing:.5px;margin-bottom:5px;}
 .metric-value{font-size:20px;font-weight:700;color:var(--navy);line-height:1.2;}
 .metric-sub{font-size:11px;font-weight:600;margin-top:3px;}
-/* Compact benchmark cards */
 .bench-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-bottom:22px;}
 .bench-card{background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);padding:10px 14px;box-shadow:var(--shadow);overflow:hidden;}
 .bench-label{font-size:9px;font-weight:700;color:var(--text-sec);text-transform:uppercase;letter-spacing:.5px;margin-bottom:2px;}
@@ -123,26 +122,36 @@ tr:hover td{background:#EAF1F9;}
 .mstar-labels-top{display:grid;grid-template-columns:1fr 1fr 1fr;width:240px;margin:0 auto;text-align:center;font-size:10px;font-weight:700;color:var(--navy);margin-bottom:4px;}
 .mstar-labels-left{position:absolute;left:-60px;top:0;height:240px;display:flex;flex-direction:column;justify-content:space-around;font-size:10px;font-weight:700;color:var(--navy);text-align:right;width:54px;}
 .mstar-container{position:relative;width:240px;margin:12px auto 0;padding-left:64px;}
-/* In-chart stat boxes */
 .chart-stats{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px;}
 .chart-stat-box{background:var(--panel);border:1px solid var(--border);border-radius:4px;padding:8px 14px;flex:1;min-width:180px;}
 .chart-stat-label{font-size:9px;font-weight:700;color:var(--text-sec);text-transform:uppercase;letter-spacing:.4px;margin-bottom:2px;}
 .chart-stat-value{font-size:13px;font-weight:700;color:var(--navy);line-height:1.3;}
 .chart-stat-sub{font-size:10px;color:var(--text-sec);margin-top:1px;}
 .zoom-hint{font-size:10px;color:var(--text-sec);text-align:center;margin-top:6px;font-style:italic;}
-/* File drop zone */
 .drop-zone{border:2px dashed var(--border);border-radius:var(--radius);padding:28px 20px;text-align:center;cursor:pointer;transition:all .2s;background:var(--panel);margin-bottom:16px;}
 .drop-zone:hover,.drop-zone.dragover{border-color:var(--blue);background:#e8f0fa;}
 .drop-zone-icon{font-size:28px;margin-bottom:8px;opacity:.5;}
 .drop-zone-text{font-size:13px;color:var(--text-sec);font-weight:600;}
 .drop-zone-sub{font-size:11px;color:var(--highlight-gray);margin-top:4px;}
 .drop-zone input[type="file"]{display:none;}
-/* Validation table */
 .validate-wrap{margin-top:16px;}
-.validate-wrap input{font-family:Arial,Helvetica,sans-serif;font-size:12px;padding:4px 8px;border:1px solid var(--border);border-radius:3px;width:100%;background:var(--bg);color:var(--text);}
-.validate-wrap input:focus{border-color:var(--blue);outline:none;}
+.validate-wrap input,.validate-wrap select{font-family:Arial,Helvetica,sans-serif;font-size:12px;padding:4px 8px;border:1px solid var(--border);border-radius:3px;background:var(--bg);color:var(--text);}
+.validate-wrap input:focus,.validate-wrap select:focus{border-color:var(--blue);outline:none;}
 .validate-actions{display:flex;gap:10px;margin-top:12px;align-items:center;}
 .validate-count{font-size:12px;color:var(--text-sec);}
+.account-bar{display:flex;gap:12px;align-items:center;margin-bottom:18px;flex-wrap:wrap;}
+.account-bar label{font-size:11px;font-weight:600;color:var(--text-sec);text-transform:uppercase;letter-spacing:.4px;}
+.account-bar select{font-family:Arial,Helvetica,sans-serif;font-size:13px;padding:8px 12px;border:1px solid var(--border);border-radius:4px;background:var(--bg);color:var(--text);min-width:200px;}
+.modal-overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.4);z-index:500;display:flex;align-items:center;justify-content:center;}
+.modal-box{background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);padding:24px 28px;max-width:420px;width:90%;box-shadow:0 8px 32px rgba(0,0,0,.15);}
+.modal-box h3{font-size:15px;font-weight:700;color:var(--navy);margin-bottom:12px;}
+.modal-box .modal-actions{display:flex;gap:10px;margin-top:16px;}
+.acct-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px;margin-top:16px;}
+.acct-info-card{background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);padding:20px;box-shadow:var(--shadow);}
+.acct-info-card h4{font-size:14px;font-weight:700;color:var(--navy);margin-bottom:8px;padding-bottom:6px;border-bottom:2px solid var(--blue);}
+.acct-info-card p{font-size:12px;color:var(--text);line-height:1.6;margin-bottom:6px;}
+.acct-info-card .acct-detail{font-size:11px;color:var(--text-sec);line-height:1.5;margin-bottom:4px;}
+.acct-info-card .acct-tag{display:inline-block;background:var(--navy);color:var(--text-on-dark);font-size:9px;font-weight:700;padding:2px 6px;border-radius:3px;margin-right:4px;text-transform:uppercase;}
 </style>
 </head>
 <body>
@@ -187,11 +196,9 @@ tr:hover td{background:#EAF1F9;}
   <div id="portfolioAuth" class="auth-gate"><h3>Sign In to View Portfolio</h3><p>Connect with your Google account to access your portfolio holdings and analytics.</p><button class="btn" onclick="handleLogin()">Sign In with Google</button></div>
   <div id="portfolioEmpty" style="display:none;"><div class="empty-state"><div class="empty-state-icon">&#128202;</div><h3>No Holdings Yet</h3><p>Add your first holding to start building your portfolio.</p><button class="btn" onclick="navigateTo('holdings')">Add Holdings</button></div></div>
   <div id="portfolioLive" style="display:none;">
-    <!-- Portfolio metrics -->
+    <div class="account-bar"><label>View Account:</label><select id="portfolioAccountFilter" onchange="renderPortfolioOverview()"><option value="all">All Accounts</option><option value="Individual">Individual Brokerage</option><option value="Roth IRA">Roth IRA</option><option value="Traditional IRA">Traditional IRA</option><option value="401(k)">Standard 401(k)</option><option value="Roth 401(k)">Roth 401(k)</option><option value="SEP IRA">SEP IRA</option><option value="529 Plan">529 Plan</option><option value="HSA">HSA</option><option value="Trust">Trust Account</option><option value="Custodial">Custodial (UTMA/UGMA)</option><option value="Joint">Joint Account</option><option value="Designated Beneficiary">Designated Beneficiary</option></select></div>
     <div class="metrics-row" id="metricsRow"></div>
-    <!-- Benchmark sparkline cards -->
     <div class="bench-row" id="benchmarkRow"></div>
-    <!-- Chart card -->
     <div class="card"><div class="card-title">Portfolio Value Over Time</div><div class="card-body">
       <div class="form-row" style="margin-bottom:8px;">
         <div class="form-group"><label>Benchmark 1</label><input type="text" id="compare1" placeholder="SPY" value="SPY" style="width:80px;text-transform:uppercase;"></div>
@@ -205,21 +212,10 @@ tr:hover td{background:#EAF1F9;}
       <div class="chart-wrap"><canvas id="portfolioLineChart"></canvas></div>
       <div class="zoom-hint">Click and drag to zoom in. Double-click or pinch to reset zoom.</div>
       <div class="btn-group" id="pfTimeframeBtns" style="margin-top:12px;margin-bottom:0;justify-content:center;">
-        <button class="btn-outline" data-range="1mo">1M</button>
-        <button class="btn-outline" data-range="3mo">3M</button>
-        <button class="btn-outline" data-range="6mo">6M</button>
-        <button class="btn-outline" data-range="ytd">YTD</button>
-        <button class="btn-outline active" data-range="1y">1Y</button>
-        <button class="btn-outline" data-range="3y">3Y</button>
-        <button class="btn-outline" data-range="5y">5Y</button>
-        <button class="btn-outline" data-range="10y">10Y</button>
-        <button class="btn-outline" data-range="15y">15Y</button>
-        <button class="btn-outline" data-range="20y">20Y</button>
+        <button class="btn-outline" data-range="1mo">1M</button><button class="btn-outline" data-range="3mo">3M</button><button class="btn-outline" data-range="6mo">6M</button><button class="btn-outline" data-range="ytd">YTD</button><button class="btn-outline active" data-range="1y">1Y</button><button class="btn-outline" data-range="3y">3Y</button><button class="btn-outline" data-range="5y">5Y</button><button class="btn-outline" data-range="10y">10Y</button><button class="btn-outline" data-range="15y">15Y</button><button class="btn-outline" data-range="20y">20Y</button>
       </div>
     </div><div class="card-sources"><strong>Sources:</strong><br>&#8226; Yahoo Finance via Cloudflare Worker &#8226; Firebase Firestore</div></div>
-    <!-- Holdings table -->
     <div class="card"><div class="card-title">Portfolio Holdings</div><div class="card-body"><div class="table-wrap" id="portfolioTableWrap"></div></div><div class="card-sources"><strong>Sources:</strong><br>&#8226; Yahoo Finance via Cloudflare Worker &#8226; Firebase Firestore</div></div>
-    <!-- Pie charts -->
     <div class="grid-3"><div id="donut-sector"></div><div id="donut-industry"></div><div id="donut-mktcap"></div></div>
     <div class="grid-2"><div id="donut-weight"></div><div id="mstar-card"></div></div>
   </div>
@@ -230,6 +226,7 @@ tr:hover td{background:#EAF1F9;}
   <div class="hero" style="padding:32px 40px;"><h1>Manage Holdings</h1><p>Add, view, and remove portfolio holdings. Market data is fetched live from Yahoo Finance. All holdings saved to your Firebase account.</p></div>
   <div id="holdingsAuth" class="auth-gate"><h3>Sign In to Manage Holdings</h3><p>Connect with your Google account to manage your portfolio.</p><button class="btn" onclick="handleLogin()">Sign In with Google</button></div>
   <div id="holdingsPanel" style="display:none;">
+    <div class="account-bar"><label>View Account:</label><select id="holdingsAccountFilter" onchange="filterHoldingsByAccount()"><option value="all">All Accounts</option><option value="Individual">Individual Brokerage</option><option value="Roth IRA">Roth IRA</option><option value="Traditional IRA">Traditional IRA</option><option value="401(k)">Standard 401(k)</option><option value="Roth 401(k)">Roth 401(k)</option><option value="SEP IRA">SEP IRA</option><option value="529 Plan">529 Plan</option><option value="HSA">HSA</option><option value="Trust">Trust Account</option><option value="Custodial">Custodial (UTMA/UGMA)</option><option value="Joint">Joint Account</option><option value="Designated Beneficiary">Designated Beneficiary</option></select></div>
     <div class="card"><div class="card-title">Add New Holding</div><div class="card-body">
       <div id="addStatus" class="status-bar"></div>
       <div class="form-row">
@@ -237,6 +234,7 @@ tr:hover td{background:#EAF1F9;}
         <div class="form-group"><label>Date Purchased</label><input type="date" id="inputDate"></div>
         <div class="form-group" style="min-width:90px;"><label>Shares</label><input type="number" id="inputQty" placeholder="50" min="0.0001" step="any"></div>
         <div class="form-group" style="min-width:100px;"><label>Cost/Share</label><input type="number" id="inputCost" placeholder="150.00" min="0" step="0.01"></div>
+        <div class="form-group" style="min-width:160px;"><label>Account Type</label><select id="inputAccountType"><option value="Individual">Individual Brokerage</option><option value="Roth IRA">Roth IRA</option><option value="Traditional IRA">Traditional IRA</option><option value="401(k)">Standard 401(k)</option><option value="Roth 401(k)">Roth 401(k)</option><option value="SEP IRA">SEP IRA</option><option value="529 Plan">529 Plan</option><option value="HSA">HSA</option><option value="Trust">Trust Account</option><option value="Custodial">Custodial (UTMA/UGMA)</option><option value="Joint">Joint Account</option><option value="Designated Beneficiary">Designated Beneficiary</option></select></div>
         <button class="btn" id="addBtn" onclick="addHolding()">Add Holding</button>
       </div>
       <div style="border-top:1px solid var(--border);margin-top:16px;padding-top:16px;">
@@ -252,11 +250,7 @@ tr:hover td{background:#EAF1F9;}
           <div style="font-size:12px;font-weight:700;color:var(--navy);margin-bottom:4px;">Validate Before Submitting</div>
           <div style="font-size:11px;color:var(--text-sec);margin-bottom:10px;">These holdings will be <strong>added</strong> to your existing portfolio. No current holdings will be removed or modified.</div>
           <div class="validate-wrap"><div class="table-wrap" id="validateTableWrap"></div></div>
-          <div class="validate-actions">
-            <button class="btn" id="submitBulkBtn" onclick="submitBulkHoldings()">Submit to Portfolio</button>
-            <button class="btn-outline btn-sm" onclick="cancelBulkImport()">Cancel</button>
-            <span class="validate-count" id="validateCount"></span>
-          </div>
+          <div class="validate-actions"><button class="btn" id="submitBulkBtn" onclick="submitBulkHoldings()">Submit to Portfolio</button><button class="btn-outline btn-sm" onclick="cancelBulkImport()">Cancel</button><span class="validate-count" id="validateCount"></span></div>
         </div>
       </div>
     </div></div>
@@ -265,6 +259,7 @@ tr:hover td{background:#EAF1F9;}
       <div class="table-wrap" id="holdingsTableWrap"></div>
       <div style="margin-top:12px;"><button class="btn" onclick="refreshAllPrices()" id="refreshBtn">Refresh All Prices</button></div>
     </div><div class="card-sources"><strong>Sources:</strong><br>&#8226; Yahoo Finance via Cloudflare Worker &#8226; Firebase Firestore</div></div>
+    <div class="card"><div class="card-title">Account Types Reference Guide</div><div class="card-body"><div class="acct-grid" id="acctInfoGrid"></div></div><div class="card-sources"><strong>Sources:</strong><br>&#8226; IRS.gov &#8226; SEC.gov &#8226; General financial education — not tax or legal advice</div></div>
   </div>
 </div></div>
 
@@ -309,35 +304,71 @@ onAuthStateChanged(auth,(user)=>{
   if(user){document.getElementById('userBadge').textContent=user.email;document.getElementById('loginBtn').style.display='none';document.getElementById('logoutBtn').style.display='';document.querySelectorAll('.auth-gate').forEach(el=>el.style.display='none');document.getElementById('holdingsPanel').style.display='';loadHoldings();}
   else{document.getElementById('userBadge').textContent='';document.getElementById('loginBtn').style.display='';document.getElementById('logoutBtn').style.display='none';document.querySelectorAll('.auth-gate').forEach(el=>el.style.display='');document.getElementById('holdingsPanel').style.display='none';document.getElementById('portfolioLive').style.display='none';document.getElementById('portfolioEmpty').style.display='none';window._holdings=[];}
 });
+
+// ADD HOLDING with duplicate detection and account type
 window.addHolding=async function(){
   const user=window._currentUser;if(!user){alert("Sign in first.");return;}
   const ticker=document.getElementById('inputTicker').value.trim().toUpperCase();
   const date=document.getElementById('inputDate').value;
   const qty=parseFloat(document.getElementById('inputQty').value);
   const cost=parseFloat(document.getElementById('inputCost').value);
+  const acctType=document.getElementById('inputAccountType').value;
   if(!ticker){showStatus('addStatus','Enter a ticker.','error');return;}
   if(!date){showStatus('addStatus','Select date.','error');return;}
   if(!qty||qty<=0){showStatus('addStatus','Enter valid quantity.','error');return;}
   if(isNaN(cost)||cost<0){showStatus('addStatus','Enter cost/share.','error');return;}
+  // Duplicate check
+  const existing=(window._holdings||[]).find(h=>h.ticker===ticker&&(h.accountType||'Individual')===acctType);
+  if(existing){
+    const yes=confirm('You already hold '+ticker+' in your '+acctType+' account ('+existing.quantity+' shares at $'+existing.costBasis.toFixed(2)+'/share).\n\nMerge? This will add '+qty+' shares and update to a weighted average cost basis.\n\nClick OK to merge, or Cancel to abort.');
+    if(!yes)return;
+    const totalShares=existing.quantity+qty;
+    const waCost=((existing.costBasis*existing.quantity)+(cost*qty))/totalShares;
+    const btn=document.getElementById('addBtn');btn.disabled=true;btn.innerHTML='<span class="spinner"></span>Merging...';
+    try{
+      await updateDoc(doc(db,"holdings",existing.id),{quantity:totalShares,costBasis:Math.round(waCost*100)/100,datePurchased:date,lastUpdated:new Date().toISOString()});
+      showStatus('addStatus','&#10003; Merged into existing '+ticker+' ('+totalShares+' shares, avg cost $'+waCost.toFixed(2)+')','success');
+      document.getElementById('inputTicker').value='';document.getElementById('inputDate').value='';document.getElementById('inputQty').value='';document.getElementById('inputCost').value='';
+      await loadHoldings();
+    }catch(e){showStatus('addStatus','Error: '+e.message,'error');}
+    btn.disabled=false;btn.textContent='Add Holding';return;
+  }
   const btn=document.getElementById('addBtn');btn.disabled=true;btn.innerHTML='<span class="spinner"></span>Adding...';
   showStatus('addStatus','<span class="spinner"></span> Fetching quote & saving...','info');
   try{
-    const q=await fetchQuote(ticker);
-    const meta=classifyHolding(ticker,q);
-    await addDoc(collection(db,"holdings"),{uid:user.uid,ticker,companyName:q.name||ticker,datePurchased:date,quantity:qty,costBasis:cost,currentPrice:q.price||0,previousClose:q.previousClose||0,sector:meta.sector,industry:meta.industry,assetClass:meta.assetClass,marketCap:meta.marketCap,mktCapCategory:meta.mktCapCategory,leverage:meta.leverage||'',lastUpdated:new Date().toISOString(),createdAt:serverTimestamp()});
-    showStatus('addStatus','&#10003; Added '+ticker,'success');
+    const q=await fetchQuote(ticker);const meta=classifyHolding(ticker,q);
+    await addDoc(collection(db,"holdings"),{uid:user.uid,ticker,companyName:q.name||ticker,datePurchased:date,quantity:qty,costBasis:cost,currentPrice:q.price||0,previousClose:q.previousClose||0,sector:meta.sector,industry:meta.industry,assetClass:meta.assetClass,marketCap:meta.marketCap,mktCapCategory:meta.mktCapCategory,leverage:meta.leverage||'',accountType:acctType,lastUpdated:new Date().toISOString(),createdAt:serverTimestamp()});
+    showStatus('addStatus','&#10003; Added '+ticker+' to '+acctType,'success');
     document.getElementById('inputTicker').value='';document.getElementById('inputDate').value='';document.getElementById('inputQty').value='';document.getElementById('inputCost').value='';
     await loadHoldings();
   }catch(e){showStatus('addStatus','Error: '+e.message,'error');}
   btn.disabled=false;btn.textContent='Add Holding';
 };
+
 window.loadHoldings=async function(){
   const user=window._currentUser;if(!user)return;
   try{const q=query(collection(db,"holdings"),where("uid","==",user.uid),orderBy("createdAt","desc"));const snap=await getDocs(q);const h=[];snap.forEach(d=>h.push({id:d.id,...d.data()}));window._holdings=h;renderHoldingsTable(h);document.getElementById('holdingsCount').textContent=h.length?'('+h.length+' positions)':'';}
   catch(e){console.error(e);showStatus('holdingsStatus','Error: '+e.message,'error');}
 };
-window.deleteHolding=async function(docId){if(!confirm('Remove?'))return;try{await deleteDoc(doc(db,"holdings",docId));await loadHoldings();}catch(e){alert(e.message);}};
+window.deleteHolding=async function(docId){if(!confirm('Remove this entire holding?'))return;try{await deleteDoc(doc(db,"holdings",docId));await loadHoldings();}catch(e){alert(e.message);}};
 window.updateHoldingDoc=async function(docId,data){try{await updateDoc(doc(db,"holdings",docId),data);}catch(e){console.error(e);}};
+
+// SELL SHARES (partial or full)
+window.sellShares=async function(docId){
+  const h=(window._holdings||[]).find(x=>x.id===docId);if(!h)return;
+  const m=document.createElement('div');m.className='modal-overlay';
+  m.innerHTML='<div class="modal-box"><h3>Sell Shares of '+h.ticker+'</h3><p style="font-size:12px;color:#5A6A7A;margin-bottom:12px;">Current: '+h.quantity+' shares in '+(h.accountType||'Individual')+' at $'+(h.currentPrice||0).toFixed(2)+'</p><div class="form-group" style="margin-bottom:12px;"><label>Shares to Sell</label><input type="number" id="sellQtyInput" placeholder="e.g. 10" min="0.0001" max="'+h.quantity+'" step="any" style="width:100%;"></div><div class="modal-actions"><button class="btn" onclick="confirmSell(\''+docId+'\','+h.quantity+')">Confirm Sale</button><button class="btn-outline" onclick="this.closest(\'.modal-overlay\').remove()">Cancel</button></div></div>';
+  document.body.appendChild(m);
+};
+window.confirmSell=async function(docId,curQty){
+  const sq=parseFloat(document.getElementById('sellQtyInput').value);
+  if(!sq||sq<=0){alert('Enter shares to sell.');return;}
+  if(sq>curQty+0.0001){alert('Cannot sell more than you own ('+curQty+').');return;}
+  document.querySelector('.modal-overlay').remove();
+  if(Math.abs(sq-curQty)<0.0001){if(confirm('Selling all shares removes this holding. Continue?')){await deleteHolding(docId);}}
+  else{try{await updateHoldingDoc(docId,{quantity:Math.round((curQty-sq)*10000)/10000,lastUpdated:new Date().toISOString()});showStatus('holdingsStatus','&#10003; Sold '+sq+' shares. Remaining: '+(curQty-sq).toFixed(4),'success');await loadHoldings();}catch(e){alert(e.message);}}
+};
+
 window.refreshAllPrices=async function(){
   const holdings=window._holdings||[];if(!holdings.length)return;
   const btn=document.getElementById('refreshBtn');btn.disabled=true;btn.innerHTML='<span class="spinner"></span>Refreshing...';
@@ -347,10 +378,10 @@ window.refreshAllPrices=async function(){
   showStatus('holdingsStatus','&#10003; Refreshed '+n+'/'+holdings.length,'success');
   await loadHoldings();btn.disabled=false;btn.textContent='Refresh All Prices';
 };
-// Direct add for bulk import (called from non-module script)
-window._addHoldingDirect=async function(ticker,name,date,qty,cost,price,prevClose,meta){
+
+window._addHoldingDirect=async function(ticker,name,date,qty,cost,price,prevClose,meta,acctType){
   const user=window._currentUser;if(!user)throw new Error('Not signed in');
-  await addDoc(collection(db,"holdings"),{uid:user.uid,ticker,companyName:name,datePurchased:date,quantity:qty,costBasis:cost,currentPrice:price,previousClose:prevClose,sector:meta.sector,industry:meta.industry,assetClass:meta.assetClass,marketCap:meta.marketCap,mktCapCategory:meta.mktCapCategory,leverage:meta.leverage||'',lastUpdated:new Date().toISOString(),createdAt:serverTimestamp()});
+  await addDoc(collection(db,"holdings"),{uid:user.uid,ticker,companyName:name,datePurchased:date,quantity:qty,costBasis:cost,currentPrice:price,previousClose:prevClose,sector:meta.sector,industry:meta.industry,assetClass:meta.assetClass,marketCap:meta.marketCap,mktCapCategory:meta.mktCapCategory,leverage:meta.leverage||'',accountType:acctType||'Individual',lastUpdated:new Date().toISOString(),createdAt:serverTimestamp()});
 };
 </script>
 
@@ -363,840 +394,211 @@ Chart.defaults.font.family='Arial, Helvetica, sans-serif';Chart.defaults.color=C
 const chartTooltip={backgroundColor:C.bg,titleColor:C.text,bodyColor:C.text,borderColor:C.border,borderWidth:1,titleFont:{family:'Arial',size:12,weight:'600'},bodyFont:{family:'Arial',size:12},padding:10};
 const chartGrid={color:'rgba(208,215,224,0.5)',drawBorder:false};
 const chartTicks={font:{family:'Arial',size:11},color:C.textSec};
-
 (async()=>{try{const r=await fetch(WORKER_URL+"/health");const d=await r.json();if(d.status==="ok"){document.getElementById("worker-status-dot").classList.replace("red","green");document.getElementById("worker-status-text").textContent="Data Proxy: Connected";}}catch(e){}})();
-
 async function fetchQuote(t){const r=await fetch(WORKER_URL+"/quote?symbol="+encodeURIComponent(t));const d=await r.json();if(d.error)throw new Error(d.error);return d;}
 async function fetchChart(t,range,interval){const r=await fetch(WORKER_URL+"/chart?symbol="+encodeURIComponent(t)+"&range="+range+"&interval="+(interval||"1d"));const d=await r.json();if(d.error)throw new Error(d.error);return d;}
 async function fetchSearch(q){const r=await fetch(WORKER_URL+"/search?q="+encodeURIComponent(q));const d=await r.json();if(d.error)throw new Error(d.error);return d;}
 window.fetchQuote=fetchQuote;
 
-// ══════════════════════════════════════════════════════
-// MASSIVELY EXPANDED CLASSIFICATION SYSTEM
-// ══════════════════════════════════════════════════════
-const ETF_DB={
-  // Broad Market
-  SPY:{s:"Broad Market",i:"S&P 500 Index",f:"Large Cap Blend",a:"ETF"},VOO:{s:"Broad Market",i:"S&P 500 Index",f:"Large Cap Blend",a:"ETF"},IVV:{s:"Broad Market",i:"S&P 500 Index",f:"Large Cap Blend",a:"ETF"},
-  VTI:{s:"Broad Market",i:"Total US Market",f:"All Cap Blend",a:"ETF"},ITOT:{s:"Broad Market",i:"Total US Market",f:"All Cap Blend",a:"ETF"},SCHB:{s:"Broad Market",i:"Total US Market",f:"All Cap Blend",a:"ETF"},
-  DIA:{s:"Broad Market",i:"Dow Jones Industrial",f:"Large Cap Value",a:"ETF"},RSP:{s:"Broad Market",i:"S&P 500 Equal Weight",f:"Large Cap Blend",a:"ETF"},
-  IWM:{s:"Broad Market",i:"Russell 2000 Small Cap",f:"Small Cap Blend",a:"ETF"},IWN:{s:"Broad Market",i:"Russell 2000 Value",f:"Small Cap Value",a:"ETF"},IWO:{s:"Broad Market",i:"Russell 2000 Growth",f:"Small Cap Growth",a:"ETF"},
-  MDY:{s:"Broad Market",i:"S&P MidCap 400",f:"Mid Cap Blend",a:"ETF"},IJH:{s:"Broad Market",i:"S&P MidCap 400",f:"Mid Cap Blend",a:"ETF"},VO:{s:"Broad Market",i:"Mid Cap Index",f:"Mid Cap Blend",a:"ETF"},
-  VIG:{s:"Broad Market",i:"Dividend Appreciation",f:"Large Cap Blend",a:"ETF"},VYM:{s:"Broad Market",i:"High Dividend Yield",f:"Large Cap Value",a:"ETF"},SCHD:{s:"Broad Market",i:"Dividend Equity",f:"Large Cap Value",a:"ETF"},DVY:{s:"Broad Market",i:"Select Dividend",f:"Large Cap Value",a:"ETF"},
-  VUG:{s:"Broad Market",i:"Growth Index",f:"Large Cap Growth",a:"ETF"},VTV:{s:"Broad Market",i:"Value Index",f:"Large Cap Value",a:"ETF"},IWF:{s:"Broad Market",i:"Russell 1000 Growth",f:"Large Cap Growth",a:"ETF"},IWD:{s:"Broad Market",i:"Russell 1000 Value",f:"Large Cap Value",a:"ETF"},
-  // Technology
-  QQQ:{s:"Information Technology",i:"Nasdaq-100 Index",f:"Large Cap Growth",a:"ETF"},QQQM:{s:"Information Technology",i:"Nasdaq-100 Index",f:"Large Cap Growth",a:"ETF"},
-  XLK:{s:"Information Technology",i:"Technology Select SPDR",f:"Large Cap Growth",a:"ETF"},VGT:{s:"Information Technology",i:"Information Technology",f:"Large Cap Growth",a:"ETF"},
-  SMH:{s:"Information Technology",i:"Semiconductors",f:"Large Cap Growth",a:"ETF"},SOXX:{s:"Information Technology",i:"Semiconductors",f:"Large Cap Growth",a:"ETF"},
-  IGV:{s:"Information Technology",i:"Software",f:"Large Cap Growth",a:"ETF"},WCLD:{s:"Information Technology",i:"Cloud Computing",f:"Mid Cap Growth",a:"ETF"},
-  ARKK:{s:"Information Technology",i:"Disruptive Innovation",f:"Mid Cap Growth",a:"ETF"},ARKW:{s:"Information Technology",i:"Next Gen Internet",f:"Mid Cap Growth",a:"ETF"},ARKF:{s:"Financials",i:"Fintech Innovation",f:"Mid Cap Growth",a:"ETF"},ARKG:{s:"Healthcare",i:"Genomic Revolution",f:"Mid Cap Growth",a:"ETF"},
-  HACK:{s:"Information Technology",i:"Cybersecurity",f:"Mid Cap Growth",a:"ETF"},BUG:{s:"Information Technology",i:"Cybersecurity",f:"Mid Cap Growth",a:"ETF"},CIBR:{s:"Information Technology",i:"Cybersecurity",f:"Mid Cap Growth",a:"ETF"},
-  BOTZ:{s:"Information Technology",i:"Robotics & AI",f:"Mid Cap Growth",a:"ETF"},ROBO:{s:"Information Technology",i:"Robotics & AI",f:"Mid Cap Growth",a:"ETF"},
-  // Leveraged ETFs
-  TQQQ:{s:"Information Technology",i:"Nasdaq-100 (3x Leveraged)",f:"Large Cap Growth",a:"Leveraged ETF",lev:"3x Long QQQ"},SQQQ:{s:"Information Technology",i:"Nasdaq-100 (3x Inverse)",f:"Large Cap Growth",a:"Leveraged ETF",lev:"3x Short QQQ"},
-  SOXL:{s:"Information Technology",i:"Semiconductors (3x Leveraged)",f:"Large Cap Growth",a:"Leveraged ETF",lev:"3x Long SOXX"},SOXS:{s:"Information Technology",i:"Semiconductors (3x Inverse)",f:"Large Cap Growth",a:"Leveraged ETF",lev:"3x Short SOXX"},
-  UPRO:{s:"Broad Market",i:"S&P 500 (3x Leveraged)",f:"Large Cap Blend",a:"Leveraged ETF",lev:"3x Long SPY"},SPXU:{s:"Broad Market",i:"S&P 500 (3x Inverse)",f:"Large Cap Blend",a:"Leveraged ETF",lev:"3x Short SPY"},
-  TNA:{s:"Broad Market",i:"Russell 2000 (3x Leveraged)",f:"Small Cap Blend",a:"Leveraged ETF",lev:"3x Long IWM"},TZA:{s:"Broad Market",i:"Russell 2000 (3x Inverse)",f:"Small Cap Blend",a:"Leveraged ETF",lev:"3x Short IWM"},
-  LABU:{s:"Healthcare",i:"Biotech (3x Leveraged)",f:"Mid Cap Growth",a:"Leveraged ETF",lev:"3x Long XBI"},LABD:{s:"Healthcare",i:"Biotech (3x Inverse)",f:"Mid Cap Growth",a:"Leveraged ETF",lev:"3x Short XBI"},
-  FNGU:{s:"Information Technology",i:"FANG+ (3x Leveraged)",f:"Large Cap Growth",a:"Leveraged ETF",lev:"3x Long FANG+"},
-  UVXY:{s:"Volatility",i:"VIX Short-Term Futures (1.5x)",f:"Volatility",a:"Leveraged ETF",lev:"1.5x Long VIX"},SVXY:{s:"Volatility",i:"VIX Short-Term Futures (0.5x Inverse)",f:"Volatility",a:"Leveraged ETF",lev:"0.5x Short VIX"},
-  // Sector SPDRs
-  XLF:{s:"Financials",i:"Financial Select SPDR",f:"Large Cap Value",a:"ETF"},XLE:{s:"Energy",i:"Energy Select SPDR",f:"Large Cap Value",a:"ETF"},XLV:{s:"Healthcare",i:"Health Care Select SPDR",f:"Large Cap Blend",a:"ETF"},
-  XLI:{s:"Industrials",i:"Industrial Select SPDR",f:"Large Cap Blend",a:"ETF"},XLP:{s:"Consumer Staples",i:"Consumer Staples Select SPDR",f:"Large Cap Value",a:"ETF"},XLY:{s:"Consumer Discretionary",i:"Consumer Discretionary Select SPDR",f:"Large Cap Growth",a:"ETF"},
-  XLU:{s:"Utilities",i:"Utilities Select SPDR",f:"Large Cap Value",a:"ETF"},XLB:{s:"Materials",i:"Materials Select SPDR",f:"Large Cap Blend",a:"ETF"},XLRE:{s:"Real Estate",i:"Real Estate Select SPDR",f:"Large Cap Blend",a:"ETF"},XLC:{s:"Communication Services",i:"Communication Services Select SPDR",f:"Large Cap Growth",a:"ETF"},
-  // Fixed Income
-  BND:{s:"Fixed Income",i:"US Aggregate Bond",f:"Intermediate Bond",a:"Bond ETF"},AGG:{s:"Fixed Income",i:"US Aggregate Bond",f:"Intermediate Bond",a:"Bond ETF"},
-  TLT:{s:"Fixed Income",i:"20+ Year Treasury",f:"Long Duration Bond",a:"Bond ETF"},IEF:{s:"Fixed Income",i:"7-10 Year Treasury",f:"Intermediate Bond",a:"Bond ETF"},SHY:{s:"Fixed Income",i:"1-3 Year Treasury",f:"Short Duration Bond",a:"Bond ETF"},
-  LQD:{s:"Fixed Income",i:"Investment Grade Corporate",f:"Intermediate Bond",a:"Bond ETF"},HYG:{s:"Fixed Income",i:"High Yield Corporate",f:"High Yield Bond",a:"Bond ETF"},JNK:{s:"Fixed Income",i:"High Yield Corporate",f:"High Yield Bond",a:"Bond ETF"},
-  TIP:{s:"Fixed Income",i:"TIPS (Inflation Protected)",f:"TIPS",a:"Bond ETF"},BNDX:{s:"Fixed Income",i:"International Bond",f:"International Bond",a:"Bond ETF"},EMB:{s:"Fixed Income",i:"EM USD Bond",f:"EM Bond",a:"Bond ETF"},
-  TMF:{s:"Fixed Income",i:"20+ Year Treasury (3x Leveraged)",f:"Long Duration Bond",a:"Leveraged ETF",lev:"3x Long TLT"},
-  // Commodities & Metals
-  GLD:{s:"Commodities",i:"Gold",f:"Precious Metals",a:"Commodity ETF"},IAU:{s:"Commodities",i:"Gold",f:"Precious Metals",a:"Commodity ETF"},SGOL:{s:"Commodities",i:"Gold",f:"Precious Metals",a:"Commodity ETF"},
-  SLV:{s:"Commodities",i:"Silver",f:"Precious Metals",a:"Commodity ETF"},PSLV:{s:"Commodities",i:"Silver (Physical)",f:"Precious Metals",a:"Commodity ETF"},
-  GDX:{s:"Commodities",i:"Gold Miners",f:"Mid Cap Value",a:"ETF"},GDXJ:{s:"Commodities",i:"Junior Gold Miners",f:"Small Cap Value",a:"ETF"},
-  USO:{s:"Commodities",i:"Crude Oil",f:"Energy Commodity",a:"Commodity ETF"},BNO:{s:"Commodities",i:"Brent Crude Oil",f:"Energy Commodity",a:"Commodity ETF"},
-  UNG:{s:"Commodities",i:"Natural Gas",f:"Energy Commodity",a:"Commodity ETF"},DBC:{s:"Commodities",i:"Commodity Index",f:"Diversified Commodity",a:"Commodity ETF"},PDBC:{s:"Commodities",i:"Commodity Index (Optimum Yield)",f:"Diversified Commodity",a:"Commodity ETF"},
-  PPLT:{s:"Commodities",i:"Platinum",f:"Precious Metals",a:"Commodity ETF"},PALL:{s:"Commodities",i:"Palladium",f:"Precious Metals",a:"Commodity ETF"},
-  COPX:{s:"Commodities",i:"Copper Miners",f:"Mid Cap Value",a:"ETF"},
-  UUP:{s:"Currency",i:"US Dollar Index (Bullish)",f:"Currency",a:"Currency ETF"},UDN:{s:"Currency",i:"US Dollar Index (Bearish)",f:"Currency",a:"Currency ETF"},FXE:{s:"Currency",i:"Euro",f:"Currency",a:"Currency ETF"},FXY:{s:"Currency",i:"Japanese Yen",f:"Currency",a:"Currency ETF"},
-  // Real Estate
-  VNQ:{s:"Real Estate",i:"US REITs",f:"Large Cap Blend",a:"REIT ETF"},VNQI:{s:"Real Estate",i:"International REITs",f:"Large Cap Blend",a:"REIT ETF"},IYR:{s:"Real Estate",i:"US Real Estate",f:"Large Cap Blend",a:"REIT ETF"},
-  // International
-  EEM:{s:"International",i:"Emerging Markets",f:"Large Cap Blend",a:"ETF"},VWO:{s:"International",i:"Emerging Markets",f:"Large Cap Blend",a:"ETF"},IEMG:{s:"International",i:"Emerging Markets",f:"Large Cap Blend",a:"ETF"},
-  EFA:{s:"International",i:"Developed Markets ex-US",f:"Large Cap Blend",a:"ETF"},VXUS:{s:"International",i:"International ex-US",f:"All Cap Blend",a:"ETF"},IXUS:{s:"International",i:"International ex-US",f:"All Cap Blend",a:"ETF"},
-  FXI:{s:"International",i:"China Large Cap",f:"Large Cap Blend",a:"ETF"},EWJ:{s:"International",i:"Japan",f:"Large Cap Blend",a:"ETF"},EWG:{s:"International",i:"Germany",f:"Large Cap Blend",a:"ETF"},EWZ:{s:"International",i:"Brazil",f:"Large Cap Blend",a:"ETF"},INDA:{s:"International",i:"India",f:"Large Cap Blend",a:"ETF"},
-  KWEB:{s:"International",i:"China Internet",f:"Large Cap Growth",a:"ETF"},
-  // Crypto
-  IBIT:{s:"Digital Assets",i:"Bitcoin",f:"Crypto",a:"Crypto ETF"},FBTC:{s:"Digital Assets",i:"Bitcoin",f:"Crypto",a:"Crypto ETF"},GBTC:{s:"Digital Assets",i:"Bitcoin Trust",f:"Crypto",a:"Crypto ETF"},
-  ETHE:{s:"Digital Assets",i:"Ethereum Trust",f:"Crypto",a:"Crypto ETF"},BITO:{s:"Digital Assets",i:"Bitcoin Futures",f:"Crypto",a:"Crypto ETF"},
-  // Specialty
-  MSTR:{s:"Information Technology",i:"Bitcoin Treasury Corp",f:"Large Cap Growth",a:"Equity"},
-  XBI:{s:"Healthcare",i:"Biotech",f:"Mid Cap Growth",a:"ETF"},IBB:{s:"Healthcare",i:"Biotech",f:"Large Cap Growth",a:"ETF"},
-  JETS:{s:"Industrials",i:"Airlines",f:"Mid Cap Blend",a:"ETF"},ITA:{s:"Industrials",i:"Aerospace & Defense",f:"Large Cap Blend",a:"ETF"},
-  KRE:{s:"Financials",i:"Regional Banks",f:"Mid Cap Value",a:"ETF"},KBE:{s:"Financials",i:"Banks",f:"Mid Cap Value",a:"ETF"},
-  ITB:{s:"Consumer Discretionary",i:"Homebuilders",f:"Mid Cap Growth",a:"ETF"},XHB:{s:"Consumer Discretionary",i:"Homebuilders",f:"Mid Cap Growth",a:"ETF"},
-  MOO:{s:"Consumer Staples",i:"Agribusiness",f:"Large Cap Blend",a:"ETF"},
-  ICLN:{s:"Utilities",i:"Clean Energy",f:"Mid Cap Growth",a:"ETF"},TAN:{s:"Utilities",i:"Solar Energy",f:"Mid Cap Growth",a:"ETF"},
-  LIT:{s:"Materials",i:"Lithium & Battery",f:"Mid Cap Growth",a:"ETF"},REMX:{s:"Materials",i:"Rare Earth & Strategic Metals",f:"Small Cap Value",a:"ETF"},
-  UFO:{s:"Industrials",i:"Space & Aerospace",f:"Mid Cap Growth",a:"ETF"},
-};
+// ═══ CLASSIFICATION (ETF + STOCK databases) ═══
+const ETF_DB={SPY:{s:"Broad Market",i:"S&P 500 Index",f:"Large Cap Blend",a:"ETF"},VOO:{s:"Broad Market",i:"S&P 500 Index",f:"Large Cap Blend",a:"ETF"},IVV:{s:"Broad Market",i:"S&P 500 Index",f:"Large Cap Blend",a:"ETF"},VTI:{s:"Broad Market",i:"Total US Market",f:"All Cap Blend",a:"ETF"},ITOT:{s:"Broad Market",i:"Total US Market",f:"All Cap Blend",a:"ETF"},DIA:{s:"Broad Market",i:"Dow Jones Industrial",f:"Large Cap Value",a:"ETF"},RSP:{s:"Broad Market",i:"S&P 500 Equal Weight",f:"Large Cap Blend",a:"ETF"},IWM:{s:"Broad Market",i:"Russell 2000 Small Cap",f:"Small Cap Blend",a:"ETF"},IWN:{s:"Broad Market",i:"Russell 2000 Value",f:"Small Cap Value",a:"ETF"},IWO:{s:"Broad Market",i:"Russell 2000 Growth",f:"Small Cap Growth",a:"ETF"},MDY:{s:"Broad Market",i:"S&P MidCap 400",f:"Mid Cap Blend",a:"ETF"},VO:{s:"Broad Market",i:"Mid Cap Index",f:"Mid Cap Blend",a:"ETF"},VIG:{s:"Broad Market",i:"Dividend Appreciation",f:"Large Cap Blend",a:"ETF"},VYM:{s:"Broad Market",i:"High Dividend Yield",f:"Large Cap Value",a:"ETF"},SCHD:{s:"Broad Market",i:"Dividend Equity",f:"Large Cap Value",a:"ETF"},VUG:{s:"Broad Market",i:"Growth Index",f:"Large Cap Growth",a:"ETF"},VTV:{s:"Broad Market",i:"Value Index",f:"Large Cap Value",a:"ETF"},IWF:{s:"Broad Market",i:"Russell 1000 Growth",f:"Large Cap Growth",a:"ETF"},IWD:{s:"Broad Market",i:"Russell 1000 Value",f:"Large Cap Value",a:"ETF"},QQQ:{s:"Information Technology",i:"Nasdaq-100 Index",f:"Large Cap Growth",a:"ETF"},QQQM:{s:"Information Technology",i:"Nasdaq-100 Index",f:"Large Cap Growth",a:"ETF"},XLK:{s:"Information Technology",i:"Technology Select SPDR",f:"Large Cap Growth",a:"ETF"},VGT:{s:"Information Technology",i:"Information Technology",f:"Large Cap Growth",a:"ETF"},SMH:{s:"Information Technology",i:"Semiconductors",f:"Large Cap Growth",a:"ETF"},SOXX:{s:"Information Technology",i:"Semiconductors",f:"Large Cap Growth",a:"ETF"},IGV:{s:"Information Technology",i:"Software",f:"Large Cap Growth",a:"ETF"},ARKK:{s:"Information Technology",i:"Disruptive Innovation",f:"Mid Cap Growth",a:"ETF"},ARKW:{s:"Information Technology",i:"Next Gen Internet",f:"Mid Cap Growth",a:"ETF"},ARKG:{s:"Healthcare",i:"Genomic Revolution",f:"Mid Cap Growth",a:"ETF"},HACK:{s:"Information Technology",i:"Cybersecurity",f:"Mid Cap Growth",a:"ETF"},CIBR:{s:"Information Technology",i:"Cybersecurity",f:"Mid Cap Growth",a:"ETF"},TQQQ:{s:"Information Technology",i:"Nasdaq-100 (3x Leveraged)",f:"Large Cap Growth",a:"Leveraged ETF",lev:"3x Long QQQ"},SQQQ:{s:"Information Technology",i:"Nasdaq-100 (3x Inverse)",f:"Large Cap Growth",a:"Leveraged ETF",lev:"3x Short QQQ"},SOXL:{s:"Information Technology",i:"Semiconductors (3x Leveraged)",f:"Large Cap Growth",a:"Leveraged ETF",lev:"3x Long SOXX"},SOXS:{s:"Information Technology",i:"Semiconductors (3x Inverse)",f:"Large Cap Growth",a:"Leveraged ETF",lev:"3x Short SOXX"},UPRO:{s:"Broad Market",i:"S&P 500 (3x Leveraged)",f:"Large Cap Blend",a:"Leveraged ETF",lev:"3x Long SPY"},SPXU:{s:"Broad Market",i:"S&P 500 (3x Inverse)",f:"Large Cap Blend",a:"Leveraged ETF",lev:"3x Short SPY"},TNA:{s:"Broad Market",i:"Russell 2000 (3x Leveraged)",f:"Small Cap Blend",a:"Leveraged ETF",lev:"3x Long IWM"},LABU:{s:"Healthcare",i:"Biotech (3x Leveraged)",f:"Mid Cap Growth",a:"Leveraged ETF",lev:"3x Long XBI"},FNGU:{s:"Information Technology",i:"FANG+ (3x Leveraged)",f:"Large Cap Growth",a:"Leveraged ETF",lev:"3x Long FANG+"},TMF:{s:"Fixed Income",i:"20+ Year Treasury (3x)",f:"Long Duration Bond",a:"Leveraged ETF",lev:"3x Long TLT"},XLF:{s:"Financials",i:"Financial Select SPDR",f:"Large Cap Value",a:"ETF"},XLE:{s:"Energy",i:"Energy Select SPDR",f:"Large Cap Value",a:"ETF"},XLV:{s:"Healthcare",i:"Health Care Select SPDR",f:"Large Cap Blend",a:"ETF"},XLI:{s:"Industrials",i:"Industrial Select SPDR",f:"Large Cap Blend",a:"ETF"},XLP:{s:"Consumer Staples",i:"Consumer Staples SPDR",f:"Large Cap Value",a:"ETF"},XLY:{s:"Consumer Discretionary",i:"Consumer Disc SPDR",f:"Large Cap Growth",a:"ETF"},XLU:{s:"Utilities",i:"Utilities Select SPDR",f:"Large Cap Value",a:"ETF"},XLB:{s:"Materials",i:"Materials Select SPDR",f:"Large Cap Blend",a:"ETF"},XLRE:{s:"Real Estate",i:"Real Estate Select SPDR",f:"Large Cap Blend",a:"ETF"},XLC:{s:"Communication Services",i:"Comm Services SPDR",f:"Large Cap Growth",a:"ETF"},BND:{s:"Fixed Income",i:"US Aggregate Bond",f:"Intermediate Bond",a:"Bond ETF"},AGG:{s:"Fixed Income",i:"US Aggregate Bond",f:"Intermediate Bond",a:"Bond ETF"},TLT:{s:"Fixed Income",i:"20+ Year Treasury",f:"Long Duration Bond",a:"Bond ETF"},IEF:{s:"Fixed Income",i:"7-10 Year Treasury",f:"Intermediate Bond",a:"Bond ETF"},SHY:{s:"Fixed Income",i:"1-3 Year Treasury",f:"Short Duration Bond",a:"Bond ETF"},LQD:{s:"Fixed Income",i:"Investment Grade Corp",f:"IG Bond",a:"Bond ETF"},HYG:{s:"Fixed Income",i:"High Yield Corp",f:"HY Bond",a:"Bond ETF"},JNK:{s:"Fixed Income",i:"High Yield Corp",f:"HY Bond",a:"Bond ETF"},TIP:{s:"Fixed Income",i:"TIPS",f:"TIPS",a:"Bond ETF"},EMB:{s:"Fixed Income",i:"EM USD Bond",f:"EM Bond",a:"Bond ETF"},GLD:{s:"Commodities",i:"Gold",f:"Precious Metals",a:"Commodity ETF"},IAU:{s:"Commodities",i:"Gold",f:"Precious Metals",a:"Commodity ETF"},SLV:{s:"Commodities",i:"Silver",f:"Precious Metals",a:"Commodity ETF"},GDX:{s:"Commodities",i:"Gold Miners",f:"Mid Cap Value",a:"ETF"},GDXJ:{s:"Commodities",i:"Junior Gold Miners",f:"Small Cap Value",a:"ETF"},USO:{s:"Commodities",i:"Crude Oil",f:"Energy Commodity",a:"Commodity ETF"},UNG:{s:"Commodities",i:"Natural Gas",f:"Energy Commodity",a:"Commodity ETF"},DBC:{s:"Commodities",i:"Commodity Index",f:"Diversified Commodity",a:"Commodity ETF"},COPX:{s:"Commodities",i:"Copper Miners",f:"Mid Cap Value",a:"ETF"},UUP:{s:"Currency",i:"US Dollar Index",f:"Currency",a:"Currency ETF"},FXE:{s:"Currency",i:"Euro",f:"Currency",a:"Currency ETF"},VNQ:{s:"Real Estate",i:"US REITs",f:"Large Cap Blend",a:"REIT ETF"},IYR:{s:"Real Estate",i:"US Real Estate",f:"Large Cap Blend",a:"REIT ETF"},EEM:{s:"International",i:"Emerging Markets",f:"Large Cap Blend",a:"ETF"},VWO:{s:"International",i:"Emerging Markets",f:"Large Cap Blend",a:"ETF"},EFA:{s:"International",i:"Developed Markets ex-US",f:"Large Cap Blend",a:"ETF"},VXUS:{s:"International",i:"International ex-US",f:"All Cap Blend",a:"ETF"},FXI:{s:"International",i:"China Large Cap",f:"Large Cap Blend",a:"ETF"},KWEB:{s:"International",i:"China Internet",f:"Large Cap Growth",a:"ETF"},INDA:{s:"International",i:"India",f:"Large Cap Blend",a:"ETF"},IBIT:{s:"Digital Assets",i:"Bitcoin",f:"Crypto",a:"Crypto ETF"},FBTC:{s:"Digital Assets",i:"Bitcoin",f:"Crypto",a:"Crypto ETF"},GBTC:{s:"Digital Assets",i:"Bitcoin Trust",f:"Crypto",a:"Crypto ETF"},ETHE:{s:"Digital Assets",i:"Ethereum Trust",f:"Crypto",a:"Crypto ETF"},BITO:{s:"Digital Assets",i:"Bitcoin Futures",f:"Crypto",a:"Crypto ETF"},XBI:{s:"Healthcare",i:"Biotech",f:"Mid Cap Growth",a:"ETF"},IBB:{s:"Healthcare",i:"Biotech",f:"Large Cap Growth",a:"ETF"},JETS:{s:"Industrials",i:"Airlines",f:"Mid Cap Blend",a:"ETF"},ITA:{s:"Industrials",i:"Aerospace & Defense",f:"Large Cap Blend",a:"ETF"},KRE:{s:"Financials",i:"Regional Banks",f:"Mid Cap Value",a:"ETF"},ITB:{s:"Consumer Discretionary",i:"Homebuilders",f:"Mid Cap Growth",a:"ETF"},ICLN:{s:"Utilities",i:"Clean Energy",f:"Mid Cap Growth",a:"ETF"},TAN:{s:"Utilities",i:"Solar Energy",f:"Mid Cap Growth",a:"ETF"},LIT:{s:"Materials",i:"Lithium & Battery",f:"Mid Cap Growth",a:"ETF"},REMX:{s:"Materials",i:"Rare Earth Metals",f:"Small Cap Value",a:"ETF"}};
+const STOCK_DB={AAPL:{s:"Information Technology",i:"Consumer Electronics",mc:"Mega Cap"},MSFT:{s:"Information Technology",i:"Software",mc:"Mega Cap"},GOOGL:{s:"Communication Services",i:"Internet Services",mc:"Mega Cap"},GOOG:{s:"Communication Services",i:"Internet Services",mc:"Mega Cap"},META:{s:"Communication Services",i:"Social Media",mc:"Mega Cap"},NVDA:{s:"Information Technology",i:"Semiconductors",mc:"Mega Cap"},AVGO:{s:"Information Technology",i:"Semiconductors",mc:"Mega Cap"},ORCL:{s:"Information Technology",i:"Enterprise Software",mc:"Mega Cap"},CRM:{s:"Information Technology",i:"Enterprise Software",mc:"Large Cap"},ADBE:{s:"Information Technology",i:"Software",mc:"Large Cap"},AMD:{s:"Information Technology",i:"Semiconductors",mc:"Large Cap"},INTC:{s:"Information Technology",i:"Semiconductors",mc:"Large Cap"},QCOM:{s:"Information Technology",i:"Semiconductors",mc:"Large Cap"},TXN:{s:"Information Technology",i:"Semiconductors",mc:"Large Cap"},AMAT:{s:"Information Technology",i:"Semiconductor Equipment",mc:"Large Cap"},MU:{s:"Information Technology",i:"Memory Semiconductors",mc:"Large Cap"},LRCX:{s:"Information Technology",i:"Semiconductor Equipment",mc:"Large Cap"},ARM:{s:"Information Technology",i:"Semiconductor IP",mc:"Large Cap"},NOW:{s:"Information Technology",i:"Enterprise Software",mc:"Large Cap"},SNOW:{s:"Information Technology",i:"Cloud Data",mc:"Large Cap"},PLTR:{s:"Information Technology",i:"Data Analytics",mc:"Large Cap"},PANW:{s:"Information Technology",i:"Cybersecurity",mc:"Large Cap"},CRWD:{s:"Information Technology",i:"Cybersecurity",mc:"Large Cap"},ZS:{s:"Information Technology",i:"Cybersecurity",mc:"Large Cap"},NET:{s:"Information Technology",i:"Cloud Infrastructure",mc:"Large Cap"},DDOG:{s:"Information Technology",i:"Cloud Monitoring",mc:"Mid Cap"},CSCO:{s:"Information Technology",i:"Networking",mc:"Large Cap"},IBM:{s:"Information Technology",i:"IT Services",mc:"Large Cap"},ACN:{s:"Information Technology",i:"IT Consulting",mc:"Large Cap"},INTU:{s:"Information Technology",i:"Financial Software",mc:"Large Cap"},SHOP:{s:"Information Technology",i:"E-Commerce Platform",mc:"Large Cap"},SQ:{s:"Financials",i:"Fintech",mc:"Large Cap"},PYPL:{s:"Financials",i:"Digital Payments",mc:"Large Cap"},UBER:{s:"Information Technology",i:"Mobility Platform",mc:"Large Cap"},ABNB:{s:"Consumer Discretionary",i:"Travel Platform",mc:"Large Cap"},AMZN:{s:"Consumer Discretionary",i:"E-Commerce",mc:"Mega Cap"},TSLA:{s:"Consumer Discretionary",i:"Electric Vehicles",mc:"Mega Cap"},HD:{s:"Consumer Discretionary",i:"Home Improvement",mc:"Large Cap"},LOW:{s:"Consumer Discretionary",i:"Home Improvement",mc:"Large Cap"},NKE:{s:"Consumer Discretionary",i:"Athletic Apparel",mc:"Large Cap"},SBUX:{s:"Consumer Discretionary",i:"Restaurants",mc:"Large Cap"},MCD:{s:"Consumer Discretionary",i:"Quick Service Restaurants",mc:"Mega Cap"},F:{s:"Consumer Discretionary",i:"Automobiles",mc:"Large Cap"},GM:{s:"Consumer Discretionary",i:"Automobiles",mc:"Large Cap"},RIVN:{s:"Consumer Discretionary",i:"Electric Vehicles",mc:"Mid Cap"},BKNG:{s:"Consumer Discretionary",i:"Online Travel",mc:"Large Cap"},PG:{s:"Consumer Staples",i:"Household Products",mc:"Mega Cap"},KO:{s:"Consumer Staples",i:"Beverages",mc:"Mega Cap"},PEP:{s:"Consumer Staples",i:"Beverages & Snacks",mc:"Mega Cap"},COST:{s:"Consumer Staples",i:"Warehouse Retail",mc:"Large Cap"},WMT:{s:"Consumer Staples",i:"Discount Retail",mc:"Mega Cap"},PM:{s:"Consumer Staples",i:"Tobacco",mc:"Large Cap"},MO:{s:"Consumer Staples",i:"Tobacco",mc:"Large Cap"},"BRK.B":{s:"Financials",i:"Diversified Holding",mc:"Mega Cap"},JPM:{s:"Financials",i:"Banking",mc:"Mega Cap"},BAC:{s:"Financials",i:"Banking",mc:"Large Cap"},WFC:{s:"Financials",i:"Banking",mc:"Large Cap"},GS:{s:"Financials",i:"Investment Banking",mc:"Large Cap"},MS:{s:"Financials",i:"Investment Banking",mc:"Large Cap"},V:{s:"Financials",i:"Payment Processing",mc:"Mega Cap"},MA:{s:"Financials",i:"Payment Processing",mc:"Mega Cap"},BLK:{s:"Financials",i:"Asset Management",mc:"Large Cap"},COIN:{s:"Financials",i:"Crypto Exchange",mc:"Large Cap"},SOFI:{s:"Financials",i:"Fintech",mc:"Mid Cap"},UNH:{s:"Healthcare",i:"Health Insurance",mc:"Mega Cap"},JNJ:{s:"Healthcare",i:"Diversified Healthcare",mc:"Mega Cap"},LLY:{s:"Healthcare",i:"Pharmaceuticals",mc:"Mega Cap"},ABBV:{s:"Healthcare",i:"Pharmaceuticals",mc:"Large Cap"},MRK:{s:"Healthcare",i:"Pharmaceuticals",mc:"Large Cap"},PFE:{s:"Healthcare",i:"Pharmaceuticals",mc:"Large Cap"},TMO:{s:"Healthcare",i:"Life Sciences Tools",mc:"Large Cap"},ABT:{s:"Healthcare",i:"Medical Devices",mc:"Large Cap"},ISRG:{s:"Healthcare",i:"Surgical Robotics",mc:"Large Cap"},AMGN:{s:"Healthcare",i:"Biotechnology",mc:"Large Cap"},GILD:{s:"Healthcare",i:"Biotechnology",mc:"Large Cap"},MRNA:{s:"Healthcare",i:"Biotechnology (mRNA)",mc:"Large Cap"},REGN:{s:"Healthcare",i:"Biotechnology",mc:"Large Cap"},VRTX:{s:"Healthcare",i:"Biotechnology",mc:"Large Cap"},XOM:{s:"Energy",i:"Oil & Gas Integrated",mc:"Mega Cap"},CVX:{s:"Energy",i:"Oil & Gas Integrated",mc:"Mega Cap"},COP:{s:"Energy",i:"Oil & Gas E&P",mc:"Large Cap"},SLB:{s:"Energy",i:"Oilfield Services",mc:"Large Cap"},OXY:{s:"Energy",i:"Oil & Gas E&P",mc:"Large Cap"},FSLR:{s:"Energy",i:"Solar Energy",mc:"Mid Cap"},ENPH:{s:"Energy",i:"Solar Energy",mc:"Mid Cap"},BA:{s:"Industrials",i:"Aerospace & Defense",mc:"Large Cap"},RTX:{s:"Industrials",i:"Aerospace & Defense",mc:"Large Cap"},LMT:{s:"Industrials",i:"Defense Contractor",mc:"Large Cap"},CAT:{s:"Industrials",i:"Heavy Equipment",mc:"Large Cap"},DE:{s:"Industrials",i:"Farm Equipment",mc:"Large Cap"},GE:{s:"Industrials",i:"Industrial Conglomerate",mc:"Large Cap"},HON:{s:"Industrials",i:"Industrial Conglomerate",mc:"Large Cap"},UPS:{s:"Industrials",i:"Logistics",mc:"Large Cap"},FDX:{s:"Industrials",i:"Logistics",mc:"Large Cap"},DIS:{s:"Communication Services",i:"Entertainment",mc:"Large Cap"},NFLX:{s:"Communication Services",i:"Streaming",mc:"Large Cap"},T:{s:"Communication Services",i:"Telecom",mc:"Large Cap"},VZ:{s:"Communication Services",i:"Telecom",mc:"Large Cap"},TMUS:{s:"Communication Services",i:"Wireless Telecom",mc:"Large Cap"},SPOT:{s:"Communication Services",i:"Music Streaming",mc:"Large Cap"},NEE:{s:"Utilities",i:"Renewable Utilities",mc:"Large Cap"},DUK:{s:"Utilities",i:"Electric Utilities",mc:"Large Cap"},SO:{s:"Utilities",i:"Electric Utilities",mc:"Large Cap"},AMT:{s:"Real Estate",i:"Cell Tower REITs",mc:"Large Cap"},PLD:{s:"Real Estate",i:"Industrial REITs",mc:"Large Cap"},EQIX:{s:"Real Estate",i:"Data Center REITs",mc:"Large Cap"},O:{s:"Real Estate",i:"Net Lease REITs",mc:"Large Cap"},SPG:{s:"Real Estate",i:"Retail REITs",mc:"Large Cap"},LIN:{s:"Materials",i:"Industrial Gases",mc:"Large Cap"},SHW:{s:"Materials",i:"Paints & Coatings",mc:"Large Cap"},FCX:{s:"Materials",i:"Copper Mining",mc:"Large Cap"},NEM:{s:"Materials",i:"Gold Mining",mc:"Large Cap"},MSTR:{s:"Information Technology",i:"Bitcoin Treasury Corp",mc:"Large Cap"}};
 
-const STOCK_DB = {
-  // Technology - Mega
-  AAPL:{s:"Information Technology",i:"Consumer Electronics",mc:"Mega Cap"},MSFT:{s:"Information Technology",i:"Software",mc:"Mega Cap"},GOOGL:{s:"Communication Services",i:"Internet Services",mc:"Mega Cap"},GOOG:{s:"Communication Services",i:"Internet Services",mc:"Mega Cap"},META:{s:"Communication Services",i:"Social Media",mc:"Mega Cap"},NVDA:{s:"Information Technology",i:"Semiconductors",mc:"Mega Cap"},AVGO:{s:"Information Technology",i:"Semiconductors",mc:"Mega Cap"},
-  ORCL:{s:"Information Technology",i:"Enterprise Software",mc:"Mega Cap"},CRM:{s:"Information Technology",i:"Enterprise Software",mc:"Large Cap"},ADBE:{s:"Information Technology",i:"Software",mc:"Large Cap"},
-  // Technology - Large
-  AMD:{s:"Information Technology",i:"Semiconductors",mc:"Large Cap"},INTC:{s:"Information Technology",i:"Semiconductors",mc:"Large Cap"},QCOM:{s:"Information Technology",i:"Semiconductors",mc:"Large Cap"},TXN:{s:"Information Technology",i:"Semiconductors",mc:"Large Cap"},AMAT:{s:"Information Technology",i:"Semiconductor Equipment",mc:"Large Cap"},MU:{s:"Information Technology",i:"Memory Semiconductors",mc:"Large Cap"},LRCX:{s:"Information Technology",i:"Semiconductor Equipment",mc:"Large Cap"},KLAC:{s:"Information Technology",i:"Semiconductor Equipment",mc:"Large Cap"},MRVL:{s:"Information Technology",i:"Semiconductors",mc:"Large Cap"},ARM:{s:"Information Technology",i:"Semiconductor IP",mc:"Large Cap"},
-  NOW:{s:"Information Technology",i:"Enterprise Software",mc:"Large Cap"},SNOW:{s:"Information Technology",i:"Cloud Data",mc:"Large Cap"},PLTR:{s:"Information Technology",i:"Data Analytics",mc:"Large Cap"},PANW:{s:"Information Technology",i:"Cybersecurity",mc:"Large Cap"},CRWD:{s:"Information Technology",i:"Cybersecurity",mc:"Large Cap"},ZS:{s:"Information Technology",i:"Cybersecurity",mc:"Large Cap"},FTNT:{s:"Information Technology",i:"Cybersecurity",mc:"Large Cap"},NET:{s:"Information Technology",i:"Cloud Infrastructure",mc:"Large Cap"},DDOG:{s:"Information Technology",i:"Cloud Monitoring",mc:"Mid Cap"},
-  CSCO:{s:"Information Technology",i:"Networking",mc:"Large Cap"},IBM:{s:"Information Technology",i:"IT Services",mc:"Large Cap"},ACN:{s:"Information Technology",i:"IT Consulting",mc:"Large Cap"},INTU:{s:"Information Technology",i:"Financial Software",mc:"Large Cap"},
-  SHOP:{s:"Information Technology",i:"E-Commerce Platform",mc:"Large Cap"},SQ:{s:"Financials",i:"Fintech / Payments",mc:"Large Cap"},PYPL:{s:"Financials",i:"Digital Payments",mc:"Large Cap"},
-  DELL:{s:"Information Technology",i:"Hardware",mc:"Large Cap"},HPQ:{s:"Information Technology",i:"Hardware",mc:"Mid Cap"},
-  UBER:{s:"Information Technology",i:"Ride-Sharing / Mobility",mc:"Large Cap"},ABNB:{s:"Consumer Discretionary",i:"Travel Platform",mc:"Large Cap"},
-  // Consumer Discretionary
-  AMZN:{s:"Consumer Discretionary",i:"E-Commerce",mc:"Mega Cap"},TSLA:{s:"Consumer Discretionary",i:"Electric Vehicles",mc:"Mega Cap"},
-  HD:{s:"Consumer Discretionary",i:"Home Improvement",mc:"Large Cap"},LOW:{s:"Consumer Discretionary",i:"Home Improvement",mc:"Large Cap"},TGT:{s:"Consumer Discretionary",i:"Discount Retail",mc:"Large Cap"},
-  NKE:{s:"Consumer Discretionary",i:"Athletic Apparel",mc:"Large Cap"},SBUX:{s:"Consumer Discretionary",i:"Restaurants / Coffee",mc:"Large Cap"},MCD:{s:"Consumer Discretionary",i:"Quick Service Restaurants",mc:"Mega Cap"},CMG:{s:"Consumer Discretionary",i:"Restaurants",mc:"Large Cap"},
-  F:{s:"Consumer Discretionary",i:"Automobiles",mc:"Large Cap"},GM:{s:"Consumer Discretionary",i:"Automobiles",mc:"Large Cap"},RIVN:{s:"Consumer Discretionary",i:"Electric Vehicles",mc:"Mid Cap"},LCID:{s:"Consumer Discretionary",i:"Electric Vehicles",mc:"Small Cap"},
-  BKNG:{s:"Consumer Discretionary",i:"Online Travel",mc:"Large Cap"},MAR:{s:"Consumer Discretionary",i:"Hotels",mc:"Large Cap"},
-  // Consumer Staples
-  PG:{s:"Consumer Staples",i:"Household Products",mc:"Mega Cap"},KO:{s:"Consumer Staples",i:"Beverages",mc:"Mega Cap"},PEP:{s:"Consumer Staples",i:"Beverages & Snacks",mc:"Mega Cap"},
-  COST:{s:"Consumer Staples",i:"Warehouse Retail",mc:"Large Cap"},WMT:{s:"Consumer Staples",i:"Discount Retail",mc:"Mega Cap"},
-  PM:{s:"Consumer Staples",i:"Tobacco",mc:"Large Cap"},MO:{s:"Consumer Staples",i:"Tobacco",mc:"Large Cap"},CL:{s:"Consumer Staples",i:"Household Products",mc:"Large Cap"},KMB:{s:"Consumer Staples",i:"Household Products",mc:"Large Cap"},
-  // Financials
-  "BRK.B":{s:"Financials",i:"Diversified Holding",mc:"Mega Cap"},BRK:{s:"Financials",i:"Diversified Holding",mc:"Mega Cap"},
-  JPM:{s:"Financials",i:"Banking",mc:"Mega Cap"},BAC:{s:"Financials",i:"Banking",mc:"Large Cap"},WFC:{s:"Financials",i:"Banking",mc:"Large Cap"},C:{s:"Financials",i:"Banking",mc:"Large Cap"},GS:{s:"Financials",i:"Investment Banking",mc:"Large Cap"},MS:{s:"Financials",i:"Investment Banking",mc:"Large Cap"},SCHW:{s:"Financials",i:"Brokerage",mc:"Large Cap"},
-  V:{s:"Financials",i:"Payment Processing",mc:"Mega Cap"},MA:{s:"Financials",i:"Payment Processing",mc:"Mega Cap"},AXP:{s:"Financials",i:"Credit Services",mc:"Large Cap"},
-  BLK:{s:"Financials",i:"Asset Management",mc:"Large Cap"},SPGI:{s:"Financials",i:"Financial Data",mc:"Large Cap"},ICE:{s:"Financials",i:"Exchanges",mc:"Large Cap"},CME:{s:"Financials",i:"Exchanges",mc:"Large Cap"},
-  COIN:{s:"Financials",i:"Crypto Exchange",mc:"Large Cap"},HOOD:{s:"Financials",i:"Brokerage / Fintech",mc:"Mid Cap"},SOFI:{s:"Financials",i:"Fintech / Digital Banking",mc:"Mid Cap"},
-  // Healthcare
-  UNH:{s:"Healthcare",i:"Health Insurance",mc:"Mega Cap"},JNJ:{s:"Healthcare",i:"Diversified Healthcare",mc:"Mega Cap"},LLY:{s:"Healthcare",i:"Pharmaceuticals",mc:"Mega Cap"},
-  ABBV:{s:"Healthcare",i:"Pharmaceuticals",mc:"Large Cap"},MRK:{s:"Healthcare",i:"Pharmaceuticals",mc:"Large Cap"},PFE:{s:"Healthcare",i:"Pharmaceuticals",mc:"Large Cap"},BMY:{s:"Healthcare",i:"Pharmaceuticals",mc:"Large Cap"},
-  TMO:{s:"Healthcare",i:"Life Sciences Tools",mc:"Large Cap"},ABT:{s:"Healthcare",i:"Medical Devices",mc:"Large Cap"},MDT:{s:"Healthcare",i:"Medical Devices",mc:"Large Cap"},ISRG:{s:"Healthcare",i:"Surgical Robotics",mc:"Large Cap"},SYK:{s:"Healthcare",i:"Medical Devices",mc:"Large Cap"},
-  AMGN:{s:"Healthcare",i:"Biotechnology",mc:"Large Cap"},GILD:{s:"Healthcare",i:"Biotechnology",mc:"Large Cap"},BIIB:{s:"Healthcare",i:"Biotechnology",mc:"Large Cap"},MRNA:{s:"Healthcare",i:"Biotechnology (mRNA)",mc:"Large Cap"},REGN:{s:"Healthcare",i:"Biotechnology",mc:"Large Cap"},VRTX:{s:"Healthcare",i:"Biotechnology",mc:"Large Cap"},
-  // Energy
-  XOM:{s:"Energy",i:"Oil & Gas Integrated",mc:"Mega Cap"},CVX:{s:"Energy",i:"Oil & Gas Integrated",mc:"Mega Cap"},COP:{s:"Energy",i:"Oil & Gas E&P",mc:"Large Cap"},EOG:{s:"Energy",i:"Oil & Gas E&P",mc:"Large Cap"},SLB:{s:"Energy",i:"Oilfield Services",mc:"Large Cap"},
-  OXY:{s:"Energy",i:"Oil & Gas E&P",mc:"Large Cap"},MPC:{s:"Energy",i:"Oil Refining",mc:"Large Cap"},VLO:{s:"Energy",i:"Oil Refining",mc:"Large Cap"},PSX:{s:"Energy",i:"Oil Refining",mc:"Large Cap"},
-  FSLR:{s:"Energy",i:"Solar Energy",mc:"Mid Cap"},ENPH:{s:"Energy",i:"Solar Energy",mc:"Mid Cap"},
-  // Industrials
-  BA:{s:"Industrials",i:"Aerospace & Defense",mc:"Large Cap"},RTX:{s:"Industrials",i:"Aerospace & Defense",mc:"Large Cap"},LMT:{s:"Industrials",i:"Defense Contractor",mc:"Large Cap"},NOC:{s:"Industrials",i:"Defense Contractor",mc:"Large Cap"},GD:{s:"Industrials",i:"Defense Contractor",mc:"Large Cap"},
-  CAT:{s:"Industrials",i:"Heavy Equipment",mc:"Large Cap"},DE:{s:"Industrials",i:"Farm Equipment",mc:"Large Cap"},GE:{s:"Industrials",i:"Industrial Conglomerate",mc:"Large Cap"},HON:{s:"Industrials",i:"Industrial Conglomerate",mc:"Large Cap"},MMM:{s:"Industrials",i:"Industrial Conglomerate",mc:"Large Cap"},
-  UPS:{s:"Industrials",i:"Logistics",mc:"Large Cap"},FDX:{s:"Industrials",i:"Logistics",mc:"Large Cap"},
-  WM:{s:"Industrials",i:"Waste Management",mc:"Large Cap"},
-  // Communication Services
-  DIS:{s:"Communication Services",i:"Entertainment",mc:"Large Cap"},NFLX:{s:"Communication Services",i:"Streaming",mc:"Large Cap"},CMCSA:{s:"Communication Services",i:"Cable & Media",mc:"Large Cap"},T:{s:"Communication Services",i:"Telecom",mc:"Large Cap"},VZ:{s:"Communication Services",i:"Telecom",mc:"Large Cap"},TMUS:{s:"Communication Services",i:"Wireless Telecom",mc:"Large Cap"},
-  SPOT:{s:"Communication Services",i:"Music Streaming",mc:"Large Cap"},RBLX:{s:"Communication Services",i:"Gaming / Metaverse",mc:"Mid Cap"},
-  // Utilities
-  NEE:{s:"Utilities",i:"Renewable Utilities",mc:"Large Cap"},DUK:{s:"Utilities",i:"Electric Utilities",mc:"Large Cap"},SO:{s:"Utilities",i:"Electric Utilities",mc:"Large Cap"},D:{s:"Utilities",i:"Electric Utilities",mc:"Large Cap"},AEP:{s:"Utilities",i:"Electric Utilities",mc:"Large Cap"},
-  // Real Estate (REITs)
-  AMT:{s:"Real Estate",i:"Cell Tower REITs",mc:"Large Cap"},PLD:{s:"Real Estate",i:"Industrial REITs",mc:"Large Cap"},CCI:{s:"Real Estate",i:"Cell Tower REITs",mc:"Large Cap"},EQIX:{s:"Real Estate",i:"Data Center REITs",mc:"Large Cap"},SPG:{s:"Real Estate",i:"Retail REITs",mc:"Large Cap"},O:{s:"Real Estate",i:"Net Lease REITs",mc:"Large Cap"},
-  // Materials
-  LIN:{s:"Materials",i:"Industrial Gases",mc:"Large Cap"},APD:{s:"Materials",i:"Industrial Gases",mc:"Large Cap"},SHW:{s:"Materials",i:"Paints & Coatings",mc:"Large Cap"},FCX:{s:"Materials",i:"Copper Mining",mc:"Large Cap"},NEM:{s:"Materials",i:"Gold Mining",mc:"Large Cap"},
-  NUE:{s:"Materials",i:"Steel",mc:"Large Cap"},CLF:{s:"Materials",i:"Iron & Steel",mc:"Mid Cap"},AA:{s:"Materials",i:"Aluminum",mc:"Mid Cap"},MP:{s:"Materials",i:"Rare Earth Mining",mc:"Small Cap"},
-};
-
-function classifyHolding(ticker, quoteData) {
-  // Check ETF database first
-  const etf = ETF_DB[ticker];
-  if (etf) return { sector:etf.s, industry:etf.i, assetClass:etf.a, marketCap:0, mktCapCategory:etf.f, leverage:etf.lev||'' };
-  // Check equity database
-  const stock = STOCK_DB[ticker];
-  if (stock) return { sector:stock.s, industry:stock.i, assetClass:"Equity", marketCap:0, mktCapCategory:stock.mc, leverage:'' };
-  // Fallback: use name-based detection from quote data
-  const name = (quoteData.name || "").toLowerCase();
-  let sector="Other", industry="Other", assetClass="Equity", mktCat="Large Cap";
-  // Name-based sector detection
-  if (name.includes("etf")||name.includes("fund")||name.includes("trust")||name.includes("index")||name.includes("ishares")||name.includes("vanguard")||name.includes("spdr")||name.includes("proshares")||name.includes("invesco")||name.includes("schwab")) { assetClass="ETF"; mktCat="Large Fund"; }
-  if (name.includes("bitcoin")||name.includes("crypto")||name.includes("blockchain")||name.includes("ethereum")) { sector="Digital Assets"; industry="Crypto"; if(assetClass==="Equity") assetClass="Crypto"; }
-  else if (name.includes("gold")||name.includes("silver")||name.includes("platinum")||name.includes("palladium")||name.includes("precious metal")) { sector="Commodities"; industry="Precious Metals"; assetClass="Commodity"; }
-  else if (name.includes("oil")||name.includes("petroleum")||name.includes("natural gas")||name.includes("energy")) { sector="Energy"; industry="Oil & Gas"; }
-  else if (name.includes("reit")||name.includes("real estate")||name.includes("realty")||name.includes("property")) { sector="Real Estate"; industry="REITs"; assetClass=assetClass==="ETF"?"REIT ETF":"REIT"; }
-  else if (name.includes("bond")||name.includes("treasury")||name.includes("fixed income")||name.includes("aggregate")||name.includes("municipal")) { sector="Fixed Income"; industry="Bonds"; assetClass="Bond"; }
-  else if (name.includes("bank")||name.includes("financial")||name.includes("insurance")||name.includes("capital")) { sector="Financials"; industry="Financial Services"; }
-  else if (name.includes("pharma")||name.includes("biotech")||name.includes("health")||name.includes("medical")||name.includes("therapeut")) { sector="Healthcare"; industry="Biotechnology / Pharma"; }
-  else if (name.includes("semiconductor")||name.includes("chip")||name.includes("software")||name.includes("tech")||name.includes("data")||name.includes("cloud")||name.includes("cyber")||name.includes("computing")) { sector="Information Technology"; industry="Technology"; }
-  else if (name.includes("cannabis")||name.includes("marijuana")||name.includes("weed")) { sector="Healthcare"; industry="Cannabis"; }
-  else if (name.includes("solar")||name.includes("wind")||name.includes("clean energy")||name.includes("renewable")) { sector="Utilities"; industry="Renewable Energy"; }
-  else if (name.includes("mining")||name.includes("copper")||name.includes("lithium")||name.includes("rare earth")||name.includes("steel")||name.includes("aluminum")) { sector="Materials"; industry="Mining & Metals"; }
-  else if (name.includes("aerospace")||name.includes("defense")||name.includes("space")) { sector="Industrials"; industry="Aerospace & Defense"; }
-  else if (name.includes("leverag")||name.includes("ultra")||name.includes("3x")||name.includes("2x")||name.includes("direxion")||name.includes("proshares ultra")) { assetClass="Leveraged ETF"; }
-  if (name.includes("3x")||name.includes("triple")) { assetClass="Leveraged ETF"; }
-  return { sector, industry, assetClass, marketCap:0, mktCapCategory:mktCat, leverage:'' };
+function classifyHolding(ticker,quoteData){
+  const etf=ETF_DB[ticker];if(etf)return{sector:etf.s,industry:etf.i,assetClass:etf.a,marketCap:0,mktCapCategory:etf.f,leverage:etf.lev||''};
+  const stock=STOCK_DB[ticker];if(stock)return{sector:stock.s,industry:stock.i,assetClass:"Equity",marketCap:0,mktCapCategory:stock.mc,leverage:''};
+  const name=(quoteData.name||"").toLowerCase();let sector="Other",industry="Other",assetClass="Equity",mktCat="Large Cap";
+  if(name.includes("etf")||name.includes("fund")||name.includes("trust")||name.includes("ishares")||name.includes("vanguard")||name.includes("spdr")||name.includes("proshares")||name.includes("invesco")){assetClass="ETF";mktCat="Large Fund";}
+  if(name.includes("bitcoin")||name.includes("crypto")||name.includes("ethereum")){sector="Digital Assets";industry="Crypto";}
+  else if(name.includes("gold")||name.includes("silver")||name.includes("platinum")){sector="Commodities";industry="Precious Metals";assetClass="Commodity";}
+  else if(name.includes("oil")||name.includes("energy")||name.includes("petroleum")){sector="Energy";industry="Oil & Gas";}
+  else if(name.includes("reit")||name.includes("real estate")||name.includes("realty")){sector="Real Estate";industry="REITs";assetClass=assetClass==="ETF"?"REIT ETF":"REIT";}
+  else if(name.includes("bond")||name.includes("treasury")||name.includes("fixed income")){sector="Fixed Income";industry="Bonds";assetClass="Bond";}
+  else if(name.includes("bank")||name.includes("financial")){sector="Financials";industry="Financial Services";}
+  else if(name.includes("pharma")||name.includes("biotech")||name.includes("health")){sector="Healthcare";industry="Biotech / Pharma";}
+  else if(name.includes("semiconductor")||name.includes("software")||name.includes("tech")||name.includes("cloud")||name.includes("cyber")){sector="Information Technology";industry="Technology";}
+  else if(name.includes("solar")||name.includes("clean energy")||name.includes("renewable")){sector="Utilities";industry="Renewable Energy";}
+  else if(name.includes("mining")||name.includes("copper")||name.includes("lithium")||name.includes("steel")){sector="Materials";industry="Mining & Metals";}
+  else if(name.includes("aerospace")||name.includes("defense")){sector="Industrials";industry="Aerospace & Defense";}
+  if(name.includes("3x")||name.includes("leverag")||name.includes("ultra")){assetClass="Leveraged ETF";}
+  return{sector,industry,assetClass,marketCap:0,mktCapCategory:mktCat,leverage:''};
 }
 
-// ── Helpers ──
+// ═══ HELPERS ═══
 const fmt=v=>"$"+Number(v).toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:2});
 const fmtInt=v=>"$"+Number(v).toLocaleString("en-US",{maximumFractionDigits:0});
-const fmtPct=(v)=>(v>=0?"+":"")+v.toFixed(2)+"%";
+const fmtPct=v=>(v>=0?"+":"")+v.toFixed(2)+"%";
 const pctColor=v=>v>=0?C.success:C.danger;
 function showStatus(id,msg,type){const el=document.getElementById(id);if(!el)return;el.className='status-bar '+type;el.innerHTML=msg;}
-
-let currentRange="1y";
-let portfolioLineChart=null;
-let donutCharts={};
-
+let currentRange="1y",portfolioLineChart=null,donutCharts={};
 const parentMap={home:'home',about:'home',portfolio:'portfolio',holdings:'portfolio',research:'research'};
 function navigateTo(p){document.activeElement.blur();document.querySelectorAll('.page').forEach(x=>x.classList.remove('active'));document.querySelectorAll('.nav-parent,.nav-child').forEach(x=>x.classList.remove('active'));document.getElementById('page-'+p).classList.add('active');const pp=parentMap[p]||p;const pe=document.querySelector('.nav-parent[data-page="'+pp+'"]');if(pe)pe.classList.add('active');const ce=document.querySelector('.nav-child[data-page="'+p+'"]');if(ce)ce.classList.add('active');window.scrollTo(0,0);if(p==='portfolio')renderPortfolioOverview();}
-
-const FEATURES=[
-  {title:"Portfolio Overview",desc:"Live valuation, benchmark comparison, allocation charts, Morningstar style box, and performance history.",page:"portfolio",tag:"Active"},
-  {title:"Manage Holdings",desc:"Add/remove holdings stored in Firebase. Prices refresh from Yahoo Finance via Cloudflare Worker.",page:"holdings",tag:"Active"},
-  {title:"Market Research",desc:"Real-time quotes, historical charts, and ticker search via Cloudflare data proxy.",page:"research",tag:"Active"},
-  {title:"Macro Regime Analysis",desc:"Six-pillar macro scorecard: Real Activity, Labor, Inflation, Monetary, Fiscal, International.",page:null,tag:"Coming Soon"},
-  {title:"Risk & Stress Testing",desc:"VaR, Monte-Carlo simulation, tracking error, and scenario analysis.",page:null,tag:"Coming Soon"},
-  {title:"Quantitative Models",desc:"ML models — regression, random forest, XGBoost, LSTM — for alpha generation.",page:null,tag:"Coming Soon"}
-];
+const FEATURES=[{title:"Portfolio Overview",desc:"Live valuation, benchmark comparison, allocation charts, Morningstar style box, and performance history.",page:"portfolio",tag:"Active"},{title:"Manage Holdings",desc:"Add/remove holdings stored in Firebase. Prices refresh from Yahoo Finance via Cloudflare Worker.",page:"holdings",tag:"Active"},{title:"Market Research",desc:"Real-time quotes, historical charts, and ticker search via Cloudflare data proxy.",page:"research",tag:"Active"},{title:"Macro Regime Analysis",desc:"Six-pillar scorecard: Real Activity, Labor, Inflation, Monetary, Fiscal, International.",page:null,tag:"Coming Soon"},{title:"Risk & Stress Testing",desc:"VaR, Monte-Carlo, tracking error, scenario analysis.",page:null,tag:"Coming Soon"},{title:"Quantitative Models",desc:"ML models — regression, random forest, XGBoost, LSTM.",page:null,tag:"Coming Soon"}];
 document.getElementById('featureGrid').innerHTML=FEATURES.map(f=>'<div class="feature-card '+(f.page?'':'disabled')+'" '+(f.page?'onclick="navigateTo(\''+f.page+'\')"':'')+'><div class="feature-tag '+(f.tag==='Coming Soon'?'soon':'')+'">'+f.tag+'</div><div class="feature-title">'+f.title+'</div><div class="feature-desc">'+f.desc+'</div></div>').join('');
-
 function bindTimeframeBtns(){document.querySelectorAll('#pfTimeframeBtns .btn-outline').forEach(b=>{b.onclick=function(){document.querySelectorAll('#pfTimeframeBtns .btn-outline').forEach(x=>x.classList.remove('active'));this.classList.add('active');currentRange=this.dataset.range;renderPortfolioOverview();};});}
 
-// ── Holdings Table (Manage page) — sortable ──
-let _holdingsSort = { col: null, asc: true };
-let _portfolioSort = { col: null, asc: true };
+// ═══ SORTABLE TABLE HELPERS ═══
+let _holdingsSort={col:null,asc:true},_portfolioSort={col:null,asc:true};
+function sortableHeader(cols,sortState,renderFn,tableId){return cols.map(c=>{const arrow=sortState.col===c.key?(sortState.asc?'&#9650;':'&#9660;'):'&#9650;';const active=sortState.col===c.key?'active':'';return '<th onclick="sortTable_'+tableId+'(\''+c.key+'\')">'+c.label+'<span class="sort-arrow '+active+'">'+arrow+'</span></th>';}).join('');}
+function getSortedHoldings(holdings,sortState){if(!sortState.col)return holdings;const key=sortState.col;return[...holdings].sort((a,b)=>{let va=a[key],vb=b[key];if(key==='marketValue'){va=(a.currentPrice||0)*a.quantity;vb=(b.currentPrice||0)*b.quantity;}if(key==='glPct'){const ca=a.costBasis*a.quantity,cb=b.costBasis*b.quantity;va=ca>0?(((a.currentPrice||0)*a.quantity-ca)/ca)*100:0;vb=cb>0?(((b.currentPrice||0)*b.quantity-cb)/cb)*100:0;}if(key==='weight'){const tv=holdings.reduce((s,h)=>s+(h.currentPrice||0)*h.quantity,0);va=tv>0?((a.currentPrice||0)*a.quantity)/tv:0;vb=tv>0?((b.currentPrice||0)*b.quantity)/tv:0;}if(typeof va==='string'&&typeof vb==='string')return sortState.asc?va.localeCompare(vb):vb.localeCompare(va);va=parseFloat(va)||0;vb=parseFloat(vb)||0;return sortState.asc?va-vb:vb-va;});}
+window.sortTable_manage=function(key){if(_holdingsSort.col===key)_holdingsSort.asc=!_holdingsSort.asc;else{_holdingsSort.col=key;_holdingsSort.asc=true;}renderHoldingsTable(window._holdings||[]);};
+window.sortTable_portfolio=function(key){if(_portfolioSort.col===key)_portfolioSort.asc=!_portfolioSort.asc;else{_portfolioSort.col=key;_portfolioSort.asc=true;}const h=window._holdings||[];const af=document.getElementById('portfolioAccountFilter')?.value||'all';const fh=af==='all'?h:h.filter(x=>(x.accountType||'Individual')===af);const tv=fh.reduce((s,x)=>s+(x.currentPrice||0)*x.quantity,0);renderPortfolioTable(fh,tv);};
+window.filterHoldingsByAccount=function(){renderHoldingsTable(window._holdings||[]);};
 
-function sortableHeader(cols, sortState, renderFn, tableId) {
-  return cols.map(c => {
-    const arrow = sortState.col === c.key ? (sortState.asc ? '&#9650;' : '&#9660;') : '&#9650;';
-    const active = sortState.col === c.key ? 'active' : '';
-    return '<th onclick="sortTable_' + tableId + '(\'' + c.key + '\')">' + c.label + '<span class="sort-arrow ' + active + '">' + arrow + '</span></th>';
-  }).join('');
+// ═══ MANAGE HOLDINGS TABLE (with Account, Sell, Sort, Total) ═══
+function renderHoldingsTable(holdings){
+  const wrap=document.getElementById('holdingsTableWrap');if(!holdings||!holdings.length){wrap.innerHTML='<div class="empty-state" style="padding:24px;"><h3>No Holdings Yet</h3></div>';return;}
+  const filter=document.getElementById('holdingsAccountFilter')?.value||'all';
+  const filtered=filter==='all'?holdings:holdings.filter(h=>(h.accountType||'Individual')===filter);
+  if(!filtered.length){wrap.innerHTML='<div class="empty-state" style="padding:24px;"><h3>No Holdings in This Account</h3><p>Switch to "All Accounts" or add holdings to this account type.</p></div>';return;}
+  const sorted=getSortedHoldings(filtered,_holdingsSort);
+  const tv=sorted.reduce((s,h)=>s+(h.currentPrice||0)*h.quantity,0);
+  const tc=sorted.reduce((s,h)=>s+h.costBasis*h.quantity,0);
+  const tgl=tv-tc,tglp=tc>0?(tgl/tc)*100:0;
+  const cols=[{key:'ticker',label:'Ticker'},{key:'companyName',label:'Company'},{key:'quantity',label:'Shares'},{key:'costBasis',label:'Cost'},{key:'currentPrice',label:'Price'},{key:'marketValue',label:'Value'},{key:'glPct',label:'G/L'},{key:'accountType',label:'Account'},{key:'sector',label:'Sector'},{key:'industry',label:'Industry'},{key:'assetClass',label:'Asset'},{key:'mktCapCategory',label:'Mkt Cap'}];
+  let html='<table><thead><tr>'+sortableHeader(cols,_holdingsSort,null,'manage')+'<th>Notes</th><th></th></tr></thead><tbody>';
+  sorted.forEach(h=>{const mv=(h.currentPrice||0)*h.quantity,cost=h.costBasis*h.quantity,gl=mv-cost,glp=cost>0?(gl/cost)*100:0,gc=gl>=0?C.success:C.danger;const note=h.leverage?'<span style="color:'+C.warning+';font-weight:600;font-size:10px;">'+h.leverage+'</span>':'';
+    html+='<tr><td style="font-weight:700;color:'+C.navy+';">'+h.ticker+'</td><td>'+h.companyName+'</td><td>'+h.quantity+'</td><td>'+fmt(h.costBasis)+'</td><td>'+fmt(h.currentPrice||0)+'</td><td style="font-weight:600;">'+fmt(mv)+'</td><td style="color:'+gc+';font-weight:600;">'+fmtPct(glp)+'</td><td>'+(h.accountType||'Individual')+'</td><td>'+(h.sector||'—')+'</td><td>'+(h.industry||'—')+'</td><td>'+(h.assetClass||'Equity')+'</td><td>'+(h.mktCapCategory||'—')+'</td><td>'+note+'</td><td style="white-space:nowrap;"><button class="btn btn-sm" onclick="sellShares(\''+h.id+'\')" style="margin-right:3px;">Sell</button><button class="btn btn-danger btn-sm" onclick="deleteHolding(\''+h.id+'\')">&#10005;</button></td></tr>';});
+  html+='<tr style="font-weight:700;background:var(--panel);"><td style="color:'+C.navy+';">TOTAL</td><td>'+sorted.length+' positions</td><td></td><td></td><td></td><td style="color:'+C.navy+';">'+fmt(tv)+'</td><td style="color:'+pctColor(tglp)+';">'+fmtPct(tglp)+' ('+fmt(tgl)+')</td><td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr></tbody></table>';
+  wrap.innerHTML=html;
 }
 
-function getSortedHoldings(holdings, sortState) {
-  if (!sortState.col) return holdings;
-  const key = sortState.col;
-  return [...holdings].sort((a, b) => {
-    let va = a[key], vb = b[key];
-    // Computed fields
-    if (key === 'marketValue') { va = (a.currentPrice || 0) * a.quantity; vb = (b.currentPrice || 0) * b.quantity; }
-    if (key === 'glPct') { const ca = a.costBasis * a.quantity, cb = b.costBasis * b.quantity; va = ca > 0 ? (((a.currentPrice || 0) * a.quantity - ca) / ca) * 100 : 0; vb = cb > 0 ? (((b.currentPrice || 0) * b.quantity - cb) / cb) * 100 : 0; }
-    if (key === 'weight') { const tv = holdings.reduce((s, h) => s + (h.currentPrice || 0) * h.quantity, 0); va = tv > 0 ? ((a.currentPrice || 0) * a.quantity) / tv : 0; vb = tv > 0 ? ((b.currentPrice || 0) * b.quantity) / tv : 0; }
-    if (typeof va === 'string' && typeof vb === 'string') return sortState.asc ? va.localeCompare(vb) : vb.localeCompare(va);
-    va = parseFloat(va) || 0; vb = parseFloat(vb) || 0;
-    return sortState.asc ? va - vb : vb - va;
-  });
-}
-
-window.sortTable_manage = function(key) {
-  if (_holdingsSort.col === key) _holdingsSort.asc = !_holdingsSort.asc;
-  else { _holdingsSort.col = key; _holdingsSort.asc = true; }
-  renderHoldingsTable(window._holdings || []);
-};
-window.sortTable_portfolio = function(key) {
-  if (_portfolioSort.col === key) _portfolioSort.asc = !_portfolioSort.asc;
-  else { _portfolioSort.col = key; _portfolioSort.asc = true; }
-  const holdings = window._holdings || [];
-  const tv = holdings.reduce((s, h) => s + (h.currentPrice || 0) * h.quantity, 0);
-  renderPortfolioTable(holdings, tv);
-};
-
-function renderHoldingsTable(holdings) {
-  const wrap = document.getElementById('holdingsTableWrap');
-  if (!holdings || !holdings.length) { wrap.innerHTML = '<div class="empty-state" style="padding:24px;"><h3>No Holdings Yet</h3><p>Use the form above to add your first holding.</p></div>'; return; }
-  const sorted = getSortedHoldings(holdings, _holdingsSort);
-  const tv = sorted.reduce((s, h) => s + (h.currentPrice || 0) * h.quantity, 0);
-  const tc = sorted.reduce((s, h) => s + h.costBasis * h.quantity, 0);
-  const tgl = tv - tc, tglp = tc > 0 ? (tgl / tc) * 100 : 0;
-  const cols = [{key:'ticker',label:'Ticker'},{key:'companyName',label:'Company'},{key:'quantity',label:'Shares'},{key:'costBasis',label:'Cost'},{key:'currentPrice',label:'Price'},{key:'marketValue',label:'Value'},{key:'glPct',label:'G/L'},{key:'sector',label:'Sector'},{key:'industry',label:'Industry'},{key:'assetClass',label:'Asset'},{key:'mktCapCategory',label:'Mkt Cap'}];
-  let html = '<table><thead><tr>' + sortableHeader(cols, _holdingsSort, renderHoldingsTable, 'manage') + '<th>Notes</th><th></th></tr></thead><tbody>';
-  sorted.forEach(h => {
-    const mv = (h.currentPrice || 0) * h.quantity, cost = h.costBasis * h.quantity, gl = mv - cost, glp = cost > 0 ? (gl / cost) * 100 : 0, gc = gl >= 0 ? C.success : C.danger;
-    const note = h.leverage ? '<span style="color:' + C.warning + ';font-weight:600;font-size:10px;">' + h.leverage + '</span>' : '';
-    html += '<tr><td style="font-weight:700;color:' + C.navy + ';">' + h.ticker + '</td><td>' + h.companyName + '</td><td>' + h.quantity + '</td><td>' + fmt(h.costBasis) + '</td><td>' + fmt(h.currentPrice || 0) + '</td><td style="font-weight:600;">' + fmt(mv) + '</td><td style="color:' + gc + ';font-weight:600;">' + fmtPct(glp) + '</td><td>' + (h.sector || '—') + '</td><td>' + (h.industry || '—') + '</td><td>' + (h.assetClass || 'Equity') + '</td><td>' + (h.mktCapCategory || '—') + '</td><td>' + note + '</td><td><button class="btn btn-danger btn-sm" onclick="deleteHolding(\'' + h.id + '\')">&#10005;</button></td></tr>';
-  });
-  // Total row
-  html += '<tr style="font-weight:700;background:var(--panel);"><td style="color:' + C.navy + ';">TOTAL</td><td></td><td></td><td>' + fmt(tc / (sorted.reduce((s, h) => s + h.quantity, 0) || 1)) + ' avg</td><td></td><td style="color:' + C.navy + ';">' + fmt(tv) + '</td><td style="color:' + pctColor(tglp) + ';">' + fmtPct(tglp) + ' (' + fmt(tgl) + ')</td><td></td><td></td><td></td><td></td><td></td><td></td></tr>';
-  html += '</tbody></table>'; wrap.innerHTML = html;
-}
-
-// ── Bulk Import ──
-let _bulkRows = []; // [{ticker,date,shares,cost}]
-const dropZone = document.getElementById('dropZone');
-if (dropZone) {
-  dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('dragover'); });
-  dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
-  dropZone.addEventListener('drop', e => { e.preventDefault(); dropZone.classList.remove('dragover'); if (e.dataTransfer.files.length) processFile(e.dataTransfer.files[0]); });
-}
-
-window.handleFileSelect = function(e) { if (e.target.files.length) processFile(e.target.files[0]); };
-
-async function processFile(file) {
-  showStatus('scanStatus', '<span class="spinner"></span> Scanning ' + file.name + '...', 'info');
-  _bulkRows = [];
-  const ext = file.name.split('.').pop().toLowerCase();
-  try {
-    if (ext === 'csv' || ext === 'txt') {
-      const text = await file.text();
-      _bulkRows = parseCSV(text);
-    } else if (ext === 'xlsx' || ext === 'xls') {
-      const buf = await file.arrayBuffer();
-      const wb = XLSX.read(buf);
-      const ws = wb.Sheets[wb.SheetNames[0]];
-      const json = XLSX.utils.sheet_to_json(ws, { header: 1 });
-      _bulkRows = parseGrid(json);
-    } else if (ext === 'pdf') {
-      showStatus('scanStatus', 'PDF parsing requires text-based PDFs. For scanned PDFs, please export to CSV first.', 'error');
-      return;
-    } else {
-      showStatus('scanStatus', 'Unsupported file type: .' + ext, 'error');
-      return;
-    }
-    if (!_bulkRows.length) { showStatus('scanStatus', 'No valid rows found. The file should contain columns for Ticker, Date, Shares, and Cost/Share in any order. Column headers are auto-detected.', 'error'); return; }
-    showStatus('scanStatus', '&#10003; Auto-detected ' + _bulkRows.length + ' holdings from <strong>' + file.name + '</strong>. Review below, edit if needed, then submit. This will only add new holdings — existing holdings are untouched.', 'success');
-    renderValidationTable();
-  } catch (e) {
-    showStatus('scanStatus', 'Error reading file: ' + e.message, 'error');
-  }
-}
-
-function parseCSV(text) {
-  const lines = text.split(/\r?\n/).map(l => l.split(/[,\t]/));
-  return parseGrid(lines);
-}
-
-function parseGrid(rows) {
-  if (rows.length < 2) return [];
-  // Determine if row 0 is a header or data
-  const firstRow = rows[0].map(c => String(c || '').trim());
-  const hasHeader = firstRow.some(c => /^[a-zA-Z\s\/]+$/.test(c) && c.length > 1 && isNaN(parseFloat(c)));
-  const dataStartIdx = hasHeader ? 1 : 0;
-  const numCols = Math.max(...rows.map(r => (r || []).length));
-  
-  // Score each column by content type
-  // Types: ticker (1-5 uppercase letters), date, number, text
-  const colScores = [];
-  for (let col = 0; col < numCols; col++) {
-    let tickerScore = 0, dateScore = 0, numScore = 0, textScore = 0;
-    const sampleSize = Math.min(rows.length, 20);
-    for (let row = dataStartIdx; row < sampleSize; row++) {
-      const val = String((rows[row] || [])[col] || '').trim();
-      if (!val) continue;
-      // Ticker: 1-6 uppercase alpha chars, possibly with dots
-      if (/^[A-Za-z]{1,6}(\.[A-Za-z])?$/.test(val)) tickerScore++;
-      // Date: various formats
-      if (/\d{4}-\d{2}-\d{2}/.test(val) || /\d{1,2}\/\d{1,2}\/\d{2,4}/.test(val) || /\d{1,2}-\d{1,2}-\d{2,4}/.test(val) || /[A-Za-z]{3,9}\s+\d{1,2}/.test(val)) dateScore++;
-      // Number: digits with optional decimals, commas, dollar signs
-      const cleaned = val.replace(/[$,\s]/g, '');
-      if (/^-?\d+\.?\d*$/.test(cleaned) && !isNaN(parseFloat(cleaned))) numScore++;
-      else textScore++;
-    }
-    colScores.push({ col, tickerScore, dateScore, numScore, textScore });
-  }
-
-  // Also use header hints if available
-  const headerHints = {};
-  if (hasHeader) {
-    firstRow.forEach((h, i) => {
-      const hl = h.toLowerCase();
-      if (hl.includes('ticker') || hl.includes('symbol') || hl === 'stock' || hl === 'holding' || hl === 'name' || hl === 'security' || hl === 'asset') headerHints[i] = 'ticker';
-      if (hl.includes('date') || hl.includes('purchased') || hl.includes('acquired') || hl.includes('bought') || hl.includes('trade') || hl.includes('settlement') || hl.includes('open')) headerHints[i] = 'date';
-      if (hl.includes('share') || hl.includes('qty') || hl.includes('quantity') || hl.includes('units') || hl.includes('amount') || hl.includes('count') || hl.includes('lot')) headerHints[i] = 'shares';
-      if (hl.includes('cost') || hl.includes('price') || hl.includes('basis') || hl.includes('paid') || hl.includes('avg') || hl.includes('purchase price') || hl.includes('unit cost') || hl.includes('per share')) headerHints[i] = 'cost';
-    });
-  }
-
-  // Assign columns: prefer header hints, then fall back to content scoring
-  let tickerCol = -1, dateCol = -1, sharesCol = -1, costCol = -1;
-  
-  // Header-based assignment first
-  Object.entries(headerHints).forEach(([i, type]) => {
-    const idx = parseInt(i);
-    if (type === 'ticker' && tickerCol === -1) tickerCol = idx;
-    if (type === 'date' && dateCol === -1) dateCol = idx;
-    if (type === 'shares' && sharesCol === -1) sharesCol = idx;
-    if (type === 'cost' && costCol === -1) costCol = idx;
-  });
-  
-  // Content-based fallback for unassigned columns
-  const used = new Set([tickerCol, dateCol, sharesCol, costCol].filter(x => x >= 0));
-  if (tickerCol === -1) {
-    const best = colScores.filter(c => !used.has(c.col)).sort((a, b) => b.tickerScore - a.tickerScore)[0];
-    if (best && best.tickerScore > 0) { tickerCol = best.col; used.add(best.col); }
-  }
-  if (dateCol === -1) {
-    const best = colScores.filter(c => !used.has(c.col)).sort((a, b) => b.dateScore - a.dateScore)[0];
-    if (best && best.dateScore > 0) { dateCol = best.col; used.add(best.col); }
-  }
-  // For shares and cost, pick the two highest-scoring numeric columns
-  if (sharesCol === -1 || costCol === -1) {
-    const numCols2 = colScores.filter(c => !used.has(c.col) && c.numScore > 0).sort((a, b) => b.numScore - a.numScore);
-    if (sharesCol === -1 && numCols2.length > 0) { sharesCol = numCols2[0].col; used.add(numCols2[0].col); }
-    if (costCol === -1 && numCols2.length > 1) { costCol = numCols2[1].col; used.add(numCols2[1].col); }
-  }
-  
-  // Ultimate fallback: sequential
-  if (tickerCol === -1) tickerCol = 0;
-  if (dateCol === -1) dateCol = Math.min(1, numCols - 1);
-  if (sharesCol === -1) sharesCol = Math.min(2, numCols - 1);
-  if (costCol === -1) costCol = Math.min(3, numCols - 1);
-
-  const result = [];
-  for (let i = dataStartIdx; i < rows.length; i++) {
-    const r = rows[i];
-    if (!r || r.length === 0) continue;
-    let ticker = String(r[tickerCol] || '').trim().toUpperCase();
-    if (!ticker || ticker.length > 10) continue;
-    // Strip common prefixes/suffixes
-    ticker = ticker.replace(/[^A-Z0-9.]/g, '');
-    if (!ticker) continue;
-    
-    let date = String(r[dateCol] || '').trim();
-    // Normalize many date formats
-    if (/^\d{1,2}\/\d{1,2}\/\d{2,4}$/.test(date)) {
-      const parts = date.split('/');
-      const yr = parts[2].length === 2 ? '20' + parts[2] : parts[2];
-      date = yr + '-' + parts[0].padStart(2, '0') + '-' + parts[1].padStart(2, '0');
-    } else if (/^\d{1,2}-\d{1,2}-\d{2,4}$/.test(date)) {
-      const parts = date.split('-');
-      const yr = parts[2].length === 2 ? '20' + parts[2] : parts[2];
-      date = yr + '-' + parts[0].padStart(2, '0') + '-' + parts[1].padStart(2, '0');
-    } else if (/^[A-Za-z]+\s+\d{1,2},?\s*\d{4}$/.test(date)) {
-      const d = new Date(date);
-      if (!isNaN(d)) date = d.toISOString().slice(0, 10);
-    }
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) date = new Date().toISOString().slice(0, 10);
-    
-    const shares = parseFloat(String(r[sharesCol] || '').replace(/[$,\s]/g, '')) || 0;
-    const cost = parseFloat(String(r[costCol] || '').replace(/[$,\s]/g, '')) || 0;
-    if (shares > 0) result.push({ ticker, date, shares, cost: cost || 0 });
-  }
-  return result;
-}
-
-function renderValidationTable() {
-  document.getElementById('validateArea').style.display = '';
-  document.getElementById('validateCount').textContent = _bulkRows.length + ' holdings to import';
-  let html = '<table><thead><tr><th>Ticker</th><th>Date Purchased</th><th>Shares</th><th>Cost/Share</th><th></th></tr></thead><tbody>';
-  _bulkRows.forEach((r, i) => {
-    html += '<tr>' +
-      '<td><input value="' + r.ticker + '" onchange="_bulkRows[' + i + '].ticker=this.value.toUpperCase()" style="text-transform:uppercase;width:80px;"></td>' +
-      '<td><input type="date" value="' + r.date + '" onchange="_bulkRows[' + i + '].date=this.value"></td>' +
-      '<td><input type="number" value="' + r.shares + '" step="any" min="0" onchange="_bulkRows[' + i + '].shares=parseFloat(this.value)||0" style="width:80px;"></td>' +
-      '<td><input type="number" value="' + r.cost + '" step="0.01" min="0" onchange="_bulkRows[' + i + '].cost=parseFloat(this.value)||0" style="width:90px;"></td>' +
-      '<td><button class="btn btn-danger btn-sm" onclick="removeBulkRow(' + i + ')">&#10005;</button></td></tr>';
-  });
-  html += '</tbody></table>';
-  document.getElementById('validateTableWrap').innerHTML = html;
-}
-
-window.removeBulkRow = function(i) {
-  _bulkRows.splice(i, 1);
-  if (!_bulkRows.length) { cancelBulkImport(); return; }
-  renderValidationTable();
-};
-
-window.cancelBulkImport = function() {
-  _bulkRows = [];
-  document.getElementById('validateArea').style.display = 'none';
-  document.getElementById('scanStatus').className = 'status-bar';
-  document.getElementById('fileInput').value = '';
-};
-
-window.submitBulkHoldings = async function() {
-  const valid = _bulkRows.filter(r => r.ticker && r.shares > 0);
-  if (!valid.length) { showStatus('scanStatus', 'No valid holdings to submit.', 'error'); return; }
-  const btn = document.getElementById('submitBulkBtn');
-  btn.disabled = true; btn.innerHTML = '<span class="spinner"></span> Submitting ' + valid.length + ' holdings...';
-  let added = 0;
-  for (const r of valid) {
-    try {
-      // This calls the existing addHolding logic via direct Firestore write
-      const q = await fetchQuote(r.ticker);
-      const meta = classifyHolding(r.ticker, q);
-      await window._addHoldingDirect(r.ticker, q.name || r.ticker, r.date, r.shares, r.cost, q.price || 0, q.previousClose || 0, meta);
-      added++;
-    } catch (e) { console.warn('Bulk add failed for', r.ticker, e); }
-  }
-  showStatus('scanStatus', '&#10003; Successfully added ' + added + ' of ' + valid.length + ' new holdings. Your existing holdings were not modified.', 'success');
-  cancelBulkImport();
-  await loadHoldings();
-  btn.disabled = false; btn.textContent = 'Submit to Portfolio';
-};
-
-// ══════════════════════════════
-// PORTFOLIO OVERVIEW
-// ══════════════════════════════
+// ═══ PORTFOLIO OVERVIEW ═══
 async function renderPortfolioOverview(){
-  const holdings=window._holdings||[];const user=window._currentUser;
+  const allHoldings=window._holdings||[];const user=window._currentUser;
   if(!user){document.getElementById('portfolioAuth').style.display='';document.getElementById('portfolioEmpty').style.display='none';document.getElementById('portfolioLive').style.display='none';return;}
   document.getElementById('portfolioAuth').style.display='none';
-  if(!holdings.length){document.getElementById('portfolioEmpty').style.display='';document.getElementById('portfolioLive').style.display='none';return;}
+  if(!allHoldings.length){document.getElementById('portfolioEmpty').style.display='';document.getElementById('portfolioLive').style.display='none';return;}
   document.getElementById('portfolioEmpty').style.display='none';document.getElementById('portfolioLive').style.display='';
+  const af=document.getElementById('portfolioAccountFilter')?.value||'all';
+  const holdings=af==='all'?allHoldings:allHoldings.filter(h=>(h.accountType||'Individual')===af);
+  if(!holdings.length){document.getElementById('metricsRow').innerHTML='<div class="empty-state" style="padding:20px;"><p>No holdings in this account. Select "All Accounts" or add holdings.</p></div>';document.getElementById('benchmarkRow').innerHTML='';document.getElementById('portfolioTableWrap').innerHTML='';return;}
   const tv=holdings.reduce((s,h)=>s+(h.currentPrice||0)*h.quantity,0);
   const tc=holdings.reduce((s,h)=>s+h.costBasis*h.quantity,0);
   const tgl=tv-tc,tglp=tc>0?(tgl/tc)*100:0;
   const tpv=holdings.reduce((s,h)=>s+(h.previousClose||0)*h.quantity,0);
   const dayChg=tv-tpv,dayPct=tpv>0?(dayChg/tpv)*100:0;
-  document.getElementById('metricsRow').innerHTML=
-    mcBig('Total Portfolio Value',fmtInt(tv),fmtPct(dayPct)+' today',pctColor(dayPct))+
-    mcBig('Total Gain/Loss',fmtPct(tglp),fmt(tgl),pctColor(tgl))+
-    mcBig('Total Cost Basis',fmtInt(tc),holdings.length+' positions',C.textSec)+
-    mcBig('Day Change',fmt(dayChg),fmtPct(dayPct),pctColor(dayPct));
-  // Benchmark sparkline cards
-  const benchTickers=["SPY","QQQ","IWM","^VIX","GLD","SLV","UUP"];
-  const benchLabels=["SPY","QQQ","IWM","VIX","GLD","SLV","UUP"];
+  document.getElementById('metricsRow').innerHTML=mcBig('Total Portfolio Value',fmtInt(tv),fmtPct(dayPct)+' today',pctColor(dayPct))+mcBig('Total Gain/Loss',fmtPct(tglp),fmt(tgl),pctColor(tgl))+mcBig('Total Cost Basis',fmtInt(tc),holdings.length+' positions',C.textSec)+mcBig('Day Change',fmt(dayChg),fmtPct(dayPct),pctColor(dayPct));
+  const benchTickers=["SPY","QQQ","IWM","^VIX","GLD","SLV","UUP"];const benchLabels=["SPY","QQQ","IWM","VIX","GLD","SLV","UUP"];
   document.getElementById('benchmarkRow').innerHTML=benchLabels.map(l=>'<div class="bench-card" id="bench-'+l+'"><div class="bench-label">'+l+' ('+rangeLabel()+')</div><div class="bench-value"><span class="spinner" style="width:12px;height:12px;"></span></div></div>').join('');
-  fetchBenchmarkSparklines(benchTickers,benchLabels);
+  fetchBenchmarkCards(benchTickers,benchLabels);
   renderPortfolioTable(holdings,tv);
   const group=(key)=>{const g={};holdings.forEach(h=>{const mv=(h.currentPrice||0)*h.quantity;const k=h[key]||'Other';g[k]=(g[k]||0)+mv;});return Object.entries(g).map(([l,v])=>({label:l,value:tv>0?Math.round(v/tv*100):0})).sort((a,b)=>b.value-a.value);};
   renderDonut('donut-sector','Portfolio Allocation by Sector',group('sector'));
   renderDonut('donut-industry','Portfolio Allocation by Industry',group('industry').slice(0,10));
   renderDonut('donut-mktcap','Portfolio by Market Cap / Style',group('mktCapCategory'));
-  const wd=holdings.map(h=>({label:h.ticker,value:tv>0?Math.round(((h.currentPrice||0)*h.quantity/tv)*100):0})).sort((a,b)=>b.value-a.value);
-  renderDonut('donut-weight','Portfolio Allocation by Holding',wd);
+  renderDonut('donut-weight','Portfolio Allocation by Holding',holdings.map(h=>({label:h.ticker,value:tv>0?Math.round(((h.currentPrice||0)*h.quantity/tv)*100):0})).sort((a,b)=>b.value-a.value));
   renderMorningstarBox(holdings);
   bindTimeframeBtns();
   document.querySelectorAll('#pfTimeframeBtns .btn-outline').forEach(b=>{b.classList.toggle('active',b.dataset.range===currentRange);});
-  // Restore overlay toggle button states
-  document.getElementById('btnStress').classList.toggle('active', _showStress);
-  document.getElementById('btnVixRange').classList.toggle('active', _showVixRange);
+  document.getElementById('btnStress').classList.toggle('active',_showStress);
+  document.getElementById('btnVixRange').classList.toggle('active',_showVixRange);
   renderPortfolioChart();
 }
-
 function mcBig(label,value,sub,subColor){return '<div class="metric-card"><div class="metric-label">'+label+'</div><div class="metric-value" style="font-size:18px;">'+value+'</div><div class="metric-sub" style="color:'+subColor+';">'+sub+'</div></div>';}
 function rangeLabel(){const m={"1mo":"1M","3mo":"3M","6mo":"6M","ytd":"YTD","1y":"1Y","3y":"3Y","5y":"5Y","10y":"10Y","15y":"15Y","20y":"20Y"};return m[currentRange]||currentRange;}
 
-// ── Benchmark Sparkline Cards ──
-async function fetchBenchmarkSparklines(tickers,labels){
-  for(let i=0;i<tickers.length;i++){
-    const label=labels[i];const el=document.getElementById('bench-'+label);if(!el)continue;
-    try{
-      const data=await fetchChart(tickers[i],currentRange,"1d");
-      const pts=(data.points||[]).filter(p=>p.close!==null);
-      if(pts.length<2){el.querySelector('.bench-value').textContent='—';continue;}
-      const first=pts[0].close,last=pts[pts.length-1].close;
-      const ret=((last-first)/first)*100;
-      const isVix=label==="VIX";
-      const displayVal=isVix?last.toFixed(2):fmtPct(ret);
-      const displaySub=isVix?fmtPct(ret)+' chg':fmt(last);
-      const cc=pctColor(isVix?-ret:ret);
-      el.innerHTML='<div class="bench-label">'+label+' ('+rangeLabel()+')</div><div class="bench-value" style="font-size:14px;color:'+cc+';">'+displayVal+'</div><div class="bench-sub" style="color:'+C.textSec+';">'+displaySub+'</div>';
-    }catch(e){if(el)el.querySelector('.bench-value').textContent='—';}
-  }
+// ═══ BENCHMARK CARDS ═══
+async function fetchBenchmarkCards(tickers,labels){for(let i=0;i<tickers.length;i++){const label=labels[i];const el=document.getElementById('bench-'+label);if(!el)continue;try{const data=await fetchChart(tickers[i],currentRange,"1d");const pts=(data.points||[]).filter(p=>p.close!==null);if(pts.length<2){el.querySelector('.bench-value').textContent='—';continue;}const first=pts[0].close,last=pts[pts.length-1].close;const ret=((last-first)/first)*100;const isVix=label==="VIX";const cc=pctColor(isVix?-ret:ret);el.innerHTML='<div class="bench-label">'+label+' ('+rangeLabel()+')</div><div class="bench-value" style="color:'+cc+';">'+(isVix?last.toFixed(2):fmtPct(ret))+'</div><div class="bench-sub" style="color:'+C.textSec+';">'+(isVix?fmtPct(ret)+' chg':fmt(last))+'</div>';}catch(e){if(el)el.querySelector('.bench-value').textContent='—';}}}
+
+// ═══ PORTFOLIO TABLE (with Account, Sort, Total) ═══
+function renderPortfolioTable(holdings,tv){
+  const sorted=getSortedHoldings(holdings,_portfolioSort);const tc=sorted.reduce((s,h)=>s+h.costBasis*h.quantity,0);const tgl=tv-tc,tglp=tc>0?(tgl/tc)*100:0;
+  const cols=[{key:'ticker',label:'Ticker'},{key:'companyName',label:'Company'},{key:'quantity',label:'Shares'},{key:'currentPrice',label:'Price'},{key:'marketValue',label:'Value'},{key:'weight',label:'Weight'},{key:'glPct',label:'G/L'},{key:'accountType',label:'Account'},{key:'sector',label:'Sector'},{key:'industry',label:'Industry'},{key:'assetClass',label:'Asset'},{key:'mktCapCategory',label:'Mkt Cap'}];
+  let html='<table><thead><tr>'+sortableHeader(cols,_portfolioSort,null,'portfolio')+'</tr></thead><tbody>';
+  sorted.forEach(h=>{const mv=(h.currentPrice||0)*h.quantity,cost=h.costBasis*h.quantity,gl=mv-cost,glp=cost>0?(gl/cost)*100:0,pp=tv>0?(mv/tv)*100:0,gc=gl>=0?C.success:C.danger;const ad=h.leverage?h.assetClass+' <span style="color:'+C.warning+';font-size:10px;">('+h.leverage+')</span>':(h.assetClass||'Equity');
+    html+='<tr><td style="font-weight:700;color:'+C.navy+';">'+h.ticker+'</td><td>'+h.companyName+'</td><td>'+h.quantity+'</td><td>'+fmt(h.currentPrice||0)+'</td><td style="font-weight:600;">'+fmt(mv)+'</td><td>'+pp.toFixed(1)+'%</td><td style="color:'+gc+';font-weight:600;">'+fmtPct(glp)+'</td><td>'+(h.accountType||'Individual')+'</td><td>'+(h.sector||'—')+'</td><td>'+(h.industry||'—')+'</td><td>'+ad+'</td><td>'+(h.mktCapCategory||'—')+'</td></tr>';});
+  html+='<tr style="font-weight:700;background:var(--panel);"><td style="color:'+C.navy+';">TOTAL</td><td>'+sorted.length+' positions</td><td></td><td></td><td style="color:'+C.navy+';">'+fmt(tv)+'</td><td>100.0%</td><td style="color:'+pctColor(tglp)+';">'+fmtPct(tglp)+' ('+fmt(tgl)+')</td><td></td><td></td><td></td><td></td><td></td></tr></tbody></table>';
+  document.getElementById('portfolioTableWrap').innerHTML=html;
 }
 
-// ── Portfolio Table (Portfolio page) — sortable with total row ──
-function renderPortfolioTable(holdings, tv) {
-  const sorted = getSortedHoldings(holdings, _portfolioSort);
-  const tc = sorted.reduce((s, h) => s + h.costBasis * h.quantity, 0);
-  const tgl = tv - tc, tglp = tc > 0 ? (tgl / tc) * 100 : 0;
-  const cols = [{key:'ticker',label:'Ticker'},{key:'companyName',label:'Company'},{key:'quantity',label:'Shares'},{key:'currentPrice',label:'Price'},{key:'marketValue',label:'Value'},{key:'weight',label:'Weight'},{key:'glPct',label:'G/L'},{key:'sector',label:'Sector'},{key:'industry',label:'Industry'},{key:'assetClass',label:'Asset'},{key:'mktCapCategory',label:'Mkt Cap'}];
-  let html = '<table><thead><tr>' + sortableHeader(cols, _portfolioSort, null, 'portfolio') + '</tr></thead><tbody>';
-  sorted.forEach(h => {
-    const mv = (h.currentPrice || 0) * h.quantity, cost = h.costBasis * h.quantity, gl = mv - cost, glp = cost > 0 ? (gl / cost) * 100 : 0, pp = tv > 0 ? (mv / tv) * 100 : 0, gc = gl >= 0 ? C.success : C.danger;
-    const assetDisplay = h.leverage ? h.assetClass + ' <span style="color:' + C.warning + ';font-size:10px;">(' + h.leverage + ')</span>' : (h.assetClass || 'Equity');
-    html += '<tr><td style="font-weight:700;color:' + C.navy + ';">' + h.ticker + '</td><td>' + h.companyName + '</td><td>' + h.quantity + '</td><td>' + fmt(h.currentPrice || 0) + '</td><td style="font-weight:600;">' + fmt(mv) + '</td><td>' + pp.toFixed(1) + '%</td><td style="color:' + gc + ';font-weight:600;">' + fmtPct(glp) + '</td><td>' + (h.sector || '—') + '</td><td>' + (h.industry || '—') + '</td><td>' + assetDisplay + '</td><td>' + (h.mktCapCategory || '—') + '</td></tr>';
-  });
-  // Total row
-  html += '<tr style="font-weight:700;background:var(--panel);"><td style="color:' + C.navy + ';">TOTAL</td><td>' + sorted.length + ' positions</td><td></td><td></td><td style="color:' + C.navy + ';">' + fmt(tv) + '</td><td>100.0%</td><td style="color:' + pctColor(tglp) + ';">' + fmtPct(tglp) + ' (' + fmt(tgl) + ')</td><td></td><td></td><td></td><td></td></tr>';
-  html += '</tbody></table>'; document.getElementById('portfolioTableWrap').innerHTML = html;
-}
-
-// ══════════════════════════════════════
-// STRESSED SCENARIOS & VIX OVERLAY
-// ══════════════════════════════════════
-let _showStress = false;
-let _showVixRange = false;
-let _vixDateMap = {}; // {date: vixClose}
-let _chartDatesGlobal = [];
-
-window.toggleStress = function() {
-  _showStress = !_showStress;
-  if (_showStress) _showVixRange = false;
-  document.getElementById('btnStress').classList.toggle('active', _showStress);
-  document.getElementById('btnVixRange').classList.toggle('active', _showVixRange);
-  if (portfolioLineChart) portfolioLineChart.update();
-};
-window.toggleVixRange = function() {
-  _showVixRange = !_showVixRange;
-  if (_showVixRange) _showStress = false;
-  document.getElementById('btnVixRange').classList.toggle('active', _showVixRange);
-  document.getElementById('btnStress').classList.toggle('active', _showStress);
-  if (portfolioLineChart) portfolioLineChart.update();
-};
-
-// Historical recession & correction periods
-const STRESS_EVENTS = [
-  {start:"2001-03-01",end:"2001-11-30",type:"recession",name:"Dot-Com Bust"},
-  {start:"2002-03-01",end:"2002-10-09",type:"correction",name:"WorldCom / Accounting Scandals"},
-  {start:"2007-12-01",end:"2009-06-30",type:"recession",name:"Great Financial Crisis"},
-  {start:"2010-04-23",end:"2010-07-02",type:"correction",name:"Flash Crash / Euro Crisis"},
-  {start:"2011-07-22",end:"2011-10-03",type:"correction",name:"US Debt Downgrade"},
-  {start:"2015-08-10",end:"2016-02-11",type:"correction",name:"China Slowdown / Oil Crash"},
-  {start:"2018-01-26",end:"2018-02-08",type:"correction",name:"Volmageddon"},
-  {start:"2018-10-03",end:"2018-12-24",type:"correction",name:"Fed Tightening / Trade War"},
-  {start:"2020-02-19",end:"2020-04-07",type:"recession",name:"COVID-19 Pandemic"},
-  {start:"2022-01-03",end:"2022-10-12",type:"correction",name:"Inflation / Fed Rate Hikes"},
-  {start:"2023-07-31",end:"2023-10-27",type:"correction",name:"Bond Selloff / Yield Surge"},
-  {start:"2025-02-19",end:"2025-04-08",type:"correction",name:"Tariff Shock / Trade War II"},
-];
-
-// VIX notable spike events for labels
-const VIX_EVENTS = [
-  {start:"2008-09-15",end:"2009-03-31",name:"Lehman / GFC Peak"},
-  {start:"2010-05-06",end:"2010-06-30",name:"Flash Crash"},
-  {start:"2011-08-01",end:"2011-10-15",name:"Debt Ceiling Crisis"},
-  {start:"2015-08-20",end:"2015-09-30",name:"China Devaluation"},
-  {start:"2018-02-02",end:"2018-02-12",name:"Volmageddon"},
-  {start:"2020-02-24",end:"2020-05-15",name:"COVID-19 Panic"},
-  {start:"2022-01-20",end:"2022-03-15",name:"Ukraine Invasion"},
-  {start:"2024-08-01",end:"2024-08-15",name:"Yen Carry Unwind"},
-  {start:"2025-03-10",end:"2025-04-15",name:"Tariff Escalation"},
-];
-
-function getStressEventForDate(d) {
-  for (const e of STRESS_EVENTS) { if (d >= e.start && d <= e.end) return e; }
-  return null;
-}
-function getVixEventForDate(d) {
-  for (const e of VIX_EVENTS) { if (d >= e.start && d <= e.end) return e; }
-  return null;
-}
-
-// Custom Chart.js plugin for drawing shaded regions
-const overlayPlugin = {
-  id: 'stressVixOverlay',
-  afterDatasetsDraw(chart) {
-    if (!_showStress && !_showVixRange) return;
-    const area = chart.chartArea;
-    if (!area || !area.left) return;
-    const x = chart.scales.x;
-    if (!x) return;
-    const dates = _chartDatesGlobal;
-    if (!dates || !dates.length) return;
-    const { left, right, top, bottom } = area;
-    const ctx = chart.ctx;
-    ctx.save();
-    try {
-      if (_showStress) {
-        let currentEvent = null;
-        let regionStart = null;
-        for (let i = 0; i < dates.length; i++) {
-          const ev = getStressEventForDate(dates[i]);
-          if (ev && ev !== currentEvent) {
-            if (currentEvent && regionStart !== null) drawRegion(ctx, x, regionStart, i - 1, top, bottom, currentEvent, dates);
-            currentEvent = ev;
-            regionStart = i;
-          } else if (!ev && currentEvent) {
-            drawRegion(ctx, x, regionStart, i - 1, top, bottom, currentEvent, dates);
-            currentEvent = null;
-            regionStart = null;
-          }
-        }
-        if (currentEvent && regionStart !== null) drawRegion(ctx, x, regionStart, dates.length - 1, top, bottom, currentEvent, dates);
-      }
-
-      if (_showVixRange) {
-        let currentZone = null;
-        let zoneStart = null;
-        for (let i = 0; i < dates.length; i++) {
-          const vix = _vixDateMap[dates[i]];
-          let zone = null;
-          if (vix != null) {
-            if (vix >= 30) zone = 'high';
-            else if (vix >= 20) zone = 'elevated';
-          }
-          if (zone !== currentZone) {
-            if (currentZone && zoneStart !== null) {
-              const ev = getVixEventForDate(dates[zoneStart]) || { name: 'VIX ' + (currentZone === 'high' ? '>30' : '20-30'), type: currentZone };
-              drawVixRegion(ctx, x, zoneStart, i - 1, top, bottom, currentZone, ev.name, dates);
-            }
-            currentZone = zone;
-            zoneStart = zone ? i : null;
-          }
-        }
-        if (currentZone && zoneStart !== null) {
-          const ev = getVixEventForDate(dates[zoneStart]) || { name: 'VIX ' + (currentZone === 'high' ? '>30' : '20-30') };
-          drawVixRegion(ctx, x, zoneStart, dates.length - 1, top, bottom, currentZone, ev.name, dates);
-        }
-      }
-    } catch(e) { /* silently ignore drawing errors during transitions */ }
-    ctx.restore();
-  }
-};
-
-function drawRegion(ctx, xScale, startIdx, endIdx, top, bottom, event, dates) {
-  const x1 = xScale.getPixelForValue(startIdx);
-  const x2 = xScale.getPixelForValue(endIdx);
-  const isRecession = event.type === 'recession';
-  ctx.fillStyle = isRecession ? 'rgba(139, 42, 42, 0.12)' : 'rgba(200, 208, 216, 0.25)';
-  ctx.fillRect(x1, top, x2 - x1, bottom - top);
-  // Label at top
-  const width = x2 - x1;
-  if (width > 30) {
-    ctx.fillStyle = isRecession ? 'rgba(139, 42, 42, 0.7)' : 'rgba(90, 106, 122, 0.7)';
-    ctx.font = width > 80 ? '600 10px Arial' : '600 8px Arial';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'top';
-    const label = width > 80 ? event.name : event.name.split(' ')[0];
-    ctx.fillText(label, x1 + width / 2, top + 4, width - 4);
-  }
-}
-
-function drawVixRegion(ctx, xScale, startIdx, endIdx, top, bottom, zone, name, dates) {
-  const x1 = xScale.getPixelForValue(startIdx);
-  const x2 = xScale.getPixelForValue(endIdx);
-  ctx.fillStyle = zone === 'high' ? 'rgba(139, 105, 20, 0.15)' : 'rgba(200, 208, 216, 0.2)';
-  ctx.fillRect(x1, top, x2 - x1, bottom - top);
-  const width = x2 - x1;
-  if (width > 30) {
-    ctx.fillStyle = zone === 'high' ? 'rgba(139, 105, 20, 0.7)' : 'rgba(90, 106, 122, 0.6)';
-    ctx.font = width > 80 ? '600 10px Arial' : '600 8px Arial';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'top';
-    const label = width > 80 ? name : (zone === 'high' ? 'VIX>30' : 'VIX>20');
-    ctx.fillText(label, x1 + width / 2, top + 4, width - 4);
-  }
-}
-
-// Register the plugin globally
+// ═══ STRESSED SCENARIOS & VIX OVERLAY ═══
+let _showStress=false,_showVixRange=false,_vixDateMap={},_chartDatesGlobal=[];
+window.toggleStress=function(){_showStress=!_showStress;if(_showStress)_showVixRange=false;document.getElementById('btnStress').classList.toggle('active',_showStress);document.getElementById('btnVixRange').classList.toggle('active',_showVixRange);if(portfolioLineChart)portfolioLineChart.update();};
+window.toggleVixRange=function(){_showVixRange=!_showVixRange;if(_showVixRange)_showStress=false;document.getElementById('btnVixRange').classList.toggle('active',_showVixRange);document.getElementById('btnStress').classList.toggle('active',_showStress);if(portfolioLineChart)portfolioLineChart.update();};
+const STRESS_EVENTS=[{start:"2001-03-01",end:"2001-11-30",type:"recession",name:"Dot-Com Bust"},{start:"2007-12-01",end:"2009-06-30",type:"recession",name:"Great Financial Crisis"},{start:"2010-04-23",end:"2010-07-02",type:"correction",name:"Flash Crash"},{start:"2011-07-22",end:"2011-10-03",type:"correction",name:"US Debt Downgrade"},{start:"2015-08-10",end:"2016-02-11",type:"correction",name:"China / Oil Crash"},{start:"2018-01-26",end:"2018-02-08",type:"correction",name:"Volmageddon"},{start:"2018-10-03",end:"2018-12-24",type:"correction",name:"Fed Tightening"},{start:"2020-02-19",end:"2020-04-07",type:"recession",name:"COVID-19"},{start:"2022-01-03",end:"2022-10-12",type:"correction",name:"Inflation / Rate Hikes"},{start:"2023-07-31",end:"2023-10-27",type:"correction",name:"Bond Selloff"},{start:"2025-02-19",end:"2025-04-08",type:"correction",name:"Tariff Shock"}];
+const VIX_EVENTS=[{start:"2008-09-15",end:"2009-03-31",name:"Lehman / GFC"},{start:"2010-05-06",end:"2010-06-30",name:"Flash Crash"},{start:"2011-08-01",end:"2011-10-15",name:"Debt Ceiling"},{start:"2020-02-24",end:"2020-05-15",name:"COVID Panic"},{start:"2022-01-20",end:"2022-03-15",name:"Ukraine"},{start:"2025-03-10",end:"2025-04-15",name:"Tariff VIX Spike"}];
+function getStressEventForDate(d){for(const e of STRESS_EVENTS){if(d>=e.start&&d<=e.end)return e;}return null;}
+function getVixEventForDate(d){for(const e of VIX_EVENTS){if(d>=e.start&&d<=e.end)return e;}return null;}
+function drawRegion(ctx,xScale,si,ei,top,bottom,ev){const x1=xScale.getPixelForValue(si),x2=xScale.getPixelForValue(ei),w=x2-x1;ctx.fillStyle=ev.type==='recession'?'rgba(139,42,42,0.12)':'rgba(200,208,216,0.25)';ctx.fillRect(x1,top,w,bottom-top);if(w>30){ctx.fillStyle=ev.type==='recession'?'rgba(139,42,42,0.7)':'rgba(90,106,122,0.7)';ctx.font=(w>80?'600 10px':'600 8px')+' Arial';ctx.textAlign='center';ctx.textBaseline='top';ctx.fillText(w>80?ev.name:ev.name.split(' ')[0],x1+w/2,top+4,w-4);}}
+function drawVixRegion(ctx,xScale,si,ei,top,bottom,zone,name){const x1=xScale.getPixelForValue(si),x2=xScale.getPixelForValue(ei),w=x2-x1;ctx.fillStyle=zone==='high'?'rgba(139,105,20,0.15)':'rgba(200,208,216,0.2)';ctx.fillRect(x1,top,w,bottom-top);if(w>30){ctx.fillStyle=zone==='high'?'rgba(139,105,20,0.7)':'rgba(90,106,122,0.6)';ctx.font=(w>80?'600 10px':'600 8px')+' Arial';ctx.textAlign='center';ctx.textBaseline='top';ctx.fillText(w>80?name:(zone==='high'?'VIX>30':'VIX>20'),x1+w/2,top+4,w-4);}}
+const overlayPlugin={id:'stressVixOverlay',afterDatasetsDraw(chart){if(!_showStress&&!_showVixRange)return;const area=chart.chartArea;if(!area||!area.left)return;const x=chart.scales.x;if(!x)return;const dates=_chartDatesGlobal;if(!dates||!dates.length)return;const{top,bottom}=area;const ctx=chart.ctx;ctx.save();try{if(_showStress){let ce=null,rs=null;for(let i=0;i<dates.length;i++){const ev=getStressEventForDate(dates[i]);if(ev&&ev!==ce){if(ce&&rs!==null)drawRegion(ctx,x,rs,i-1,top,bottom,ce);ce=ev;rs=i;}else if(!ev&&ce){drawRegion(ctx,x,rs,i-1,top,bottom,ce);ce=null;rs=null;}}if(ce&&rs!==null)drawRegion(ctx,x,rs,dates.length-1,top,bottom,ce);}if(_showVixRange){let cz=null,zs=null;for(let i=0;i<dates.length;i++){const vix=_vixDateMap[dates[i]];let z=null;if(vix!=null){if(vix>=30)z='high';else if(vix>=20)z='elevated';}if(z!==cz){if(cz&&zs!==null){const ev=getVixEventForDate(dates[zs])||{name:'VIX '+(cz==='high'?'>30':'20-30')};drawVixRegion(ctx,x,zs,i-1,top,bottom,cz,ev.name);}cz=z;zs=z?i:null;}}if(cz&&zs!==null){const ev=getVixEventForDate(dates[zs])||{name:'VIX '+(cz==='high'?'>30':'20-30')};drawVixRegion(ctx,x,zs,dates.length-1,top,bottom,cz,ev.name);}}}catch(e){}ctx.restore();}};
 Chart.register(overlayPlugin);
 
-// ══════════════════════════════════════
-// PORTFOLIO CHART
-// ══════════════════════════════════════
-let _chartPortfolioSeries=[];let _chartBenchmarkSeries={};
-
+// ═══ PORTFOLIO CHART ═══
+let _chartPortfolioSeries=[],_chartBenchmarkSeries={};
 window.renderPortfolioChart=async function(){
-  const holdings=window._holdings||[];if(!holdings.length)return;
-  const loadEl=document.getElementById('chartLoading');loadEl.style.display='block';
-  document.getElementById('chartStats').innerHTML='';
-  // Fetch historical data for each holding
-  const holdingSeries={};
-  for(const h of holdings){try{const data=await fetchChart(h.ticker,currentRange,"1d");const pts=(data.points||[]).filter(p=>p.close!==null);const map={};pts.forEach(p=>{map[p.date.slice(0,10)]=p.close;});holdingSeries[h.ticker]={map,quantity:h.quantity};}catch(e){}}
-  const allDates=new Set();Object.values(holdingSeries).forEach(s=>Object.keys(s.map).forEach(d=>allDates.add(d)));
-  const dates=Array.from(allDates).sort();if(!dates.length){loadEl.style.display='none';return;}
-  // Portfolio value per date
-  const pfValues=dates.map(d=>{let t=0;Object.values(holdingSeries).forEach(s=>{if(s.map[d]!=null)t+=s.map[d]*s.quantity;});return t;});
-  const valid=[];dates.forEach((d,i)=>{if(pfValues[i]>0)valid.push({date:d,value:pfValues[i]});});
-  if(!valid.length){loadEl.style.display='none';return;}
-  const chartDates=valid.map(d=>d.date),chartValues=valid.map(d=>d.value);
-  _chartDatesGlobal=chartDates;
-  _chartPortfolioSeries=chartValues;
-  // Fetch VIX data for VIX Range overlay
-  try{const vData=await fetchChart("^VIX",currentRange,"1d");const vPts=(vData.points||[]).filter(p=>p.close!==null);_vixDateMap={};vPts.forEach(p=>{_vixDateMap[p.date.slice(0,10)]=p.close;});}catch(e){_vixDateMap={};}
-  const pfStart=chartValues[0],pfEnd=chartValues[chartValues.length-1];
-  const datasets=[{label:'Portfolio',data:chartValues,borderColor:C.navy,backgroundColor:'rgba(0,60,113,.06)',borderWidth:2.5,pointRadius:1.5,pointHoverRadius:6,pointBackgroundColor:C.navy,pointHoverBackgroundColor:C.navy,fill:true,tension:.3,yAxisID:'y'}];
-  // Benchmarks
-  _chartBenchmarkSeries={};
-  const compInputs=[document.getElementById('compare1').value.trim().toUpperCase(),document.getElementById('compare2').value.trim().toUpperCase()].filter(Boolean);
-  const compColors=[C.blue,C.blueLight];
-  for(let i=0;i<compInputs.length;i++){
-    const sym=compInputs[i];
-    try{const data=await fetchChart(sym,currentRange,"1d");const pts=(data.points||[]).filter(p=>p.close!==null);
-      if(pts.length>1){const ptsMap={};pts.forEach(p=>{ptsMap[p.date.slice(0,10)]=p.close;});_chartBenchmarkSeries[sym]=ptsMap;
-        const aligned=chartDates.map(d=>ptsMap[d]!=null?ptsMap[d]:null);
-        datasets.push({label:sym,data:aligned,borderColor:compColors[i],borderWidth:2,pointRadius:1,pointHoverRadius:5,pointBackgroundColor:compColors[i],pointHoverBackgroundColor:compColors[i],fill:false,tension:.3,spanGaps:true,yAxisID:'y1'});
-      }}catch(e){}}
-  const hasBenchmarks=datasets.length>1;
-  // Compute stats for stat boxes
-  const pfRetPct=pfStart>0?((pfEnd-pfStart)/pfStart*100):0;
-  let bmRetPct=null,bmSym=compInputs[0]||'';
-  if(bmSym&&_chartBenchmarkSeries[bmSym]){const bd=Object.keys(_chartBenchmarkSeries[bmSym]).sort();if(bd.length>=2){const bf=_chartBenchmarkSeries[bmSym][bd[0]],bl=_chartBenchmarkSeries[bmSym][bd[bd.length-1]];bmRetPct=bf>0?((bl-bf)/bf*100):0;}}
-  const alpha=bmRetPct!=null?(pfRetPct-bmRetPct):null;
-  // Growth of $10K
-  const gPf=pfStart>0?(10000*(pfEnd/pfStart)):10000;
-  const gBm=bmRetPct!=null?(10000*(1+bmRetPct/100)):null;
-  // Portfolio variance/stdev from daily returns
-  const dailyReturns=[];for(let j=1;j<chartValues.length;j++){if(chartValues[j-1]>0)dailyReturns.push((chartValues[j]-chartValues[j-1])/chartValues[j-1]);}
-  const meanRet=dailyReturns.length?dailyReturns.reduce((a,b)=>a+b,0)/dailyReturns.length:0;
-  const variance=dailyReturns.length?dailyReturns.reduce((a,r)=>a+(r-meanRet)**2,0)/dailyReturns.length:0;
-  const stdev=Math.sqrt(variance);
-  const annStdev=stdev*Math.sqrt(252)*100;
-  const annVar=variance*252*10000;
-  // Stat boxes
-  let statsHtml='';
-  if(alpha!=null)statsHtml+='<div class="chart-stat-box"><div class="chart-stat-label">Alpha vs '+bmSym+' ('+rangeLabel()+')</div><div class="chart-stat-value" style="color:'+pctColor(alpha)+';">'+fmtPct(alpha)+'</div><div class="chart-stat-sub">Portfolio '+fmtPct(pfRetPct)+' vs '+bmSym+' '+fmtPct(bmRetPct)+'</div></div>';
-  statsHtml+='<div class="chart-stat-box"><div class="chart-stat-label">Growth of $10,000 ('+rangeLabel()+')</div><div class="chart-stat-value">Portfolio: '+fmtInt(gPf)+'</div><div class="chart-stat-sub">'+(gBm!=null?bmSym+': '+fmtInt(gBm):'Add benchmark to compare')+'</div></div>';
-  statsHtml+='<div class="chart-stat-box"><div class="chart-stat-label">Portfolio Risk (Annualized)</div><div class="chart-stat-value">&#963; '+annStdev.toFixed(1)+'%</div><div class="chart-stat-sub">Variance: '+(annVar).toFixed(2)+'%&sup2;</div></div>';
-  document.getElementById('chartStats').innerHTML=statsHtml;
-  // Build chart with zoom plugin
-  const ctx=document.getElementById('portfolioLineChart').getContext('2d');
-  if(portfolioLineChart)portfolioLineChart.destroy();
-  portfolioLineChart=new Chart(ctx,{type:'line',data:{labels:chartDates,datasets},
-    options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},
-      plugins:{
-        legend:{display:hasBenchmarks,labels:{font:{family:'Arial',size:11},color:C.textSec,boxWidth:10,padding:16}},
-        tooltip:{backgroundColor:C.bg,titleColor:C.text,bodyColor:C.text,borderColor:C.border,borderWidth:1,
-          titleFont:{family:'Arial',size:12,weight:'700'},bodyFont:{family:'Arial',size:12},footerFont:{family:'Arial',size:11,weight:'600'},footerColor:C.navy,padding:12,boxPadding:4,usePointStyle:true,
-          callbacks:{
-            title:function(items){return items[0]?.label||'';},
-            label:function(ctx){const v=ctx.parsed.y;if(v==null)return null;return ctx.dataset.yAxisID==='y'?' Portfolio: '+fmt(v):' '+ctx.dataset.label+': '+fmt(v);},
-            afterBody:function(items){
-              const idx=items[0]?.dataIndex;if(idx==null)return[];
-              const lines=[''];
-              const d=chartDates[idx];
-              // Stress event info
-              if(_showStress){const ev=getStressEventForDate(d);if(ev){lines.push('⚠ '+ev.name+' ('+ev.type+')');
-                // Find drawdown during this event
-                const eStart=chartDates.findIndex(dd=>dd>=ev.start);const eEnd=chartDates.findIndex(dd=>dd>ev.end);
-                const ePeak=Math.max(...chartValues.slice(Math.max(0,eStart-5),eEnd>0?eEnd:chartValues.length));
-                const eTrough=Math.min(...chartValues.slice(eStart,eEnd>0?eEnd:chartValues.length));
-                if(ePeak>0)lines.push('  Portfolio Drawdown: '+fmtPct(((eTrough-ePeak)/ePeak)*100));
-                compInputs.forEach(sym=>{const pm=_chartBenchmarkSeries[sym];if(!pm)return;const bd=Object.keys(pm).filter(dd=>dd>=ev.start&&dd<=ev.end).sort();if(bd.length>=2){const bP=Math.max(...bd.map(dd=>pm[dd]||0));const bT=Math.min(...bd.map(dd=>pm[dd]||0).filter(v=>v>0));if(bP>0)lines.push('  '+sym+' Drawdown: '+fmtPct(((bT-bP)/bP)*100));}});
-                lines.push('');}}
-              // VIX level
-              if(_showVixRange){const vix=_vixDateMap[d];if(vix!=null){lines.push('VIX: '+vix.toFixed(1)+(vix>=30?' (Extreme Fear)':vix>=20?' (Elevated)':' (Normal)'));
-                const ev=getVixEventForDate(d);if(ev)lines.push('  Event: '+ev.name);lines.push('');}}
-              // Point-in-time return
-              const pfAtPoint=chartValues[idx];const pfPtRet=pfStart>0?((pfAtPoint-pfStart)/pfStart*100):0;
-              lines.push('Return to Date:');
-              lines.push('  Portfolio: '+fmtPct(pfPtRet));
-              compInputs.forEach(sym=>{
-                const ptsMap=_chartBenchmarkSeries[sym];if(!ptsMap)return;
-                const bd=Object.keys(ptsMap).sort();if(bd.length<2)return;
-                const bFirst=ptsMap[bd[0]],bAtDate=ptsMap[chartDates[idx]];
-                if(bFirst>0&&bAtDate!=null){lines.push('  '+sym+': '+fmtPct(((bAtDate-bFirst)/bFirst)*100));}
-              });
-              if(compInputs[0]&&_chartBenchmarkSeries[compInputs[0]]){
-                const ptsMap=_chartBenchmarkSeries[compInputs[0]];const bd=Object.keys(ptsMap).sort();
-                if(bd.length>=2){const bFirst=ptsMap[bd[0]],bAtDate=ptsMap[chartDates[idx]];
-                  if(bFirst>0&&bAtDate!=null){const bRet=((bAtDate-bFirst)/bFirst)*100;lines.push('  Alpha: '+fmtPct(pfPtRet-bRet));}}}
-              return lines;
-            }
-          }
-        },
-        zoom:{zoom:{wheel:{enabled:true},pinch:{enabled:true},mode:'x',scaleMode:'x'},pan:{enabled:true,mode:'x'},limits:{x:{minRange:5}}}
-      },
-      scales:{
-        x:{grid:chartGrid,ticks:{...chartTicks,maxTicksLimit:12},border:{display:false}},
-        y:{type:'linear',position:'left',grid:chartGrid,ticks:{...chartTicks,callback:function(v){return '$'+(v>=1e6?(v/1e6).toFixed(1)+'M':v>=1e3?(v/1e3).toFixed(0)+'K':v.toFixed(0));}},border:{display:false},title:{display:true,text:'Portfolio Value ($)',font:{family:'Arial',size:12,weight:'600'},color:C.textSec}},
-        y1:{type:'linear',position:'right',display:hasBenchmarks,grid:{drawOnChartArea:false},ticks:{...chartTicks,callback:function(v){return '$'+v.toFixed(2);}},border:{display:false},title:{display:hasBenchmarks,text:'Benchmark Price ($)',font:{family:'Arial',size:12,weight:'600'},color:C.textSec}}
-      }
-    }
-  });
+  const allH=window._holdings||[];if(!allH.length)return;
+  const af=document.getElementById('portfolioAccountFilter')?.value||'all';
+  const holdings=af==='all'?allH:allH.filter(h=>(h.accountType||'Individual')===af);
+  if(!holdings.length)return;
+  const loadEl=document.getElementById('chartLoading');loadEl.style.display='block';document.getElementById('chartStats').innerHTML='';
+  const hs={};for(const h of holdings){try{const d=await fetchChart(h.ticker,currentRange,"1d");const pts=(d.points||[]).filter(p=>p.close!==null);const m={};pts.forEach(p=>{m[p.date.slice(0,10)]=p.close;});hs[h.ticker]={map:m,quantity:h.quantity};}catch(e){}}
+  const ad=new Set();Object.values(hs).forEach(s=>Object.keys(s.map).forEach(d=>ad.add(d)));const dates=Array.from(ad).sort();if(!dates.length){loadEl.style.display='none';return;}
+  const pv=dates.map(d=>{let t=0;Object.values(hs).forEach(s=>{if(s.map[d]!=null)t+=s.map[d]*s.quantity;});return t;});
+  const valid=[];dates.forEach((d,i)=>{if(pv[i]>0)valid.push({date:d,value:pv[i]});});if(!valid.length){loadEl.style.display='none';return;}
+  const cd=valid.map(d=>d.date),cv=valid.map(d=>d.value);_chartDatesGlobal=cd;_chartPortfolioSeries=cv;
+  try{const vD=await fetchChart("^VIX",currentRange,"1d");const vP=(vD.points||[]).filter(p=>p.close!==null);_vixDateMap={};vP.forEach(p=>{_vixDateMap[p.date.slice(0,10)]=p.close;});}catch(e){_vixDateMap={};}
+  const pfS=cv[0],pfE=cv[cv.length-1],ds=[{label:'Portfolio',data:cv,borderColor:C.navy,backgroundColor:'rgba(0,60,113,.06)',borderWidth:2.5,pointRadius:1.5,pointHoverRadius:6,pointBackgroundColor:C.navy,pointHoverBackgroundColor:C.navy,fill:true,tension:.3,yAxisID:'y'}];
+  _chartBenchmarkSeries={};const ci=[document.getElementById('compare1').value.trim().toUpperCase(),document.getElementById('compare2').value.trim().toUpperCase()].filter(Boolean);const cc=[C.blue,C.blueLight];
+  for(let i=0;i<ci.length;i++){const sym=ci[i];try{const d=await fetchChart(sym,currentRange,"1d");const pts=(d.points||[]).filter(p=>p.close!==null);if(pts.length>1){const pm={};pts.forEach(p=>{pm[p.date.slice(0,10)]=p.close;});_chartBenchmarkSeries[sym]=pm;ds.push({label:sym,data:cd.map(d=>pm[d]!=null?pm[d]:null),borderColor:cc[i],borderWidth:2,pointRadius:1,pointHoverRadius:5,pointBackgroundColor:cc[i],pointHoverBackgroundColor:cc[i],fill:false,tension:.3,spanGaps:true,yAxisID:'y1'});}}catch(e){}}
+  const hb=ds.length>1;const pfRet=pfS>0?((pfE-pfS)/pfS*100):0;let bmRet=null,bmSym=ci[0]||'';
+  if(bmSym&&_chartBenchmarkSeries[bmSym]){const bd=Object.keys(_chartBenchmarkSeries[bmSym]).sort();if(bd.length>=2){const bf=_chartBenchmarkSeries[bmSym][bd[0]],bl=_chartBenchmarkSeries[bmSym][bd[bd.length-1]];bmRet=bf>0?((bl-bf)/bf*100):0;}}
+  const alpha=bmRet!=null?(pfRet-bmRet):null;const gPf=pfS>0?(10000*(pfE/pfS)):10000;const gBm=bmRet!=null?(10000*(1+bmRet/100)):null;
+  const dr=[];for(let j=1;j<cv.length;j++){if(cv[j-1]>0)dr.push((cv[j]-cv[j-1])/cv[j-1]);}const mr=dr.length?dr.reduce((a,b)=>a+b,0)/dr.length:0;const vr=dr.length?dr.reduce((a,r)=>a+(r-mr)**2,0)/dr.length:0;const sd=Math.sqrt(vr)*Math.sqrt(252)*100;
+  let sh='';if(alpha!=null)sh+='<div class="chart-stat-box"><div class="chart-stat-label">Alpha vs '+bmSym+'</div><div class="chart-stat-value" style="color:'+pctColor(alpha)+';">'+fmtPct(alpha)+'</div><div class="chart-stat-sub">Portfolio '+fmtPct(pfRet)+' vs '+bmSym+' '+fmtPct(bmRet)+'</div></div>';
+  sh+='<div class="chart-stat-box"><div class="chart-stat-label">Growth of $10,000</div><div class="chart-stat-value">Portfolio: '+fmtInt(gPf)+'</div><div class="chart-stat-sub">'+(gBm!=null?bmSym+': '+fmtInt(gBm):'Add benchmark')+'</div></div>';
+  sh+='<div class="chart-stat-box"><div class="chart-stat-label">Risk (Annualized)</div><div class="chart-stat-value">&#963; '+sd.toFixed(1)+'%</div></div>';
+  document.getElementById('chartStats').innerHTML=sh;
+  const ctx=document.getElementById('portfolioLineChart').getContext('2d');if(portfolioLineChart)portfolioLineChart.destroy();
+  portfolioLineChart=new Chart(ctx,{type:'line',data:{labels:cd,datasets:ds},options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},plugins:{legend:{display:hb,labels:{font:{family:'Arial',size:11},color:C.textSec,boxWidth:10,padding:16}},tooltip:{backgroundColor:C.bg,titleColor:C.text,bodyColor:C.text,borderColor:C.border,borderWidth:1,titleFont:{family:'Arial',size:12,weight:'700'},bodyFont:{family:'Arial',size:12},footerFont:{family:'Arial',size:11,weight:'600'},footerColor:C.navy,padding:12,boxPadding:4,usePointStyle:true,callbacks:{title:function(items){return items[0]?.label||'';},label:function(c){const v=c.parsed.y;if(v==null)return null;return c.dataset.yAxisID==='y'?' Portfolio: '+fmt(v):' '+c.dataset.label+': '+fmt(v);},afterBody:function(items){const idx=items[0]?.dataIndex;if(idx==null)return[];const d=cd[idx];const lines=[''];if(_showStress){const ev=getStressEventForDate(d);if(ev){lines.push('⚠ '+ev.name+' ('+ev.type+')');const es=cd.findIndex(dd=>dd>=ev.start);const ee=cd.findIndex(dd=>dd>ev.end);const ep=Math.max(...cv.slice(Math.max(0,es-5),ee>0?ee:cv.length));const et=Math.min(...cv.slice(es,ee>0?ee:cv.length));if(ep>0)lines.push('  Drawdown: '+fmtPct(((et-ep)/ep)*100));lines.push('');}}if(_showVixRange){const vix=_vixDateMap[d];if(vix!=null){lines.push('VIX: '+vix.toFixed(1)+(vix>=30?' (Extreme)':vix>=20?' (Elevated)':' (Normal)'));const ev=getVixEventForDate(d);if(ev)lines.push('  '+ev.name);lines.push('');}}const pfAt=cv[idx];const pfPtR=pfS>0?((pfAt-pfS)/pfS*100):0;lines.push('Return to Date:');lines.push('  Portfolio: '+fmtPct(pfPtR));ci.forEach(sym=>{const pm=_chartBenchmarkSeries[sym];if(!pm)return;const bd=Object.keys(pm).sort();if(bd.length<2)return;const bf=pm[bd[0]],ba=pm[cd[idx]];if(bf>0&&ba!=null)lines.push('  '+sym+': '+fmtPct(((ba-bf)/bf)*100));});return lines;}}},zoom:{zoom:{wheel:{enabled:true},pinch:{enabled:true},mode:'x'},pan:{enabled:true,mode:'x'},limits:{x:{minRange:5}}}},scales:{x:{grid:chartGrid,ticks:{...chartTicks,maxTicksLimit:12},border:{display:false}},y:{type:'linear',position:'left',grid:chartGrid,ticks:{...chartTicks,callback:function(v){return '$'+(v>=1e6?(v/1e6).toFixed(1)+'M':v>=1e3?(v/1e3).toFixed(0)+'K':v.toFixed(0));}},border:{display:false},title:{display:true,text:'Portfolio Value ($)',font:{family:'Arial',size:12,weight:'600'},color:C.textSec}},y1:{type:'linear',position:'right',display:hb,grid:{drawOnChartArea:false},ticks:{...chartTicks,callback:function(v){return '$'+v.toFixed(2);}},border:{display:false},title:{display:hb,text:'Benchmark Price ($)',font:{family:'Arial',size:12,weight:'600'},color:C.textSec}}}}});
   loadEl.style.display='none';
 };
 
-// ── Morningstar Style Box ──
-function renderMorningstarBox(holdings){
-  const el=document.getElementById('mstar-card');if(!el)return;
-  const tv=holdings.reduce((s,h)=>s+(h.currentPrice||0)*h.quantity,0);if(tv===0){el.innerHTML='';return;}
-  let xSum=0,ySum=0;
-  const growth=new Set(["Information Technology","Consumer Discretionary","Communication Services","Digital Assets"]);
-  const value=new Set(["Financials","Energy","Utilities","Consumer Staples","Real Estate","Materials"]);
-  const lg=new Set(["Mega Cap","Large Cap","Large Cap Growth","Large Cap Value","Large Cap Blend","Large Fund"]);
-  const md=new Set(["Mid Cap","Mid Cap Growth","Mid Cap Value","Mid Cap Blend","Mid-Sized Fund"]);
-  const sm=new Set(["Small Cap","Small Cap Growth","Small Cap Value","Small Cap Blend","Micro Cap","Small Fund"]);
-  holdings.forEach(h=>{const w=((h.currentPrice||0)*h.quantity)/tv;let x=1;if(growth.has(h.sector))x=2;else if(value.has(h.sector))x=0;let y=0;const cat=h.mktCapCategory||'';if(lg.has(cat))y=0;else if(md.has(cat))y=1;else if(sm.has(cat))y=2;xSum+=x*w;ySum+=y*w;});
-  const dotLeft=Math.max(9,Math.min(231,(xSum/2)*240));const dotTop=Math.max(9,Math.min(231,(ySum/2)*240));
-  el.innerHTML='<div class="card"><div class="card-title">Morningstar Style Box</div><div class="card-body"><div class="mstar-labels-top"><span>Value</span><span>Blend</span><span>Growth</span></div><div class="mstar-container"><div class="mstar-labels-left"><span>Large</span><span>Mid</span><span>Small</span></div><div class="mstar-grid"><div class="mstar-cell">Large<br>Value</div><div class="mstar-cell">Large<br>Blend</div><div class="mstar-cell">Large<br>Growth</div><div class="mstar-cell">Mid<br>Value</div><div class="mstar-cell">Mid<br>Blend</div><div class="mstar-cell">Mid<br>Growth</div><div class="mstar-cell">Small<br>Value</div><div class="mstar-cell">Small<br>Blend</div><div class="mstar-cell">Small<br>Growth</div><div class="mstar-dot" style="left:'+dotLeft+'px;top:'+dotTop+'px;" title="Your Portfolio"></div></div></div><div style="text-align:center;margin-top:12px;font-size:11px;color:'+C.textSec+';">Your portfolio weighted position</div></div><div class="card-sources"><strong>Sources:</strong><br>&#8226; Perry Asset Management — Holdings sector &amp; market cap classification</div></div>';
-}
+// ═══ MORNINGSTAR STYLE BOX ═══
+function renderMorningstarBox(holdings){const el=document.getElementById('mstar-card');if(!el)return;const tv=holdings.reduce((s,h)=>s+(h.currentPrice||0)*h.quantity,0);if(tv===0){el.innerHTML='';return;}let xS=0,yS=0;const gr=new Set(["Information Technology","Consumer Discretionary","Communication Services","Digital Assets"]);const vl=new Set(["Financials","Energy","Utilities","Consumer Staples","Real Estate","Materials"]);const lg=new Set(["Mega Cap","Large Cap","Large Cap Growth","Large Cap Value","Large Cap Blend","Large Fund"]);const md=new Set(["Mid Cap","Mid Cap Growth","Mid Cap Value","Mid Cap Blend"]);const sm=new Set(["Small Cap","Small Cap Growth","Small Cap Value","Small Cap Blend","Micro Cap"]);holdings.forEach(h=>{const w=((h.currentPrice||0)*h.quantity)/tv;let x=1;if(gr.has(h.sector))x=2;else if(vl.has(h.sector))x=0;let y=0;const c=h.mktCapCategory||'';if(lg.has(c))y=0;else if(md.has(c))y=1;else if(sm.has(c))y=2;xS+=x*w;yS+=y*w;});const dL=Math.max(9,Math.min(231,(xS/2)*240)),dT=Math.max(9,Math.min(231,(yS/2)*240));el.innerHTML='<div class="card"><div class="card-title">Morningstar Style Box</div><div class="card-body"><div class="mstar-labels-top"><span>Value</span><span>Blend</span><span>Growth</span></div><div class="mstar-container"><div class="mstar-labels-left"><span>Large</span><span>Mid</span><span>Small</span></div><div class="mstar-grid"><div class="mstar-cell">Large<br>Value</div><div class="mstar-cell">Large<br>Blend</div><div class="mstar-cell">Large<br>Growth</div><div class="mstar-cell">Mid<br>Value</div><div class="mstar-cell">Mid<br>Blend</div><div class="mstar-cell">Mid<br>Growth</div><div class="mstar-cell">Small<br>Value</div><div class="mstar-cell">Small<br>Blend</div><div class="mstar-cell">Small<br>Growth</div><div class="mstar-dot" style="left:'+dL+'px;top:'+dT+'px;" title="Your Portfolio"></div></div></div><div style="text-align:center;margin-top:12px;font-size:11px;color:'+C.textSec+';">Portfolio weighted position</div></div><div class="card-sources"><strong>Sources:</strong><br>&#8226; Perry AM — Holdings sector &amp; market cap</div></div>';}
 
-// ── Donuts ──
-function renderDonut(id,title,data){const el=document.getElementById(id);if(!el)return;const cid=id+'-c';el.innerHTML='<div class="card"><div class="card-title">'+title+'</div><div class="card-body"><div class="donut-wrap"><div class="donut-canvas-wrap"><canvas id="'+cid+'"></canvas></div><div class="donut-legend">'+data.map((d,i)=>'<div class="legend-row"><span class="legend-dot" style="background:'+PALETTE[i%PALETTE.length]+'"></span><span class="legend-label">'+d.label+'</span><span class="legend-val">'+d.value+'%</span></div>').join('')+'</div></div></div><div class="card-sources"><strong>Sources:</strong><br>&#8226; Yahoo Finance &#8226; Firebase Firestore</div></div>';const ctx=document.getElementById(cid).getContext('2d');if(donutCharts[id])donutCharts[id].destroy();donutCharts[id]=new Chart(ctx,{type:'doughnut',data:{labels:data.map(d=>d.label),datasets:[{data:data.map(d=>d.value),backgroundColor:data.map((_,i)=>PALETTE[i%PALETTE.length]),borderWidth:2,borderColor:C.bg}]},options:{responsive:true,maintainAspectRatio:false,cutout:'62%',plugins:{legend:{display:false},tooltip:{...chartTooltip,callbacks:{label:c=>' '+c.label+': '+c.parsed+'%'}}}}});}
+// ═══ DONUTS ═══
+function renderDonut(id,title,data){const el=document.getElementById(id);if(!el)return;const cid=id+'-c';el.innerHTML='<div class="card"><div class="card-title">'+title+'</div><div class="card-body"><div class="donut-wrap"><div class="donut-canvas-wrap"><canvas id="'+cid+'"></canvas></div><div class="donut-legend">'+data.map((d,i)=>'<div class="legend-row"><span class="legend-dot" style="background:'+PALETTE[i%PALETTE.length]+'"></span><span class="legend-label">'+d.label+'</span><span class="legend-val">'+d.value+'%</span></div>').join('')+'</div></div></div><div class="card-sources"><strong>Sources:</strong><br>&#8226; Yahoo Finance &#8226; Firestore</div></div>';const ctx=document.getElementById(cid).getContext('2d');if(donutCharts[id])donutCharts[id].destroy();donutCharts[id]=new Chart(ctx,{type:'doughnut',data:{labels:data.map(d=>d.label),datasets:[{data:data.map(d=>d.value),backgroundColor:data.map((_,i)=>PALETTE[i%PALETTE.length]),borderWidth:2,borderColor:C.bg}]},options:{responsive:true,maintainAspectRatio:false,cutout:'62%',plugins:{legend:{display:false},tooltip:{...chartTooltip,callbacks:{label:c=>' '+c.label+': '+c.parsed+'%'}}}}});}
 
-// ── Research ──
+// ═══ BULK IMPORT ═══
+let _bulkRows=[];
+const dropZone=document.getElementById('dropZone');
+if(dropZone){dropZone.addEventListener('dragover',e=>{e.preventDefault();dropZone.classList.add('dragover');});dropZone.addEventListener('dragleave',()=>dropZone.classList.remove('dragover'));dropZone.addEventListener('drop',e=>{e.preventDefault();dropZone.classList.remove('dragover');if(e.dataTransfer.files.length)processFile(e.dataTransfer.files[0]);});}
+window.handleFileSelect=function(e){if(e.target.files.length)processFile(e.target.files[0]);};
+async function processFile(file){showStatus('scanStatus','<span class="spinner"></span> Scanning '+file.name+'...','info');_bulkRows=[];const ext=file.name.split('.').pop().toLowerCase();try{if(ext==='csv'||ext==='txt'){_bulkRows=parseGrid(file.await?await file.text():(await file.text()).split(/\r?\n/).map(l=>l.split(/[,\t]/)));}else if(ext==='xlsx'||ext==='xls'){const buf=await file.arrayBuffer();const wb=XLSX.read(buf);const ws=wb.Sheets[wb.SheetNames[0]];_bulkRows=parseGrid(XLSX.utils.sheet_to_json(ws,{header:1}));}else{showStatus('scanStatus','Unsupported: .'+ext,'error');return;}if(!_bulkRows.length){showStatus('scanStatus','No valid rows found.','error');return;}showStatus('scanStatus','&#10003; Found '+_bulkRows.length+' holdings from <strong>'+file.name+'</strong>. Review below.','success');renderValidationTable();}catch(e){showStatus('scanStatus','Error: '+e.message,'error');}}
+function parseGrid(input){const rows=typeof input==='string'?input.split(/\r?\n/).map(l=>l.split(/[,\t]/)):input;if(rows.length<2)return[];const fr=rows[0].map(c=>String(c||'').trim());const hdr=fr.some(c=>/^[a-zA-Z\s\/]+$/.test(c)&&c.length>1&&isNaN(parseFloat(c)));const si=hdr?1:0;const nc=Math.max(...rows.map(r=>(r||[]).length));const cs=[];for(let col=0;col<nc;col++){let ts=0,ds=0,ns=0;for(let row=si;row<Math.min(rows.length,20);row++){const v=String((rows[row]||[])[col]||'').trim();if(!v)continue;if(/^[A-Za-z]{1,6}(\.[A-Za-z])?$/.test(v))ts++;if(/\d{4}-\d{2}-\d{2}/.test(v)||/\d{1,2}\/\d{1,2}\/\d{2,4}/.test(v)||/\d{1,2}-\d{1,2}-\d{2,4}/.test(v))ds++;const cl=v.replace(/[$,\s]/g,'');if(/^-?\d+\.?\d*$/.test(cl))ns++;}cs.push({col,ts,ds,ns});}const hh={};if(hdr)fr.forEach((h,i)=>{const hl=h.toLowerCase();if(hl.includes('ticker')||hl.includes('symbol')||hl==='stock'||hl.includes('security'))hh[i]='ticker';if(hl.includes('date')||hl.includes('purchased')||hl.includes('acquired')||hl.includes('trade'))hh[i]='date';if(hl.includes('share')||hl.includes('qty')||hl.includes('quantity')||hl.includes('units')||hl.includes('amount'))hh[i]='shares';if(hl.includes('cost')||hl.includes('price')||hl.includes('basis')||hl.includes('paid')||hl.includes('per share'))hh[i]='cost';});
+  let tc=-1,dc=-1,sc=-1,cc2=-1;Object.entries(hh).forEach(([i,t])=>{const idx=parseInt(i);if(t==='ticker'&&tc===-1)tc=idx;if(t==='date'&&dc===-1)dc=idx;if(t==='shares'&&sc===-1)sc=idx;if(t==='cost'&&cc2===-1)cc2=idx;});
+  const used=new Set([tc,dc,sc,cc2].filter(x=>x>=0));if(tc===-1){const b=cs.filter(c=>!used.has(c.col)).sort((a,b)=>b.ts-a.ts)[0];if(b&&b.ts>0){tc=b.col;used.add(b.col);}}if(dc===-1){const b=cs.filter(c=>!used.has(c.col)).sort((a,b)=>b.ds-a.ds)[0];if(b&&b.ds>0){dc=b.col;used.add(b.col);}}if(sc===-1||cc2===-1){const nc2=cs.filter(c=>!used.has(c.col)&&c.ns>0).sort((a,b)=>b.ns-a.ns);if(sc===-1&&nc2.length>0){sc=nc2[0].col;used.add(nc2[0].col);}if(cc2===-1&&nc2.length>1){cc2=nc2[1].col;used.add(nc2[1].col);}}
+  if(tc===-1)tc=0;if(dc===-1)dc=1;if(sc===-1)sc=2;if(cc2===-1)cc2=3;
+  const result=[];for(let i=si;i<rows.length;i++){const r=rows[i];if(!r||!r.length)continue;let ticker=String(r[tc]||'').trim().toUpperCase().replace(/[^A-Z0-9.]/g,'');if(!ticker||ticker.length>10)continue;let date=String(r[dc]||'').trim();if(/^\d{1,2}\/\d{1,2}\/\d{2,4}$/.test(date)){const p=date.split('/');date=(p[2].length===2?'20'+p[2]:p[2])+'-'+p[0].padStart(2,'0')+'-'+p[1].padStart(2,'0');}else if(/^\d{1,2}-\d{1,2}-\d{2,4}$/.test(date)){const p=date.split('-');date=(p[2].length===2?'20'+p[2]:p[2])+'-'+p[0].padStart(2,'0')+'-'+p[1].padStart(2,'0');}if(!/^\d{4}-\d{2}-\d{2}$/.test(date))date=new Date().toISOString().slice(0,10);const shares=parseFloat(String(r[sc]||'').replace(/[$,\s]/g,''))||0;const cost=parseFloat(String(r[cc2]||'').replace(/[$,\s]/g,''))||0;if(shares>0)result.push({ticker,date,shares,cost:cost||0});}return result;}
+function renderValidationTable(){document.getElementById('validateArea').style.display='';document.getElementById('validateCount').textContent=_bulkRows.length+' holdings';let html='<table><thead><tr><th>Ticker</th><th>Date</th><th>Shares</th><th>Cost/Share</th><th></th></tr></thead><tbody>';_bulkRows.forEach((r,i)=>{html+='<tr><td><input value="'+r.ticker+'" onchange="_bulkRows['+i+'].ticker=this.value.toUpperCase()" style="text-transform:uppercase;width:70px;"></td><td><input type="date" value="'+r.date+'" onchange="_bulkRows['+i+'].date=this.value" style="width:130px;"></td><td><input type="number" value="'+r.shares+'" step="any" onchange="_bulkRows['+i+'].shares=parseFloat(this.value)||0" style="width:70px;"></td><td><input type="number" value="'+r.cost+'" step="0.01" onchange="_bulkRows['+i+'].cost=parseFloat(this.value)||0" style="width:80px;"></td><td><button class="btn btn-danger btn-sm" onclick="removeBulkRow('+i+')">&#10005;</button></td></tr>';});html+='</tbody></table>';document.getElementById('validateTableWrap').innerHTML=html;}
+window.removeBulkRow=function(i){_bulkRows.splice(i,1);if(!_bulkRows.length){cancelBulkImport();return;}renderValidationTable();};
+window.cancelBulkImport=function(){_bulkRows=[];document.getElementById('validateArea').style.display='none';document.getElementById('scanStatus').className='status-bar';document.getElementById('fileInput').value='';};
+window.submitBulkHoldings=async function(){const valid=_bulkRows.filter(r=>r.ticker&&r.shares>0);if(!valid.length){showStatus('scanStatus','No valid holdings.','error');return;}const btn=document.getElementById('submitBulkBtn');btn.disabled=true;btn.innerHTML='<span class="spinner"></span> Submitting...';const acctType=document.getElementById('inputAccountType')?.value||'Individual';let n=0;for(const r of valid){try{const q=await fetchQuote(r.ticker);const meta=classifyHolding(r.ticker,q);await window._addHoldingDirect(r.ticker,q.name||r.ticker,r.date,r.shares,r.cost,q.price||0,q.previousClose||0,meta,acctType);n++;}catch(e){console.warn(r.ticker,e);}}showStatus('scanStatus','&#10003; Added '+n+'/'+valid.length+' new holdings. Existing holdings untouched.','success');cancelBulkImport();await loadHoldings();btn.disabled=false;btn.textContent='Submit to Portfolio';};
+
+// ═══ ACCOUNT TYPES EDUCATIONAL CARDS ═══
+const ACCT_INFO=[
+{name:"Individual Brokerage",tags:["Taxable","No Limits"],desc:"Standard taxable investment account. No contribution limits or withdrawal restrictions. Most flexible account type.",tax:"Capital gains taxed at short-term or long-term rates. Dividends taxed annually. Tax-loss harvesting available.",beneficiary:"Transferred via TOD designation outside probate. Beneficiaries receive stepped-up cost basis at death.",death:"Assets pass to named TOD beneficiary immediately. Without TOD, goes through probate.",bestFor:"Investing beyond retirement limits, short-to-medium goals, tax-loss harvesting."},
+{name:"Roth IRA",tags:["Tax-Free Growth","After-Tax"],desc:"After-tax contributions with tax-free qualified withdrawals in retirement (59½+). Contributions withdrawable anytime.",tax:"No tax on qualified distributions. 2025 limit: $7,000 ($8,000 if 50+). Income limits apply. Earnings withdrawn early face 10% penalty + tax.",beneficiary:"Spouse can treat as own Roth IRA. Non-spouse must deplete within 10 years (SECURE Act). All distributions tax-free.",death:"No RMDs for original owner. Spouse rolls to own Roth; non-spouse depletes in 10 years tax-free if 5-year rule met.",bestFor:"Younger investors, those expecting higher future tax rates, legacy planning, Roth conversion ladders."},
+{name:"Traditional IRA",tags:["Tax-Deferred","Pre-Tax"],desc:"Contributions may be tax-deductible. Growth tax-deferred. Withdrawals in retirement taxed as ordinary income.",tax:"Deductible if below income threshold. 2025 limit: $7,000 ($8,000 if 50+). RMDs at 73. 10% penalty before 59½.",beneficiary:"Non-spouse must deplete in 10 years. All distributions taxed as ordinary income to beneficiary.",death:"RMDs at 73. Spouse rolls to own IRA. Non-spouse: 10-year depletion, all taxable. Can create significant tax burden.",bestFor:"Tax deduction in high-income years, tax-deferred growth, no employer plan."},
+{name:"Standard 401(k)",tags:["Employer-Sponsored","Pre-Tax"],desc:"Employer-sponsored with pre-tax contributions reducing current AGI. Often includes employer matching.",tax:"Pre-tax contributions. 2025 limit: $23,500 ($31,000 if 50+). Employer match doesn't count toward limit. Withdrawals taxed as income.",beneficiary:"Spouse is default by law (ERISA). Non-spouse requires spousal consent. 10-year depletion for non-spouse.",death:"Spouse can roll to IRA. Non-spouse: full distribution within 10 years, all taxed as income.",bestFor:"Maximizing employer match, high earners seeking deductions, long-term accumulation."},
+{name:"Roth 401(k)",tags:["Employer-Sponsored","After-Tax"],desc:"After-tax 401(k) contributions with tax-free qualified withdrawals. Employer match goes to separate pre-tax bucket.",tax:"After-tax (no deduction). Same limits as 401(k). RMDs at 73 (avoid by rolling to Roth IRA). Qualified withdrawals tax-free.",beneficiary:"Spouse is default. Roth portion tax-free; employer match taxable. Non-spouse: 10-year depletion.",death:"Roll to Roth IRA before death to eliminate RMDs. Roth portion tax-free to heirs.",bestFor:"High earners wanting tax-free retirement income, tax diversification."},
+{name:"SEP IRA",tags:["Self-Employed","Pre-Tax"],desc:"Simplified Employee Pension for self-employed. Very high contribution limits based on business income.",tax:"Deductible business expense. 2025: 25% of net income up to $70,000. Same withdrawal rules as Traditional IRA.",beneficiary:"Same as Traditional IRA. 10-year rule for non-spouse.",death:"Same as Traditional IRA. RMDs at 73.",bestFor:"Self-employed, freelancers, small business owners seeking maximum pre-tax contributions."},
+{name:"529 Plan",tags:["Education","Tax-Advantaged"],desc:"Tax-advantaged education savings. Growth and qualified withdrawals for education are tax-free.",tax:"After-tax contributions (many states offer deduction). Non-qualified: earnings taxed + 10% penalty. Up to $35,000 rollable to Roth IRA.",beneficiary:"Account owner controls. Beneficiary changeable to family member anytime.",death:"Successor owner takes over if named. Otherwise enters estate.",bestFor:"Children's education, state tax deductions, Roth IRA rollover option."},
+{name:"HSA",tags:["Triple Tax","Healthcare"],desc:"Triple tax advantage: deductible contributions, tax-free growth, tax-free medical withdrawals. Requires HDHP.",tax:"2025: $4,300 individual / $8,550 family ($1,000 catch-up if 55+). After 65, non-medical withdrawals taxed as income only.",beneficiary:"Spouse: becomes their HSA. Non-spouse: taxable lump sum as ordinary income.",death:"Worst account to leave to non-spouse. Spend it or leave to spouse.",bestFor:"Long-term medical savings, retirement health costs, maximizing triple tax advantage."},
+{name:"Trust Account",tags:["Estate Planning","Flexible"],desc:"Investment account within a trust structure for estate planning, asset protection, and controlled distributions.",tax:"Revocable: taxed at grantor's rates. Irrevocable: compressed brackets (37% at ~$14,450).",beneficiary:"Trust document specifies everything. Can include staggered distributions, spendthrift provisions.",death:"Revocable becomes irrevocable. Avoids probate. Revocable assets get stepped-up basis.",bestFor:"Estate planning, probate avoidance, controlled distributions, high-net-worth."},
+{name:"Custodial (UTMA/UGMA)",tags:["Minor's Account","Taxable"],desc:"Account for minors. Assets belong irrevocably to the minor and transfer at age of majority.",tax:"First $1,300 unearned income tax-free. Next $1,300 at child's rate. Above $2,600 at parent's rate.",beneficiary:"The minor IS the owner. Cannot be changed. Full control at 18 (UGMA) or 18-21 (UTMA).",death:"Custodian dies: successor takes over. Minor dies: to minor's estate. Cannot revert to parent.",bestFor:"Gifts to minors, non-education goals."},
+{name:"Joint Account",tags:["Shared Ownership","Taxable"],desc:"Shared taxable account. Common types: JTWROS (survivor inherits) and Tenants in Common.",tax:"Same as individual taxable. Reporting depends on structure.",beneficiary:"JTWROS: survivor inherits automatically. TIC: deceased share through estate.",death:"JTWROS: passes to survivor with stepped-up basis on decedent's half. Community property: full step-up.",bestFor:"Couples investing together, simple survivorship planning."},
+{name:"Designated Beneficiary",tags:["Inherited","Distribution Rules"],desc:"Inherited account subject to specific distribution rules based on relationship and account type.",tax:"Non-spouse: 10-year depletion. Traditional: taxed as income. Roth: tax-free if 5-year rule met.",beneficiary:"Cannot name successor beneficiary. If beneficiary dies, remainder goes to their estate.",death:"10-year clock doesn't reset. Remaining taxed to estate.",bestFor:"Understanding inherited account rules, tax planning for inherited wealth."}
+];
+function renderAccountInfoCards(){const g=document.getElementById('acctInfoGrid');if(!g)return;g.innerHTML=ACCT_INFO.map(a=>'<div class="acct-info-card"><h4>'+a.name+'</h4><div style="margin-bottom:8px;">'+a.tags.map(t=>'<span class="acct-tag">'+t+'</span>').join('')+'</div><p>'+a.desc+'</p><div class="acct-detail"><strong style="color:'+C.navy+';">Tax:</strong> '+a.tax+'</div><div class="acct-detail"><strong style="color:'+C.navy+';">Beneficiaries:</strong> '+a.beneficiary+'</div><div class="acct-detail"><strong style="color:'+C.navy+';">After Death:</strong> '+a.death+'</div><div class="acct-detail" style="margin-top:4px;"><strong style="color:'+C.success+';">Best For:</strong> '+a.bestFor+'</div></div>').join('');}
+setTimeout(renderAccountInfoCards,100);
+
+// ═══ RESEARCH ═══
 let researchChart=null;
 document.getElementById('researchType').addEventListener('change',function(){document.getElementById('rangeGroup').style.display=this.value==='chart'?'':'none';});
-window.runResearch=async function(){
-  const ticker=document.getElementById('researchTicker').value.trim().toUpperCase();const type=document.getElementById('researchType').value;
-  if(!ticker&&type!=='search'){alert('Enter a ticker.');return;}
-  document.getElementById('researchRawCard').style.display='';document.getElementById('researchOutput').textContent='Fetching...';document.getElementById('researchChartCard').style.display='none';document.getElementById('researchResults').innerHTML='';
-  try{
-    if(type==='quote'){const d=await fetchQuote(ticker);const chg=d.change||0,chgPct=d.changePercent||0,cc=chg>=0?C.success:C.danger;document.getElementById('researchResults').innerHTML='<div class="metrics-row" style="margin-bottom:20px;">'+mcBig(d.symbol,fmt(d.price),fmtPct(chgPct)+' ('+fmt(chg)+')',cc)+mcBig('Prev Close',fmt(d.previousClose),'',C.textSec)+mcBig('Day Range',(d.intradayLow?fmt(d.intradayLow):'—')+' — '+(d.intradayHigh?fmt(d.intradayHigh):'—'),'',C.textSec)+mcBig('Volume',d.volume?Number(d.volume).toLocaleString():'—','',C.textSec)+'</div>';document.getElementById('researchOutput').textContent=JSON.stringify(d,null,2);}
-    else if(type==='chart'){const range=document.getElementById('researchRange').value;const d=await fetchChart(ticker,range,'1d');const pts=(d.points||[]).filter(p=>p.close!==null);document.getElementById('researchChartCard').style.display='';document.getElementById('researchChartTitle').textContent=ticker+' Price ('+range+')';const ctx=document.getElementById('researchChart').getContext('2d');if(researchChart)researchChart.destroy();researchChart=new Chart(ctx,{type:'line',data:{labels:pts.map(p=>p.date.slice(0,10)),datasets:[{label:ticker,data:pts.map(p=>p.close),borderColor:C.navy,backgroundColor:'rgba(0,60,113,.06)',borderWidth:2.5,pointRadius:0,pointHoverRadius:5,pointHoverBackgroundColor:C.navy,fill:true,tension:.3}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{...chartTooltip,callbacks:{label:c=>' '+fmt(c.parsed.y)}}},scales:{x:{grid:chartGrid,ticks:{...chartTicks,maxTicksLimit:12},border:{display:false}},y:{grid:chartGrid,ticks:{...chartTicks,callback:v=>'$'+v.toFixed(2)},border:{display:false}}}}});document.getElementById('researchOutput').textContent=pts.length+' points loaded.';}
-    else if(type==='search'){const d=await fetchSearch(ticker);let html='<div class="card"><div class="card-title">Search: "'+ticker+'"</div><div class="card-body"><table><thead><tr><th>Symbol</th><th>Name</th><th>Type</th><th>Exchange</th></tr></thead><tbody>';(d.results||[]).forEach(r=>{html+='<tr><td style="font-weight:700;color:'+C.navy+';">'+r.symbol+'</td><td>'+r.name+'</td><td>'+r.type+'</td><td>'+r.exchange+'</td></tr>';});html+='</tbody></table></div><div class="card-sources"><strong>Sources:</strong><br>&#8226; Yahoo Finance</div></div>';document.getElementById('researchResults').innerHTML=html;document.getElementById('researchOutput').textContent=JSON.stringify(d,null,2);}
-  }catch(e){document.getElementById('researchOutput').textContent='Error: '+e.message;}
-};
+window.runResearch=async function(){const ticker=document.getElementById('researchTicker').value.trim().toUpperCase();const type=document.getElementById('researchType').value;if(!ticker&&type!=='search'){alert('Enter a ticker.');return;}document.getElementById('researchRawCard').style.display='';document.getElementById('researchOutput').textContent='Fetching...';document.getElementById('researchChartCard').style.display='none';document.getElementById('researchResults').innerHTML='';try{if(type==='quote'){const d=await fetchQuote(ticker);const chg=d.change||0,chgPct=d.changePercent||0,cc2=chg>=0?C.success:C.danger;document.getElementById('researchResults').innerHTML='<div class="metrics-row" style="margin-bottom:20px;">'+mcBig(d.symbol,fmt(d.price),fmtPct(chgPct)+' ('+fmt(chg)+')',cc2)+mcBig('Prev Close',fmt(d.previousClose),'',C.textSec)+mcBig('Day Range',(d.intradayLow?fmt(d.intradayLow):'—')+' — '+(d.intradayHigh?fmt(d.intradayHigh):'—'),'',C.textSec)+mcBig('Volume',d.volume?Number(d.volume).toLocaleString():'—','',C.textSec)+'</div>';document.getElementById('researchOutput').textContent=JSON.stringify(d,null,2);}else if(type==='chart'){const range=document.getElementById('researchRange').value;const d=await fetchChart(ticker,range,'1d');const pts=(d.points||[]).filter(p=>p.close!==null);document.getElementById('researchChartCard').style.display='';document.getElementById('researchChartTitle').textContent=ticker+' Price ('+range+')';const ctx=document.getElementById('researchChart').getContext('2d');if(researchChart)researchChart.destroy();researchChart=new Chart(ctx,{type:'line',data:{labels:pts.map(p=>p.date.slice(0,10)),datasets:[{label:ticker,data:pts.map(p=>p.close),borderColor:C.navy,backgroundColor:'rgba(0,60,113,.06)',borderWidth:2.5,pointRadius:0,pointHoverRadius:5,pointHoverBackgroundColor:C.navy,fill:true,tension:.3}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{...chartTooltip,callbacks:{label:c=>' '+fmt(c.parsed.y)}}},scales:{x:{grid:chartGrid,ticks:{...chartTicks,maxTicksLimit:12},border:{display:false}},y:{grid:chartGrid,ticks:{...chartTicks,callback:v=>'$'+v.toFixed(2)},border:{display:false}}}}});document.getElementById('researchOutput').textContent=pts.length+' points.';}else if(type==='search'){const d=await fetchSearch(ticker);let html='<div class="card"><div class="card-title">Search: "'+ticker+'"</div><div class="card-body"><table><thead><tr><th>Symbol</th><th>Name</th><th>Type</th><th>Exchange</th></tr></thead><tbody>';(d.results||[]).forEach(r=>{html+='<tr><td style="font-weight:700;color:'+C.navy+';">'+r.symbol+'</td><td>'+r.name+'</td><td>'+r.type+'</td><td>'+r.exchange+'</td></tr>';});html+='</tbody></table></div><div class="card-sources"><strong>Sources:</strong><br>&#8226; Yahoo Finance</div></div>';document.getElementById('researchResults').innerHTML=html;document.getElementById('researchOutput').textContent=JSON.stringify(d,null,2);}}catch(e){document.getElementById('researchOutput').textContent='Error: '+e.message;}};
 </script>
 </body>
 </html>
