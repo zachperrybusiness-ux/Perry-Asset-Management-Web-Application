@@ -845,6 +845,9 @@ async function renderPortfolioOverview(){
   renderMorningstarBox(holdings);
   bindTimeframeBtns();
   document.querySelectorAll('#pfTimeframeBtns .btn-outline').forEach(b=>{b.classList.toggle('active',b.dataset.range===currentRange);});
+  // Restore overlay toggle button states
+  document.getElementById('btnStress').classList.toggle('active', _showStress);
+  document.getElementById('btnVixRange').classList.toggle('active', _showVixRange);
   renderPortfolioChart();
 }
 
@@ -951,60 +954,61 @@ function getVixEventForDate(d) {
 // Custom Chart.js plugin for drawing shaded regions
 const overlayPlugin = {
   id: 'stressVixOverlay',
-  beforeDraw(chart) {
+  afterDatasetsDraw(chart) {
     if (!_showStress && !_showVixRange) return;
-    const { ctx, chartArea: { left, right, top, bottom }, scales: { x } } = chart;
+    const area = chart.chartArea;
+    if (!area || !area.left) return;
+    const x = chart.scales.x;
+    if (!x) return;
     const dates = _chartDatesGlobal;
-    if (!dates.length) return;
+    if (!dates || !dates.length) return;
+    const { left, right, top, bottom } = area;
+    const ctx = chart.ctx;
     ctx.save();
-
-    if (_showStress) {
-      // Draw stress regions
-      let currentEvent = null;
-      let regionStart = null;
-      for (let i = 0; i < dates.length; i++) {
-        const ev = getStressEventForDate(dates[i]);
-        if (ev && ev !== currentEvent) {
-          // Start new region
-          if (currentEvent && regionStart !== null) drawRegion(ctx, x, regionStart, i - 1, top, bottom, currentEvent, dates);
-          currentEvent = ev;
-          regionStart = i;
-        } else if (!ev && currentEvent) {
-          drawRegion(ctx, x, regionStart, i - 1, top, bottom, currentEvent, dates);
-          currentEvent = null;
-          regionStart = null;
-        }
-      }
-      if (currentEvent && regionStart !== null) drawRegion(ctx, x, regionStart, dates.length - 1, top, bottom, currentEvent, dates);
-    }
-
-    if (_showVixRange) {
-      // Draw VIX zones
-      let currentZone = null; // 'elevated' or 'high'
-      let zoneStart = null;
-      let zoneName = '';
-      for (let i = 0; i < dates.length; i++) {
-        const vix = _vixDateMap[dates[i]];
-        let zone = null;
-        if (vix != null) {
-          if (vix >= 30) zone = 'high';
-          else if (vix >= 20) zone = 'elevated';
-        }
-        if (zone !== currentZone) {
-          if (currentZone && zoneStart !== null) {
-            const ev = getVixEventForDate(dates[zoneStart]) || { name: 'VIX ' + (currentZone === 'high' ? '>30' : '20-30'), type: currentZone };
-            drawVixRegion(ctx, x, zoneStart, i - 1, top, bottom, currentZone, ev.name, dates);
+    try {
+      if (_showStress) {
+        let currentEvent = null;
+        let regionStart = null;
+        for (let i = 0; i < dates.length; i++) {
+          const ev = getStressEventForDate(dates[i]);
+          if (ev && ev !== currentEvent) {
+            if (currentEvent && regionStart !== null) drawRegion(ctx, x, regionStart, i - 1, top, bottom, currentEvent, dates);
+            currentEvent = ev;
+            regionStart = i;
+          } else if (!ev && currentEvent) {
+            drawRegion(ctx, x, regionStart, i - 1, top, bottom, currentEvent, dates);
+            currentEvent = null;
+            regionStart = null;
           }
-          currentZone = zone;
-          zoneStart = zone ? i : null;
+        }
+        if (currentEvent && regionStart !== null) drawRegion(ctx, x, regionStart, dates.length - 1, top, bottom, currentEvent, dates);
+      }
+
+      if (_showVixRange) {
+        let currentZone = null;
+        let zoneStart = null;
+        for (let i = 0; i < dates.length; i++) {
+          const vix = _vixDateMap[dates[i]];
+          let zone = null;
+          if (vix != null) {
+            if (vix >= 30) zone = 'high';
+            else if (vix >= 20) zone = 'elevated';
+          }
+          if (zone !== currentZone) {
+            if (currentZone && zoneStart !== null) {
+              const ev = getVixEventForDate(dates[zoneStart]) || { name: 'VIX ' + (currentZone === 'high' ? '>30' : '20-30'), type: currentZone };
+              drawVixRegion(ctx, x, zoneStart, i - 1, top, bottom, currentZone, ev.name, dates);
+            }
+            currentZone = zone;
+            zoneStart = zone ? i : null;
+          }
+        }
+        if (currentZone && zoneStart !== null) {
+          const ev = getVixEventForDate(dates[zoneStart]) || { name: 'VIX ' + (currentZone === 'high' ? '>30' : '20-30') };
+          drawVixRegion(ctx, x, zoneStart, dates.length - 1, top, bottom, currentZone, ev.name, dates);
         }
       }
-      if (currentZone && zoneStart !== null) {
-        const ev = getVixEventForDate(dates[zoneStart]) || { name: 'VIX ' + (currentZone === 'high' ? '>30' : '20-30') };
-        drawVixRegion(ctx, x, zoneStart, dates.length - 1, top, bottom, currentZone, ev.name, dates);
-      }
-    }
-
+    } catch(e) { /* silently ignore drawing errors during transitions */ }
     ctx.restore();
   }
 };
