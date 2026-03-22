@@ -41,12 +41,11 @@ html,body{font-family:Arial,Helvetica,sans-serif;background:var(--bg);color:var(
 .metric-sub{font-size:11px;font-weight:600;margin-top:3px;}
 /* Compact benchmark cards */
 .bench-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-bottom:22px;}
-.bench-card{background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);padding:10px 14px;box-shadow:var(--shadow);height:100px;overflow:hidden;position:relative;}
+.bench-card{background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);padding:10px 14px;box-shadow:var(--shadow);overflow:hidden;}
 .bench-label{font-size:9px;font-weight:700;color:var(--text-sec);text-transform:uppercase;letter-spacing:.5px;margin-bottom:2px;}
 .bench-value{font-size:14px;font-weight:700;color:var(--navy);line-height:1.2;}
 .bench-sub{font-size:10px;font-weight:600;margin-top:1px;}
-.bench-spark-wrap{width:100%;height:24px;position:absolute;bottom:8px;left:0;padding:0 14px;}
-.bench-spark{display:block;width:100%;height:100%;}
+.bench-spark-svg{display:block;width:100%;height:20px;margin-top:4px;}
 .grid-2{display:grid;grid-template-columns:1fr 1fr;gap:20px;}
 .grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:20px;}
 @media(max-width:900px){.grid-2,.grid-3{grid-template-columns:1fr;}}
@@ -487,7 +486,6 @@ function showStatus(id,msg,type){const el=document.getElementById(id);if(!el)ret
 let currentRange="1y";
 let portfolioLineChart=null;
 let donutCharts={};
-let sparkCharts={};
 
 const parentMap={home:'home',about:'home',portfolio:'portfolio',holdings:'portfolio',research:'research'};
 function navigateTo(p){document.activeElement.blur();document.querySelectorAll('.page').forEach(x=>x.classList.remove('active'));document.querySelectorAll('.nav-parent,.nav-child').forEach(x=>x.classList.remove('active'));document.getElementById('page-'+p).classList.add('active');const pp=parentMap[p]||p;const pe=document.querySelector('.nav-parent[data-page="'+pp+'"]');if(pe)pe.classList.add('active');const ce=document.querySelector('.nav-child[data-page="'+p+'"]');if(ce)ce.classList.add('active');window.scrollTo(0,0);if(p==='portfolio')renderPortfolioOverview();}
@@ -571,17 +569,15 @@ async function fetchBenchmarkSparklines(tickers,labels){
       const displayVal=isVix?last.toFixed(2):fmtPct(ret);
       const displaySub=isVix?fmtPct(ret)+' chg':fmt(last);
       const cc=pctColor(isVix?-ret:ret);
-      el.innerHTML='<div class="bench-label">'+label+' ('+rangeLabel()+')</div><div class="bench-value" style="font-size:14px;color:'+cc+';">'+displayVal+'</div><div class="bench-sub" style="color:'+C.textSec+';">'+displaySub+'</div><div class="bench-spark-wrap"><canvas id="spark-'+label+'" width="200" height="24"></canvas></div>';
-      // Draw sparkline — responsive OFF, fixed size, no events
-      const sparkCanvas=document.getElementById('spark-'+label);
-      if(sparkCanvas){
-        sparkCanvas.style.width='100%';sparkCanvas.style.height='24px';
-        const closes=pts.map(p=>p.close);
-        if(sparkCharts[label])sparkCharts[label].destroy();
-        sparkCharts[label]=new Chart(sparkCanvas,{type:'line',data:{labels:closes.map((_,j)=>j),datasets:[{data:closes,borderColor:ret>=0?C.success:C.danger,borderWidth:1.5,pointRadius:0,fill:false,tension:.4}]},options:{responsive:false,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{enabled:false}},scales:{x:{display:false},y:{display:false}},animation:false,events:[]}});
-      }
+      el.innerHTML='<div class="bench-label">'+label+' ('+rangeLabel()+')</div><div class="bench-value" style="font-size:14px;color:'+cc+';">'+displayVal+'</div><div class="bench-sub" style="color:'+C.textSec+';">'+displaySub+'</div>'+buildSparkSVG(pts.map(p=>p.close),ret>=0?C.success:C.danger);
     }catch(e){if(el)el.querySelector('.bench-value').textContent='—';}
   }
+}
+function buildSparkSVG(data,color){
+  if(!data||data.length<2)return'';
+  const w=120,h=20,mn=Math.min(...data),mx=Math.max(...data),rng=mx-mn||1;
+  const pts=data.map((v,i)=>{const x=(i/(data.length-1))*w;const y=h-((v-mn)/rng)*h;return x.toFixed(1)+','+y.toFixed(1);}).join(' ');
+  return '<svg class="bench-spark-svg" viewBox="0 0 '+w+' '+h+'" preserveAspectRatio="none"><polyline points="'+pts+'" fill="none" stroke="'+color+'" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>';
 }
 
 // ── Portfolio Table (Portfolio page) ──
