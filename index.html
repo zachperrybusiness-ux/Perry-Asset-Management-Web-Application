@@ -180,6 +180,8 @@ tr:hover td{background:#EAF1F9;}
         <div class="form-group"><label>Benchmark 1</label><input type="text" id="compare1" placeholder="SPY" value="SPY" style="width:80px;text-transform:uppercase;"></div>
         <div class="form-group"><label>Benchmark 2</label><input type="text" id="compare2" placeholder="QQQ" value="QQQ" style="width:80px;text-transform:uppercase;"></div>
         <button class="btn btn-sm" onclick="renderPortfolioChart()">Update Chart</button>
+        <button class="btn-outline btn-sm" id="btnStress" onclick="toggleStress()" style="margin-left:8px;">Stressed Scenarios</button>
+        <button class="btn-outline btn-sm" id="btnVixRange" onclick="toggleVixRange()" style="margin-left:4px;">VIX Range</button>
       </div>
       <div class="chart-stats" id="chartStats"></div>
       <div id="chartLoading" style="text-align:center;padding:40px;color:var(--text-sec);display:none;"><span class="spinner"></span> Loading chart data...</div>
@@ -193,6 +195,9 @@ tr:hover td{background:#EAF1F9;}
         <button class="btn-outline active" data-range="1y">1Y</button>
         <button class="btn-outline" data-range="3y">3Y</button>
         <button class="btn-outline" data-range="5y">5Y</button>
+        <button class="btn-outline" data-range="10y">10Y</button>
+        <button class="btn-outline" data-range="15y">15Y</button>
+        <button class="btn-outline" data-range="20y">20Y</button>
       </div>
     </div><div class="card-sources"><strong>Sources:</strong><br>&#8226; Yahoo Finance via Cloudflare Worker &#8226; Firebase Firestore</div></div>
     <!-- Holdings table -->
@@ -552,7 +557,7 @@ async function renderPortfolioOverview(){
 }
 
 function mcBig(label,value,sub,subColor){return '<div class="metric-card"><div class="metric-label">'+label+'</div><div class="metric-value" style="font-size:18px;">'+value+'</div><div class="metric-sub" style="color:'+subColor+';">'+sub+'</div></div>';}
-function rangeLabel(){const m={"1mo":"1M","3mo":"3M","6mo":"6M","ytd":"YTD","1y":"1Y","3y":"3Y","5y":"5Y"};return m[currentRange]||currentRange;}
+function rangeLabel(){const m={"1mo":"1M","3mo":"3M","6mo":"6M","ytd":"YTD","1y":"1Y","3y":"3Y","5y":"5Y","10y":"10Y","15y":"15Y","20y":"20Y"};return m[currentRange]||currentRange;}
 
 // ── Benchmark Sparkline Cards ──
 async function fetchBenchmarkSparklines(tickers,labels){
@@ -585,7 +590,166 @@ function renderPortfolioTable(holdings,tv){
 }
 
 // ══════════════════════════════════════
-// PORTFOLIO CHART — Dual axis, zoom, point-in-time tooltips, stat boxes
+// STRESSED SCENARIOS & VIX OVERLAY
+// ══════════════════════════════════════
+let _showStress = false;
+let _showVixRange = false;
+let _vixDateMap = {}; // {date: vixClose}
+let _chartDatesGlobal = [];
+
+window.toggleStress = function() {
+  _showStress = !_showStress;
+  if (_showStress) _showVixRange = false;
+  document.getElementById('btnStress').classList.toggle('active', _showStress);
+  document.getElementById('btnVixRange').classList.toggle('active', _showVixRange);
+  if (portfolioLineChart) portfolioLineChart.update();
+};
+window.toggleVixRange = function() {
+  _showVixRange = !_showVixRange;
+  if (_showVixRange) _showStress = false;
+  document.getElementById('btnVixRange').classList.toggle('active', _showVixRange);
+  document.getElementById('btnStress').classList.toggle('active', _showStress);
+  if (portfolioLineChart) portfolioLineChart.update();
+};
+
+// Historical recession & correction periods
+const STRESS_EVENTS = [
+  {start:"2001-03-01",end:"2001-11-30",type:"recession",name:"Dot-Com Bust"},
+  {start:"2002-03-01",end:"2002-10-09",type:"correction",name:"WorldCom / Accounting Scandals"},
+  {start:"2007-12-01",end:"2009-06-30",type:"recession",name:"Great Financial Crisis"},
+  {start:"2010-04-23",end:"2010-07-02",type:"correction",name:"Flash Crash / Euro Crisis"},
+  {start:"2011-07-22",end:"2011-10-03",type:"correction",name:"US Debt Downgrade"},
+  {start:"2015-08-10",end:"2016-02-11",type:"correction",name:"China Slowdown / Oil Crash"},
+  {start:"2018-01-26",end:"2018-02-08",type:"correction",name:"Volmageddon"},
+  {start:"2018-10-03",end:"2018-12-24",type:"correction",name:"Fed Tightening / Trade War"},
+  {start:"2020-02-19",end:"2020-04-07",type:"recession",name:"COVID-19 Pandemic"},
+  {start:"2022-01-03",end:"2022-10-12",type:"correction",name:"Inflation / Fed Rate Hikes"},
+  {start:"2023-07-31",end:"2023-10-27",type:"correction",name:"Bond Selloff / Yield Surge"},
+  {start:"2025-02-19",end:"2025-04-08",type:"correction",name:"Tariff Shock / Trade War II"},
+];
+
+// VIX notable spike events for labels
+const VIX_EVENTS = [
+  {start:"2008-09-15",end:"2009-03-31",name:"Lehman / GFC Peak"},
+  {start:"2010-05-06",end:"2010-06-30",name:"Flash Crash"},
+  {start:"2011-08-01",end:"2011-10-15",name:"Debt Ceiling Crisis"},
+  {start:"2015-08-20",end:"2015-09-30",name:"China Devaluation"},
+  {start:"2018-02-02",end:"2018-02-12",name:"Volmageddon"},
+  {start:"2020-02-24",end:"2020-05-15",name:"COVID-19 Panic"},
+  {start:"2022-01-20",end:"2022-03-15",name:"Ukraine Invasion"},
+  {start:"2024-08-01",end:"2024-08-15",name:"Yen Carry Unwind"},
+  {start:"2025-03-10",end:"2025-04-15",name:"Tariff Escalation"},
+];
+
+function getStressEventForDate(d) {
+  for (const e of STRESS_EVENTS) { if (d >= e.start && d <= e.end) return e; }
+  return null;
+}
+function getVixEventForDate(d) {
+  for (const e of VIX_EVENTS) { if (d >= e.start && d <= e.end) return e; }
+  return null;
+}
+
+// Custom Chart.js plugin for drawing shaded regions
+const overlayPlugin = {
+  id: 'stressVixOverlay',
+  beforeDraw(chart) {
+    if (!_showStress && !_showVixRange) return;
+    const { ctx, chartArea: { left, right, top, bottom }, scales: { x } } = chart;
+    const dates = _chartDatesGlobal;
+    if (!dates.length) return;
+    ctx.save();
+
+    if (_showStress) {
+      // Draw stress regions
+      let currentEvent = null;
+      let regionStart = null;
+      for (let i = 0; i < dates.length; i++) {
+        const ev = getStressEventForDate(dates[i]);
+        if (ev && ev !== currentEvent) {
+          // Start new region
+          if (currentEvent && regionStart !== null) drawRegion(ctx, x, regionStart, i - 1, top, bottom, currentEvent, dates);
+          currentEvent = ev;
+          regionStart = i;
+        } else if (!ev && currentEvent) {
+          drawRegion(ctx, x, regionStart, i - 1, top, bottom, currentEvent, dates);
+          currentEvent = null;
+          regionStart = null;
+        }
+      }
+      if (currentEvent && regionStart !== null) drawRegion(ctx, x, regionStart, dates.length - 1, top, bottom, currentEvent, dates);
+    }
+
+    if (_showVixRange) {
+      // Draw VIX zones
+      let currentZone = null; // 'elevated' or 'high'
+      let zoneStart = null;
+      let zoneName = '';
+      for (let i = 0; i < dates.length; i++) {
+        const vix = _vixDateMap[dates[i]];
+        let zone = null;
+        if (vix != null) {
+          if (vix >= 30) zone = 'high';
+          else if (vix >= 20) zone = 'elevated';
+        }
+        if (zone !== currentZone) {
+          if (currentZone && zoneStart !== null) {
+            const ev = getVixEventForDate(dates[zoneStart]) || { name: 'VIX ' + (currentZone === 'high' ? '>30' : '20-30'), type: currentZone };
+            drawVixRegion(ctx, x, zoneStart, i - 1, top, bottom, currentZone, ev.name, dates);
+          }
+          currentZone = zone;
+          zoneStart = zone ? i : null;
+        }
+      }
+      if (currentZone && zoneStart !== null) {
+        const ev = getVixEventForDate(dates[zoneStart]) || { name: 'VIX ' + (currentZone === 'high' ? '>30' : '20-30') };
+        drawVixRegion(ctx, x, zoneStart, dates.length - 1, top, bottom, currentZone, ev.name, dates);
+      }
+    }
+
+    ctx.restore();
+  }
+};
+
+function drawRegion(ctx, xScale, startIdx, endIdx, top, bottom, event, dates) {
+  const x1 = xScale.getPixelForValue(startIdx);
+  const x2 = xScale.getPixelForValue(endIdx);
+  const isRecession = event.type === 'recession';
+  ctx.fillStyle = isRecession ? 'rgba(139, 42, 42, 0.12)' : 'rgba(200, 208, 216, 0.25)';
+  ctx.fillRect(x1, top, x2 - x1, bottom - top);
+  // Label at top
+  const width = x2 - x1;
+  if (width > 30) {
+    ctx.fillStyle = isRecession ? 'rgba(139, 42, 42, 0.7)' : 'rgba(90, 106, 122, 0.7)';
+    ctx.font = width > 80 ? '600 10px Arial' : '600 8px Arial';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'top';
+    const label = width > 80 ? event.name : event.name.split(' ')[0];
+    ctx.fillText(label, x1 + width / 2, top + 4, width - 4);
+  }
+}
+
+function drawVixRegion(ctx, xScale, startIdx, endIdx, top, bottom, zone, name, dates) {
+  const x1 = xScale.getPixelForValue(startIdx);
+  const x2 = xScale.getPixelForValue(endIdx);
+  ctx.fillStyle = zone === 'high' ? 'rgba(139, 105, 20, 0.15)' : 'rgba(200, 208, 216, 0.2)';
+  ctx.fillRect(x1, top, x2 - x1, bottom - top);
+  const width = x2 - x1;
+  if (width > 30) {
+    ctx.fillStyle = zone === 'high' ? 'rgba(139, 105, 20, 0.7)' : 'rgba(90, 106, 122, 0.6)';
+    ctx.font = width > 80 ? '600 10px Arial' : '600 8px Arial';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'top';
+    const label = width > 80 ? name : (zone === 'high' ? 'VIX>30' : 'VIX>20');
+    ctx.fillText(label, x1 + width / 2, top + 4, width - 4);
+  }
+}
+
+// Register the plugin globally
+Chart.register(overlayPlugin);
+
+// ══════════════════════════════════════
+// PORTFOLIO CHART
 // ══════════════════════════════════════
 let _chartPortfolioSeries=[];let _chartBenchmarkSeries={};
 
@@ -603,7 +767,10 @@ window.renderPortfolioChart=async function(){
   const valid=[];dates.forEach((d,i)=>{if(pfValues[i]>0)valid.push({date:d,value:pfValues[i]});});
   if(!valid.length){loadEl.style.display='none';return;}
   const chartDates=valid.map(d=>d.date),chartValues=valid.map(d=>d.value);
+  _chartDatesGlobal=chartDates;
   _chartPortfolioSeries=chartValues;
+  // Fetch VIX data for VIX Range overlay
+  try{const vData=await fetchChart("^VIX",currentRange,"1d");const vPts=(vData.points||[]).filter(p=>p.close!==null);_vixDateMap={};vPts.forEach(p=>{_vixDateMap[p.date.slice(0,10)]=p.close;});}catch(e){_vixDateMap={};}
   const pfStart=chartValues[0],pfEnd=chartValues[chartValues.length-1];
   const datasets=[{label:'Portfolio',data:chartValues,borderColor:C.navy,backgroundColor:'rgba(0,60,113,.06)',borderWidth:2.5,pointRadius:1.5,pointHoverRadius:6,pointBackgroundColor:C.navy,pointHoverBackgroundColor:C.navy,fill:true,tension:.3,yAxisID:'y'}];
   // Benchmarks
@@ -654,7 +821,20 @@ window.renderPortfolioChart=async function(){
             afterBody:function(items){
               const idx=items[0]?.dataIndex;if(idx==null)return[];
               const lines=[''];
-              // Point-in-time return from start to THIS point
+              const d=chartDates[idx];
+              // Stress event info
+              if(_showStress){const ev=getStressEventForDate(d);if(ev){lines.push('⚠ '+ev.name+' ('+ev.type+')');
+                // Find drawdown during this event
+                const eStart=chartDates.findIndex(dd=>dd>=ev.start);const eEnd=chartDates.findIndex(dd=>dd>ev.end);
+                const ePeak=Math.max(...chartValues.slice(Math.max(0,eStart-5),eEnd>0?eEnd:chartValues.length));
+                const eTrough=Math.min(...chartValues.slice(eStart,eEnd>0?eEnd:chartValues.length));
+                if(ePeak>0)lines.push('  Portfolio Drawdown: '+fmtPct(((eTrough-ePeak)/ePeak)*100));
+                compInputs.forEach(sym=>{const pm=_chartBenchmarkSeries[sym];if(!pm)return;const bd=Object.keys(pm).filter(dd=>dd>=ev.start&&dd<=ev.end).sort();if(bd.length>=2){const bP=Math.max(...bd.map(dd=>pm[dd]||0));const bT=Math.min(...bd.map(dd=>pm[dd]||0).filter(v=>v>0));if(bP>0)lines.push('  '+sym+' Drawdown: '+fmtPct(((bT-bP)/bP)*100));}});
+                lines.push('');}}
+              // VIX level
+              if(_showVixRange){const vix=_vixDateMap[d];if(vix!=null){lines.push('VIX: '+vix.toFixed(1)+(vix>=30?' (Extreme Fear)':vix>=20?' (Elevated)':' (Normal)'));
+                const ev=getVixEventForDate(d);if(ev)lines.push('  Event: '+ev.name);lines.push('');}}
+              // Point-in-time return
               const pfAtPoint=chartValues[idx];const pfPtRet=pfStart>0?((pfAtPoint-pfStart)/pfStart*100):0;
               lines.push('Return to Date:');
               lines.push('  Portfolio: '+fmtPct(pfPtRet));
