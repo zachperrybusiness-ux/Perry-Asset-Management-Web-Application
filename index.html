@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Perry Asset Management</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2.0.1/dist/chartjs-plugin-zoom.min.js"></script>
 <style>
 :root{--navy:#003C71;--blue:#5B9BD5;--blue-light:#A8C8E8;--bg:#FFFFFF;--panel:#F4F6F9;--border:#D0D7E0;--text:#000000;--text-on-dark:#FFFFFF;--text-sec:#5A6A7A;--success:#2E7D52;--warning:#8B6914;--danger:#8B2A2A;--highlight-gray:#C8D0D8;--radius:6px;--shadow:0 2px 8px rgba(0,0,0,0.06);}
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
@@ -38,6 +39,13 @@ html,body{font-family:Arial,Helvetica,sans-serif;background:var(--bg);color:var(
 .metric-label{font-size:10px;font-weight:600;color:var(--text-sec);text-transform:uppercase;letter-spacing:.5px;margin-bottom:5px;}
 .metric-value{font-size:20px;font-weight:700;color:var(--navy);line-height:1.2;}
 .metric-sub{font-size:11px;font-weight:600;margin-top:3px;}
+/* Compact benchmark cards */
+.bench-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-bottom:22px;}
+.bench-card{background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);padding:10px 14px;box-shadow:var(--shadow);}
+.bench-label{font-size:9px;font-weight:700;color:var(--text-sec);text-transform:uppercase;letter-spacing:.5px;margin-bottom:2px;}
+.bench-value{font-size:14px;font-weight:700;color:var(--navy);line-height:1.2;}
+.bench-sub{font-size:10px;font-weight:600;margin-top:1px;}
+.bench-spark{height:28px;margin-top:4px;}
 .grid-2{display:grid;grid-template-columns:1fr 1fr;gap:20px;}
 .grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:20px;}
 @media(max-width:900px){.grid-2,.grid-3{grid-template-columns:1fr;}}
@@ -106,13 +114,19 @@ tr:hover td{background:#EAF1F9;}
 .conn-item{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--text-sec);}
 .conn-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;}
 .conn-dot.green{background:var(--success);}.conn-dot.red{background:var(--danger);}
-/* Morningstar Style Box */
 .mstar-grid{display:grid;grid-template-columns:1fr 1fr 1fr;grid-template-rows:1fr 1fr 1fr;width:240px;height:240px;border:2px solid var(--navy);border-radius:4px;position:relative;margin:0 auto;}
 .mstar-cell{border:1px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:600;color:var(--text-sec);text-align:center;line-height:1.2;padding:4px;}
 .mstar-dot{position:absolute;width:18px;height:18px;background:var(--blue);border:3px solid var(--navy);border-radius:50%;transform:translate(-50%,-50%);z-index:10;box-shadow:0 2px 6px rgba(0,0,0,.25);}
 .mstar-labels-top{display:grid;grid-template-columns:1fr 1fr 1fr;width:240px;margin:0 auto;text-align:center;font-size:10px;font-weight:700;color:var(--navy);margin-bottom:4px;}
 .mstar-labels-left{position:absolute;left:-60px;top:0;height:240px;display:flex;flex-direction:column;justify-content:space-around;font-size:10px;font-weight:700;color:var(--navy);text-align:right;width:54px;}
 .mstar-container{position:relative;width:240px;margin:12px auto 0;padding-left:64px;}
+/* In-chart stat boxes */
+.chart-stats{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px;}
+.chart-stat-box{background:var(--panel);border:1px solid var(--border);border-radius:4px;padding:8px 14px;flex:1;min-width:180px;}
+.chart-stat-label{font-size:9px;font-weight:700;color:var(--text-sec);text-transform:uppercase;letter-spacing:.4px;margin-bottom:2px;}
+.chart-stat-value{font-size:13px;font-weight:700;color:var(--navy);line-height:1.3;}
+.chart-stat-sub{font-size:10px;color:var(--text-sec);margin-top:1px;}
+.zoom-hint{font-size:10px;color:var(--text-sec);text-align:center;margin-top:6px;font-style:italic;}
 </style>
 </head>
 <body>
@@ -157,21 +171,22 @@ tr:hover td{background:#EAF1F9;}
   <div id="portfolioAuth" class="auth-gate"><h3>Sign In to View Portfolio</h3><p>Connect with your Google account to access your portfolio holdings and analytics.</p><button class="btn" onclick="handleLogin()">Sign In with Google</button></div>
   <div id="portfolioEmpty" style="display:none;"><div class="empty-state"><div class="empty-state-icon">&#128202;</div><h3>No Holdings Yet</h3><p>Add your first holding to start building your portfolio.</p><button class="btn" onclick="navigateTo('holdings')">Add Holdings</button></div></div>
   <div id="portfolioLive" style="display:none;">
-    <!-- Metric cards row 1: Portfolio -->
+    <!-- Portfolio metrics -->
     <div class="metrics-row" id="metricsRow"></div>
-    <!-- Metric cards row 2: Benchmarks -->
-    <div class="metrics-row" id="benchmarkRow"></div>
-    <!-- History chart with compare -->
+    <!-- Benchmark sparkline cards -->
+    <div class="bench-row" id="benchmarkRow"></div>
+    <!-- Chart card -->
     <div class="card"><div class="card-title">Portfolio Value Over Time</div><div class="card-body">
-      <div class="form-row" style="margin-bottom:12px;">
-        <div class="form-group"><label>Compare Benchmark 1</label><input type="text" id="compare1" placeholder="e.g. SPY" style="width:100px;text-transform:uppercase;"></div>
-        <div class="form-group"><label>Compare Benchmark 2</label><input type="text" id="compare2" placeholder="e.g. QQQ" style="width:100px;text-transform:uppercase;"></div>
+      <div class="form-row" style="margin-bottom:8px;">
+        <div class="form-group"><label>Benchmark 1</label><input type="text" id="compare1" placeholder="SPY" value="SPY" style="width:80px;text-transform:uppercase;"></div>
+        <div class="form-group"><label>Benchmark 2</label><input type="text" id="compare2" placeholder="QQQ" value="QQQ" style="width:80px;text-transform:uppercase;"></div>
         <button class="btn btn-sm" onclick="renderPortfolioChart()">Update Chart</button>
       </div>
+      <div class="chart-stats" id="chartStats"></div>
       <div id="chartLoading" style="text-align:center;padding:40px;color:var(--text-sec);display:none;"><span class="spinner"></span> Loading chart data...</div>
       <div class="chart-wrap"><canvas id="portfolioLineChart"></canvas></div>
-      <!-- Timeframe selector below chart -->
-      <div class="btn-group" id="pfTimeframeBtns" style="margin-top:16px;margin-bottom:0;justify-content:center;">
+      <div class="zoom-hint">Click and drag to zoom in. Double-click or pinch to reset zoom.</div>
+      <div class="btn-group" id="pfTimeframeBtns" style="margin-top:12px;margin-bottom:0;justify-content:center;">
         <button class="btn-outline" data-range="1mo">1M</button>
         <button class="btn-outline" data-range="3mo">3M</button>
         <button class="btn-outline" data-range="6mo">6M</button>
@@ -180,14 +195,12 @@ tr:hover td{background:#EAF1F9;}
         <button class="btn-outline" data-range="3y">3Y</button>
         <button class="btn-outline" data-range="5y">5Y</button>
       </div>
-    </div><div class="card-sources"><strong>Sources:</strong><br>&#8226; Yahoo Finance via Cloudflare Worker proxy &#8226; Firebase Firestore (user holdings)</div></div>
+    </div><div class="card-sources"><strong>Sources:</strong><br>&#8226; Yahoo Finance via Cloudflare Worker &#8226; Firebase Firestore</div></div>
     <!-- Holdings table -->
-    <div class="card"><div class="card-title">Portfolio Holdings</div><div class="card-body"><div class="table-wrap" id="portfolioTableWrap"></div></div><div class="card-sources"><strong>Sources:</strong><br>&#8226; Yahoo Finance via Cloudflare Worker proxy &#8226; Firebase Firestore</div></div>
+    <div class="card"><div class="card-title">Portfolio Holdings</div><div class="card-body"><div class="table-wrap" id="portfolioTableWrap"></div></div><div class="card-sources"><strong>Sources:</strong><br>&#8226; Yahoo Finance via Cloudflare Worker &#8226; Firebase Firestore</div></div>
     <!-- Pie charts -->
     <div class="grid-3"><div id="donut-sector"></div><div id="donut-industry"></div><div id="donut-mktcap"></div></div>
-    <div class="grid-2"><div id="donut-weight"></div>
-    <!-- Morningstar Style Box -->
-    <div id="mstar-card"></div></div>
+    <div class="grid-2"><div id="donut-weight"></div><div id="mstar-card"></div></div>
   </div>
 </div></div>
 
@@ -216,7 +229,7 @@ tr:hover td{background:#EAF1F9;}
 
 <!-- RESEARCH -->
 <div class="page" id="page-research"><div class="content-wrap">
-  <div class="hero" style="padding:32px 40px;"><h1>Market Research</h1><p>Real-time quotes, historical price charts, and ticker search powered by Yahoo Finance via Cloudflare Worker proxy.</p></div>
+  <div class="hero" style="padding:32px 40px;"><h1>Market Research</h1><p>Real-time quotes, historical charts, and ticker search via Cloudflare Worker proxy.</p></div>
   <div class="card"><div class="card-title">Ticker Lookup</div><div class="card-body">
     <div class="form-row">
       <div class="form-group" style="min-width:140px;"><label>Ticker</label><input type="text" id="researchTicker" placeholder="AAPL" style="text-transform:uppercase;"></div>
@@ -270,7 +283,7 @@ window.addHolding=async function(){
   try{
     const q=await fetchQuote(ticker);
     const meta=classifyHolding(ticker,q);
-    await addDoc(collection(db,"holdings"),{uid:user.uid,ticker,companyName:q.name||ticker,datePurchased:date,quantity:qty,costBasis:cost,currentPrice:q.price||0,previousClose:q.previousClose||0,sector:meta.sector,industry:meta.industry,assetClass:meta.assetClass,marketCap:meta.marketCap,mktCapCategory:meta.mktCapCategory,lastUpdated:new Date().toISOString(),createdAt:serverTimestamp()});
+    await addDoc(collection(db,"holdings"),{uid:user.uid,ticker,companyName:q.name||ticker,datePurchased:date,quantity:qty,costBasis:cost,currentPrice:q.price||0,previousClose:q.previousClose||0,sector:meta.sector,industry:meta.industry,assetClass:meta.assetClass,marketCap:meta.marketCap,mktCapCategory:meta.mktCapCategory,leverage:meta.leverage||'',lastUpdated:new Date().toISOString(),createdAt:serverTimestamp()});
     showStatus('addStatus','&#10003; Added '+ticker,'success');
     document.getElementById('inputTicker').value='';document.getElementById('inputDate').value='';document.getElementById('inputQty').value='';document.getElementById('inputCost').value='';
     await loadHoldings();
@@ -289,7 +302,7 @@ window.refreshAllPrices=async function(){
   const btn=document.getElementById('refreshBtn');btn.disabled=true;btn.innerHTML='<span class="spinner"></span>Refreshing...';
   showStatus('holdingsStatus','<span class="spinner"></span> Refreshing '+holdings.length+' holdings...','info');
   let n=0;
-  for(const h of holdings){try{const q=await fetchQuote(h.ticker);const meta=classifyHolding(h.ticker,q);await updateHoldingDoc(h.id,{currentPrice:q.price||h.currentPrice,previousClose:q.previousClose||h.previousClose,companyName:q.name||h.companyName,sector:meta.sector,industry:meta.industry,assetClass:meta.assetClass,marketCap:meta.marketCap,mktCapCategory:meta.mktCapCategory,lastUpdated:new Date().toISOString()});n++;}catch(e){console.warn(h.ticker,e);}}
+  for(const h of holdings){try{const q=await fetchQuote(h.ticker);const meta=classifyHolding(h.ticker,q);await updateHoldingDoc(h.id,{currentPrice:q.price||h.currentPrice,previousClose:q.previousClose||h.previousClose,companyName:q.name||h.companyName,sector:meta.sector,industry:meta.industry,assetClass:meta.assetClass,marketCap:meta.marketCap,mktCapCategory:meta.mktCapCategory,leverage:meta.leverage||'',lastUpdated:new Date().toISOString()});n++;}catch(e){console.warn(h.ticker,e);}}
   showStatus('holdingsStatus','&#10003; Refreshed '+n+'/'+holdings.length,'success');
   await loadHoldings();btn.disabled=false;btn.textContent='Refresh All Prices';
 };
@@ -305,67 +318,163 @@ const chartTooltip={backgroundColor:C.bg,titleColor:C.text,bodyColor:C.text,bord
 const chartGrid={color:'rgba(208,215,224,0.5)',drawBorder:false};
 const chartTicks={font:{family:'Arial',size:11},color:C.textSec};
 
-// Worker health check
 (async()=>{try{const r=await fetch(WORKER_URL+"/health");const d=await r.json();if(d.status==="ok"){document.getElementById("worker-status-dot").classList.replace("red","green");document.getElementById("worker-status-text").textContent="Data Proxy: Connected";}}catch(e){}})();
 
-// ── Worker fetch helpers ──
 async function fetchQuote(t){const r=await fetch(WORKER_URL+"/quote?symbol="+encodeURIComponent(t));const d=await r.json();if(d.error)throw new Error(d.error);return d;}
 async function fetchChart(t,range,interval){const r=await fetch(WORKER_URL+"/chart?symbol="+encodeURIComponent(t)+"&range="+range+"&interval="+(interval||"1d"));const d=await r.json();if(d.error)throw new Error(d.error);return d;}
 async function fetchSearch(q){const r=await fetch(WORKER_URL+"/search?q="+encodeURIComponent(q));const d=await r.json();if(d.error)throw new Error(d.error);return d;}
 window.fetchQuote=fetchQuote;
 
-// ── Holding classification ──
-const ETF_MAP={
-  SPY:{sector:"Broad Market",industry:"S&P 500 Index",focus:"Large Cap Blend"},
-  QQQ:{sector:"Technology",industry:"Semiconductors & Software",focus:"Large Cap Growth"},
-  IWM:{sector:"Broad Market",industry:"Russell 2000 Index",focus:"Small Cap Blend"},
-  DIA:{sector:"Broad Market",industry:"Dow Jones Industrial",focus:"Large Cap Value"},
-  VTI:{sector:"Broad Market",industry:"Total US Market",focus:"All Cap Blend"},
-  VOO:{sector:"Broad Market",industry:"S&P 500 Index",focus:"Large Cap Blend"},
-  ARKK:{sector:"Technology",industry:"Disruptive Innovation",focus:"Mid Cap Growth"},
-  XLF:{sector:"Financials",industry:"Financial Select",focus:"Large Cap Value"},
-  XLE:{sector:"Energy",industry:"Energy Select",focus:"Large Cap Value"},
-  XLK:{sector:"Technology",industry:"Technology Select",focus:"Large Cap Growth"},
-  XLV:{sector:"Healthcare",industry:"Health Care Select",focus:"Large Cap Blend"},
-  XLI:{sector:"Industrials",industry:"Industrial Select",focus:"Large Cap Blend"},
-  XLP:{sector:"Consumer Staples",industry:"Consumer Staples Select",focus:"Large Cap Value"},
-  XLY:{sector:"Consumer Discretionary",industry:"Consumer Discretionary Select",focus:"Large Cap Growth"},
-  XLU:{sector:"Utilities",industry:"Utilities Select",focus:"Large Cap Value"},
-  XLB:{sector:"Materials",industry:"Materials Select",focus:"Large Cap Blend"},
-  XLRE:{sector:"Real Estate",industry:"Real Estate Select",focus:"Large Cap Blend"},
-  VGT:{sector:"Technology",industry:"Information Technology",focus:"Large Cap Growth"},
-  VIG:{sector:"Broad Market",industry:"Dividend Appreciation",focus:"Large Cap Blend"},
-  BND:{sector:"Fixed Income",industry:"US Aggregate Bond",focus:"Intermediate Bond"},
-  TLT:{sector:"Fixed Income",industry:"20+ Year Treasury",focus:"Long Duration Bond"},
-  GLD:{sector:"Commodities",industry:"Gold",focus:"Commodity"},
-  SLV:{sector:"Commodities",industry:"Silver",focus:"Commodity"},
-  VNQ:{sector:"Real Estate",industry:"Real Estate Investment Trusts",focus:"Large Cap Blend"},
-  EEM:{sector:"International",industry:"Emerging Markets",focus:"Large Cap Blend"},
-  EFA:{sector:"International",industry:"Developed Markets ex-US",focus:"Large Cap Blend"},
-  VWO:{sector:"International",industry:"Emerging Markets",focus:"Large Cap Blend"},
-  VXUS:{sector:"International",industry:"International ex-US",focus:"All Cap Blend"},
-  IBIT:{sector:"Crypto",industry:"Bitcoin",focus:"Digital Asset"},
-  MSTR:{sector:"Technology",industry:"Bitcoin Treasury",focus:"Large Cap Growth"},
+// ══════════════════════════════════════════════════════
+// MASSIVELY EXPANDED CLASSIFICATION SYSTEM
+// ══════════════════════════════════════════════════════
+const ETF_DB={
+  // Broad Market
+  SPY:{s:"Broad Market",i:"S&P 500 Index",f:"Large Cap Blend",a:"ETF"},VOO:{s:"Broad Market",i:"S&P 500 Index",f:"Large Cap Blend",a:"ETF"},IVV:{s:"Broad Market",i:"S&P 500 Index",f:"Large Cap Blend",a:"ETF"},
+  VTI:{s:"Broad Market",i:"Total US Market",f:"All Cap Blend",a:"ETF"},ITOT:{s:"Broad Market",i:"Total US Market",f:"All Cap Blend",a:"ETF"},SCHB:{s:"Broad Market",i:"Total US Market",f:"All Cap Blend",a:"ETF"},
+  DIA:{s:"Broad Market",i:"Dow Jones Industrial",f:"Large Cap Value",a:"ETF"},RSP:{s:"Broad Market",i:"S&P 500 Equal Weight",f:"Large Cap Blend",a:"ETF"},
+  IWM:{s:"Broad Market",i:"Russell 2000 Small Cap",f:"Small Cap Blend",a:"ETF"},IWN:{s:"Broad Market",i:"Russell 2000 Value",f:"Small Cap Value",a:"ETF"},IWO:{s:"Broad Market",i:"Russell 2000 Growth",f:"Small Cap Growth",a:"ETF"},
+  MDY:{s:"Broad Market",i:"S&P MidCap 400",f:"Mid Cap Blend",a:"ETF"},IJH:{s:"Broad Market",i:"S&P MidCap 400",f:"Mid Cap Blend",a:"ETF"},VO:{s:"Broad Market",i:"Mid Cap Index",f:"Mid Cap Blend",a:"ETF"},
+  VIG:{s:"Broad Market",i:"Dividend Appreciation",f:"Large Cap Blend",a:"ETF"},VYM:{s:"Broad Market",i:"High Dividend Yield",f:"Large Cap Value",a:"ETF"},SCHD:{s:"Broad Market",i:"Dividend Equity",f:"Large Cap Value",a:"ETF"},DVY:{s:"Broad Market",i:"Select Dividend",f:"Large Cap Value",a:"ETF"},
+  VUG:{s:"Broad Market",i:"Growth Index",f:"Large Cap Growth",a:"ETF"},VTV:{s:"Broad Market",i:"Value Index",f:"Large Cap Value",a:"ETF"},IWF:{s:"Broad Market",i:"Russell 1000 Growth",f:"Large Cap Growth",a:"ETF"},IWD:{s:"Broad Market",i:"Russell 1000 Value",f:"Large Cap Value",a:"ETF"},
+  // Technology
+  QQQ:{s:"Information Technology",i:"Nasdaq-100 Index",f:"Large Cap Growth",a:"ETF"},QQQM:{s:"Information Technology",i:"Nasdaq-100 Index",f:"Large Cap Growth",a:"ETF"},
+  XLK:{s:"Information Technology",i:"Technology Select SPDR",f:"Large Cap Growth",a:"ETF"},VGT:{s:"Information Technology",i:"Information Technology",f:"Large Cap Growth",a:"ETF"},
+  SMH:{s:"Information Technology",i:"Semiconductors",f:"Large Cap Growth",a:"ETF"},SOXX:{s:"Information Technology",i:"Semiconductors",f:"Large Cap Growth",a:"ETF"},
+  IGV:{s:"Information Technology",i:"Software",f:"Large Cap Growth",a:"ETF"},WCLD:{s:"Information Technology",i:"Cloud Computing",f:"Mid Cap Growth",a:"ETF"},
+  ARKK:{s:"Information Technology",i:"Disruptive Innovation",f:"Mid Cap Growth",a:"ETF"},ARKW:{s:"Information Technology",i:"Next Gen Internet",f:"Mid Cap Growth",a:"ETF"},ARKF:{s:"Financials",i:"Fintech Innovation",f:"Mid Cap Growth",a:"ETF"},ARKG:{s:"Healthcare",i:"Genomic Revolution",f:"Mid Cap Growth",a:"ETF"},
+  HACK:{s:"Information Technology",i:"Cybersecurity",f:"Mid Cap Growth",a:"ETF"},BUG:{s:"Information Technology",i:"Cybersecurity",f:"Mid Cap Growth",a:"ETF"},CIBR:{s:"Information Technology",i:"Cybersecurity",f:"Mid Cap Growth",a:"ETF"},
+  BOTZ:{s:"Information Technology",i:"Robotics & AI",f:"Mid Cap Growth",a:"ETF"},ROBO:{s:"Information Technology",i:"Robotics & AI",f:"Mid Cap Growth",a:"ETF"},
+  // Leveraged ETFs
+  TQQQ:{s:"Information Technology",i:"Nasdaq-100 (3x Leveraged)",f:"Large Cap Growth",a:"Leveraged ETF",lev:"3x Long QQQ"},SQQQ:{s:"Information Technology",i:"Nasdaq-100 (3x Inverse)",f:"Large Cap Growth",a:"Leveraged ETF",lev:"3x Short QQQ"},
+  SOXL:{s:"Information Technology",i:"Semiconductors (3x Leveraged)",f:"Large Cap Growth",a:"Leveraged ETF",lev:"3x Long SOXX"},SOXS:{s:"Information Technology",i:"Semiconductors (3x Inverse)",f:"Large Cap Growth",a:"Leveraged ETF",lev:"3x Short SOXX"},
+  UPRO:{s:"Broad Market",i:"S&P 500 (3x Leveraged)",f:"Large Cap Blend",a:"Leveraged ETF",lev:"3x Long SPY"},SPXU:{s:"Broad Market",i:"S&P 500 (3x Inverse)",f:"Large Cap Blend",a:"Leveraged ETF",lev:"3x Short SPY"},
+  TNA:{s:"Broad Market",i:"Russell 2000 (3x Leveraged)",f:"Small Cap Blend",a:"Leveraged ETF",lev:"3x Long IWM"},TZA:{s:"Broad Market",i:"Russell 2000 (3x Inverse)",f:"Small Cap Blend",a:"Leveraged ETF",lev:"3x Short IWM"},
+  LABU:{s:"Healthcare",i:"Biotech (3x Leveraged)",f:"Mid Cap Growth",a:"Leveraged ETF",lev:"3x Long XBI"},LABD:{s:"Healthcare",i:"Biotech (3x Inverse)",f:"Mid Cap Growth",a:"Leveraged ETF",lev:"3x Short XBI"},
+  FNGU:{s:"Information Technology",i:"FANG+ (3x Leveraged)",f:"Large Cap Growth",a:"Leveraged ETF",lev:"3x Long FANG+"},
+  UVXY:{s:"Volatility",i:"VIX Short-Term Futures (1.5x)",f:"Volatility",a:"Leveraged ETF",lev:"1.5x Long VIX"},SVXY:{s:"Volatility",i:"VIX Short-Term Futures (0.5x Inverse)",f:"Volatility",a:"Leveraged ETF",lev:"0.5x Short VIX"},
+  // Sector SPDRs
+  XLF:{s:"Financials",i:"Financial Select SPDR",f:"Large Cap Value",a:"ETF"},XLE:{s:"Energy",i:"Energy Select SPDR",f:"Large Cap Value",a:"ETF"},XLV:{s:"Healthcare",i:"Health Care Select SPDR",f:"Large Cap Blend",a:"ETF"},
+  XLI:{s:"Industrials",i:"Industrial Select SPDR",f:"Large Cap Blend",a:"ETF"},XLP:{s:"Consumer Staples",i:"Consumer Staples Select SPDR",f:"Large Cap Value",a:"ETF"},XLY:{s:"Consumer Discretionary",i:"Consumer Discretionary Select SPDR",f:"Large Cap Growth",a:"ETF"},
+  XLU:{s:"Utilities",i:"Utilities Select SPDR",f:"Large Cap Value",a:"ETF"},XLB:{s:"Materials",i:"Materials Select SPDR",f:"Large Cap Blend",a:"ETF"},XLRE:{s:"Real Estate",i:"Real Estate Select SPDR",f:"Large Cap Blend",a:"ETF"},XLC:{s:"Communication Services",i:"Communication Services Select SPDR",f:"Large Cap Growth",a:"ETF"},
+  // Fixed Income
+  BND:{s:"Fixed Income",i:"US Aggregate Bond",f:"Intermediate Bond",a:"Bond ETF"},AGG:{s:"Fixed Income",i:"US Aggregate Bond",f:"Intermediate Bond",a:"Bond ETF"},
+  TLT:{s:"Fixed Income",i:"20+ Year Treasury",f:"Long Duration Bond",a:"Bond ETF"},IEF:{s:"Fixed Income",i:"7-10 Year Treasury",f:"Intermediate Bond",a:"Bond ETF"},SHY:{s:"Fixed Income",i:"1-3 Year Treasury",f:"Short Duration Bond",a:"Bond ETF"},
+  LQD:{s:"Fixed Income",i:"Investment Grade Corporate",f:"Intermediate Bond",a:"Bond ETF"},HYG:{s:"Fixed Income",i:"High Yield Corporate",f:"High Yield Bond",a:"Bond ETF"},JNK:{s:"Fixed Income",i:"High Yield Corporate",f:"High Yield Bond",a:"Bond ETF"},
+  TIP:{s:"Fixed Income",i:"TIPS (Inflation Protected)",f:"TIPS",a:"Bond ETF"},BNDX:{s:"Fixed Income",i:"International Bond",f:"International Bond",a:"Bond ETF"},EMB:{s:"Fixed Income",i:"EM USD Bond",f:"EM Bond",a:"Bond ETF"},
+  TMF:{s:"Fixed Income",i:"20+ Year Treasury (3x Leveraged)",f:"Long Duration Bond",a:"Leveraged ETF",lev:"3x Long TLT"},
+  // Commodities & Metals
+  GLD:{s:"Commodities",i:"Gold",f:"Precious Metals",a:"Commodity ETF"},IAU:{s:"Commodities",i:"Gold",f:"Precious Metals",a:"Commodity ETF"},SGOL:{s:"Commodities",i:"Gold",f:"Precious Metals",a:"Commodity ETF"},
+  SLV:{s:"Commodities",i:"Silver",f:"Precious Metals",a:"Commodity ETF"},PSLV:{s:"Commodities",i:"Silver (Physical)",f:"Precious Metals",a:"Commodity ETF"},
+  GDX:{s:"Commodities",i:"Gold Miners",f:"Mid Cap Value",a:"ETF"},GDXJ:{s:"Commodities",i:"Junior Gold Miners",f:"Small Cap Value",a:"ETF"},
+  USO:{s:"Commodities",i:"Crude Oil",f:"Energy Commodity",a:"Commodity ETF"},BNO:{s:"Commodities",i:"Brent Crude Oil",f:"Energy Commodity",a:"Commodity ETF"},
+  UNG:{s:"Commodities",i:"Natural Gas",f:"Energy Commodity",a:"Commodity ETF"},DBC:{s:"Commodities",i:"Commodity Index",f:"Diversified Commodity",a:"Commodity ETF"},PDBC:{s:"Commodities",i:"Commodity Index (Optimum Yield)",f:"Diversified Commodity",a:"Commodity ETF"},
+  PPLT:{s:"Commodities",i:"Platinum",f:"Precious Metals",a:"Commodity ETF"},PALL:{s:"Commodities",i:"Palladium",f:"Precious Metals",a:"Commodity ETF"},
+  COPX:{s:"Commodities",i:"Copper Miners",f:"Mid Cap Value",a:"ETF"},
+  UUP:{s:"Currency",i:"US Dollar Index (Bullish)",f:"Currency",a:"Currency ETF"},UDN:{s:"Currency",i:"US Dollar Index (Bearish)",f:"Currency",a:"Currency ETF"},FXE:{s:"Currency",i:"Euro",f:"Currency",a:"Currency ETF"},FXY:{s:"Currency",i:"Japanese Yen",f:"Currency",a:"Currency ETF"},
+  // Real Estate
+  VNQ:{s:"Real Estate",i:"US REITs",f:"Large Cap Blend",a:"REIT ETF"},VNQI:{s:"Real Estate",i:"International REITs",f:"Large Cap Blend",a:"REIT ETF"},IYR:{s:"Real Estate",i:"US Real Estate",f:"Large Cap Blend",a:"REIT ETF"},
+  // International
+  EEM:{s:"International",i:"Emerging Markets",f:"Large Cap Blend",a:"ETF"},VWO:{s:"International",i:"Emerging Markets",f:"Large Cap Blend",a:"ETF"},IEMG:{s:"International",i:"Emerging Markets",f:"Large Cap Blend",a:"ETF"},
+  EFA:{s:"International",i:"Developed Markets ex-US",f:"Large Cap Blend",a:"ETF"},VXUS:{s:"International",i:"International ex-US",f:"All Cap Blend",a:"ETF"},IXUS:{s:"International",i:"International ex-US",f:"All Cap Blend",a:"ETF"},
+  FXI:{s:"International",i:"China Large Cap",f:"Large Cap Blend",a:"ETF"},EWJ:{s:"International",i:"Japan",f:"Large Cap Blend",a:"ETF"},EWG:{s:"International",i:"Germany",f:"Large Cap Blend",a:"ETF"},EWZ:{s:"International",i:"Brazil",f:"Large Cap Blend",a:"ETF"},INDA:{s:"International",i:"India",f:"Large Cap Blend",a:"ETF"},
+  KWEB:{s:"International",i:"China Internet",f:"Large Cap Growth",a:"ETF"},
+  // Crypto
+  IBIT:{s:"Digital Assets",i:"Bitcoin",f:"Crypto",a:"Crypto ETF"},FBTC:{s:"Digital Assets",i:"Bitcoin",f:"Crypto",a:"Crypto ETF"},GBTC:{s:"Digital Assets",i:"Bitcoin Trust",f:"Crypto",a:"Crypto ETF"},
+  ETHE:{s:"Digital Assets",i:"Ethereum Trust",f:"Crypto",a:"Crypto ETF"},BITO:{s:"Digital Assets",i:"Bitcoin Futures",f:"Crypto",a:"Crypto ETF"},
+  // Specialty
+  MSTR:{s:"Information Technology",i:"Bitcoin Treasury Corp",f:"Large Cap Growth",a:"Equity"},
+  XBI:{s:"Healthcare",i:"Biotech",f:"Mid Cap Growth",a:"ETF"},IBB:{s:"Healthcare",i:"Biotech",f:"Large Cap Growth",a:"ETF"},
+  JETS:{s:"Industrials",i:"Airlines",f:"Mid Cap Blend",a:"ETF"},ITA:{s:"Industrials",i:"Aerospace & Defense",f:"Large Cap Blend",a:"ETF"},
+  KRE:{s:"Financials",i:"Regional Banks",f:"Mid Cap Value",a:"ETF"},KBE:{s:"Financials",i:"Banks",f:"Mid Cap Value",a:"ETF"},
+  ITB:{s:"Consumer Discretionary",i:"Homebuilders",f:"Mid Cap Growth",a:"ETF"},XHB:{s:"Consumer Discretionary",i:"Homebuilders",f:"Mid Cap Growth",a:"ETF"},
+  MOO:{s:"Consumer Staples",i:"Agribusiness",f:"Large Cap Blend",a:"ETF"},
+  ICLN:{s:"Utilities",i:"Clean Energy",f:"Mid Cap Growth",a:"ETF"},TAN:{s:"Utilities",i:"Solar Energy",f:"Mid Cap Growth",a:"ETF"},
+  LIT:{s:"Materials",i:"Lithium & Battery",f:"Mid Cap Growth",a:"ETF"},REMX:{s:"Materials",i:"Rare Earth & Strategic Metals",f:"Small Cap Value",a:"ETF"},
+  UFO:{s:"Industrials",i:"Space & Aerospace",f:"Mid Cap Growth",a:"ETF"},
 };
-const SECTOR_MAP={AAPL:"Technology",MSFT:"Technology",GOOGL:"Technology",GOOG:"Technology",AMZN:"Consumer Discretionary",META:"Technology",NVDA:"Technology",TSLA:"Consumer Discretionary",BRK:"Financials","BRK.B":"Financials",JPM:"Financials",JNJ:"Healthcare",V:"Financials",UNH:"Healthcare",HD:"Consumer Discretionary",PG:"Consumer Staples",MA:"Financials",DIS:"Communication Services",BAC:"Financials",XOM:"Energy",CVX:"Energy",NFLX:"Communication Services",COST:"Consumer Staples",ABBV:"Healthcare",KO:"Consumer Staples",PEP:"Consumer Staples",MRK:"Healthcare",AVGO:"Technology",LLY:"Healthcare",TMO:"Healthcare",WMT:"Consumer Staples",CRM:"Technology",AMD:"Technology",INTC:"Technology",CSCO:"Technology",ADBE:"Technology",ORCL:"Technology",ACN:"Technology",NOW:"Technology",IBM:"Technology",QCOM:"Technology",TXN:"Technology",AMAT:"Technology",MU:"Technology",PLTR:"Technology",COIN:"Financials",SQ:"Financials",PYPL:"Financials",SNOW:"Technology",NET:"Technology",CRWD:"Technology",ZS:"Technology",DDOG:"Technology",PANW:"Technology",SHOP:"Technology",SE:"Technology",MELI:"Consumer Discretionary",NKE:"Consumer Discretionary",SBUX:"Consumer Discretionary",MCD:"Consumer Discretionary",LOW:"Consumer Discretionary",TGT:"Consumer Discretionary",F:"Consumer Discretionary",GM:"Consumer Discretionary",BA:"Industrials",CAT:"Industrials",GE:"Industrials",MMM:"Industrials",UPS:"Industrials",FDX:"Industrials",RTX:"Industrials",LMT:"Industrials",PFE:"Healthcare",BMY:"Healthcare",GILD:"Healthcare",AMGN:"Healthcare",BIIB:"Healthcare",MRNA:"Healthcare",NEE:"Utilities",DUK:"Utilities",SO:"Utilities",D:"Utilities"};
-const INDUSTRY_MAP={AAPL:"Consumer Electronics",MSFT:"Software",GOOGL:"Internet Services",AMZN:"E-Commerce",META:"Social Media",NVDA:"Semiconductors",TSLA:"Electric Vehicles",JPM:"Banking",JNJ:"Pharmaceuticals",V:"Payment Processing",UNH:"Health Insurance",HD:"Home Improvement",PG:"Household Products",MA:"Payment Processing",DIS:"Entertainment",NFLX:"Streaming",XOM:"Oil & Gas",CVX:"Oil & Gas",COST:"Retail",WMT:"Retail",CRM:"Enterprise Software",AMD:"Semiconductors",INTC:"Semiconductors",AVGO:"Semiconductors",LLY:"Pharmaceuticals",ABBV:"Pharmaceuticals",MRK:"Pharmaceuticals",ADBE:"Software",ORCL:"Enterprise Software",NOW:"Enterprise Software",PLTR:"Data Analytics",COIN:"Crypto Exchange",CRWD:"Cybersecurity",PANW:"Cybersecurity",ZS:"Cybersecurity",BA:"Aerospace",CAT:"Heavy Equipment",GE:"Industrial Conglomerate",NEE:"Renewable Utilities",PFE:"Pharmaceuticals",MRNA:"Biotechnology",AMGN:"Biotechnology"};
+
+const STOCK_DB = {
+  // Technology - Mega
+  AAPL:{s:"Information Technology",i:"Consumer Electronics",mc:"Mega Cap"},MSFT:{s:"Information Technology",i:"Software",mc:"Mega Cap"},GOOGL:{s:"Communication Services",i:"Internet Services",mc:"Mega Cap"},GOOG:{s:"Communication Services",i:"Internet Services",mc:"Mega Cap"},META:{s:"Communication Services",i:"Social Media",mc:"Mega Cap"},NVDA:{s:"Information Technology",i:"Semiconductors",mc:"Mega Cap"},AVGO:{s:"Information Technology",i:"Semiconductors",mc:"Mega Cap"},
+  ORCL:{s:"Information Technology",i:"Enterprise Software",mc:"Mega Cap"},CRM:{s:"Information Technology",i:"Enterprise Software",mc:"Large Cap"},ADBE:{s:"Information Technology",i:"Software",mc:"Large Cap"},
+  // Technology - Large
+  AMD:{s:"Information Technology",i:"Semiconductors",mc:"Large Cap"},INTC:{s:"Information Technology",i:"Semiconductors",mc:"Large Cap"},QCOM:{s:"Information Technology",i:"Semiconductors",mc:"Large Cap"},TXN:{s:"Information Technology",i:"Semiconductors",mc:"Large Cap"},AMAT:{s:"Information Technology",i:"Semiconductor Equipment",mc:"Large Cap"},MU:{s:"Information Technology",i:"Memory Semiconductors",mc:"Large Cap"},LRCX:{s:"Information Technology",i:"Semiconductor Equipment",mc:"Large Cap"},KLAC:{s:"Information Technology",i:"Semiconductor Equipment",mc:"Large Cap"},MRVL:{s:"Information Technology",i:"Semiconductors",mc:"Large Cap"},ARM:{s:"Information Technology",i:"Semiconductor IP",mc:"Large Cap"},
+  NOW:{s:"Information Technology",i:"Enterprise Software",mc:"Large Cap"},SNOW:{s:"Information Technology",i:"Cloud Data",mc:"Large Cap"},PLTR:{s:"Information Technology",i:"Data Analytics",mc:"Large Cap"},PANW:{s:"Information Technology",i:"Cybersecurity",mc:"Large Cap"},CRWD:{s:"Information Technology",i:"Cybersecurity",mc:"Large Cap"},ZS:{s:"Information Technology",i:"Cybersecurity",mc:"Large Cap"},FTNT:{s:"Information Technology",i:"Cybersecurity",mc:"Large Cap"},NET:{s:"Information Technology",i:"Cloud Infrastructure",mc:"Large Cap"},DDOG:{s:"Information Technology",i:"Cloud Monitoring",mc:"Mid Cap"},
+  CSCO:{s:"Information Technology",i:"Networking",mc:"Large Cap"},IBM:{s:"Information Technology",i:"IT Services",mc:"Large Cap"},ACN:{s:"Information Technology",i:"IT Consulting",mc:"Large Cap"},INTU:{s:"Information Technology",i:"Financial Software",mc:"Large Cap"},
+  SHOP:{s:"Information Technology",i:"E-Commerce Platform",mc:"Large Cap"},SQ:{s:"Financials",i:"Fintech / Payments",mc:"Large Cap"},PYPL:{s:"Financials",i:"Digital Payments",mc:"Large Cap"},
+  DELL:{s:"Information Technology",i:"Hardware",mc:"Large Cap"},HPQ:{s:"Information Technology",i:"Hardware",mc:"Mid Cap"},
+  UBER:{s:"Information Technology",i:"Ride-Sharing / Mobility",mc:"Large Cap"},ABNB:{s:"Consumer Discretionary",i:"Travel Platform",mc:"Large Cap"},
+  // Consumer Discretionary
+  AMZN:{s:"Consumer Discretionary",i:"E-Commerce",mc:"Mega Cap"},TSLA:{s:"Consumer Discretionary",i:"Electric Vehicles",mc:"Mega Cap"},
+  HD:{s:"Consumer Discretionary",i:"Home Improvement",mc:"Large Cap"},LOW:{s:"Consumer Discretionary",i:"Home Improvement",mc:"Large Cap"},TGT:{s:"Consumer Discretionary",i:"Discount Retail",mc:"Large Cap"},
+  NKE:{s:"Consumer Discretionary",i:"Athletic Apparel",mc:"Large Cap"},SBUX:{s:"Consumer Discretionary",i:"Restaurants / Coffee",mc:"Large Cap"},MCD:{s:"Consumer Discretionary",i:"Quick Service Restaurants",mc:"Mega Cap"},CMG:{s:"Consumer Discretionary",i:"Restaurants",mc:"Large Cap"},
+  F:{s:"Consumer Discretionary",i:"Automobiles",mc:"Large Cap"},GM:{s:"Consumer Discretionary",i:"Automobiles",mc:"Large Cap"},RIVN:{s:"Consumer Discretionary",i:"Electric Vehicles",mc:"Mid Cap"},LCID:{s:"Consumer Discretionary",i:"Electric Vehicles",mc:"Small Cap"},
+  BKNG:{s:"Consumer Discretionary",i:"Online Travel",mc:"Large Cap"},MAR:{s:"Consumer Discretionary",i:"Hotels",mc:"Large Cap"},
+  // Consumer Staples
+  PG:{s:"Consumer Staples",i:"Household Products",mc:"Mega Cap"},KO:{s:"Consumer Staples",i:"Beverages",mc:"Mega Cap"},PEP:{s:"Consumer Staples",i:"Beverages & Snacks",mc:"Mega Cap"},
+  COST:{s:"Consumer Staples",i:"Warehouse Retail",mc:"Large Cap"},WMT:{s:"Consumer Staples",i:"Discount Retail",mc:"Mega Cap"},
+  PM:{s:"Consumer Staples",i:"Tobacco",mc:"Large Cap"},MO:{s:"Consumer Staples",i:"Tobacco",mc:"Large Cap"},CL:{s:"Consumer Staples",i:"Household Products",mc:"Large Cap"},KMB:{s:"Consumer Staples",i:"Household Products",mc:"Large Cap"},
+  // Financials
+  "BRK.B":{s:"Financials",i:"Diversified Holding",mc:"Mega Cap"},BRK:{s:"Financials",i:"Diversified Holding",mc:"Mega Cap"},
+  JPM:{s:"Financials",i:"Banking",mc:"Mega Cap"},BAC:{s:"Financials",i:"Banking",mc:"Large Cap"},WFC:{s:"Financials",i:"Banking",mc:"Large Cap"},C:{s:"Financials",i:"Banking",mc:"Large Cap"},GS:{s:"Financials",i:"Investment Banking",mc:"Large Cap"},MS:{s:"Financials",i:"Investment Banking",mc:"Large Cap"},SCHW:{s:"Financials",i:"Brokerage",mc:"Large Cap"},
+  V:{s:"Financials",i:"Payment Processing",mc:"Mega Cap"},MA:{s:"Financials",i:"Payment Processing",mc:"Mega Cap"},AXP:{s:"Financials",i:"Credit Services",mc:"Large Cap"},
+  BLK:{s:"Financials",i:"Asset Management",mc:"Large Cap"},SPGI:{s:"Financials",i:"Financial Data",mc:"Large Cap"},ICE:{s:"Financials",i:"Exchanges",mc:"Large Cap"},CME:{s:"Financials",i:"Exchanges",mc:"Large Cap"},
+  COIN:{s:"Financials",i:"Crypto Exchange",mc:"Large Cap"},HOOD:{s:"Financials",i:"Brokerage / Fintech",mc:"Mid Cap"},SOFI:{s:"Financials",i:"Fintech / Digital Banking",mc:"Mid Cap"},
+  // Healthcare
+  UNH:{s:"Healthcare",i:"Health Insurance",mc:"Mega Cap"},JNJ:{s:"Healthcare",i:"Diversified Healthcare",mc:"Mega Cap"},LLY:{s:"Healthcare",i:"Pharmaceuticals",mc:"Mega Cap"},
+  ABBV:{s:"Healthcare",i:"Pharmaceuticals",mc:"Large Cap"},MRK:{s:"Healthcare",i:"Pharmaceuticals",mc:"Large Cap"},PFE:{s:"Healthcare",i:"Pharmaceuticals",mc:"Large Cap"},BMY:{s:"Healthcare",i:"Pharmaceuticals",mc:"Large Cap"},
+  TMO:{s:"Healthcare",i:"Life Sciences Tools",mc:"Large Cap"},ABT:{s:"Healthcare",i:"Medical Devices",mc:"Large Cap"},MDT:{s:"Healthcare",i:"Medical Devices",mc:"Large Cap"},ISRG:{s:"Healthcare",i:"Surgical Robotics",mc:"Large Cap"},SYK:{s:"Healthcare",i:"Medical Devices",mc:"Large Cap"},
+  AMGN:{s:"Healthcare",i:"Biotechnology",mc:"Large Cap"},GILD:{s:"Healthcare",i:"Biotechnology",mc:"Large Cap"},BIIB:{s:"Healthcare",i:"Biotechnology",mc:"Large Cap"},MRNA:{s:"Healthcare",i:"Biotechnology (mRNA)",mc:"Large Cap"},REGN:{s:"Healthcare",i:"Biotechnology",mc:"Large Cap"},VRTX:{s:"Healthcare",i:"Biotechnology",mc:"Large Cap"},
+  // Energy
+  XOM:{s:"Energy",i:"Oil & Gas Integrated",mc:"Mega Cap"},CVX:{s:"Energy",i:"Oil & Gas Integrated",mc:"Mega Cap"},COP:{s:"Energy",i:"Oil & Gas E&P",mc:"Large Cap"},EOG:{s:"Energy",i:"Oil & Gas E&P",mc:"Large Cap"},SLB:{s:"Energy",i:"Oilfield Services",mc:"Large Cap"},
+  OXY:{s:"Energy",i:"Oil & Gas E&P",mc:"Large Cap"},MPC:{s:"Energy",i:"Oil Refining",mc:"Large Cap"},VLO:{s:"Energy",i:"Oil Refining",mc:"Large Cap"},PSX:{s:"Energy",i:"Oil Refining",mc:"Large Cap"},
+  FSLR:{s:"Energy",i:"Solar Energy",mc:"Mid Cap"},ENPH:{s:"Energy",i:"Solar Energy",mc:"Mid Cap"},
+  // Industrials
+  BA:{s:"Industrials",i:"Aerospace & Defense",mc:"Large Cap"},RTX:{s:"Industrials",i:"Aerospace & Defense",mc:"Large Cap"},LMT:{s:"Industrials",i:"Defense Contractor",mc:"Large Cap"},NOC:{s:"Industrials",i:"Defense Contractor",mc:"Large Cap"},GD:{s:"Industrials",i:"Defense Contractor",mc:"Large Cap"},
+  CAT:{s:"Industrials",i:"Heavy Equipment",mc:"Large Cap"},DE:{s:"Industrials",i:"Farm Equipment",mc:"Large Cap"},GE:{s:"Industrials",i:"Industrial Conglomerate",mc:"Large Cap"},HON:{s:"Industrials",i:"Industrial Conglomerate",mc:"Large Cap"},MMM:{s:"Industrials",i:"Industrial Conglomerate",mc:"Large Cap"},
+  UPS:{s:"Industrials",i:"Logistics",mc:"Large Cap"},FDX:{s:"Industrials",i:"Logistics",mc:"Large Cap"},
+  WM:{s:"Industrials",i:"Waste Management",mc:"Large Cap"},
+  // Communication Services
+  DIS:{s:"Communication Services",i:"Entertainment",mc:"Large Cap"},NFLX:{s:"Communication Services",i:"Streaming",mc:"Large Cap"},CMCSA:{s:"Communication Services",i:"Cable & Media",mc:"Large Cap"},T:{s:"Communication Services",i:"Telecom",mc:"Large Cap"},VZ:{s:"Communication Services",i:"Telecom",mc:"Large Cap"},TMUS:{s:"Communication Services",i:"Wireless Telecom",mc:"Large Cap"},
+  SPOT:{s:"Communication Services",i:"Music Streaming",mc:"Large Cap"},RBLX:{s:"Communication Services",i:"Gaming / Metaverse",mc:"Mid Cap"},
+  // Utilities
+  NEE:{s:"Utilities",i:"Renewable Utilities",mc:"Large Cap"},DUK:{s:"Utilities",i:"Electric Utilities",mc:"Large Cap"},SO:{s:"Utilities",i:"Electric Utilities",mc:"Large Cap"},D:{s:"Utilities",i:"Electric Utilities",mc:"Large Cap"},AEP:{s:"Utilities",i:"Electric Utilities",mc:"Large Cap"},
+  // Real Estate (REITs)
+  AMT:{s:"Real Estate",i:"Cell Tower REITs",mc:"Large Cap"},PLD:{s:"Real Estate",i:"Industrial REITs",mc:"Large Cap"},CCI:{s:"Real Estate",i:"Cell Tower REITs",mc:"Large Cap"},EQIX:{s:"Real Estate",i:"Data Center REITs",mc:"Large Cap"},SPG:{s:"Real Estate",i:"Retail REITs",mc:"Large Cap"},O:{s:"Real Estate",i:"Net Lease REITs",mc:"Large Cap"},
+  // Materials
+  LIN:{s:"Materials",i:"Industrial Gases",mc:"Large Cap"},APD:{s:"Materials",i:"Industrial Gases",mc:"Large Cap"},SHW:{s:"Materials",i:"Paints & Coatings",mc:"Large Cap"},FCX:{s:"Materials",i:"Copper Mining",mc:"Large Cap"},NEM:{s:"Materials",i:"Gold Mining",mc:"Large Cap"},
+  NUE:{s:"Materials",i:"Steel",mc:"Large Cap"},CLF:{s:"Materials",i:"Iron & Steel",mc:"Mid Cap"},AA:{s:"Materials",i:"Aluminum",mc:"Mid Cap"},MP:{s:"Materials",i:"Rare Earth Mining",mc:"Small Cap"},
+};
 
 function classifyHolding(ticker, quoteData) {
-  const etf = ETF_MAP[ticker];
-  if (etf) return { sector: etf.sector, industry: etf.industry, assetClass: "ETF", marketCap: 0, mktCapCategory: etf.focus };
-  // Check for bond/commodity keywords
+  // Check ETF database first
+  const etf = ETF_DB[ticker];
+  if (etf) return { sector:etf.s, industry:etf.i, assetClass:etf.a, marketCap:0, mktCapCategory:etf.f, leverage:etf.lev||'' };
+  // Check equity database
+  const stock = STOCK_DB[ticker];
+  if (stock) return { sector:stock.s, industry:stock.i, assetClass:"Equity", marketCap:0, mktCapCategory:stock.mc, leverage:'' };
+  // Fallback: use name-based detection from quote data
   const name = (quoteData.name || "").toLowerCase();
-  let assetClass = "Equity";
-  if (name.includes("bond") || name.includes("treasury") || name.includes("fixed income")) assetClass = "Fixed Income";
-  else if (name.includes("gold") || name.includes("silver") || name.includes("commodity")) assetClass = "Commodity";
-  else if (name.includes("reit") || name.includes("real estate")) assetClass = "Real Estate";
-  const sector = SECTOR_MAP[ticker] || "Other";
-  const industry = INDUSTRY_MAP[ticker] || "Other";
-  const mc = quoteData.intradayHigh && quoteData.volume ? estimateMarketCap(quoteData) : 0;
-  return { sector, industry, assetClass, marketCap: mc, mktCapCategory: classifyMktCap(mc) };
+  let sector="Other", industry="Other", assetClass="Equity", mktCat="Large Cap";
+  // Name-based sector detection
+  if (name.includes("etf")||name.includes("fund")||name.includes("trust")||name.includes("index")||name.includes("ishares")||name.includes("vanguard")||name.includes("spdr")||name.includes("proshares")||name.includes("invesco")||name.includes("schwab")) { assetClass="ETF"; mktCat="Large Fund"; }
+  if (name.includes("bitcoin")||name.includes("crypto")||name.includes("blockchain")||name.includes("ethereum")) { sector="Digital Assets"; industry="Crypto"; if(assetClass==="Equity") assetClass="Crypto"; }
+  else if (name.includes("gold")||name.includes("silver")||name.includes("platinum")||name.includes("palladium")||name.includes("precious metal")) { sector="Commodities"; industry="Precious Metals"; assetClass="Commodity"; }
+  else if (name.includes("oil")||name.includes("petroleum")||name.includes("natural gas")||name.includes("energy")) { sector="Energy"; industry="Oil & Gas"; }
+  else if (name.includes("reit")||name.includes("real estate")||name.includes("realty")||name.includes("property")) { sector="Real Estate"; industry="REITs"; assetClass=assetClass==="ETF"?"REIT ETF":"REIT"; }
+  else if (name.includes("bond")||name.includes("treasury")||name.includes("fixed income")||name.includes("aggregate")||name.includes("municipal")) { sector="Fixed Income"; industry="Bonds"; assetClass="Bond"; }
+  else if (name.includes("bank")||name.includes("financial")||name.includes("insurance")||name.includes("capital")) { sector="Financials"; industry="Financial Services"; }
+  else if (name.includes("pharma")||name.includes("biotech")||name.includes("health")||name.includes("medical")||name.includes("therapeut")) { sector="Healthcare"; industry="Biotechnology / Pharma"; }
+  else if (name.includes("semiconductor")||name.includes("chip")||name.includes("software")||name.includes("tech")||name.includes("data")||name.includes("cloud")||name.includes("cyber")||name.includes("computing")) { sector="Information Technology"; industry="Technology"; }
+  else if (name.includes("cannabis")||name.includes("marijuana")||name.includes("weed")) { sector="Healthcare"; industry="Cannabis"; }
+  else if (name.includes("solar")||name.includes("wind")||name.includes("clean energy")||name.includes("renewable")) { sector="Utilities"; industry="Renewable Energy"; }
+  else if (name.includes("mining")||name.includes("copper")||name.includes("lithium")||name.includes("rare earth")||name.includes("steel")||name.includes("aluminum")) { sector="Materials"; industry="Mining & Metals"; }
+  else if (name.includes("aerospace")||name.includes("defense")||name.includes("space")) { sector="Industrials"; industry="Aerospace & Defense"; }
+  else if (name.includes("leverag")||name.includes("ultra")||name.includes("3x")||name.includes("2x")||name.includes("direxion")||name.includes("proshares ultra")) { assetClass="Leveraged ETF"; }
+  if (name.includes("3x")||name.includes("triple")) { assetClass="Leveraged ETF"; }
+  return { sector, industry, assetClass, marketCap:0, mktCapCategory:mktCat, leverage:'' };
 }
-function estimateMarketCap(q) { return 0; } // We'll use stored marketCap from Firestore
-function classifyMktCap(mc) { if (!mc || mc === 0) return "N/A"; if (mc >= 200e9) return "Mega Cap"; if (mc >= 10e9) return "Large Cap"; if (mc >= 2e9) return "Mid Cap"; if (mc >= 300e6) return "Small Cap"; return "Micro Cap"; }
 
 // ── Helpers ──
 const fmt=v=>"$"+Number(v).toLocaleString("en-US",{minimumFractionDigits:2,maximumFractionDigits:2});
@@ -374,16 +483,14 @@ const fmtPct=(v)=>(v>=0?"+":"")+v.toFixed(2)+"%";
 const pctColor=v=>v>=0?C.success:C.danger;
 function showStatus(id,msg,type){const el=document.getElementById(id);if(!el)return;el.className='status-bar '+type;el.innerHTML=msg;}
 
-// ── State ──
-let currentRange = "1y";
-let portfolioLineChart = null;
-let donutCharts = {};
+let currentRange="1y";
+let portfolioLineChart=null;
+let donutCharts={};
+let sparkCharts={};
 
-// ── Nav ──
 const parentMap={home:'home',about:'home',portfolio:'portfolio',holdings:'portfolio',research:'research'};
 function navigateTo(p){document.activeElement.blur();document.querySelectorAll('.page').forEach(x=>x.classList.remove('active'));document.querySelectorAll('.nav-parent,.nav-child').forEach(x=>x.classList.remove('active'));document.getElementById('page-'+p).classList.add('active');const pp=parentMap[p]||p;const pe=document.querySelector('.nav-parent[data-page="'+pp+'"]');if(pe)pe.classList.add('active');const ce=document.querySelector('.nav-child[data-page="'+p+'"]');if(ce)ce.classList.add('active');window.scrollTo(0,0);if(p==='portfolio')renderPortfolioOverview();}
 
-// ── Home Features ──
 const FEATURES=[
   {title:"Portfolio Overview",desc:"Live valuation, benchmark comparison, allocation charts, Morningstar style box, and performance history.",page:"portfolio",tag:"Active"},
   {title:"Manage Holdings",desc:"Add/remove holdings stored in Firebase. Prices refresh from Yahoo Finance via Cloudflare Worker.",page:"holdings",tag:"Active"},
@@ -394,398 +501,211 @@ const FEATURES=[
 ];
 document.getElementById('featureGrid').innerHTML=FEATURES.map(f=>'<div class="feature-card '+(f.page?'':'disabled')+'" '+(f.page?'onclick="navigateTo(\''+f.page+'\')"':'')+'><div class="feature-tag '+(f.tag==='Coming Soon'?'soon':'')+'">'+f.tag+'</div><div class="feature-title">'+f.title+'</div><div class="feature-desc">'+f.desc+'</div></div>').join('');
 
-// ── Timeframe buttons ──
-function bindTimeframeBtns() {
-  document.querySelectorAll('#pfTimeframeBtns .btn-outline').forEach(b => {
-    b.onclick = function() {
-      document.querySelectorAll('#pfTimeframeBtns .btn-outline').forEach(x => x.classList.remove('active'));
-      this.classList.add('active');
-      currentRange = this.dataset.range;
-      renderPortfolioOverview();
-    };
-  });
-}
+function bindTimeframeBtns(){document.querySelectorAll('#pfTimeframeBtns .btn-outline').forEach(b=>{b.onclick=function(){document.querySelectorAll('#pfTimeframeBtns .btn-outline').forEach(x=>x.classList.remove('active'));this.classList.add('active');currentRange=this.dataset.range;renderPortfolioOverview();};});}
 
 // ── Holdings Table (Manage page) ──
-function renderHoldingsTable(holdings) {
-  const wrap = document.getElementById('holdingsTableWrap');
-  if (!holdings || !holdings.length) { wrap.innerHTML = '<div class="empty-state" style="padding:24px;"><h3>No Holdings Yet</h3><p>Use the form above to add your first holding.</p></div>'; return; }
-  const tv = holdings.reduce((s,h) => s + (h.currentPrice||0)*h.quantity, 0);
-  let html = '<table><thead><tr><th>Ticker</th><th>Company</th><th>Shares</th><th>Cost</th><th>Price</th><th>Value</th><th>G/L</th><th>Sector</th><th>Industry</th><th>Asset</th><th>Mkt Cap</th><th></th></tr></thead><tbody>';
-  holdings.forEach(h => {
+function renderHoldingsTable(holdings){
+  const wrap=document.getElementById('holdingsTableWrap');
+  if(!holdings||!holdings.length){wrap.innerHTML='<div class="empty-state" style="padding:24px;"><h3>No Holdings Yet</h3><p>Use the form above to add your first holding.</p></div>';return;}
+  let html='<table><thead><tr><th>Ticker</th><th>Company</th><th>Shares</th><th>Cost</th><th>Price</th><th>Value</th><th>G/L</th><th>Sector</th><th>Industry</th><th>Asset</th><th>Mkt Cap</th><th>Notes</th><th></th></tr></thead><tbody>';
+  holdings.forEach(h=>{
     const mv=(h.currentPrice||0)*h.quantity,cost=h.costBasis*h.quantity,gl=mv-cost,glp=cost>0?(gl/cost)*100:0,gc=gl>=0?C.success:C.danger;
-    html+='<tr><td style="font-weight:700;color:'+C.navy+';">'+h.ticker+'</td><td>'+h.companyName+'</td><td>'+h.quantity+'</td><td>'+fmt(h.costBasis)+'</td><td>'+fmt(h.currentPrice||0)+'</td><td style="font-weight:600;">'+fmt(mv)+'</td><td style="color:'+gc+';font-weight:600;">'+fmtPct(glp)+'</td><td>'+(h.sector||'—')+'</td><td>'+(h.industry||'—')+'</td><td>'+(h.assetClass||'Equity')+'</td><td>'+(h.mktCapCategory||'—')+'</td><td><button class="btn btn-danger btn-sm" onclick="deleteHolding(\''+h.id+'\')">&#10005;</button></td></tr>';
+    const note=h.leverage?'<span style="color:'+C.warning+';font-weight:600;font-size:10px;">'+h.leverage+'</span>':'';
+    html+='<tr><td style="font-weight:700;color:'+C.navy+';">'+h.ticker+'</td><td>'+h.companyName+'</td><td>'+h.quantity+'</td><td>'+fmt(h.costBasis)+'</td><td>'+fmt(h.currentPrice||0)+'</td><td style="font-weight:600;">'+fmt(mv)+'</td><td style="color:'+gc+';font-weight:600;">'+fmtPct(glp)+'</td><td>'+(h.sector||'—')+'</td><td>'+(h.industry||'—')+'</td><td>'+(h.assetClass||'Equity')+'</td><td>'+(h.mktCapCategory||'—')+'</td><td>'+note+'</td><td><button class="btn btn-danger btn-sm" onclick="deleteHolding(\''+h.id+'\')">&#10005;</button></td></tr>';
   });
-  html += '</tbody></table>';
-  wrap.innerHTML = html;
+  html+='</tbody></table>';wrap.innerHTML=html;
 }
 
-// ══════════════════════════════════════
-// PORTFOLIO OVERVIEW (the big one)
-// ══════════════════════════════════════
-async function renderPortfolioOverview() {
-  const holdings = window._holdings || [];
-  const user = window._currentUser;
-  if (!user) { document.getElementById('portfolioAuth').style.display='';document.getElementById('portfolioEmpty').style.display='none';document.getElementById('portfolioLive').style.display='none';return; }
+// ══════════════════════════════
+// PORTFOLIO OVERVIEW
+// ══════════════════════════════
+async function renderPortfolioOverview(){
+  const holdings=window._holdings||[];const user=window._currentUser;
+  if(!user){document.getElementById('portfolioAuth').style.display='';document.getElementById('portfolioEmpty').style.display='none';document.getElementById('portfolioLive').style.display='none';return;}
   document.getElementById('portfolioAuth').style.display='none';
-  if (!holdings.length) { document.getElementById('portfolioEmpty').style.display='';document.getElementById('portfolioLive').style.display='none';return; }
-  document.getElementById('portfolioEmpty').style.display='none';
-  document.getElementById('portfolioLive').style.display='';
-
+  if(!holdings.length){document.getElementById('portfolioEmpty').style.display='';document.getElementById('portfolioLive').style.display='none';return;}
+  document.getElementById('portfolioEmpty').style.display='none';document.getElementById('portfolioLive').style.display='';
   const tv=holdings.reduce((s,h)=>s+(h.currentPrice||0)*h.quantity,0);
   const tc=holdings.reduce((s,h)=>s+h.costBasis*h.quantity,0);
   const tgl=tv-tc,tglp=tc>0?(tgl/tc)*100:0;
   const tpv=holdings.reduce((s,h)=>s+(h.previousClose||0)*h.quantity,0);
   const dayChg=tv-tpv,dayPct=tpv>0?(dayChg/tpv)*100:0;
-
-  // Row 1: Portfolio metrics
   document.getElementById('metricsRow').innerHTML=
-    mc('Total Portfolio Value',fmtInt(tv),fmtPct(dayPct)+' today',pctColor(dayPct))+
-    mc('Total Gain/Loss',fmtPct(tglp),fmt(tgl),pctColor(tgl))+
-    mc('Total Cost Basis',fmtInt(tc),holdings.length+' positions',C.textSec)+
-    mc('Day Change',fmt(dayChg),fmtPct(dayPct),pctColor(dayPct));
-
-  // Row 2: Benchmark returns (async)
-  document.getElementById('benchmarkRow').innerHTML=
-    mc('SPY ('+rangeLabel()+')','<span class="spinner"></span>','Loading...',C.textSec)+
-    mc('QQQ ('+rangeLabel()+')','<span class="spinner"></span>','Loading...',C.textSec)+
-    mc('IWM ('+rangeLabel()+')','<span class="spinner"></span>','Loading...',C.textSec)+
-    mc('VIX ('+rangeLabel()+')','<span class="spinner"></span>','Loading...',C.textSec);
-  fetchBenchmarks();
-
-  // Portfolio table with all columns
-  renderPortfolioTable(holdings, tv);
-
-  // Donut charts
+    mcBig('Total Portfolio Value',fmtInt(tv),fmtPct(dayPct)+' today',pctColor(dayPct))+
+    mcBig('Total Gain/Loss',fmtPct(tglp),fmt(tgl),pctColor(tgl))+
+    mcBig('Total Cost Basis',fmtInt(tc),holdings.length+' positions',C.textSec)+
+    mcBig('Day Change',fmt(dayChg),fmtPct(dayPct),pctColor(dayPct));
+  // Benchmark sparkline cards
+  const benchTickers=["SPY","QQQ","IWM","^VIX","GLD","SLV","UUP"];
+  const benchLabels=["SPY","QQQ","IWM","VIX","GLD","SLV","UUP"];
+  document.getElementById('benchmarkRow').innerHTML=benchLabels.map(l=>'<div class="bench-card" id="bench-'+l+'"><div class="bench-label">'+l+' ('+rangeLabel()+')</div><div class="bench-value"><span class="spinner" style="width:12px;height:12px;"></span></div></div>').join('');
+  fetchBenchmarkSparklines(benchTickers,benchLabels);
+  renderPortfolioTable(holdings,tv);
   const group=(key)=>{const g={};holdings.forEach(h=>{const mv=(h.currentPrice||0)*h.quantity;const k=h[key]||'Other';g[k]=(g[k]||0)+mv;});return Object.entries(g).map(([l,v])=>({label:l,value:tv>0?Math.round(v/tv*100):0})).sort((a,b)=>b.value-a.value);};
   renderDonut('donut-sector','Portfolio Allocation by Sector',group('sector'));
-  renderDonut('donut-industry','Portfolio Allocation by Industry',group('industry').slice(0,8));
+  renderDonut('donut-industry','Portfolio Allocation by Industry',group('industry').slice(0,10));
   renderDonut('donut-mktcap','Portfolio by Market Cap / Style',group('mktCapCategory'));
-  const weightData=holdings.map(h=>({label:h.ticker,value:tv>0?Math.round(((h.currentPrice||0)*h.quantity/tv)*100):0})).sort((a,b)=>b.value-a.value);
-  renderDonut('donut-weight','Portfolio Allocation by Holding',weightData);
-
-  // Morningstar Style Box
+  const wd=holdings.map(h=>({label:h.ticker,value:tv>0?Math.round(((h.currentPrice||0)*h.quantity/tv)*100):0})).sort((a,b)=>b.value-a.value);
+  renderDonut('donut-weight','Portfolio Allocation by Holding',wd);
   renderMorningstarBox(holdings);
-
-  // Bind timeframe buttons (they are inside portfolioLive, need rebinding)
   bindTimeframeBtns();
-  // Set active state on current range button
-  document.querySelectorAll('#pfTimeframeBtns .btn-outline').forEach(b => {
-    b.classList.toggle('active', b.dataset.range === currentRange);
-  });
-
-  // Portfolio chart
+  document.querySelectorAll('#pfTimeframeBtns .btn-outline').forEach(b=>{b.classList.toggle('active',b.dataset.range===currentRange);});
   renderPortfolioChart();
 }
 
-function mc(label,value,sub,subColor){return '<div class="metric-card"><div class="metric-label">'+label+'</div><div class="metric-value" style="font-size:18px;">'+value+'</div><div class="metric-sub" style="color:'+subColor+';">'+sub+'</div></div>';}
+function mcBig(label,value,sub,subColor){return '<div class="metric-card"><div class="metric-label">'+label+'</div><div class="metric-value" style="font-size:18px;">'+value+'</div><div class="metric-sub" style="color:'+subColor+';">'+sub+'</div></div>';}
 function rangeLabel(){const m={"1mo":"1M","3mo":"3M","6mo":"6M","ytd":"YTD","1y":"1Y","3y":"3Y","5y":"5Y"};return m[currentRange]||currentRange;}
 
-// ── Benchmark fetch ──
-async function fetchBenchmarks() {
-  const tickers = ["SPY","QQQ","IWM","^VIX"];
-  const labels = ["SPY","QQQ","IWM","VIX"];
-  const results = [];
-  for (let i = 0; i < tickers.length; i++) {
-    try {
-      const data = await fetchChart(tickers[i], currentRange, "1d");
-      const pts = (data.points||[]).filter(p=>p.close!==null);
-      if (pts.length >= 2) {
-        const first = pts[0].close, last = pts[pts.length-1].close;
-        const ret = ((last-first)/first)*100;
-        results.push({label:labels[i],ret,last});
-      } else { results.push({label:labels[i],ret:0,last:0}); }
-    } catch(e) { results.push({label:labels[i],ret:0,last:0}); }
+// ── Benchmark Sparkline Cards ──
+async function fetchBenchmarkSparklines(tickers,labels){
+  for(let i=0;i<tickers.length;i++){
+    const label=labels[i];const el=document.getElementById('bench-'+label);if(!el)continue;
+    try{
+      const data=await fetchChart(tickers[i],currentRange,"1d");
+      const pts=(data.points||[]).filter(p=>p.close!==null);
+      if(pts.length<2){el.querySelector('.bench-value').textContent='—';continue;}
+      const first=pts[0].close,last=pts[pts.length-1].close;
+      const ret=((last-first)/first)*100;
+      const isVix=label==="VIX";
+      const displayVal=isVix?last.toFixed(2):fmtPct(ret);
+      const displaySub=isVix?fmtPct(ret)+' chg':fmt(last);
+      const cc=pctColor(isVix?-ret:ret);
+      el.innerHTML='<div class="bench-label">'+label+' ('+rangeLabel()+')</div><div class="bench-value" style="font-size:14px;color:'+cc+';">'+displayVal+'</div><div class="bench-sub" style="color:'+C.textSec+';">'+displaySub+'</div><canvas class="bench-spark" id="spark-'+label+'"></canvas>';
+      // Draw sparkline
+      const sparkCtx=document.getElementById('spark-'+label);
+      if(sparkCtx){
+        const closes=pts.map(p=>p.close);
+        if(sparkCharts[label])sparkCharts[label].destroy();
+        sparkCharts[label]=new Chart(sparkCtx,{type:'line',data:{labels:closes.map((_,j)=>j),datasets:[{data:closes,borderColor:ret>=0?C.success:C.danger,borderWidth:1.5,pointRadius:0,fill:false,tension:.4}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{enabled:false}},scales:{x:{display:false},y:{display:false}},animation:false}});
+      }
+    }catch(e){if(el)el.querySelector('.bench-value').textContent='—';}
   }
-  document.getElementById('benchmarkRow').innerHTML = results.map(r => {
-    const isVix = r.label === "VIX";
-    return mc(r.label+' ('+rangeLabel()+')', isVix ? r.last.toFixed(2) : fmtPct(r.ret), isVix ? fmtPct(r.ret)+' change' : fmt(r.last), pctColor(isVix ? -r.ret : r.ret));
-  }).join('');
 }
 
-// ── Portfolio Table (Portfolio page - enriched) ──
-function renderPortfolioTable(holdings, tv) {
-  let html='<table><thead><tr><th>Ticker</th><th>Company</th><th>Shares</th><th>Price</th><th>Value</th><th>Weight</th><th>G/L</th><th>Sector</th><th>Industry</th><th>Asset</th><th>Mkt Cap Tier</th></tr></thead><tbody>';
+// ── Portfolio Table (Portfolio page) ──
+function renderPortfolioTable(holdings,tv){
+  let html='<table><thead><tr><th>Ticker</th><th>Company</th><th>Shares</th><th>Price</th><th>Value</th><th>Weight</th><th>G/L</th><th>Sector</th><th>Industry</th><th>Asset</th><th>Mkt Cap</th></tr></thead><tbody>';
   holdings.forEach(h=>{
     const mv=(h.currentPrice||0)*h.quantity,cost=h.costBasis*h.quantity,gl=mv-cost,glp=cost>0?(gl/cost)*100:0,pp=tv>0?(mv/tv)*100:0,gc=gl>=0?C.success:C.danger;
-    html+='<tr><td style="font-weight:700;color:'+C.navy+';">'+h.ticker+'</td><td>'+h.companyName+'</td><td>'+h.quantity+'</td><td>'+fmt(h.currentPrice||0)+'</td><td style="font-weight:600;">'+fmt(mv)+'</td><td>'+pp.toFixed(1)+'%</td><td style="color:'+gc+';font-weight:600;">'+fmtPct(glp)+'</td><td>'+(h.sector||'—')+'</td><td>'+(h.industry||'—')+'</td><td>'+(h.assetClass||'Equity')+'</td><td>'+(h.mktCapCategory||'—')+'</td></tr>';
+    const assetDisplay=h.leverage?h.assetClass+' <span style="color:'+C.warning+';font-size:10px;">('+h.leverage+')</span>':(h.assetClass||'Equity');
+    html+='<tr><td style="font-weight:700;color:'+C.navy+';">'+h.ticker+'</td><td>'+h.companyName+'</td><td>'+h.quantity+'</td><td>'+fmt(h.currentPrice||0)+'</td><td style="font-weight:600;">'+fmt(mv)+'</td><td>'+pp.toFixed(1)+'%</td><td style="color:'+gc+';font-weight:600;">'+fmtPct(glp)+'</td><td>'+(h.sector||'—')+'</td><td>'+(h.industry||'—')+'</td><td>'+assetDisplay+'</td><td>'+(h.mktCapCategory||'—')+'</td></tr>';
   });
-  html+='</tbody></table>';
-  document.getElementById('portfolioTableWrap').innerHTML=html;
+  html+='</tbody></table>';document.getElementById('portfolioTableWrap').innerHTML=html;
 }
 
-// ── Portfolio History Chart with Compare ──
-// Stores benchmark data for tooltip access
-let _chartBenchmarkData = {};
+// ══════════════════════════════════════
+// PORTFOLIO CHART — Dual axis, zoom, point-in-time tooltips, stat boxes
+// ══════════════════════════════════════
+let _chartPortfolioSeries=[];let _chartBenchmarkSeries={};
 
-window.renderPortfolioChart = async function() {
-  const holdings = window._holdings || [];
-  if (!holdings.length) return;
-
-  const loadEl = document.getElementById('chartLoading');
-  loadEl.style.display = 'block';
-
-  // 1) Fetch historical prices for each holding and compute portfolio $ value per date
-  const holdingSeries = {}; // { ticker: { date: close } }
-  for (const h of holdings) {
-    try {
-      const data = await fetchChart(h.ticker, currentRange, "1d");
-      const pts = (data.points || []).filter(p => p.close !== null);
-      const map = {};
-      pts.forEach(p => { map[p.date.slice(0,10)] = p.close; });
-      holdingSeries[h.ticker] = { map, quantity: h.quantity };
-    } catch(e) { console.warn("Chart fetch failed:", h.ticker); }
-  }
-
-  // Collect all unique dates from all holdings
-  const allDates = new Set();
-  Object.values(holdingSeries).forEach(s => Object.keys(s.map).forEach(d => allDates.add(d)));
-  const dates = Array.from(allDates).sort();
-  if (!dates.length) { loadEl.style.display = 'none'; return; }
-
-  // Compute portfolio value at each date = SUM(shares * price) for each holding
-  const portfolioValues = dates.map(d => {
-    let total = 0;
-    Object.values(holdingSeries).forEach(s => {
-      const price = s.map[d];
-      if (price != null) total += price * s.quantity;
-    });
-    return total;
-  });
-
-  // Filter out dates where portfolio value is 0 (missing data)
-  const validData = [];
-  dates.forEach((d, i) => { if (portfolioValues[i] > 0) validData.push({ date: d, value: portfolioValues[i] }); });
-  if (!validData.length) { loadEl.style.display = 'none'; return; }
-
-  const chartDates = validData.map(d => d.date);
-  const chartValues = validData.map(d => d.value);
-  const pfStart = chartValues[0];
-  const pfEnd = chartValues[chartValues.length - 1];
-  const pfReturnPct = pfStart > 0 ? ((pfEnd - pfStart) / pfStart * 100) : 0;
-
-  const datasets = [];
-  // Portfolio dataset on LEFT y-axis (y)
-  datasets.push({
-    label: 'Portfolio',
-    data: chartValues,
-    borderColor: C.navy,
-    backgroundColor: 'rgba(0,60,113,.06)',
-    borderWidth: 2.5,
-    pointRadius: 2,
-    pointHoverRadius: 6,
-    pointBackgroundColor: C.navy,
-    pointHoverBackgroundColor: C.navy,
-    fill: true,
-    tension: .3,
-    yAxisID: 'y'
-  });
-
-  // 2) Fetch compare benchmarks on RIGHT y-axis (y1)
-  _chartBenchmarkData = {};
-  const compColors = [C.blue, C.blueLight];
-  const compInputs = [
-    document.getElementById('compare1').value.trim().toUpperCase(),
-    document.getElementById('compare2').value.trim().toUpperCase()
-  ].filter(Boolean);
-
-  for (let i = 0; i < compInputs.length; i++) {
-    const sym = compInputs[i];
-    try {
-      const data = await fetchChart(sym, currentRange, "1d");
-      const pts = (data.points || []).filter(p => p.close !== null);
-      if (pts.length > 1) {
-        const ptsMap = {};
-        pts.forEach(p => { ptsMap[p.date.slice(0,10)] = p.close; });
-        _chartBenchmarkData[sym] = ptsMap;
-        // Align to portfolio dates
-        const aligned = chartDates.map(d => ptsMap[d] != null ? ptsMap[d] : null);
-        datasets.push({
-          label: sym,
-          data: aligned,
-          borderColor: compColors[i],
-          borderWidth: 2,
-          pointRadius: 1.5,
-          pointHoverRadius: 5,
-          pointBackgroundColor: compColors[i],
-          pointHoverBackgroundColor: compColors[i],
-          fill: false,
-          tension: .3,
-          spanGaps: true,
-          yAxisID: 'y1'
-        });
-      }
-    } catch(e) { console.warn("Benchmark fetch failed:", sym); }
-  }
-
-  const hasBenchmarks = datasets.length > 1;
-
-  // Compute benchmark period returns for tooltip footer
-  const benchmarkReturns = {};
-  compInputs.forEach(sym => {
-    const ptsMap = _chartBenchmarkData[sym];
-    if (!ptsMap) return;
-    const bDates = Object.keys(ptsMap).sort();
-    if (bDates.length >= 2) {
-      const first = ptsMap[bDates[0]], last = ptsMap[bDates[bDates.length-1]];
-      benchmarkReturns[sym] = first > 0 ? ((last - first) / first * 100) : 0;
-    }
-  });
-
-  // 3) Build chart
-  const ctx = document.getElementById('portfolioLineChart').getContext('2d');
-  if (portfolioLineChart) portfolioLineChart.destroy();
-
-  portfolioLineChart = new Chart(ctx, {
-    type: 'line',
-    data: { labels: chartDates, datasets },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      interaction: { mode: 'index', intersect: false },
-      plugins: {
-        legend: {
-          display: hasBenchmarks,
-          labels: { font: { family: 'Arial', size: 11 }, color: C.textSec, boxWidth: 10, padding: 16 }
-        },
-        tooltip: {
-          backgroundColor: C.bg,
-          titleColor: C.text,
-          bodyColor: C.text,
-          borderColor: C.border,
-          borderWidth: 1,
-          titleFont: { family: 'Arial, Helvetica, sans-serif', size: 12, weight: '700' },
-          bodyFont: { family: 'Arial, Helvetica, sans-serif', size: 12 },
-          footerFont: { family: 'Arial, Helvetica, sans-serif', size: 11, weight: '600' },
-          footerColor: C.navy,
-          padding: 12,
-          boxPadding: 4,
-          usePointStyle: true,
-          callbacks: {
-            title: function(items) {
-              return items[0]?.label || '';
-            },
-            label: function(context) {
-              const ds = context.dataset;
-              const val = context.parsed.y;
-              if (val == null) return null;
-              if (ds.yAxisID === 'y') {
-                return ' Portfolio: ' + fmt(val);
-              } else {
-                return ' ' + ds.label + ': ' + fmt(val);
-              }
-            },
-            afterBody: function(items) {
-              const lines = [];
-              // Add portfolio period return
-              lines.push('');
-              lines.push('Period Return (' + rangeLabel() + '):');
-              lines.push('  Portfolio: ' + fmtPct(pfReturnPct));
-              // Add benchmark returns
-              compInputs.forEach(sym => {
-                if (benchmarkReturns[sym] != null) {
-                  lines.push('  ' + sym + ': ' + fmtPct(benchmarkReturns[sym]));
-                }
+window.renderPortfolioChart=async function(){
+  const holdings=window._holdings||[];if(!holdings.length)return;
+  const loadEl=document.getElementById('chartLoading');loadEl.style.display='block';
+  document.getElementById('chartStats').innerHTML='';
+  // Fetch historical data for each holding
+  const holdingSeries={};
+  for(const h of holdings){try{const data=await fetchChart(h.ticker,currentRange,"1d");const pts=(data.points||[]).filter(p=>p.close!==null);const map={};pts.forEach(p=>{map[p.date.slice(0,10)]=p.close;});holdingSeries[h.ticker]={map,quantity:h.quantity};}catch(e){}}
+  const allDates=new Set();Object.values(holdingSeries).forEach(s=>Object.keys(s.map).forEach(d=>allDates.add(d)));
+  const dates=Array.from(allDates).sort();if(!dates.length){loadEl.style.display='none';return;}
+  // Portfolio value per date
+  const pfValues=dates.map(d=>{let t=0;Object.values(holdingSeries).forEach(s=>{if(s.map[d]!=null)t+=s.map[d]*s.quantity;});return t;});
+  const valid=[];dates.forEach((d,i)=>{if(pfValues[i]>0)valid.push({date:d,value:pfValues[i]});});
+  if(!valid.length){loadEl.style.display='none';return;}
+  const chartDates=valid.map(d=>d.date),chartValues=valid.map(d=>d.value);
+  _chartPortfolioSeries=chartValues;
+  const pfStart=chartValues[0],pfEnd=chartValues[chartValues.length-1];
+  const datasets=[{label:'Portfolio',data:chartValues,borderColor:C.navy,backgroundColor:'rgba(0,60,113,.06)',borderWidth:2.5,pointRadius:1.5,pointHoverRadius:6,pointBackgroundColor:C.navy,pointHoverBackgroundColor:C.navy,fill:true,tension:.3,yAxisID:'y'}];
+  // Benchmarks
+  _chartBenchmarkSeries={};
+  const compInputs=[document.getElementById('compare1').value.trim().toUpperCase(),document.getElementById('compare2').value.trim().toUpperCase()].filter(Boolean);
+  const compColors=[C.blue,C.blueLight];
+  for(let i=0;i<compInputs.length;i++){
+    const sym=compInputs[i];
+    try{const data=await fetchChart(sym,currentRange,"1d");const pts=(data.points||[]).filter(p=>p.close!==null);
+      if(pts.length>1){const ptsMap={};pts.forEach(p=>{ptsMap[p.date.slice(0,10)]=p.close;});_chartBenchmarkSeries[sym]=ptsMap;
+        const aligned=chartDates.map(d=>ptsMap[d]!=null?ptsMap[d]:null);
+        datasets.push({label:sym,data:aligned,borderColor:compColors[i],borderWidth:2,pointRadius:1,pointHoverRadius:5,pointBackgroundColor:compColors[i],pointHoverBackgroundColor:compColors[i],fill:false,tension:.3,spanGaps:true,yAxisID:'y1'});
+      }}catch(e){}}
+  const hasBenchmarks=datasets.length>1;
+  // Compute stats for stat boxes
+  const pfRetPct=pfStart>0?((pfEnd-pfStart)/pfStart*100):0;
+  let bmRetPct=null,bmSym=compInputs[0]||'';
+  if(bmSym&&_chartBenchmarkSeries[bmSym]){const bd=Object.keys(_chartBenchmarkSeries[bmSym]).sort();if(bd.length>=2){const bf=_chartBenchmarkSeries[bmSym][bd[0]],bl=_chartBenchmarkSeries[bmSym][bd[bd.length-1]];bmRetPct=bf>0?((bl-bf)/bf*100):0;}}
+  const alpha=bmRetPct!=null?(pfRetPct-bmRetPct):null;
+  // Growth of $10K
+  const gPf=pfStart>0?(10000*(pfEnd/pfStart)):10000;
+  const gBm=bmRetPct!=null?(10000*(1+bmRetPct/100)):null;
+  // Portfolio variance/stdev from daily returns
+  const dailyReturns=[];for(let j=1;j<chartValues.length;j++){if(chartValues[j-1]>0)dailyReturns.push((chartValues[j]-chartValues[j-1])/chartValues[j-1]);}
+  const meanRet=dailyReturns.length?dailyReturns.reduce((a,b)=>a+b,0)/dailyReturns.length:0;
+  const variance=dailyReturns.length?dailyReturns.reduce((a,r)=>a+(r-meanRet)**2,0)/dailyReturns.length:0;
+  const stdev=Math.sqrt(variance);
+  const annStdev=stdev*Math.sqrt(252)*100;
+  const annVar=variance*252*10000;
+  // Stat boxes
+  let statsHtml='';
+  if(alpha!=null)statsHtml+='<div class="chart-stat-box"><div class="chart-stat-label">Alpha vs '+bmSym+' ('+rangeLabel()+')</div><div class="chart-stat-value" style="color:'+pctColor(alpha)+';">'+fmtPct(alpha)+'</div><div class="chart-stat-sub">Portfolio '+fmtPct(pfRetPct)+' vs '+bmSym+' '+fmtPct(bmRetPct)+'</div></div>';
+  statsHtml+='<div class="chart-stat-box"><div class="chart-stat-label">Growth of $10,000 ('+rangeLabel()+')</div><div class="chart-stat-value">Portfolio: '+fmtInt(gPf)+'</div><div class="chart-stat-sub">'+(gBm!=null?bmSym+': '+fmtInt(gBm):'Add benchmark to compare')+'</div></div>';
+  statsHtml+='<div class="chart-stat-box"><div class="chart-stat-label">Portfolio Risk (Annualized)</div><div class="chart-stat-value">&#963; '+annStdev.toFixed(1)+'%</div><div class="chart-stat-sub">Variance: '+(annVar).toFixed(2)+'%&sup2;</div></div>';
+  document.getElementById('chartStats').innerHTML=statsHtml;
+  // Build chart with zoom plugin
+  const ctx=document.getElementById('portfolioLineChart').getContext('2d');
+  if(portfolioLineChart)portfolioLineChart.destroy();
+  portfolioLineChart=new Chart(ctx,{type:'line',data:{labels:chartDates,datasets},
+    options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},
+      plugins:{
+        legend:{display:hasBenchmarks,labels:{font:{family:'Arial',size:11},color:C.textSec,boxWidth:10,padding:16}},
+        tooltip:{backgroundColor:C.bg,titleColor:C.text,bodyColor:C.text,borderColor:C.border,borderWidth:1,
+          titleFont:{family:'Arial',size:12,weight:'700'},bodyFont:{family:'Arial',size:12},footerFont:{family:'Arial',size:11,weight:'600'},footerColor:C.navy,padding:12,boxPadding:4,usePointStyle:true,
+          callbacks:{
+            title:function(items){return items[0]?.label||'';},
+            label:function(ctx){const v=ctx.parsed.y;if(v==null)return null;return ctx.dataset.yAxisID==='y'?' Portfolio: '+fmt(v):' '+ctx.dataset.label+': '+fmt(v);},
+            afterBody:function(items){
+              const idx=items[0]?.dataIndex;if(idx==null)return[];
+              const lines=[''];
+              // Point-in-time return from start to THIS point
+              const pfAtPoint=chartValues[idx];const pfPtRet=pfStart>0?((pfAtPoint-pfStart)/pfStart*100):0;
+              lines.push('Return to Date:');
+              lines.push('  Portfolio: '+fmtPct(pfPtRet));
+              compInputs.forEach(sym=>{
+                const ptsMap=_chartBenchmarkSeries[sym];if(!ptsMap)return;
+                const bd=Object.keys(ptsMap).sort();if(bd.length<2)return;
+                const bFirst=ptsMap[bd[0]],bAtDate=ptsMap[chartDates[idx]];
+                if(bFirst>0&&bAtDate!=null){lines.push('  '+sym+': '+fmtPct(((bAtDate-bFirst)/bFirst)*100));}
               });
-              // Alpha
-              if (compInputs.length > 0 && benchmarkReturns[compInputs[0]] != null) {
-                const alpha = pfReturnPct - benchmarkReturns[compInputs[0]];
-                lines.push('  Alpha vs ' + compInputs[0] + ': ' + fmtPct(alpha));
-              }
+              if(compInputs[0]&&_chartBenchmarkSeries[compInputs[0]]){
+                const ptsMap=_chartBenchmarkSeries[compInputs[0]];const bd=Object.keys(ptsMap).sort();
+                if(bd.length>=2){const bFirst=ptsMap[bd[0]],bAtDate=ptsMap[chartDates[idx]];
+                  if(bFirst>0&&bAtDate!=null){const bRet=((bAtDate-bFirst)/bFirst)*100;lines.push('  Alpha: '+fmtPct(pfPtRet-bRet));}}}
               return lines;
             }
           }
-        }
+        },
+        zoom:{zoom:{wheel:{enabled:true},pinch:{enabled:true},mode:'x',scaleMode:'x'},pan:{enabled:true,mode:'x'},limits:{x:{minRange:5}}}
       },
-      scales: {
-        x: {
-          grid: chartGrid,
-          ticks: { ...chartTicks, maxTicksLimit: 12 },
-          border: { display: false }
-        },
-        y: {
-          type: 'linear',
-          position: 'left',
-          grid: chartGrid,
-          ticks: {
-            ...chartTicks,
-            callback: function(v) { return '$' + (v >= 1e6 ? (v/1e6).toFixed(1)+'M' : v >= 1e3 ? (v/1e3).toFixed(0)+'K' : v.toFixed(0)); }
-          },
-          border: { display: false },
-          title: { display: true, text: 'Portfolio Value ($)', font: { family: 'Arial', size: 12, weight: '600' }, color: C.textSec }
-        },
-        y1: {
-          type: 'linear',
-          position: 'right',
-          display: hasBenchmarks,
-          grid: { drawOnChartArea: false },
-          ticks: {
-            ...chartTicks,
-            callback: function(v) { return '$' + v.toFixed(2); }
-          },
-          border: { display: false },
-          title: { display: hasBenchmarks, text: 'Benchmark Price ($)', font: { family: 'Arial', size: 12, weight: '600' }, color: C.textSec }
-        }
+      scales:{
+        x:{grid:chartGrid,ticks:{...chartTicks,maxTicksLimit:12},border:{display:false}},
+        y:{type:'linear',position:'left',grid:chartGrid,ticks:{...chartTicks,callback:function(v){return '$'+(v>=1e6?(v/1e6).toFixed(1)+'M':v>=1e3?(v/1e3).toFixed(0)+'K':v.toFixed(0));}},border:{display:false},title:{display:true,text:'Portfolio Value ($)',font:{family:'Arial',size:12,weight:'600'},color:C.textSec}},
+        y1:{type:'linear',position:'right',display:hasBenchmarks,grid:{drawOnChartArea:false},ticks:{...chartTicks,callback:function(v){return '$'+v.toFixed(2);}},border:{display:false},title:{display:hasBenchmarks,text:'Benchmark Price ($)',font:{family:'Arial',size:12,weight:'600'},color:C.textSec}}
       }
     }
   });
-
-  loadEl.style.display = 'none';
+  loadEl.style.display='none';
 };
 
 // ── Morningstar Style Box ──
-function renderMorningstarBox(holdings) {
-  const el = document.getElementById('mstar-card');
-  if (!el) return;
-  // Compute weighted average position
-  // X-axis: Value(0) - Blend(1) - Growth(2) based on sector tilt
-  // Y-axis: Large(0) - Mid(1) - Small(2) based on mktCap
-  const tv = holdings.reduce((s,h) => s + (h.currentPrice||0)*h.quantity, 0);
-  if (tv === 0) { el.innerHTML = ''; return; }
-  let xSum=0, ySum=0;
-  const growthSectors = new Set(["Technology","Consumer Discretionary","Communication Services"]);
-  const valueSectors = new Set(["Financials","Energy","Utilities","Consumer Staples","Real Estate"]);
-  const largeCats = new Set(["Mega Cap","Large Cap","Large Cap Growth","Large Cap Value","Large Cap Blend"]);
-  const midCats = new Set(["Mid Cap","Mid Cap Growth","Mid Cap Value","Mid Cap Blend"]);
-  const smallCats = new Set(["Small Cap","Small Cap Growth","Small Cap Value","Small Cap Blend","Micro Cap"]);
-
-  holdings.forEach(h => {
-    const w = tv > 0 ? ((h.currentPrice||0)*h.quantity)/tv : 0;
-    // X: 0=value, 1=blend, 2=growth
-    let x = 1;
-    if (growthSectors.has(h.sector)) x = 2;
-    else if (valueSectors.has(h.sector)) x = 0;
-    // Y: 0=large, 1=mid, 2=small
-    let y = 0;
-    const cat = h.mktCapCategory || '';
-    if (largeCats.has(cat)) y = 0;
-    else if (midCats.has(cat)) y = 1;
-    else if (smallCats.has(cat)) y = 2;
-    else if (cat === 'N/A' || cat === 'ETF') y = 0; // default ETFs to large
-    xSum += x * w;
-    ySum += y * w;
-  });
-
-  // Position as % within 3x3 grid (0-100%)
-  const xPct = (xSum / 2) * 100; // 0=left, 100=right
-  const yPct = (ySum / 2) * 100; // 0=top, 100=bottom
-  // Convert to pixel position within 240x240 grid
-  const dotLeft = Math.max(9, Math.min(231, (xPct/100)*240));
-  const dotTop = Math.max(9, Math.min(231, (yPct/100)*240));
-
-  el.innerHTML = '<div class="card"><div class="card-title">Morningstar Style Box</div><div class="card-body">'+
-    '<div class="mstar-labels-top"><span>Value</span><span>Blend</span><span>Growth</span></div>'+
-    '<div class="mstar-container">'+
-      '<div class="mstar-labels-left"><span>Large</span><span>Mid</span><span>Small</span></div>'+
-      '<div class="mstar-grid">'+
-        '<div class="mstar-cell">Large<br>Value</div><div class="mstar-cell">Large<br>Blend</div><div class="mstar-cell">Large<br>Growth</div>'+
-        '<div class="mstar-cell">Mid<br>Value</div><div class="mstar-cell">Mid<br>Blend</div><div class="mstar-cell">Mid<br>Growth</div>'+
-        '<div class="mstar-cell">Small<br>Value</div><div class="mstar-cell">Small<br>Blend</div><div class="mstar-cell">Small<br>Growth</div>'+
-        '<div class="mstar-dot" style="left:'+dotLeft+'px;top:'+dotTop+'px;" title="Your Portfolio"></div>'+
-      '</div>'+
-    '</div>'+
-    '<div style="text-align:center;margin-top:12px;font-size:11px;color:'+C.textSec+';">Your portfolio weighted position</div>'+
-  '</div><div class="card-sources"><strong>Sources:</strong><br>&#8226; Perry Asset Management — Morningstar-style classification based on holdings sector &amp; market cap</div></div>';
+function renderMorningstarBox(holdings){
+  const el=document.getElementById('mstar-card');if(!el)return;
+  const tv=holdings.reduce((s,h)=>s+(h.currentPrice||0)*h.quantity,0);if(tv===0){el.innerHTML='';return;}
+  let xSum=0,ySum=0;
+  const growth=new Set(["Information Technology","Consumer Discretionary","Communication Services","Digital Assets"]);
+  const value=new Set(["Financials","Energy","Utilities","Consumer Staples","Real Estate","Materials"]);
+  const lg=new Set(["Mega Cap","Large Cap","Large Cap Growth","Large Cap Value","Large Cap Blend","Large Fund"]);
+  const md=new Set(["Mid Cap","Mid Cap Growth","Mid Cap Value","Mid Cap Blend","Mid-Sized Fund"]);
+  const sm=new Set(["Small Cap","Small Cap Growth","Small Cap Value","Small Cap Blend","Micro Cap","Small Fund"]);
+  holdings.forEach(h=>{const w=((h.currentPrice||0)*h.quantity)/tv;let x=1;if(growth.has(h.sector))x=2;else if(value.has(h.sector))x=0;let y=0;const cat=h.mktCapCategory||'';if(lg.has(cat))y=0;else if(md.has(cat))y=1;else if(sm.has(cat))y=2;xSum+=x*w;ySum+=y*w;});
+  const dotLeft=Math.max(9,Math.min(231,(xSum/2)*240));const dotTop=Math.max(9,Math.min(231,(ySum/2)*240));
+  el.innerHTML='<div class="card"><div class="card-title">Morningstar Style Box</div><div class="card-body"><div class="mstar-labels-top"><span>Value</span><span>Blend</span><span>Growth</span></div><div class="mstar-container"><div class="mstar-labels-left"><span>Large</span><span>Mid</span><span>Small</span></div><div class="mstar-grid"><div class="mstar-cell">Large<br>Value</div><div class="mstar-cell">Large<br>Blend</div><div class="mstar-cell">Large<br>Growth</div><div class="mstar-cell">Mid<br>Value</div><div class="mstar-cell">Mid<br>Blend</div><div class="mstar-cell">Mid<br>Growth</div><div class="mstar-cell">Small<br>Value</div><div class="mstar-cell">Small<br>Blend</div><div class="mstar-cell">Small<br>Growth</div><div class="mstar-dot" style="left:'+dotLeft+'px;top:'+dotTop+'px;" title="Your Portfolio"></div></div></div><div style="text-align:center;margin-top:12px;font-size:11px;color:'+C.textSec+';">Your portfolio weighted position</div></div><div class="card-sources"><strong>Sources:</strong><br>&#8226; Perry Asset Management — Holdings sector &amp; market cap classification</div></div>';
 }
 
 // ── Donuts ──
@@ -799,9 +719,9 @@ window.runResearch=async function(){
   if(!ticker&&type!=='search'){alert('Enter a ticker.');return;}
   document.getElementById('researchRawCard').style.display='';document.getElementById('researchOutput').textContent='Fetching...';document.getElementById('researchChartCard').style.display='none';document.getElementById('researchResults').innerHTML='';
   try{
-    if(type==='quote'){const d=await fetchQuote(ticker);const chg=d.change||0,chgPct=d.changePercent||0,cc=chg>=0?C.success:C.danger;document.getElementById('researchResults').innerHTML='<div class="metrics-row" style="margin-bottom:20px;">'+mc(d.symbol,fmt(d.price),fmtPct(chgPct)+' ('+fmt(chg)+')',cc)+mc('Prev Close',fmt(d.previousClose),'','#5A6A7A')+mc('Day Range',(d.intradayLow?fmt(d.intradayLow):'—')+' — '+(d.intradayHigh?fmt(d.intradayHigh):'—'),'','#5A6A7A')+mc('Volume',d.volume?Number(d.volume).toLocaleString():'—','','#5A6A7A')+'</div>';document.getElementById('researchOutput').textContent=JSON.stringify(d,null,2);}
-    else if(type==='chart'){const range=document.getElementById('researchRange').value;const d=await fetchChart(ticker,range,'1d');const pts=(d.points||[]).filter(p=>p.close!==null);document.getElementById('researchChartCard').style.display='';document.getElementById('researchChartTitle').textContent=ticker+' Price ('+range+')';const ctx=document.getElementById('researchChart').getContext('2d');if(researchChart)researchChart.destroy();researchChart=new Chart(ctx,{type:'line',data:{labels:pts.map(p=>p.date.slice(0,10)),datasets:[{label:ticker,data:pts.map(p=>p.close),borderColor:C.navy,backgroundColor:'rgba(0,60,113,.06)',borderWidth:2.5,pointRadius:0,pointHoverRadius:5,pointHoverBackgroundColor:C.navy,fill:true,tension:.3}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{...chartTooltip,callbacks:{label:c=>' '+fmt(c.parsed.y)}}},scales:{x:{grid:chartGrid,ticks:{...chartTicks,maxTicksLimit:12},border:{display:false}},y:{grid:chartGrid,ticks:{...chartTicks,callback:v=>'$'+v.toFixed(2)},border:{display:false}}}}});document.getElementById('researchOutput').textContent=pts.length+' points.\n'+JSON.stringify(d.points?.slice(0,3),null,2)+'\n...';}
-    else if(type==='search'){const d=await fetchSearch(ticker||document.getElementById('researchTicker').value.trim());let html='<div class="card"><div class="card-title">Search: "'+ticker+'"</div><div class="card-body"><table><thead><tr><th>Symbol</th><th>Name</th><th>Type</th><th>Exchange</th></tr></thead><tbody>';(d.results||[]).forEach(r=>{html+='<tr><td style="font-weight:700;color:'+C.navy+';">'+r.symbol+'</td><td>'+r.name+'</td><td>'+r.type+'</td><td>'+r.exchange+'</td></tr>';});html+='</tbody></table></div><div class="card-sources"><strong>Sources:</strong><br>&#8226; Yahoo Finance</div></div>';document.getElementById('researchResults').innerHTML=html;document.getElementById('researchOutput').textContent=JSON.stringify(d,null,2);}
+    if(type==='quote'){const d=await fetchQuote(ticker);const chg=d.change||0,chgPct=d.changePercent||0,cc=chg>=0?C.success:C.danger;document.getElementById('researchResults').innerHTML='<div class="metrics-row" style="margin-bottom:20px;">'+mcBig(d.symbol,fmt(d.price),fmtPct(chgPct)+' ('+fmt(chg)+')',cc)+mcBig('Prev Close',fmt(d.previousClose),'',C.textSec)+mcBig('Day Range',(d.intradayLow?fmt(d.intradayLow):'—')+' — '+(d.intradayHigh?fmt(d.intradayHigh):'—'),'',C.textSec)+mcBig('Volume',d.volume?Number(d.volume).toLocaleString():'—','',C.textSec)+'</div>';document.getElementById('researchOutput').textContent=JSON.stringify(d,null,2);}
+    else if(type==='chart'){const range=document.getElementById('researchRange').value;const d=await fetchChart(ticker,range,'1d');const pts=(d.points||[]).filter(p=>p.close!==null);document.getElementById('researchChartCard').style.display='';document.getElementById('researchChartTitle').textContent=ticker+' Price ('+range+')';const ctx=document.getElementById('researchChart').getContext('2d');if(researchChart)researchChart.destroy();researchChart=new Chart(ctx,{type:'line',data:{labels:pts.map(p=>p.date.slice(0,10)),datasets:[{label:ticker,data:pts.map(p=>p.close),borderColor:C.navy,backgroundColor:'rgba(0,60,113,.06)',borderWidth:2.5,pointRadius:0,pointHoverRadius:5,pointHoverBackgroundColor:C.navy,fill:true,tension:.3}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{...chartTooltip,callbacks:{label:c=>' '+fmt(c.parsed.y)}}},scales:{x:{grid:chartGrid,ticks:{...chartTicks,maxTicksLimit:12},border:{display:false}},y:{grid:chartGrid,ticks:{...chartTicks,callback:v=>'$'+v.toFixed(2)},border:{display:false}}}}});document.getElementById('researchOutput').textContent=pts.length+' points loaded.';}
+    else if(type==='search'){const d=await fetchSearch(ticker);let html='<div class="card"><div class="card-title">Search: "'+ticker+'"</div><div class="card-body"><table><thead><tr><th>Symbol</th><th>Name</th><th>Type</th><th>Exchange</th></tr></thead><tbody>';(d.results||[]).forEach(r=>{html+='<tr><td style="font-weight:700;color:'+C.navy+';">'+r.symbol+'</td><td>'+r.name+'</td><td>'+r.type+'</td><td>'+r.exchange+'</td></tr>';});html+='</tbody></table></div><div class="card-sources"><strong>Sources:</strong><br>&#8226; Yahoo Finance</div></div>';document.getElementById('researchResults').innerHTML=html;document.getElementById('researchOutput').textContent=JSON.stringify(d,null,2);}
   }catch(e){document.getElementById('researchOutput').textContent='Error: '+e.message;}
 };
 </script>
