@@ -41,11 +41,12 @@ html,body{font-family:Arial,Helvetica,sans-serif;background:var(--bg);color:var(
 .metric-sub{font-size:11px;font-weight:600;margin-top:3px;}
 /* Compact benchmark cards */
 .bench-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-bottom:22px;}
-.bench-card{background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);padding:10px 14px;box-shadow:var(--shadow);}
+.bench-card{background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);padding:10px 14px;box-shadow:var(--shadow);height:100px;overflow:hidden;position:relative;}
 .bench-label{font-size:9px;font-weight:700;color:var(--text-sec);text-transform:uppercase;letter-spacing:.5px;margin-bottom:2px;}
 .bench-value{font-size:14px;font-weight:700;color:var(--navy);line-height:1.2;}
 .bench-sub{font-size:10px;font-weight:600;margin-top:1px;}
-.bench-spark{height:28px;margin-top:4px;}
+.bench-spark-wrap{width:100%;height:24px;position:absolute;bottom:8px;left:0;padding:0 14px;}
+.bench-spark{display:block;width:100%;height:100%;}
 .grid-2{display:grid;grid-template-columns:1fr 1fr;gap:20px;}
 .grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:20px;}
 @media(max-width:900px){.grid-2,.grid-3{grid-template-columns:1fr;}}
@@ -570,13 +571,14 @@ async function fetchBenchmarkSparklines(tickers,labels){
       const displayVal=isVix?last.toFixed(2):fmtPct(ret);
       const displaySub=isVix?fmtPct(ret)+' chg':fmt(last);
       const cc=pctColor(isVix?-ret:ret);
-      el.innerHTML='<div class="bench-label">'+label+' ('+rangeLabel()+')</div><div class="bench-value" style="font-size:14px;color:'+cc+';">'+displayVal+'</div><div class="bench-sub" style="color:'+C.textSec+';">'+displaySub+'</div><canvas class="bench-spark" id="spark-'+label+'"></canvas>';
-      // Draw sparkline
-      const sparkCtx=document.getElementById('spark-'+label);
-      if(sparkCtx){
+      el.innerHTML='<div class="bench-label">'+label+' ('+rangeLabel()+')</div><div class="bench-value" style="font-size:14px;color:'+cc+';">'+displayVal+'</div><div class="bench-sub" style="color:'+C.textSec+';">'+displaySub+'</div><div class="bench-spark-wrap"><canvas id="spark-'+label+'" width="200" height="24"></canvas></div>';
+      // Draw sparkline — responsive OFF, fixed size, no events
+      const sparkCanvas=document.getElementById('spark-'+label);
+      if(sparkCanvas){
+        sparkCanvas.style.width='100%';sparkCanvas.style.height='24px';
         const closes=pts.map(p=>p.close);
         if(sparkCharts[label])sparkCharts[label].destroy();
-        sparkCharts[label]=new Chart(sparkCtx,{type:'line',data:{labels:closes.map((_,j)=>j),datasets:[{data:closes,borderColor:ret>=0?C.success:C.danger,borderWidth:1.5,pointRadius:0,fill:false,tension:.4}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{enabled:false}},scales:{x:{display:false},y:{display:false}},animation:false}});
+        sparkCharts[label]=new Chart(sparkCanvas,{type:'line',data:{labels:closes.map((_,j)=>j),datasets:[{data:closes,borderColor:ret>=0?C.success:C.danger,borderWidth:1.5,pointRadius:0,fill:false,tension:.4}]},options:{responsive:false,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{enabled:false}},scales:{x:{display:false},y:{display:false}},animation:false,events:[]}});
       }
     }catch(e){if(el)el.querySelector('.bench-value').textContent='—';}
   }
