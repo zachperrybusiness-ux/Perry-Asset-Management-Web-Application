@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Perry Asset Management</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background: #0a0f1c;
+            color: #e2e8f0;
+            min-height: 100vh;
+        }
+        .header {
+            background: linear-gradient(135deg, #1a1f3a 0%, #0d1117 100%);
+            border-bottom: 1px solid #2d3748;
+            padding: 20px 32px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .header h1 {
+            font-size: 1.5rem;
+            font-weight: 600;
+            background: linear-gradient(135deg, #60a5fa, #a78bfa);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .auth-section { display: flex; gap: 12px; align-items: center; }
+        .btn {
+            padding: 8px 20px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.875rem;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+        .btn-primary {
+            background: #3b82f6;
+            color: white;
+        }
+        .btn-primary:hover { background: #2563eb; }
+        .btn-outline {
+            background: transparent;
+            border: 1px solid #4b5563;
+            color: #9ca3af;
+        }
+        .btn-outline:hover {
+            border-color: #60a5fa;
+            color: #60a5fa;
+        }
+        .btn-research {
+            background: linear-gradient(135deg, #10b981, #059669);
+            color: white;
+            padding: 10px 24px;
+            font-size: 1rem;
+        }
+        .btn-research:hover { opacity: 0.9; }
+        .main-content {
+            max-width: 1200px;
+            margin: 40px auto;
+            padding: 0 32px;
+        }
+        .status-bar {
+            background: #1a1f3a;
+            border: 1px solid #2d3748;
+            border-radius: 8px;
+            padding: 16px 24px;
+            margin-bottom: 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .status-dot {
+            width: 8px; height: 8px;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 8px;
+        }
+        .status-dot.green { background: #10b981; }
+        .status-dot.red { background: #ef4444; }
+        .card-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 24px;
+            margin-top: 24px;
+        }
+        .card {
+            background: #1a1f3a;
+            border: 1px solid #2d3748;
+            border-radius: 12px;
+            padding: 24px;
+        }
+        .card h3 {
+            font-size: 1.1rem;
+            margin-bottom: 16px;
+            color: #94a3b8;
+        }
+        #research-output {
+            background: #0d1117;
+            border: 1px solid #2d3748;
+            border-radius: 8px;
+            padding: 16px;
+            min-height: 120px;
+            font-family: 'Fira Code', monospace;
+            font-size: 0.85rem;
+            color: #a5f3fc;
+            white-space: pre-wrap;
+            overflow-y: auto;
+            max-height: 400px;
+        }
+        #user-data-output {
+            background: #0d1117;
+            border: 1px solid #2d3748;
+            border-radius: 8px;
+            padding: 16px;
+            min-height: 80px;
+            font-size: 0.9rem;
+        }
+        .hidden { display: none; }
+        .user-email { color: #60a5fa; font-size: 0.875rem; }
+    </style>
+</head>
+<body>
+
+    <!-- HEADER -->
+    <div class="header">
+        <h1>Perry Asset Management</h1>
+        <div class="auth-section">
+            <span id="user-display" class="user-email"></span>
+            <button id="login-btn" class="btn btn-primary" onclick="handleLogin()">Sign In</button>
+            <button id="logout-btn" class="btn btn-outline hidden" onclick="handleLogout()">Sign Out</button>
+        </div>
+    </div>
+
+    <!-- MAIN -->
+    <div class="main-content">
+
+        <!-- STATUS BAR -->
+        <div class="status-bar">
+            <div>
+                <span id="firebase-status-dot" class="status-dot red"></span>
+                <span id="firebase-status-text">Firebase: Not Connected</span>
+            </div>
+            <div>
+                <span id="worker-status-dot" class="status-dot red"></span>
+                <span id="worker-status-text">Data Proxy: Not Connected</span>
+            </div>
+        </div>
+
+        <!-- CARDS -->
+        <div class="card-grid">
+
+            <!-- RESEARCH CARD -->
+            <div class="card">
+                <h3>📊 Market Research</h3>
+                <div style="display: flex; gap: 12px; margin-bottom: 16px;">
+                    <input type="text" id="ticker-input" placeholder="Enter ticker (e.g. AAPL)"
+                        style="flex:1; padding: 10px; background: #0d1117; border: 1px solid #4b5563;
+                        border-radius: 6px; color: #e2e8f0; font-size: 0.95rem;">
+                    <button class="btn btn-research" onclick="handleResearch()">Research</button>
+                </div>
+                <div id="research-output">Waiting for research query...</div>
+            </div>
+
+            <!-- USER DATA CARD -->
+            <div class="card">
+                <h3>💾 Saved Data</h3>
+                <div style="margin-bottom: 16px; display: flex; gap: 12px;">
+                    <input type="text" id="note-input" placeholder="Add a research note..."
+                        style="flex:1; padding: 10px; background: #0d1117; border: 1px solid #4b5563;
+                        border-radius: 6px; color: #e2e8f0; font-size: 0.95rem;">
+                    <button class="btn btn-primary" onclick="saveNote()">Save</button>
+                </div>
+                <div id="user-data-output">Sign in to view saved data.</div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- ============================================================ -->
+    <!-- FIREBASE SDK (loaded from CDN) -->
+    <!-- ============================================================ -->
+    <script type="module">
+
+        // -------------------------------------------------------
+        // STEP A: Import Firebase modules
+        // -------------------------------------------------------
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+        import { getAuth, signInWithPopup, signOut, GoogleAuthProvider, onAuthStateChanged }
+            from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+        import { getFirestore, collection, addDoc, getDocs, query, where, orderBy, serverTimestamp }
+            from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+        // -------------------------------------------------------
+        // STEP B: Your Firebase config (REPLACE WITH YOUR VALUES from Phase 4)
+        // -------------------------------------------------------
+        const firebaseConfig = {
+            apiKey:            "YOUR_API_KEY",
+            authDomain:        "YOUR_PROJECT_ID.firebaseapp.com",
+            projectId:         "YOUR_PROJECT_ID",
+            storageBucket:     "YOUR_PROJECT_ID.appspot.com",
+            messagingSenderId: "YOUR_SENDER_ID",
+            appId:             "YOUR_APP_ID"
+        };
+
+        // -------------------------------------------------------
+        // STEP C: Initialize Firebase
+        // -------------------------------------------------------
+        const app  = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db   = getFirestore(app);
+
+        // Update status indicator
+        document.getElementById("firebase-status-dot").classList.replace("red", "green");
+        document.getElementById("firebase-status-text").textContent = "Firebase: Connected";
+
+        // -------------------------------------------------------
+        // STEP D: Authentication handlers
+        // -------------------------------------------------------
+        const provider = new GoogleAuthProvider();
+
+        window.handleLogin = async function() {
+            try {
+                await signInWithPopup(auth, provider);
+            } catch (err) {
+                console.error("Login failed:", err);
+                alert("Login failed: " + err.message);
+            }
+        };
+
+        window.handleLogout = async function() {
+            await signOut(auth);
+        };
+
+        // Listen for auth state changes
+        onAuthStateChanged(auth, (user) => {
+            if (user) {
+                document.getElementById("user-display").textContent = user.email;
+                document.getElementById("login-btn").classList.add("hidden");
+                document.getElementById("logout-btn").classList.remove("hidden");
+                loadNotes(user.uid);
+            } else {
+                document.getElementById("user-display").textContent = "";
+                document.getElementById("login-btn").classList.remove("hidden");
+                document.getElementById("logout-btn").classList.add("hidden");
+                document.getElementById("user-data-output").textContent = "Sign in to view saved data.";
+            }
+        });
+
+        // -------------------------------------------------------
+        // STEP E: Firestore data operations
+        // -------------------------------------------------------
+        window.saveNote = async function() {
+            const user = auth.currentUser;
+            if (!user) { alert("Please sign in first."); return; }
+
+            const noteText = document.getElementById("note-input").value.trim();
+            if (!noteText) { alert("Enter a note first."); return; }
+
+            try {
+                await addDoc(collection(db, "notes"), {
+                    uid:       user.uid,
+                    text:      noteText,
+                    createdAt: serverTimestamp()
+                });
+                document.getElementById("note-input").value = "";
+                loadNotes(user.uid);
+            } catch (err) {
+                console.error("Save failed:", err);
+                alert("Save failed: " + err.message);
+            }
+        };
+
+        async function loadNotes(uid) {
+            try {
+                const q = query(
+                    collection(db, "notes"),
+                    where("uid", "==", uid),
+                    orderBy("createdAt", "desc")
+                );
+                const snapshot = await getDocs(q);
+                const output = document.getElementById("user-data-output");
+
+                if (snapshot.empty) {
+                    output.textContent = "No saved notes yet.";
+                    return;
+                }
+
+                output.innerHTML = "";
+                snapshot.forEach((doc) => {
+                    const data = doc.data();
+                    const date = data.createdAt
+                        ? new Date(data.createdAt.seconds * 1000).toLocaleString()
+                        : "just now";
+                    const div = document.createElement("div");
+                    div.style.cssText = "padding: 8px 0; border-bottom: 1px solid #2d3748;";
+                    div.innerHTML = `<span style="color:#94a3b8;font-size:0.75rem;">${date}</span>
+                                     <br/>${data.text}`;
+                    output.appendChild(div);
+                });
+            } catch (err) {
+                console.error("Load failed:", err);
+            }
+        }
+
+        // -------------------------------------------------------
+        // STEP F: Research button (calls Cloudflare Worker)
+        // -------------------------------------------------------
+        // REPLACE this URL with your Cloudflare Worker URL from Phase 9
+        const WORKER_URL = "https://YOUR_WORKER_NAME.YOUR_CF_SUBDOMAIN.workers.dev";
+
+        window.handleResearch = async function() {
+            const ticker = document.getElementById("ticker-input").value.trim().toUpperCase();
+            if (!ticker) { alert("Enter a ticker symbol."); return; }
+
+            const output = document.getElementById("research-output");
+            output.textContent = `Fetching data for ${ticker}...`;
+
+            try {
+                const res  = await fetch(`${WORKER_URL}/quote?symbol=${ticker}`);
+                const data = await res.json();
+
+                if (data.error) {
+                    output.textContent = `Error: ${data.error}`;
+                    return;
+                }
+
+                output.textContent = JSON.stringify(data, null, 2);
+
+                // Update worker status on success
+                document.getElementById("worker-status-dot").classList.replace("red", "green");
+                document.getElementById("worker-status-text").textContent = "Data Proxy: Connected";
+
+            } catch (err) {
+                output.textContent = `Fetch failed: ${err.message}\n\nMake sure your Cloudflare Worker is deployed (Phase 9).`;
+            }
+        };
+
+    </script>
+</body>
+</html>
