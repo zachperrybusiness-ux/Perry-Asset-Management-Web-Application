@@ -45,7 +45,6 @@ html,body{font-family:Arial,Helvetica,sans-serif;background:var(--bg);color:var(
 .bench-label{font-size:9px;font-weight:700;color:var(--text-sec);text-transform:uppercase;letter-spacing:.5px;margin-bottom:2px;}
 .bench-value{font-size:14px;font-weight:700;color:var(--navy);line-height:1.2;}
 .bench-sub{font-size:10px;font-weight:600;margin-top:1px;}
-.bench-spark-svg{display:block;width:100%;height:20px;margin-top:4px;}
 .grid-2{display:grid;grid-template-columns:1fr 1fr;gap:20px;}
 .grid-3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:20px;}
 @media(max-width:900px){.grid-2,.grid-3{grid-template-columns:1fr;}}
@@ -569,15 +568,9 @@ async function fetchBenchmarkSparklines(tickers,labels){
       const displayVal=isVix?last.toFixed(2):fmtPct(ret);
       const displaySub=isVix?fmtPct(ret)+' chg':fmt(last);
       const cc=pctColor(isVix?-ret:ret);
-      el.innerHTML='<div class="bench-label">'+label+' ('+rangeLabel()+')</div><div class="bench-value" style="font-size:14px;color:'+cc+';">'+displayVal+'</div><div class="bench-sub" style="color:'+C.textSec+';">'+displaySub+'</div>'+buildSparkSVG(pts.map(p=>p.close),ret>=0?C.success:C.danger);
+      el.innerHTML='<div class="bench-label">'+label+' ('+rangeLabel()+')</div><div class="bench-value" style="font-size:14px;color:'+cc+';">'+displayVal+'</div><div class="bench-sub" style="color:'+C.textSec+';">'+displaySub+'</div>';
     }catch(e){if(el)el.querySelector('.bench-value').textContent='—';}
   }
-}
-function buildSparkSVG(data,color){
-  if(!data||data.length<2)return'';
-  const w=120,h=20,mn=Math.min(...data),mx=Math.max(...data),rng=mx-mn||1;
-  const pts=data.map((v,i)=>{const x=(i/(data.length-1))*w;const y=h-((v-mn)/rng)*h;return x.toFixed(1)+','+y.toFixed(1);}).join(' ');
-  return '<svg class="bench-spark-svg" viewBox="0 0 '+w+' '+h+'" preserveAspectRatio="none"><polyline points="'+pts+'" fill="none" stroke="'+color+'" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>';
 }
 
 // ── Portfolio Table (Portfolio page) ──
