@@ -6,6 +6,7 @@
 <title>Perry Asset Management</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2.0.1/dist/chartjs-plugin-zoom.min.js"></script>
+<script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
 <style>
 :root{--navy:#003C71;--blue:#5B9BD5;--blue-light:#A8C8E8;--bg:#FFFFFF;--panel:#F4F6F9;--border:#D0D7E0;--text:#000000;--text-on-dark:#FFFFFF;--text-sec:#5A6A7A;--success:#2E7D52;--warning:#8B6914;--danger:#8B2A2A;--highlight-gray:#C8D0D8;--radius:6px;--shadow:0 2px 8px rgba(0,0,0,0.06);}
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
@@ -63,7 +64,10 @@ html,body{font-family:Arial,Helvetica,sans-serif;background:var(--bg);color:var(
 .btn-outline.active{background:var(--blue);color:var(--text-on-dark);border-color:var(--blue);}
 .btn-group{display:flex;gap:6px;margin-bottom:16px;flex-wrap:wrap;}
 table{width:100%;border-collapse:collapse;font-family:Arial,Helvetica,sans-serif;}
-th{background:var(--navy);color:var(--text-on-dark);font-size:11px;font-weight:600;padding:9px 10px;text-align:left;white-space:nowrap;}
+th{background:var(--navy);color:var(--text-on-dark);font-size:11px;font-weight:600;padding:9px 10px;text-align:left;white-space:nowrap;cursor:pointer;user-select:none;}
+th:hover{background:#004a8c;}
+th .sort-arrow{font-size:9px;opacity:.5;margin-left:3px;}
+th .sort-arrow.active{opacity:1;}
 td{font-size:11.5px;color:var(--text);padding:8px 10px;border-bottom:1px solid var(--border);}
 tr:nth-child(even) td{background:var(--panel);}
 tr:hover td{background:#EAF1F9;}
@@ -126,6 +130,19 @@ tr:hover td{background:#EAF1F9;}
 .chart-stat-value{font-size:13px;font-weight:700;color:var(--navy);line-height:1.3;}
 .chart-stat-sub{font-size:10px;color:var(--text-sec);margin-top:1px;}
 .zoom-hint{font-size:10px;color:var(--text-sec);text-align:center;margin-top:6px;font-style:italic;}
+/* File drop zone */
+.drop-zone{border:2px dashed var(--border);border-radius:var(--radius);padding:28px 20px;text-align:center;cursor:pointer;transition:all .2s;background:var(--panel);margin-bottom:16px;}
+.drop-zone:hover,.drop-zone.dragover{border-color:var(--blue);background:#e8f0fa;}
+.drop-zone-icon{font-size:28px;margin-bottom:8px;opacity:.5;}
+.drop-zone-text{font-size:13px;color:var(--text-sec);font-weight:600;}
+.drop-zone-sub{font-size:11px;color:var(--highlight-gray);margin-top:4px;}
+.drop-zone input[type="file"]{display:none;}
+/* Validation table */
+.validate-wrap{margin-top:16px;}
+.validate-wrap input{font-family:Arial,Helvetica,sans-serif;font-size:12px;padding:4px 8px;border:1px solid var(--border);border-radius:3px;width:100%;background:var(--bg);color:var(--text);}
+.validate-wrap input:focus{border-color:var(--blue);outline:none;}
+.validate-actions{display:flex;gap:10px;margin-top:12px;align-items:center;}
+.validate-count{font-size:12px;color:var(--text-sec);}
 </style>
 </head>
 <body>
@@ -222,6 +239,25 @@ tr:hover td{background:#EAF1F9;}
         <div class="form-group" style="min-width:100px;"><label>Cost/Share</label><input type="number" id="inputCost" placeholder="150.00" min="0" step="0.01"></div>
         <button class="btn" id="addBtn" onclick="addHolding()">Add Holding</button>
       </div>
+      <div style="border-top:1px solid var(--border);margin-top:16px;padding-top:16px;">
+        <div style="font-size:12px;font-weight:700;color:var(--navy);margin-bottom:8px;">Bulk Import from File</div>
+        <div class="drop-zone" id="dropZone" onclick="document.getElementById('fileInput').click()">
+          <div class="drop-zone-icon">&#128196;</div>
+          <div class="drop-zone-text">Drop a CSV, Excel, or PDF file here</div>
+          <div class="drop-zone-sub">or click to browse — expects columns: Ticker, Date, Shares, Cost/Share</div>
+          <input type="file" id="fileInput" accept=".csv,.xlsx,.xls,.pdf,.txt" onchange="handleFileSelect(event)">
+        </div>
+        <div id="scanStatus" class="status-bar"></div>
+        <div id="validateArea" style="display:none;">
+          <div style="font-size:12px;font-weight:700;color:var(--navy);margin-bottom:8px;">Validate Before Submitting</div>
+          <div class="validate-wrap"><div class="table-wrap" id="validateTableWrap"></div></div>
+          <div class="validate-actions">
+            <button class="btn" id="submitBulkBtn" onclick="submitBulkHoldings()">Submit to Portfolio</button>
+            <button class="btn-outline btn-sm" onclick="cancelBulkImport()">Cancel</button>
+            <span class="validate-count" id="validateCount"></span>
+          </div>
+        </div>
+      </div>
     </div></div>
     <div class="card"><div class="card-title">Your Holdings <span style="font-weight:400;font-size:12px;opacity:.7;" id="holdingsCount"></span></div><div class="card-body">
       <div id="holdingsStatus" class="status-bar"></div>
@@ -309,6 +345,11 @@ window.refreshAllPrices=async function(){
   for(const h of holdings){try{const q=await fetchQuote(h.ticker);const meta=classifyHolding(h.ticker,q);await updateHoldingDoc(h.id,{currentPrice:q.price||h.currentPrice,previousClose:q.previousClose||h.previousClose,companyName:q.name||h.companyName,sector:meta.sector,industry:meta.industry,assetClass:meta.assetClass,marketCap:meta.marketCap,mktCapCategory:meta.mktCapCategory,leverage:meta.leverage||'',lastUpdated:new Date().toISOString()});n++;}catch(e){console.warn(h.ticker,e);}}
   showStatus('holdingsStatus','&#10003; Refreshed '+n+'/'+holdings.length,'success');
   await loadHoldings();btn.disabled=false;btn.textContent='Refresh All Prices';
+};
+// Direct add for bulk import (called from non-module script)
+window._addHoldingDirect=async function(ticker,name,date,qty,cost,price,prevClose,meta){
+  const user=window._currentUser;if(!user)throw new Error('Not signed in');
+  await addDoc(collection(db,"holdings"),{uid:user.uid,ticker,companyName:name,datePurchased:date,quantity:qty,costBasis:cost,currentPrice:price,previousClose:prevClose,sector:meta.sector,industry:meta.industry,assetClass:meta.assetClass,marketCap:meta.marketCap,mktCapCategory:meta.mktCapCategory,leverage:meta.leverage||'',lastUpdated:new Date().toISOString(),createdAt:serverTimestamp()});
 };
 </script>
 
@@ -506,18 +547,196 @@ document.getElementById('featureGrid').innerHTML=FEATURES.map(f=>'<div class="fe
 
 function bindTimeframeBtns(){document.querySelectorAll('#pfTimeframeBtns .btn-outline').forEach(b=>{b.onclick=function(){document.querySelectorAll('#pfTimeframeBtns .btn-outline').forEach(x=>x.classList.remove('active'));this.classList.add('active');currentRange=this.dataset.range;renderPortfolioOverview();};});}
 
-// ── Holdings Table (Manage page) ──
-function renderHoldingsTable(holdings){
-  const wrap=document.getElementById('holdingsTableWrap');
-  if(!holdings||!holdings.length){wrap.innerHTML='<div class="empty-state" style="padding:24px;"><h3>No Holdings Yet</h3><p>Use the form above to add your first holding.</p></div>';return;}
-  let html='<table><thead><tr><th>Ticker</th><th>Company</th><th>Shares</th><th>Cost</th><th>Price</th><th>Value</th><th>G/L</th><th>Sector</th><th>Industry</th><th>Asset</th><th>Mkt Cap</th><th>Notes</th><th></th></tr></thead><tbody>';
-  holdings.forEach(h=>{
-    const mv=(h.currentPrice||0)*h.quantity,cost=h.costBasis*h.quantity,gl=mv-cost,glp=cost>0?(gl/cost)*100:0,gc=gl>=0?C.success:C.danger;
-    const note=h.leverage?'<span style="color:'+C.warning+';font-weight:600;font-size:10px;">'+h.leverage+'</span>':'';
-    html+='<tr><td style="font-weight:700;color:'+C.navy+';">'+h.ticker+'</td><td>'+h.companyName+'</td><td>'+h.quantity+'</td><td>'+fmt(h.costBasis)+'</td><td>'+fmt(h.currentPrice||0)+'</td><td style="font-weight:600;">'+fmt(mv)+'</td><td style="color:'+gc+';font-weight:600;">'+fmtPct(glp)+'</td><td>'+(h.sector||'—')+'</td><td>'+(h.industry||'—')+'</td><td>'+(h.assetClass||'Equity')+'</td><td>'+(h.mktCapCategory||'—')+'</td><td>'+note+'</td><td><button class="btn btn-danger btn-sm" onclick="deleteHolding(\''+h.id+'\')">&#10005;</button></td></tr>';
-  });
-  html+='</tbody></table>';wrap.innerHTML=html;
+// ── Holdings Table (Manage page) — sortable ──
+let _holdingsSort = { col: null, asc: true };
+let _portfolioSort = { col: null, asc: true };
+
+function sortableHeader(cols, sortState, renderFn, tableId) {
+  return cols.map(c => {
+    const arrow = sortState.col === c.key ? (sortState.asc ? '&#9650;' : '&#9660;') : '&#9650;';
+    const active = sortState.col === c.key ? 'active' : '';
+    return '<th onclick="sortTable_' + tableId + '(\'' + c.key + '\')">' + c.label + '<span class="sort-arrow ' + active + '">' + arrow + '</span></th>';
+  }).join('');
 }
+
+function getSortedHoldings(holdings, sortState) {
+  if (!sortState.col) return holdings;
+  const key = sortState.col;
+  return [...holdings].sort((a, b) => {
+    let va = a[key], vb = b[key];
+    // Computed fields
+    if (key === 'marketValue') { va = (a.currentPrice || 0) * a.quantity; vb = (b.currentPrice || 0) * b.quantity; }
+    if (key === 'glPct') { const ca = a.costBasis * a.quantity, cb = b.costBasis * b.quantity; va = ca > 0 ? (((a.currentPrice || 0) * a.quantity - ca) / ca) * 100 : 0; vb = cb > 0 ? (((b.currentPrice || 0) * b.quantity - cb) / cb) * 100 : 0; }
+    if (key === 'weight') { const tv = holdings.reduce((s, h) => s + (h.currentPrice || 0) * h.quantity, 0); va = tv > 0 ? ((a.currentPrice || 0) * a.quantity) / tv : 0; vb = tv > 0 ? ((b.currentPrice || 0) * b.quantity) / tv : 0; }
+    if (typeof va === 'string' && typeof vb === 'string') return sortState.asc ? va.localeCompare(vb) : vb.localeCompare(va);
+    va = parseFloat(va) || 0; vb = parseFloat(vb) || 0;
+    return sortState.asc ? va - vb : vb - va;
+  });
+}
+
+window.sortTable_manage = function(key) {
+  if (_holdingsSort.col === key) _holdingsSort.asc = !_holdingsSort.asc;
+  else { _holdingsSort.col = key; _holdingsSort.asc = true; }
+  renderHoldingsTable(window._holdings || []);
+};
+window.sortTable_portfolio = function(key) {
+  if (_portfolioSort.col === key) _portfolioSort.asc = !_portfolioSort.asc;
+  else { _portfolioSort.col = key; _portfolioSort.asc = true; }
+  const holdings = window._holdings || [];
+  const tv = holdings.reduce((s, h) => s + (h.currentPrice || 0) * h.quantity, 0);
+  renderPortfolioTable(holdings, tv);
+};
+
+function renderHoldingsTable(holdings) {
+  const wrap = document.getElementById('holdingsTableWrap');
+  if (!holdings || !holdings.length) { wrap.innerHTML = '<div class="empty-state" style="padding:24px;"><h3>No Holdings Yet</h3><p>Use the form above to add your first holding.</p></div>'; return; }
+  const sorted = getSortedHoldings(holdings, _holdingsSort);
+  const tv = sorted.reduce((s, h) => s + (h.currentPrice || 0) * h.quantity, 0);
+  const tc = sorted.reduce((s, h) => s + h.costBasis * h.quantity, 0);
+  const tgl = tv - tc, tglp = tc > 0 ? (tgl / tc) * 100 : 0;
+  const cols = [{key:'ticker',label:'Ticker'},{key:'companyName',label:'Company'},{key:'quantity',label:'Shares'},{key:'costBasis',label:'Cost'},{key:'currentPrice',label:'Price'},{key:'marketValue',label:'Value'},{key:'glPct',label:'G/L'},{key:'sector',label:'Sector'},{key:'industry',label:'Industry'},{key:'assetClass',label:'Asset'},{key:'mktCapCategory',label:'Mkt Cap'}];
+  let html = '<table><thead><tr>' + sortableHeader(cols, _holdingsSort, renderHoldingsTable, 'manage') + '<th>Notes</th><th></th></tr></thead><tbody>';
+  sorted.forEach(h => {
+    const mv = (h.currentPrice || 0) * h.quantity, cost = h.costBasis * h.quantity, gl = mv - cost, glp = cost > 0 ? (gl / cost) * 100 : 0, gc = gl >= 0 ? C.success : C.danger;
+    const note = h.leverage ? '<span style="color:' + C.warning + ';font-weight:600;font-size:10px;">' + h.leverage + '</span>' : '';
+    html += '<tr><td style="font-weight:700;color:' + C.navy + ';">' + h.ticker + '</td><td>' + h.companyName + '</td><td>' + h.quantity + '</td><td>' + fmt(h.costBasis) + '</td><td>' + fmt(h.currentPrice || 0) + '</td><td style="font-weight:600;">' + fmt(mv) + '</td><td style="color:' + gc + ';font-weight:600;">' + fmtPct(glp) + '</td><td>' + (h.sector || '—') + '</td><td>' + (h.industry || '—') + '</td><td>' + (h.assetClass || 'Equity') + '</td><td>' + (h.mktCapCategory || '—') + '</td><td>' + note + '</td><td><button class="btn btn-danger btn-sm" onclick="deleteHolding(\'' + h.id + '\')">&#10005;</button></td></tr>';
+  });
+  // Total row
+  html += '<tr style="font-weight:700;background:var(--panel);"><td style="color:' + C.navy + ';">TOTAL</td><td></td><td></td><td>' + fmt(tc / (sorted.reduce((s, h) => s + h.quantity, 0) || 1)) + ' avg</td><td></td><td style="color:' + C.navy + ';">' + fmt(tv) + '</td><td style="color:' + pctColor(tglp) + ';">' + fmtPct(tglp) + ' (' + fmt(tgl) + ')</td><td></td><td></td><td></td><td></td><td></td><td></td></tr>';
+  html += '</tbody></table>'; wrap.innerHTML = html;
+}
+
+// ── Bulk Import ──
+let _bulkRows = []; // [{ticker,date,shares,cost}]
+const dropZone = document.getElementById('dropZone');
+if (dropZone) {
+  dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('dragover'); });
+  dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+  dropZone.addEventListener('drop', e => { e.preventDefault(); dropZone.classList.remove('dragover'); if (e.dataTransfer.files.length) processFile(e.dataTransfer.files[0]); });
+}
+
+window.handleFileSelect = function(e) { if (e.target.files.length) processFile(e.target.files[0]); };
+
+async function processFile(file) {
+  showStatus('scanStatus', '<span class="spinner"></span> Scanning ' + file.name + '...', 'info');
+  _bulkRows = [];
+  const ext = file.name.split('.').pop().toLowerCase();
+  try {
+    if (ext === 'csv' || ext === 'txt') {
+      const text = await file.text();
+      _bulkRows = parseCSV(text);
+    } else if (ext === 'xlsx' || ext === 'xls') {
+      const buf = await file.arrayBuffer();
+      const wb = XLSX.read(buf);
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      const json = XLSX.utils.sheet_to_json(ws, { header: 1 });
+      _bulkRows = parseGrid(json);
+    } else if (ext === 'pdf') {
+      showStatus('scanStatus', 'PDF parsing requires text-based PDFs. For scanned PDFs, please export to CSV first.', 'error');
+      return;
+    } else {
+      showStatus('scanStatus', 'Unsupported file type: .' + ext, 'error');
+      return;
+    }
+    if (!_bulkRows.length) { showStatus('scanStatus', 'No valid rows found. Expected columns: Ticker, Date, Shares, Cost/Share', 'error'); return; }
+    showStatus('scanStatus', '&#10003; Found ' + _bulkRows.length + ' holdings. Review and edit below before submitting.', 'success');
+    renderValidationTable();
+  } catch (e) {
+    showStatus('scanStatus', 'Error reading file: ' + e.message, 'error');
+  }
+}
+
+function parseCSV(text) {
+  const lines = text.split(/\r?\n/).map(l => l.split(/[,\t]/));
+  return parseGrid(lines);
+}
+
+function parseGrid(rows) {
+  if (rows.length < 2) return [];
+  // Try to detect header row
+  const header = rows[0].map(c => String(c || '').toLowerCase().trim());
+  let tickerCol = -1, dateCol = -1, sharesCol = -1, costCol = -1;
+  header.forEach((h, i) => {
+    if (h.includes('ticker') || h.includes('symbol') || h === 'stock') tickerCol = i;
+    if (h.includes('date') || h.includes('purchased') || h.includes('acquired')) dateCol = i;
+    if (h.includes('share') || h.includes('qty') || h.includes('quantity') || h.includes('units')) sharesCol = i;
+    if (h.includes('cost') || h.includes('price') || h.includes('basis') || h.includes('paid')) costCol = i;
+  });
+  // Fallback: assume columns in order
+  if (tickerCol === -1) tickerCol = 0;
+  if (dateCol === -1) dateCol = 1;
+  if (sharesCol === -1) sharesCol = 2;
+  if (costCol === -1) costCol = 3;
+  const result = [];
+  for (let i = 1; i < rows.length; i++) {
+    const r = rows[i];
+    if (!r || !r[tickerCol]) continue;
+    const ticker = String(r[tickerCol] || '').trim().toUpperCase();
+    if (!ticker || ticker.length > 10 || /[^A-Z0-9.\-]/.test(ticker)) continue;
+    let date = String(r[dateCol] || '').trim();
+    // Try to normalize date formats
+    if (/^\d{1,2}\/\d{1,2}\/\d{2,4}$/.test(date)) {
+      const parts = date.split('/');
+      const yr = parts[2].length === 2 ? '20' + parts[2] : parts[2];
+      date = yr + '-' + parts[0].padStart(2, '0') + '-' + parts[1].padStart(2, '0');
+    }
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) date = new Date().toISOString().slice(0, 10);
+    const shares = parseFloat(String(r[sharesCol] || '').replace(/[,$]/g, '')) || 0;
+    const cost = parseFloat(String(r[costCol] || '').replace(/[,$]/g, '')) || 0;
+    if (shares > 0) result.push({ ticker, date, shares, cost });
+  }
+  return result;
+}
+
+function renderValidationTable() {
+  document.getElementById('validateArea').style.display = '';
+  document.getElementById('validateCount').textContent = _bulkRows.length + ' holdings to import';
+  let html = '<table><thead><tr><th>Ticker</th><th>Date Purchased</th><th>Shares</th><th>Cost/Share</th><th></th></tr></thead><tbody>';
+  _bulkRows.forEach((r, i) => {
+    html += '<tr>' +
+      '<td><input value="' + r.ticker + '" onchange="_bulkRows[' + i + '].ticker=this.value.toUpperCase()" style="text-transform:uppercase;width:80px;"></td>' +
+      '<td><input type="date" value="' + r.date + '" onchange="_bulkRows[' + i + '].date=this.value"></td>' +
+      '<td><input type="number" value="' + r.shares + '" step="any" min="0" onchange="_bulkRows[' + i + '].shares=parseFloat(this.value)||0" style="width:80px;"></td>' +
+      '<td><input type="number" value="' + r.cost + '" step="0.01" min="0" onchange="_bulkRows[' + i + '].cost=parseFloat(this.value)||0" style="width:90px;"></td>' +
+      '<td><button class="btn btn-danger btn-sm" onclick="removeBulkRow(' + i + ')">&#10005;</button></td></tr>';
+  });
+  html += '</tbody></table>';
+  document.getElementById('validateTableWrap').innerHTML = html;
+}
+
+window.removeBulkRow = function(i) {
+  _bulkRows.splice(i, 1);
+  if (!_bulkRows.length) { cancelBulkImport(); return; }
+  renderValidationTable();
+};
+
+window.cancelBulkImport = function() {
+  _bulkRows = [];
+  document.getElementById('validateArea').style.display = 'none';
+  document.getElementById('scanStatus').className = 'status-bar';
+  document.getElementById('fileInput').value = '';
+};
+
+window.submitBulkHoldings = async function() {
+  const valid = _bulkRows.filter(r => r.ticker && r.shares > 0);
+  if (!valid.length) { showStatus('scanStatus', 'No valid holdings to submit.', 'error'); return; }
+  const btn = document.getElementById('submitBulkBtn');
+  btn.disabled = true; btn.innerHTML = '<span class="spinner"></span> Submitting ' + valid.length + ' holdings...';
+  let added = 0;
+  for (const r of valid) {
+    try {
+      // This calls the existing addHolding logic via direct Firestore write
+      const q = await fetchQuote(r.ticker);
+      const meta = classifyHolding(r.ticker, q);
+      await window._addHoldingDirect(r.ticker, q.name || r.ticker, r.date, r.shares, r.cost, q.price || 0, q.previousClose || 0, meta);
+      added++;
+    } catch (e) { console.warn('Bulk add failed for', r.ticker, e); }
+  }
+  showStatus('scanStatus', '&#10003; Successfully added ' + added + ' of ' + valid.length + ' holdings.', 'success');
+  cancelBulkImport();
+  await loadHoldings();
+  btn.disabled = false; btn.textContent = 'Submit to Portfolio';
+};
 
 // ══════════════════════════════
 // PORTFOLIO OVERVIEW
@@ -578,15 +797,21 @@ async function fetchBenchmarkSparklines(tickers,labels){
   }
 }
 
-// ── Portfolio Table (Portfolio page) ──
-function renderPortfolioTable(holdings,tv){
-  let html='<table><thead><tr><th>Ticker</th><th>Company</th><th>Shares</th><th>Price</th><th>Value</th><th>Weight</th><th>G/L</th><th>Sector</th><th>Industry</th><th>Asset</th><th>Mkt Cap</th></tr></thead><tbody>';
-  holdings.forEach(h=>{
-    const mv=(h.currentPrice||0)*h.quantity,cost=h.costBasis*h.quantity,gl=mv-cost,glp=cost>0?(gl/cost)*100:0,pp=tv>0?(mv/tv)*100:0,gc=gl>=0?C.success:C.danger;
-    const assetDisplay=h.leverage?h.assetClass+' <span style="color:'+C.warning+';font-size:10px;">('+h.leverage+')</span>':(h.assetClass||'Equity');
-    html+='<tr><td style="font-weight:700;color:'+C.navy+';">'+h.ticker+'</td><td>'+h.companyName+'</td><td>'+h.quantity+'</td><td>'+fmt(h.currentPrice||0)+'</td><td style="font-weight:600;">'+fmt(mv)+'</td><td>'+pp.toFixed(1)+'%</td><td style="color:'+gc+';font-weight:600;">'+fmtPct(glp)+'</td><td>'+(h.sector||'—')+'</td><td>'+(h.industry||'—')+'</td><td>'+assetDisplay+'</td><td>'+(h.mktCapCategory||'—')+'</td></tr>';
+// ── Portfolio Table (Portfolio page) — sortable with total row ──
+function renderPortfolioTable(holdings, tv) {
+  const sorted = getSortedHoldings(holdings, _portfolioSort);
+  const tc = sorted.reduce((s, h) => s + h.costBasis * h.quantity, 0);
+  const tgl = tv - tc, tglp = tc > 0 ? (tgl / tc) * 100 : 0;
+  const cols = [{key:'ticker',label:'Ticker'},{key:'companyName',label:'Company'},{key:'quantity',label:'Shares'},{key:'currentPrice',label:'Price'},{key:'marketValue',label:'Value'},{key:'weight',label:'Weight'},{key:'glPct',label:'G/L'},{key:'sector',label:'Sector'},{key:'industry',label:'Industry'},{key:'assetClass',label:'Asset'},{key:'mktCapCategory',label:'Mkt Cap'}];
+  let html = '<table><thead><tr>' + sortableHeader(cols, _portfolioSort, null, 'portfolio') + '</tr></thead><tbody>';
+  sorted.forEach(h => {
+    const mv = (h.currentPrice || 0) * h.quantity, cost = h.costBasis * h.quantity, gl = mv - cost, glp = cost > 0 ? (gl / cost) * 100 : 0, pp = tv > 0 ? (mv / tv) * 100 : 0, gc = gl >= 0 ? C.success : C.danger;
+    const assetDisplay = h.leverage ? h.assetClass + ' <span style="color:' + C.warning + ';font-size:10px;">(' + h.leverage + ')</span>' : (h.assetClass || 'Equity');
+    html += '<tr><td style="font-weight:700;color:' + C.navy + ';">' + h.ticker + '</td><td>' + h.companyName + '</td><td>' + h.quantity + '</td><td>' + fmt(h.currentPrice || 0) + '</td><td style="font-weight:600;">' + fmt(mv) + '</td><td>' + pp.toFixed(1) + '%</td><td style="color:' + gc + ';font-weight:600;">' + fmtPct(glp) + '</td><td>' + (h.sector || '—') + '</td><td>' + (h.industry || '—') + '</td><td>' + assetDisplay + '</td><td>' + (h.mktCapCategory || '—') + '</td></tr>';
   });
-  html+='</tbody></table>';document.getElementById('portfolioTableWrap').innerHTML=html;
+  // Total row
+  html += '<tr style="font-weight:700;background:var(--panel);"><td style="color:' + C.navy + ';">TOTAL</td><td>' + sorted.length + ' positions</td><td></td><td></td><td style="color:' + C.navy + ';">' + fmt(tv) + '</td><td>100.0%</td><td style="color:' + pctColor(tglp) + ';">' + fmtPct(tglp) + ' (' + fmt(tgl) + ')</td><td></td><td></td><td></td><td></td></tr>';
+  html += '</tbody></table>'; document.getElementById('portfolioTableWrap').innerHTML = html;
 }
 
 // ══════════════════════════════════════
