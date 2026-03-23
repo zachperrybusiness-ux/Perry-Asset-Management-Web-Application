@@ -1319,21 +1319,21 @@ tr:hover td { background: #EAF1F9; }
 <div class="page" id="page-research">
   <div class="content-wrap">
     <div class="hero" style="padding:32px 40px;">
-      <h1>Market Research</h1>
-      <p>Real-time quotes, comprehensive fundamentals, historical charts, and ticker search powered by your Cloudflare Worker proxy to Yahoo Finance.</p>
+      <h1>Financial Analysis</h1>
+      <p>AI-powered investment analysis using SEC EDGAR filings, real-time market data, and analyst estimates. Enter a ticker to generate a comprehensive CFA-grade financial report.</p>
     </div>
     <div class="card">
-      <div class="card-title">Ticker Lookup</div>
+      <div class="card-title">Company Lookup</div>
       <div class="card-body">
         <div class="form-row">
           <div class="form-group" style="min-width:140px;">
             <label>Ticker</label>
-            <input type="text" id="researchTicker" placeholder="AAPL" style="text-transform:uppercase;">
+            <input type="text" id="researchTicker" placeholder="AAPL" style="text-transform:uppercase;" onkeydown="if(event.key==='Enter')runResearch()">
           </div>
           <div class="form-group">
-            <label>Type</label>
+            <label>Analysis Type</label>
             <select id="researchType">
-              <option value="full" selected>Full Analysis</option>
+              <option value="full" selected>Full Analysis (AI)</option>
               <option value="quote">Quick Quote</option>
               <option value="chart">Chart Only</option>
               <option value="search">Search Tickers</option>
@@ -1350,7 +1350,7 @@ tr:hover td { background: #EAF1F9; }
               <option value="5y">5Y</option>
             </select>
           </div>
-          <button class="btn" onclick="runResearch()">Fetch Data</button>
+          <button class="btn" onclick="runResearch()">Analyze</button>
         </div>
       </div>
     </div>
@@ -1367,12 +1367,12 @@ tr:hover td { background: #EAF1F9; }
       </div>
     </div>
     <div class="card" id="researchRawCard" style="display:none;">
-      <div class="card-title">Raw Data</div>
+      <div class="card-title">Raw SEC Data</div>
       <div class="card-body">
         <div class="research-output" id="researchOutput"></div>
       </div>
       <div class="card-sources">
-        <strong>Sources:</strong><br>&#8226; Yahoo Finance via Cloudflare Worker
+        <strong>Sources:</strong><br>&#8226; SEC EDGAR &bull; FMP &bull; Yahoo Finance
       </div>
     </div>
   </div>
@@ -3041,6 +3041,120 @@ async function fetchFundamentals(ticker) {
   return d;
 }
 
+// ════════════════════════════════════════════════════
+// AI FINANCIAL ANALYSIS — Claude analyzes SEC data
+// ════════════════════════════════════════════════════
+async function runAIAnalysis(ticker, secData) {
+  const prompt = `You are a senior CFA charterholder and equity research analyst. Given raw SEC EDGAR data for ${ticker}, produce a comprehensive financial analysis.
+
+COMPANY: ${secData.profile?.name || ticker} (${ticker})
+SECTOR: ${secData.profile?.sector || 'N/A'} | INDUSTRY: ${secData.profile?.industry || 'N/A'}
+PRICE: $${secData.price?.current || 'N/A'} | MKT CAP: $${secData.profile?.marketCap ? (secData.profile.marketCap/1e9).toFixed(1)+'B' : 'N/A'}
+
+SEC DATA:
+${JSON.stringify({income:secData.incomeStatement,balance:secData.balanceSheet,cashflow:secData.cashFlowStatement,dividends:secData.dividends,analysts:secData.analystTargets,ratings:secData.analystRatings,price:secData.price,tech:secData.technicals},null,1)}
+
+RESPOND ONLY WITH JSON (no markdown, no backticks). Structure:
+{
+  "companyOverview":"2-3 sentences on business and competitive position",
+  "investmentThesis":"3-4 sentence bull/bear assessment",
+  "verdictLabel":"BUY" or "HOLD" or "SELL",
+  "valuationRatios":{"peRatio":num,"forwardPE":num|null,"pegRatio":num|null,"priceToBook":num,"priceToSales":num,"evToRevenue":num,"evToEbitda":num,"enterpriseValue":num,"eps":num,"bookValuePerShare":num},
+  "profitability":{"grossMargin":num,"operatingMargin":num,"profitMargin":num,"returnOnEquity":num,"returnOnAssets":num,"roic":num|null},
+  "financialHealth":{"currentRatio":num,"debtToEquity":num,"interestCoverage":num|null,"totalDebt":num,"totalCash":num,"netDebt":num,"freeCashFlow":num,"operatingCashFlow":num},
+  "growthMetrics":{"revenueCAGR5Y":num,"netIncomeCAGR5Y":num,"epsCAGR5Y":num|null,"revenueGrowthYoY":num,"earningsGrowthYoY":num},
+  "dividendAnalysis":{"dividendPerShare":num|null,"dividendYield":num|null,"payoutRatio":num|null,"dividendGrowthRate":num|null,"commentary":"1 sentence"},
+  "incomeStatementTable":[{"label":"Revenue","values":[5 nums]},{"label":"Cost of Revenue","values":[...]},{"label":"Gross Profit","values":[...]},{"label":"Operating Income","values":[...]},{"label":"Net Income","values":[...]},{"label":"EPS (Diluted)","values":[...]},{"label":"R&D Expense","values":[...]},{"label":"SG&A Expense","values":[...]}],
+  "incomeStatementYears":["2021","2022","2023","2024","2025"],
+  "balanceSheetTable":[{"label":"Total Assets","values":[...]},{"label":"Current Assets","values":[...]},{"label":"Total Liabilities","values":[...]},{"label":"Current Liabilities","values":[...]},{"label":"Stockholders Equity","values":[...]},{"label":"Cash & Equivalents","values":[...]},{"label":"Total Debt","values":[...]},{"label":"Shares Outstanding","values":[...]}],
+  "balanceSheetYears":["2021","2022","2023","2024","2025"],
+  "cashFlowTable":[{"label":"Operating Cash Flow","values":[...]},{"label":"Capital Expenditures","values":[...]},{"label":"Free Cash Flow","values":[...]},{"label":"Dividends Paid","values":[...]},{"label":"Stock Repurchases","values":[...]},{"label":"Stock-Based Comp","values":[...]}],
+  "cashFlowYears":["2021","2022","2023","2024","2025"],
+  "keyRisks":["risk1","risk2","risk3"],
+  "keyCatalysts":["catalyst1","catalyst2","catalyst3"],
+  "analystSummary":"1-2 sentences on analyst consensus",
+  "targetPrice":num|null,
+  "currentPrice":num
+}
+
+RULES: Compute ALL ratios from raw data. Margins/returns/growth as percentages (47.33 not 0.4733). Free Cash Flow = Operating CF - abs(CapEx). CAGR = ((end/begin)^(1/years)-1)*100. Use actual year labels from the data. ONLY valid JSON.`;
+
+  const response = await fetch("https://api.anthropic.com/v1/messages", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ model: "claude-sonnet-4-20250514", max_tokens: 4000, messages: [{ role: "user", content: prompt }] })
+  });
+  const result = await response.json();
+  const text = result.content?.map(function(c){return c.text||""}).join("") || "";
+  return JSON.parse(text.replace(/```json|```/g, "").trim());
+}
+
+// ════════════════════════════════════════════════════
+// RENDER AI ANALYSIS RESULTS
+// ════════════════════════════════════════════════════
+function renderAIAnalysis(ticker, a, secData) {
+  var price = a.currentPrice || secData.price?.current || 0;
+  var chg = secData.price?.change || 0;
+  var chgPct = secData.price?.changePercent || 0;
+  var cc = chg >= 0 ? C.success : C.danger;
+  var profile = secData.profile || {};
+  var tech = secData.technicals || {};
+  function N(v){if(v==null)return'—';if(Math.abs(v)>=1e12)return'$'+(v/1e12).toFixed(2)+'T';if(Math.abs(v)>=1e9)return'$'+(v/1e9).toFixed(2)+'B';if(Math.abs(v)>=1e6)return'$'+(v/1e6).toFixed(1)+'M';return'$'+Number(v).toLocaleString();}
+  function P(v){return v!=null?(v>=0?'+':'')+v.toFixed(2)+'%':'—';}
+  function D(v){return v!=null?v.toFixed(2):'—';}
+  function cl(v){return v!=null?(v>=0?C.success:C.danger):C.text;}
+  var vc={'BUY':C.success,'SELL':C.danger,'HOLD':'#8B6914'}[a.verdictLabel]||C.navy;
+  var h='';
+  // Header
+  h+='<div class="card"><div class="card-title">'+(profile.name||ticker)+' ('+ticker+') — '+(profile.sector||'')+' / '+(profile.industry||'')+'</div><div class="card-body">';
+  if(a.companyOverview)h+='<p style="font-size:12px;color:'+C.textSec+';line-height:1.6;margin-bottom:10px;">'+a.companyOverview+'</p>';
+  h+='<div style="font-size:11px;color:'+C.textSec+';">';
+  if(profile.website)h+='<strong>Website:</strong> '+profile.website+' &nbsp;|&nbsp; ';
+  if(profile.city)h+=profile.city+(profile.state?', '+profile.state:'')+' &nbsp;|&nbsp; ';
+  if(profile.employees)h+='<strong>Employees:</strong> '+Number(profile.employees).toLocaleString();
+  h+='</div></div></div>';
+  // Price row
+  h+='<div class="metrics-row">';
+  h+=mcBig(ticker,'$'+price.toFixed(2),P(chgPct)+' ($'+chg.toFixed(2)+')',cc);
+  h+=mcBig('Market Cap',profile.marketCap?N(profile.marketCap):'—','','');
+  h+=mcBig('52-Week',(tech.fiftyTwoWeekLow?'$'+tech.fiftyTwoWeekLow:'')+' — '+(tech.fiftyTwoWeekHigh?'$'+tech.fiftyTwoWeekHigh:''),'50d: $'+(tech.fiftyDayAverage||'—'),'');
+  h+='<div class="metric-card" style="text-align:center;"><div class="metric-val" style="font-size:22px;font-weight:800;color:'+vc+';">'+a.verdictLabel+'</div><div class="metric-sub" style="font-size:11px;color:'+C.textSec+';">AI Verdict</div></div>';
+  h+='</div>';
+  // Thesis
+  h+='<div class="card"><div class="card-title" style="background:'+vc+';">Investment Thesis</div><div class="card-body"><p style="font-size:13px;line-height:1.7;">'+a.investmentThesis+'</p>';
+  if(a.analystSummary)h+='<p style="font-size:12px;color:'+C.textSec+';margin-top:8px;"><strong>Analyst Consensus:</strong> '+a.analystSummary+'</p>';
+  h+='</div></div>';
+  // Risks & Catalysts
+  if(a.keyRisks?.length||a.keyCatalysts?.length){h+='<div class="grid-2">';
+  if(a.keyCatalysts?.length){h+='<div class="card"><div class="card-title" style="background:'+C.success+';">Key Catalysts</div><div class="card-body"><ul style="margin:0;padding-left:18px;font-size:12px;line-height:1.8;">';a.keyCatalysts.forEach(function(c){h+='<li>'+c+'</li>';});h+='</ul></div></div>';}
+  if(a.keyRisks?.length){h+='<div class="card"><div class="card-title" style="background:'+C.danger+';">Key Risks</div><div class="card-body"><ul style="margin:0;padding-left:18px;font-size:12px;line-height:1.8;">';a.keyRisks.forEach(function(r){h+='<li>'+r+'</li>';});h+='</ul></div></div>';}
+  h+='</div>';}
+  // Ratios 3-col
+  h+='<div class="grid-3">';
+  var vr=a.valuationRatios||{};
+  h+=researchTable('Valuation Ratios',[['P/E',D(vr.peRatio)],['Forward P/E',D(vr.forwardPE)],['PEG',D(vr.pegRatio)],null,['P/B',D(vr.priceToBook)],['P/S',D(vr.priceToSales)],['EV/Rev',D(vr.evToRevenue)],['EV/EBITDA',D(vr.evToEbitda)],null,['EV',vr.enterpriseValue?N(vr.enterpriseValue):'—'],['EPS','$'+D(vr.eps)],['BV/Share','$'+D(vr.bookValuePerShare)]]);
+  var pr=a.profitability||{};
+  h+=researchTable('Profitability',[['Gross Margin',P(pr.grossMargin),cl(pr.grossMargin)],['Operating Margin',P(pr.operatingMargin),cl(pr.operatingMargin)],['Net Margin',P(pr.profitMargin),cl(pr.profitMargin)],null,['ROE',P(pr.returnOnEquity),cl(pr.returnOnEquity)],['ROA',P(pr.returnOnAssets),cl(pr.returnOnAssets)],['ROIC',pr.roic!=null?P(pr.roic):'—']]);
+  var fh=a.financialHealth||{};
+  h+=researchTable('Financial Health',[['Current Ratio',D(fh.currentRatio)],['Debt/Equity',D(fh.debtToEquity)],['Int Coverage',fh.interestCoverage!=null?D(fh.interestCoverage)+'x':'—'],null,['Total Debt',N(fh.totalDebt)],['Total Cash',N(fh.totalCash)],['Net Debt',N(fh.netDebt)],null,['Op CF',N(fh.operatingCashFlow)],['FCF',N(fh.freeCashFlow)]]);
+  h+='</div>';
+  // Growth + Div + Analyst
+  h+='<div class="grid-3">';
+  var gr=a.growthMetrics||{};
+  h+=researchTable('Growth',[['Rev CAGR 5Y',P(gr.revenueCAGR5Y),cl(gr.revenueCAGR5Y)],['NI CAGR 5Y',P(gr.netIncomeCAGR5Y),cl(gr.netIncomeCAGR5Y)],['EPS CAGR 5Y',gr.epsCAGR5Y!=null?P(gr.epsCAGR5Y):'—'],null,['Rev YoY',P(gr.revenueGrowthYoY),cl(gr.revenueGrowthYoY)],['Earnings YoY',P(gr.earningsGrowthYoY),cl(gr.earningsGrowthYoY)]]);
+  var dv=a.dividendAnalysis||{};
+  h+=researchTable('Dividends',[['Div/Share',dv.dividendPerShare!=null?'$'+dv.dividendPerShare.toFixed(2):'None'],['Yield',dv.dividendYield!=null?dv.dividendYield.toFixed(2)+'%':'None'],['Payout',dv.payoutRatio!=null?dv.payoutRatio.toFixed(1)+'%':'—'],['Div Growth',dv.dividendGrowthRate!=null?P(dv.dividendGrowthRate):'—'],null,['Note',dv.commentary||'—']]);
+  var at=secData.analystTargets||{};var ar=secData.analystRatings||{};var tA=(ar.strongBuy||0)+(ar.buy||0)+(ar.hold||0)+(ar.sell||0)+(ar.strongSell||0);
+  h+=researchTable('Analyst',[['Target High',at.high?'$'+at.high.toFixed(2):'—'],['Target Mean',at.mean?'$'+at.mean.toFixed(2):'—'],['Target Low',at.low?'$'+at.low.toFixed(2):'—'],null,['Strong Buy',ar.strongBuy||0],['Buy',ar.buy||0],['Hold',ar.hold||0],['Sell',ar.sell||0],['# Analysts',tA||'—']]);
+  h+='</div>';
+  // Financial tables
+  function finTable(title,data,years){if(!data?.length||!years?.length)return'';var t='<div class="card"><div class="card-title">'+title+'</div><div class="card-body"><div style="overflow-x:auto;"><table style="font-size:12px;white-space:nowrap;"><thead><tr><th style="min-width:150px;">Line Item</th>';years.forEach(function(y){t+='<th style="text-align:right;">'+y+'</th>';});t+='</tr></thead><tbody>';data.forEach(function(row){if(!row?.label)return;t+='<tr><td style="font-weight:600;">'+row.label+'</td>';(row.values||[]).forEach(function(v){if(v==null){t+='<td style="text-align:right;color:'+C.textSec+';">—</td>';}else if(row.label.includes('EPS')){t+='<td style="text-align:right;">$'+Number(v).toFixed(2)+'</td>';}else if(Math.abs(v)>=1e9){t+='<td style="text-align:right;">'+(v/1e9).toFixed(2)+'B</td>';}else if(Math.abs(v)>=1e6){t+='<td style="text-align:right;">'+(v/1e6).toFixed(1)+'M</td>';}else{t+='<td style="text-align:right;">'+Number(v).toLocaleString()+'</td>';}});t+='</tr>';});t+='</tbody></table></div></div><div class="card-sources"><strong>Sources:</strong><br>&#8226; SEC EDGAR 10-K Filings (XBRL)</div></div>';return t;}
+  h+=finTable('Income Statement',a.incomeStatementTable,a.incomeStatementYears);
+  h+=finTable('Balance Sheet',a.balanceSheetTable,a.balanceSheetYears);
+  h+=finTable('Cash Flow Statement',a.cashFlowTable,a.cashFlowYears);
+  return h;
+}
+
 window.runResearch = async function() {
   var ticker = document.getElementById('researchTicker').value.trim().toUpperCase();
   var type = document.getElementById('researchType').value;
@@ -3053,247 +3167,95 @@ window.runResearch = async function() {
 
   try {
     // ════════════════════════════
-    // FULL ANALYSIS
+    // FULL AI ANALYSIS
     // ════════════════════════════
     if (type === 'full') {
-      var d = await fetchFundamentals(ticker);
-      var chg = d.change || 0;
-      var chgPct = d.changePercent || 0;
-      var cc3 = chg >= 0 ? C.success : C.danger;
-      var priceNow = d.price || 0;
-      var w52H = d.fiftyTwoWeekHigh;
-      var w52L = d.fiftyTwoWeekLow;
-      var w52Pct = (w52H && w52L && w52H !== w52L) ? ((priceNow - w52L) / (w52H - w52L) * 100).toFixed(0) : null;
+      // Step 1: Fetch SEC data from Worker
+      document.getElementById('researchResults').innerHTML =
+        '<div style="padding:40px;text-align:center;">' +
+        '<span class="spinner"></span><br><br>' +
+        '<strong style="font-size:14px;">Step 1 of 2 — Pulling SEC EDGAR Filings for ' + ticker + '</strong><br>' +
+        '<span style="font-size:12px;color:'+C.textSec+';">Fetching 5 years of 10-K data directly from the SEC...</span></div>';
 
-      // Company header card
-      var html = '<div class="card"><div class="card-title">' + d.name + ' (' + d.symbol + ') — ' +
-        (d.sector || 'N/A') + ' / ' + (d.industry || 'N/A') + '</div><div class="card-body">';
-      if (d.longBusinessSummary) {
-        html += '<p style="font-size:12px;color:' + C.textSec + ';line-height:1.6;margin-bottom:12px;">' +
-          d.longBusinessSummary.substring(0, 600) + (d.longBusinessSummary.length > 600 ? '...' : '') + '</p>';
-      }
-      html += '<div style="font-size:11px;color:' + C.textSec + ';">';
-      if (d.website) html += '<strong>Website:</strong> ' + d.website + ' &nbsp;|&nbsp; ';
-      if (d.city) html += d.city + (d.state ? ', ' + d.state : '') + (d.country ? ', ' + d.country : '') + ' &nbsp;|&nbsp; ';
-      if (d.fullTimeEmployees) html += '<strong>Employees:</strong> ' + Number(d.fullTimeEmployees).toLocaleString();
-      html += '</div></div></div>';
+      var secData = await fetchFundamentals(ticker);
+      document.getElementById('researchOutput').textContent = JSON.stringify(secData, null, 2);
 
-      // Price metrics row
-      html += '<div class="metrics-row">' +
-        mcBig(d.symbol, fmt(priceNow), fmtR(chgPct) + ' (' + fmt(chg) + ')', cc3) +
-        mcBig('Market Cap', d.marketCapFmt || fmtB(d.marketCap), d.quoteType || '', C.textSec) +
-        mcBig('52-Week Range', (w52L ? fmt(w52L) : '—') + ' — ' + (w52H ? fmt(w52H) : '—'),
-          w52Pct ? w52Pct + '% from low' : '', C.textSec) +
-        mcBig('Volume', d.volume ? Number(d.volume).toLocaleString() : '—',
-          'Prev Close: ' + (d.previousClose ? fmt(d.previousClose) : '—'), C.textSec) +
-        '</div>';
+      // Step 2: Send to Claude for analysis
+      document.getElementById('researchResults').innerHTML =
+        '<div style="padding:40px;text-align:center;">' +
+        '<span class="spinner"></span><br><br>' +
+        '<strong style="font-size:14px;">Step 2 of 2 — AI Analyzing Financial Statements</strong><br>' +
+        '<span style="font-size:12px;color:'+C.textSec+';">Computing ratios, identifying trends, generating investment thesis...</span></div>';
 
-      // Two-column: Valuation + Financial Health
-      html += '<div class="grid-2">';
-      html += researchTable('Valuation Ratios', [
-        ['Trailing P/E', d.trailingPE ? d.trailingPE.toFixed(2) : null],
-        ['Forward P/E', d.forwardPE ? d.forwardPE.toFixed(2) : null],
-        ['PEG Ratio', d.pegRatio ? d.pegRatio.toFixed(2) : null],
-        ['Price/Book', d.priceToBook ? d.priceToBook.toFixed(2) : null],
-        ['Price/Sales', d.priceToSales ? d.priceToSales.toFixed(2) : null],
-        ['EV/Revenue', d.evToRevenue ? d.evToRevenue.toFixed(2) : null],
-        ['EV/EBITDA', d.evToEbitda ? d.evToEbitda.toFixed(2) : null],
-        null,
-        ['Enterprise Value', d.enterpriseValueFmt || fmtB(d.enterpriseValue)],
-        ['Trailing EPS', d.trailingEps ? '$' + d.trailingEps.toFixed(2) : null],
-        ['Forward EPS', d.forwardEps ? '$' + d.forwardEps.toFixed(2) : null],
-        ['Book Value/Share', d.bookValuePerShare ? '$' + d.bookValuePerShare.toFixed(2) : null]
-      ]);
-      html += researchTable('Financial Health', [
-        ['Revenue', d.totalRevenueFmt || fmtB(d.totalRevenue)],
-        ['Revenue Growth', fmtR(d.revenueGrowth), pcC(d.revenueGrowth)],
-        ['Earnings Growth', fmtR(d.earningsGrowth), pcC(d.earningsGrowth)],
-        null,
-        ['Gross Margin', fmtR(d.grossMargin)],
-        ['Operating Margin', fmtR(d.operatingMargin)],
-        ['Profit Margin', fmtR(d.profitMargin)],
-        null,
-        ['EBITDA', d.ebitdaFmt || fmtB(d.ebitda)],
-        ['Free Cash Flow', d.freeCashflowFmt || fmtB(d.freeCashflow)],
-        ['Operating Cash Flow', d.operatingCashflowFmt || fmtB(d.operatingCashflow)],
-        null,
-        ['Total Debt', d.totalDebtFmt || fmtB(d.totalDebt)],
-        ['Total Cash', d.totalCashFmt || fmtB(d.totalCash)],
-        ['Debt/Equity', d.debtToEquity ? d.debtToEquity.toFixed(1) : null],
-        ['Current Ratio', d.currentRatio ? d.currentRatio.toFixed(2) : null],
-        ['Return on Equity', fmtR(d.returnOnEquity), pcC(d.returnOnEquity)],
-        ['Return on Assets', fmtR(d.returnOnAssets), pcC(d.returnOnAssets)]
-      ]);
-      html += '</div>';
+      var analysis = await runAIAnalysis(ticker, secData);
 
-      // Three-column: Dividends + Key Stats + Analyst
-      html += '<div class="grid-3">';
-      html += researchTable('Dividends', [
-        ['Dividend Rate', d.dividendRate ? '$' + d.dividendRate.toFixed(2) : 'None'],
-        ['Dividend Yield', d.dividendYield ? d.dividendYield.toFixed(2) + '%' : 'None'],
-        ['Payout Ratio', d.payoutRatio ? d.payoutRatio.toFixed(1) + '%' : null],
-        ['5Y Avg Yield', d.fiveYearAvgDividendYield ? d.fiveYearAvgDividendYield.toFixed(2) + '%' : null],
-        ['Ex-Div Date', d.exDividendDate || null],
-        ['Div Pay Date', d.dividendDate || null]
-      ]);
-
-      html += researchTable('Key Statistics', [
-        ['Beta (5Y)', d.beta ? d.beta.toFixed(2) : null],
-        ['50-Day Avg', d.fiftyDayAverage ? fmt(d.fiftyDayAverage) : null],
-        ['200-Day Avg', d.twoHundredDayAverage ? fmt(d.twoHundredDayAverage) : null],
-        null,
-        ['Shares Out', d.sharesOutstandingFmt || null],
-        ['Float', d.floatSharesFmt || null],
-        ['Short Ratio', d.shortRatio ? d.shortRatio.toFixed(2) : null],
-        ['Short % Float', d.shortPercentOfFloat ? d.shortPercentOfFloat.toFixed(2) + '%' : null],
-        null,
-        ['% Insiders', d.heldPercentInsiders ? d.heldPercentInsiders.toFixed(2) + '%' : null],
-        ['% Institutions', d.heldPercentInstitutions ? d.heldPercentInstitutions.toFixed(2) + '%' : null],
-        ['Last Split', d.lastSplitFactor ? d.lastSplitFactor + ' (' + d.lastSplitDate + ')' : null]
-      ]);
-
-      var rec = d.recommendationKey ? d.recommendationKey.toUpperCase() : '—';
-      var recColor = (rec === 'BUY' || rec === 'STRONG_BUY') ? C.success : rec === 'SELL' ? C.danger : C.navy;
-      var upside = (d.targetMeanPrice && priceNow > 0) ? ((d.targetMeanPrice - priceNow) / priceNow) * 100 : null;
-      html += researchTable('Analyst Estimates', [
-        ['Recommendation', rec, recColor],
-        ['Mean Score', d.recommendationMean ? d.recommendationMean.toFixed(1) + ' / 5' : null],
-        ['# Analysts', d.numberOfAnalystOpinions || null],
-        null,
-        ['Target High', d.targetHighPrice ? fmt(d.targetHighPrice) : null],
-        ['Target Mean', d.targetMeanPrice ? fmt(d.targetMeanPrice) : null],
-        ['Target Median', d.targetMedianPrice ? fmt(d.targetMedianPrice) : null],
-        ['Target Low', d.targetLowPrice ? fmt(d.targetLowPrice) : null],
-        null,
-        ['Upside (Mean)', upside != null ? fmtR(upside) : null, upside != null ? pcC(upside) : C.text],
-        ['Next Earnings', d.earningsDate ? (Array.isArray(d.earningsDate) ? d.earningsDate.join(' to ') : String(d.earningsDate)) : null]
-      ]);
-      html += '</div>';
-
-      // Earnings history table
-      if (d.earningsHistory && d.earningsHistory.length) {
-        html += '<div class="card"><div class="card-title">Recent Earnings</div><div class="card-body">' +
-          '<table style="font-size:12px;"><thead><tr><th>Quarter</th><th>Actual EPS</th><th>Estimate</th><th>Surprise</th></tr></thead><tbody>';
-        d.earningsHistory.forEach(function(q) {
-          var surprise = (q.actual != null && q.estimate != null) ? q.actual - q.estimate : null;
-          var sc = surprise != null ? pcC(surprise) : C.text;
-          html += '<tr><td style="font-weight:600;">' + (q.quarter || '—') + '</td>' +
-            '<td>' + (q.actual != null ? '$' + q.actual.toFixed(2) : '—') + '</td>' +
-            '<td>' + (q.estimate != null ? '$' + q.estimate.toFixed(2) : '—') + '</td>' +
-            '<td style="color:' + sc + ';font-weight:600;">' + (surprise != null ? (surprise >= 0 ? '+' : '') + '$' + surprise.toFixed(2) : '—') + '</td></tr>';
-        });
-        html += '</tbody></table></div><div class="card-sources"><strong>Sources:</strong><br>&#8226; Yahoo Finance</div></div>';
-      }
-
-      // Recommendation trend table
-      if (d.recommendationTrend && d.recommendationTrend.length) {
-        html += '<div class="card"><div class="card-title">Analyst Recommendation Trend</div><div class="card-body">' +
-          '<table style="font-size:12px;"><thead><tr><th>Period</th><th style="color:' + C.success + ';">Strong Buy</th><th style="color:' + C.success + ';">Buy</th><th>Hold</th><th style="color:' + C.danger + ';">Sell</th><th style="color:' + C.danger + ';">Strong Sell</th></tr></thead><tbody>';
-        d.recommendationTrend.forEach(function(t) {
-          html += '<tr><td style="font-weight:600;">' + t.period + '</td>' +
-            '<td>' + (t.strongBuy || 0) + '</td><td>' + (t.buy || 0) + '</td>' +
-            '<td>' + (t.hold || 0) + '</td><td>' + (t.sell || 0) + '</td>' +
-            '<td>' + (t.strongSell || 0) + '</td></tr>';
-        });
-        html += '</tbody></table></div><div class="card-sources"><strong>Sources:</strong><br>&#8226; Yahoo Finance</div></div>';
-      }
-
+      // Step 3: Render the analysis
+      var html = renderAIAnalysis(ticker, analysis, secData);
       document.getElementById('researchResults').innerHTML = html;
+      document.getElementById('researchOutput').textContent = JSON.stringify({ secData: secData, aiAnalysis: analysis }, null, 2);
 
-      // Also show 1Y chart
+      // Also load 1Y chart
       try {
-        var chartData = await fetchChart(ticker, '1y', '1d');
-        var pts = (chartData.points || []).filter(function(p) { return p.close !== null; });
-        if (pts.length > 1) {
+        var chartData = await fetchChart(ticker, '1y');
+        if (chartData.points?.length) {
           document.getElementById('researchChartCard').style.display = '';
-          document.getElementById('researchChartTitle').textContent = ticker + ' — 1 Year Price History';
-          var ctx = document.getElementById('researchChart').getContext('2d');
-          if (researchChart) researchChart.destroy();
-          researchChart = new Chart(ctx, {
-            type: 'line',
-            data: {
-              labels: pts.map(function(p) { return p.date.slice(0, 10); }),
-              datasets: [{
-                label: ticker, data: pts.map(function(p) { return p.close; }),
-                borderColor: C.navy, backgroundColor: 'rgba(0,60,113,.06)',
-                borderWidth: 2.5, pointRadius: 0, pointHoverRadius: 5,
-                pointHoverBackgroundColor: C.navy, fill: true, tension: .3
-              }]
-            },
-            options: {
-              responsive: true, maintainAspectRatio: false,
-              plugins: { legend: { display: false }, tooltip: { ...chartTooltip, callbacks: { label: function(c) { return ' ' + fmt(c.parsed.y); } } } },
-              scales: {
-                x: { grid: chartGrid, ticks: { ...chartTicks, maxTicksLimit: 12 }, border: { display: false } },
-                y: { grid: chartGrid, ticks: { ...chartTicks, callback: function(v) { return '$' + v.toFixed(2); } }, border: { display: false } }
-              }
-            }
-          });
+          document.getElementById('researchChartTitle').textContent = (secData.profile?.name || ticker) + ' (' + ticker + ') — 1-Year Price Chart';
+          renderResearchChart(chartData.points, ticker);
         }
-      } catch(e) { /* chart is optional bonus */ }
-
-      document.getElementById('researchOutput').textContent = JSON.stringify(d, null, 2);
+      } catch (ce) {}
+    }
 
     // ════════════════════════════
     // QUICK QUOTE
     // ════════════════════════════
-    } else if (type === 'quote') {
+    else if (type === 'quote') {
       var d = await fetchQuote(ticker);
-      var chg = d.change || 0, chgPct = d.changePercent || 0, cc3 = chg >= 0 ? C.success : C.danger;
-      document.getElementById('researchResults').innerHTML =
-        '<div class="metrics-row" style="margin-bottom:20px;">' +
-        mcBig(d.symbol, fmt(d.price), fmtR(chgPct) + ' (' + fmt(chg) + ')', cc3) +
-        mcBig('Prev Close', fmt(d.previousClose), '', C.textSec) +
-        mcBig('Day Range', (d.intradayLow ? fmt(d.intradayLow) : '—') + ' — ' + (d.intradayHigh ? fmt(d.intradayHigh) : '—'), '', C.textSec) +
-        mcBig('Volume', d.volume ? Number(d.volume).toLocaleString() : '—', '', C.textSec) + '</div>';
+      var chg2 = d.change || 0;
+      var cc2 = chg2 >= 0 ? C.success : C.danger;
+      var html = '<div class="metrics-row">' +
+        mcBig(d.symbol || ticker, fmt(d.current || d.price || 0), fmtR(d.changePercent || 0) + ' (' + fmt(chg2) + ')', cc2) +
+        mcBig('Volume', d.volume ? Number(d.volume).toLocaleString() : '—', '', C.textSec) +
+        mcBig('Day Range', (d.dayLow || '—') + ' — ' + (d.dayHigh || '—'), '', C.textSec) +
+        mcBig('Prev Close', fmt(d.previousClose || 0), '', C.textSec) +
+        '</div>';
+      document.getElementById('researchResults').innerHTML = html;
       document.getElementById('researchOutput').textContent = JSON.stringify(d, null, 2);
+    }
 
     // ════════════════════════════
     // CHART ONLY
     // ════════════════════════════
-    } else if (type === 'chart') {
+    else if (type === 'chart') {
       var range = document.getElementById('researchRange').value;
-      var d = await fetchChart(ticker, range, '1d');
-      var pts = (d.points || []).filter(function(p) { return p.close !== null; });
+      var chartData = await fetchChart(ticker, range);
+      var pts = chartData.points || [];
       document.getElementById('researchResults').innerHTML = '';
-      document.getElementById('researchChartCard').style.display = '';
-      document.getElementById('researchChartTitle').textContent = ticker + ' Price (' + range + ')';
-      var ctx = document.getElementById('researchChart').getContext('2d');
-      if (researchChart) researchChart.destroy();
-      researchChart = new Chart(ctx, {
-        type: 'line',
-        data: {
-          labels: pts.map(function(p) { return p.date.slice(0, 10); }),
-          datasets: [{
-            label: ticker, data: pts.map(function(p) { return p.close; }),
-            borderColor: C.navy, backgroundColor: 'rgba(0,60,113,.06)',
-            borderWidth: 2.5, pointRadius: 0, pointHoverRadius: 5,
-            pointHoverBackgroundColor: C.navy, fill: true, tension: .3
-          }]
-        },
-        options: {
-          responsive: true, maintainAspectRatio: false,
-          plugins: { legend: { display: false }, tooltip: { ...chartTooltip, callbacks: { label: function(c) { return ' ' + fmt(c.parsed.y); } } } },
-          scales: {
-            x: { grid: chartGrid, ticks: { ...chartTicks, maxTicksLimit: 12 }, border: { display: false } },
-            y: { grid: chartGrid, ticks: { ...chartTicks, callback: function(v) { return '$' + v.toFixed(2); } }, border: { display: false } }
-          }
-        }
-      });
+      if (pts.length) {
+        document.getElementById('researchChartCard').style.display = '';
+        document.getElementById('researchChartTitle').textContent = ticker + ' — ' + range.toUpperCase() + ' Price Chart';
+        renderResearchChart(pts, ticker);
+      }
       document.getElementById('researchOutput').textContent = pts.length + ' data points.';
+    }
 
     // ════════════════════════════
-    // SEARCH
+    // SEARCH TICKERS
     // ════════════════════════════
-    } else if (type === 'search') {
-      var d = await fetchSearch(ticker);
-      var html = '<div class="card"><div class="card-title">Search: "' + ticker + '"</div><div class="card-body">' +
-        '<table><thead><tr><th>Symbol</th><th>Name</th><th>Type</th><th>Exchange</th></tr></thead><tbody>';
-      (d.results || []).forEach(function(r) {
-        html += '<tr><td style="font-weight:700;color:' + C.navy + ';">' + r.symbol + '</td>' +
-          '<td>' + r.name + '</td><td>' + r.type + '</td><td>' + r.exchange + '</td></tr>';
-      });
-      html += '</tbody></table></div><div class="card-sources"><strong>Sources:</strong><br>&#8226; Yahoo Finance</div></div>';
+    else if (type === 'search') {
+      var query = ticker || document.getElementById('researchTicker').value.trim();
+      var d = await fetchSearch(query);
+      var results = d.results || [];
+      var html = '<div class="card"><div class="card-title">Search Results for "' + query + '"</div><div class="card-body">';
+      if (results.length === 0) { html += '<p>No results found.</p>'; }
+      else {
+        html += '<table style="font-size:12px;"><thead><tr><th>Symbol</th><th>Name</th><th>Type</th><th>Exchange</th></tr></thead><tbody>';
+        results.forEach(function(r) {
+          html += '<tr><td style="font-weight:600;cursor:pointer;color:'+C.navy+';" onclick="document.getElementById(\'researchTicker\').value=\'' + r.symbol + '\';document.getElementById(\'researchType\').value=\'full\';runResearch();">' +
+            r.symbol + '</td><td>' + (r.name || '') + '</td><td>' + (r.type || '') + '</td><td>' + (r.exchange || '') + '</td></tr>';
+        });
+        html += '</tbody></table>';
+      }
+      html += '</div></div>';
       document.getElementById('researchResults').innerHTML = html;
       document.getElementById('researchOutput').textContent = JSON.stringify(d, null, 2);
     }
@@ -3301,11 +3263,14 @@ window.runResearch = async function() {
     document.getElementById('researchOutput').textContent = 'Error: ' + e.message;
     document.getElementById('researchResults').innerHTML =
       '<div class="card"><div class="card-title" style="background:var(--danger);">Error</div><div class="card-body">' +
-      '<p style="color:var(--danger);font-weight:600;">Failed to fetch data for ' + ticker + '</p>' +
+      '<p style="color:var(--danger);font-weight:600;">Failed to analyze ' + ticker + '</p>' +
       '<p style="font-size:12px;color:var(--text-sec);">Error: ' + e.message + '</p>' +
-      '<p style="font-size:12px;color:var(--text-sec);margin-top:8px;">Make sure your Cloudflare Worker has the <code>/fundamentals</code> endpoint.<br>' +
-      'Test: <code style="background:var(--panel);padding:2px 6px;border-radius:3px;">' + WORKER_URL + '/fundamentals?symbol=' + ticker + '</code></p>' +
-      '</div></div>';
+      '<p style="font-size:12px;color:var(--text-sec);margin-top:8px;">Troubleshooting:</p>' +
+      '<ul style="font-size:12px;color:var(--text-sec);margin-top:4px;">' +
+      '<li>1. Verify Cloudflare Worker is deployed: <code>' + WORKER_URL + '/health</code></li>' +
+      '<li>2. Test SEC data: <code>' + WORKER_URL + '/fundamentals?symbol=' + ticker + '</code></li>' +
+      '<li>3. Check Anthropic API key is configured in your browser</li>' +
+      '</ul></div></div>';
   }
 };
 </script>
