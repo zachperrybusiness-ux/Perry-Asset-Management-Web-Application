@@ -3,8 +3,10 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Home — Perry Asset Management</title>
+<title>Portfolio — Perry Asset Management</title>
 <link rel="stylesheet" href="css/style.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2.0.1/dist/chartjs-plugin-zoom.min.js"></script>
 
 </head>
 <body>
@@ -17,7 +19,7 @@
   </div>
   <div class="nav">
     <div class="nav-group">
-      <div class="nav-parent active" data-page="home">
+      <div class="nav-parent" data-page="home">
         <a href="index.html" style="color:inherit;text-decoration:none;">Home</a> <span class="arrow">&#9660;</span>
       </div>
       <div class="nav-dropdown">
@@ -25,7 +27,7 @@
       </div>
     </div>
     <div class="nav-group">
-      <div class="nav-parent" data-page="portfolio">
+      <div class="nav-parent active" data-page="portfolio">
         <a href="portfolio.html" style="color:inherit;text-decoration:none;">Portfolio</a> <span class="arrow">&#9660;</span>
       </div>
       <div class="nav-dropdown">
@@ -59,18 +61,115 @@
 
 <div id="page-content">
   <div class="content-wrap">
-    <div class="hero">
-      <h1>Institutional-Grade Investment Intelligence</h1>
-      <p>Perry Asset Management delivers macro-driven portfolio analytics, quantitative modeling, and real-time regime analysis to support disciplined, data-grounded investment decisions.</p>
+    <!-- Auth gate -->
+    <div id="portfolioAuth" class="auth-gate">
+      <h3>Sign In to View Portfolio</h3>
+      <p>Connect with your Google account to access your portfolio holdings and analytics.</p>
+      <button class="btn" onclick="handleLogin()">Sign In with Google</button>
     </div>
-    <div style="margin-bottom:8px;font-size:12px;font-weight:600;color:var(--text-sec);text-transform:uppercase;letter-spacing:.5px;">
-      Platform Capabilities
+    <!-- Empty state -->
+    <div id="portfolioEmpty" style="display:none;">
+      <div class="empty-state">
+        <div class="empty-state-icon">&#128202;</div>
+        <h3>No Holdings Yet</h3>
+        <p>Add your first holding to start building your portfolio.</p>
+        <button class="btn" onclick="window.location.href='holdings.html'">Add Holdings</button>
+      </div>
     </div>
-    <div class="grid-3" id="featureGrid"></div>
+    <!-- Live portfolio -->
+    <div id="portfolioLive" style="display:none;">
+      <!-- Account filter -->
+      <div class="account-bar">
+        <label>View Account:</label>
+        <select id="portfolioAccountFilter" onchange="renderPortfolioOverview()">
+          <option value="all">All Accounts</option>
+          <option value="Individual">Individual Brokerage</option>
+          <option value="Roth IRA">Roth IRA</option>
+          <option value="Traditional IRA">Traditional IRA</option>
+          <option value="401(k)">Standard 401(k)</option>
+          <option value="Roth 401(k)">Roth 401(k)</option>
+          <option value="SEP IRA">SEP IRA</option>
+          <option value="529 Plan">529 Plan</option>
+          <option value="HSA">HSA</option>
+          <option value="Trust">Trust Account</option>
+          <option value="Custodial">Custodial (UTMA/UGMA)</option>
+          <option value="Joint">Joint Account</option>
+          <option value="Designated Beneficiary">Designated Beneficiary</option>
+        </select>
+      </div>
+      <!-- Portfolio metrics -->
+      <div class="metrics-row" id="metricsRow"></div>
+      <!-- Benchmark cards -->
+      <div class="bench-row" id="benchmarkRow"></div>
+      <!-- Chart card -->
+      <div class="card">
+        <div class="card-title">Portfolio Value Over Time</div>
+        <div class="card-body">
+          <div class="form-row" style="margin-bottom:8px;">
+            <div class="form-group">
+              <label>Benchmark 1</label>
+              <input type="text" id="compare1" placeholder="SPY" value="SPY" style="width:80px;text-transform:uppercase;">
+            </div>
+            <div class="form-group">
+              <label>Benchmark 2</label>
+              <input type="text" id="compare2" placeholder="QQQ" value="QQQ" style="width:80px;text-transform:uppercase;">
+            </div>
+            <button class="btn btn-sm" onclick="renderPortfolioChart()">Update Chart</button>
+            <button class="btn-outline btn-sm" id="btnStress" onclick="toggleStress()" style="margin-left:8px;">Stressed Scenarios</button>
+            <button class="btn-outline btn-sm" id="btnVixRange" onclick="toggleVixRange()" style="margin-left:4px;">VIX Range</button>
+          </div>
+          <div class="chart-stats" id="chartStats"></div>
+          <div id="chartLoading" style="text-align:center;padding:40px;color:var(--text-sec);display:none;">
+            <span class="spinner"></span> Loading chart data...
+          </div>
+          <div class="chart-wrap">
+            <canvas id="portfolioLineChart"></canvas>
+          </div>
+          <div class="zoom-hint">Click and drag to zoom in. Double-click or pinch to reset zoom.</div>
+          <div class="btn-group" id="pfTimeframeBtns" style="margin-top:12px;margin-bottom:0;justify-content:center;">
+            <button class="btn-outline" data-range="1mo">1M</button>
+            <button class="btn-outline" data-range="3mo">3M</button>
+            <button class="btn-outline" data-range="6mo">6M</button>
+            <button class="btn-outline" data-range="ytd">YTD</button>
+            <button class="btn-outline active" data-range="1y">1Y</button>
+            <button class="btn-outline" data-range="3y">3Y</button>
+            <button class="btn-outline" data-range="5y">5Y</button>
+            <button class="btn-outline" data-range="10y">10Y</button>
+            <button class="btn-outline" data-range="15y">15Y</button>
+            <button class="btn-outline" data-range="20y">20Y</button>
+          </div>
+        </div>
+        <div class="card-sources">
+          <strong>Sources:</strong><br>
+          &#8226; Yahoo Finance via Cloudflare Worker &#8226; Firebase Firestore
+        </div>
+      </div>
+      <!-- Holdings table -->
+      <div class="card">
+        <div class="card-title">Portfolio Holdings</div>
+        <div class="card-body">
+          <div class="table-wrap" id="portfolioTableWrap"></div>
+        </div>
+        <div class="card-sources">
+          <strong>Sources:</strong><br>
+          &#8226; Yahoo Finance via Cloudflare Worker &#8226; Firebase Firestore
+        </div>
+      </div>
+      <!-- Pie charts -->
+      <div class="grid-3">
+        <div id="donut-sector"></div>
+        <div id="donut-industry"></div>
+        <div id="donut-mktcap"></div>
+      </div>
+      <div class="grid-2">
+        <div id="donut-weight"></div>
+        <div id="mstar-card"></div>
+      </div>
+    </div>
   </div>
 </div>
 
-<!-- ═══════════ ABOUT ═══════════ -->
+<!-- ═══════════ HOLDINGS ═══════════ -->
 
 
 <script type="module">
@@ -253,6 +352,7 @@
       snap.forEach(d => h.push({ id: d.id, ...d.data() }));
       window._holdings = h;
       renderHoldingsTable(h);
+      if (typeof renderPortfolioOverview === 'function') renderPortfolioOverview();
       document.getElementById('holdingsCount').textContent =
         h.length ? '(' + h.length + ' positions)' : '';
     } catch(e) {

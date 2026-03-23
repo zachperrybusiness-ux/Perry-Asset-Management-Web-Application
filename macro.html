@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Home — Perry Asset Management</title>
+<title>Macro Analysis — Perry Asset Management</title>
 <link rel="stylesheet" href="css/style.css">
 
 </head>
@@ -17,7 +17,7 @@
   </div>
   <div class="nav">
     <div class="nav-group">
-      <div class="nav-parent active" data-page="home">
+      <div class="nav-parent" data-page="home">
         <a href="index.html" style="color:inherit;text-decoration:none;">Home</a> <span class="arrow">&#9660;</span>
       </div>
       <div class="nav-dropdown">
@@ -38,7 +38,7 @@
       </div>
     </div>
     <div class="nav-group">
-      <div class="nav-parent" data-page="macro">
+      <div class="nav-parent active" data-page="macro">
         <a href="macro.html" style="color:inherit;text-decoration:none;">Macro Analysis</a>
       </div>
     </div>
@@ -59,19 +59,43 @@
 
 <div id="page-content">
   <div class="content-wrap">
-    <div class="hero">
-      <h1>Institutional-Grade Investment Intelligence</h1>
-      <p>Perry Asset Management delivers macro-driven portfolio analytics, quantitative modeling, and real-time regime analysis to support disciplined, data-grounded investment decisions.</p>
+    <div class="hero" style="padding:32px 40px;">
+      <h1>Macro Regime Analysis</h1>
+      <p>CFA-based macro regime scoring, business cycle classification, sector rotation maps, and cross-asset confirmation using real-time economic data.</p>
     </div>
-    <div style="margin-bottom:8px;font-size:12px;font-weight:600;color:var(--text-sec);text-transform:uppercase;letter-spacing:.5px;">
-      Platform Capabilities
+    <div class="card">
+      <div class="card-title">AI-Powered Macro Briefing</div>
+      <div class="card-body">
+        <p style="margin-bottom:16px;">Generate a complete macro regime analysis using the 10-indicator CFA scorecard framework. Covers ISM PMI, yield curve, labor markets, credit conditions, and monetary policy.</p>
+        <div class="form-row">
+          <button class="btn" id="runMacroBtn" onclick="runMacroAnalysis()">Run Macro Analysis</button>
+        </div>
+      </div>
     </div>
-    <div class="grid-3" id="featureGrid"></div>
+    <div id="macroResults"></div>
+
+    <div class="grid-3" style="margin-top:20px;">
+      <div class="card">
+        <div class="card-title">Regime Scorecard</div>
+        <div class="card-body">
+          <p style="font-size:12px;color:var(--text-sec);">10-indicator expansion/contraction scorecard scored from live economic data. Classifies the current business cycle phase: Early Expansion, Mid-Cycle, Late Cycle, or Contraction.</p>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title">Sector Rotation Map</div>
+        <div class="card-body">
+          <p style="font-size:12px;color:var(--text-sec);">Ranked sector and asset-class investment opportunity map with conviction ratings, primary thesis, and key risk for each position. Covers 17+ sectors and asset classes.</p>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title">Risk Assessment</div>
+        <div class="card-body">
+          <p style="font-size:12px;color:var(--text-sec);">Active macro risk scoring: monetary policy, fiscal dynamics, geopolitical shocks, credit stress, and stagflation probability. Each risk rated by severity and duration.</p>
+        </div>
+      </div>
+    </div>
   </div>
 </div>
-
-<!-- ═══════════ ABOUT ═══════════ -->
-
 
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";

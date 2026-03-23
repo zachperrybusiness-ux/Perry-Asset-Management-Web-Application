@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Home — Perry Asset Management</title>
+<title>Quantitative Models — Perry Asset Management</title>
 <link rel="stylesheet" href="css/style.css">
 
 </head>
@@ -17,7 +17,7 @@
   </div>
   <div class="nav">
     <div class="nav-group">
-      <div class="nav-parent active" data-page="home">
+      <div class="nav-parent" data-page="home">
         <a href="index.html" style="color:inherit;text-decoration:none;">Home</a> <span class="arrow">&#9660;</span>
       </div>
       <div class="nav-dropdown">
@@ -43,7 +43,7 @@
       </div>
     </div>
     <div class="nav-group">
-      <div class="nav-parent" data-page="quant">
+      <div class="nav-parent active" data-page="quant">
         <a href="quant.html" style="color:inherit;text-decoration:none;">Quant Models</a>
       </div>
     </div>
@@ -59,19 +59,41 @@
 
 <div id="page-content">
   <div class="content-wrap">
-    <div class="hero">
-      <h1>Institutional-Grade Investment Intelligence</h1>
-      <p>Perry Asset Management delivers macro-driven portfolio analytics, quantitative modeling, and real-time regime analysis to support disciplined, data-grounded investment decisions.</p>
+    <div class="hero" style="padding:32px 40px;">
+      <h1>Quantitative Models</h1>
+      <p>Stock decision analysis using Multiple Linear Regression, macro regime backtesting, peer comparison, and Monte Carlo simulation.</p>
     </div>
-    <div style="margin-bottom:8px;font-size:12px;font-weight:600;color:var(--text-sec);text-transform:uppercase;letter-spacing:.5px;">
-      Platform Capabilities
+    <div class="card">
+      <div class="card-title">Stock Decision Tree</div>
+      <div class="card-body">
+        <p style="margin-bottom:16px;">Enter a ticker for a full quantitative analysis: peer comparison, 10-year macro regime backtesting, MLR with bootstrapping, indicator importance ranking, and a regime-grounded 12-month investment verdict.</p>
+        <div class="form-row">
+          <div class="form-group" style="min-width:140px;">
+            <label>Ticker</label>
+            <input type="text" id="quantTicker" placeholder="NVDA" style="text-transform:uppercase;" onkeydown="if(event.key==='Enter')runQuantAnalysis()">
+          </div>
+          <button class="btn" onclick="runQuantAnalysis()">Run Analysis</button>
+        </div>
+      </div>
     </div>
-    <div class="grid-3" id="featureGrid"></div>
+    <div id="quantResults"></div>
+
+    <div class="grid-2" style="margin-top:20px;">
+      <div class="card">
+        <div class="card-title">MLR & Indicator Ranking</div>
+        <div class="card-body">
+          <p style="font-size:12px;color:var(--text-sec);">Multiple Linear Regression identifies which macro and fundamental indicators have the strongest predictive power for a stock's 12-month forward return. Each indicator ranked by % explanatory contribution.</p>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title">Monte Carlo Simulation</div>
+        <div class="card-body">
+          <p style="font-size:12px;color:var(--text-sec);">1,000-path Geometric Brownian Motion simulation calibrated to historical volatility and current VIX regime. Produces probability distributions for 12-month price targets with confidence bands.</p>
+        </div>
+      </div>
+    </div>
   </div>
 </div>
-
-<!-- ═══════════ ABOUT ═══════════ -->
-
 
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";

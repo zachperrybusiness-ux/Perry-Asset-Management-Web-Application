@@ -3,8 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Home — Perry Asset Management</title>
+<title>Manage Holdings — Perry Asset Management</title>
 <link rel="stylesheet" href="css/style.css">
+<script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
 
 </head>
 <body>
@@ -17,7 +18,7 @@
   </div>
   <div class="nav">
     <div class="nav-group">
-      <div class="nav-parent active" data-page="home">
+      <div class="nav-parent" data-page="home">
         <a href="index.html" style="color:inherit;text-decoration:none;">Home</a> <span class="arrow">&#9660;</span>
       </div>
       <div class="nav-dropdown">
@@ -25,11 +26,11 @@
       </div>
     </div>
     <div class="nav-group">
-      <div class="nav-parent" data-page="portfolio">
+      <div class="nav-parent active" data-page="portfolio">
         <a href="portfolio.html" style="color:inherit;text-decoration:none;">Portfolio</a> <span class="arrow">&#9660;</span>
       </div>
       <div class="nav-dropdown">
-        <div class="nav-child" data-page="holdings"><a href="holdings.html" style="color:inherit;text-decoration:none;">Manage Holdings</a></div>
+        <div class="nav-child active" data-page="holdings"><a href="holdings.html" style="color:inherit;text-decoration:none;">Manage Holdings</a></div>
       </div>
     </div>
     <div class="nav-group">
@@ -59,18 +60,143 @@
 
 <div id="page-content">
   <div class="content-wrap">
-    <div class="hero">
-      <h1>Institutional-Grade Investment Intelligence</h1>
-      <p>Perry Asset Management delivers macro-driven portfolio analytics, quantitative modeling, and real-time regime analysis to support disciplined, data-grounded investment decisions.</p>
+    <div class="hero" style="padding:32px 40px;">
+      <h1>Manage Holdings</h1>
+      <p>Add, view, and remove portfolio holdings. Market data is fetched live from Yahoo Finance. All holdings saved to your Firebase account.</p>
     </div>
-    <div style="margin-bottom:8px;font-size:12px;font-weight:600;color:var(--text-sec);text-transform:uppercase;letter-spacing:.5px;">
-      Platform Capabilities
+    <!-- Auth gate -->
+    <div id="holdingsAuth" class="auth-gate">
+      <h3>Sign In to Manage Holdings</h3>
+      <p>Connect with your Google account to manage your portfolio.</p>
+      <button class="btn" onclick="handleLogin()">Sign In with Google</button>
     </div>
-    <div class="grid-3" id="featureGrid"></div>
+    <!-- Holdings panel (shown when signed in) -->
+    <div id="holdingsPanel" style="display:none;">
+      <!-- Account filter -->
+      <div class="account-bar">
+        <label>View Account:</label>
+        <select id="holdingsAccountFilter" onchange="filterHoldingsByAccount()">
+          <option value="all">All Accounts</option>
+          <option value="Individual">Individual Brokerage</option>
+          <option value="Roth IRA">Roth IRA</option>
+          <option value="Traditional IRA">Traditional IRA</option>
+          <option value="401(k)">Standard 401(k)</option>
+          <option value="Roth 401(k)">Roth 401(k)</option>
+          <option value="SEP IRA">SEP IRA</option>
+          <option value="529 Plan">529 Plan</option>
+          <option value="HSA">HSA</option>
+          <option value="Trust">Trust Account</option>
+          <option value="Custodial">Custodial (UTMA/UGMA)</option>
+          <option value="Joint">Joint Account</option>
+          <option value="Designated Beneficiary">Designated Beneficiary</option>
+        </select>
+      </div>
+      <!-- Add holding card -->
+      <div class="card">
+        <div class="card-title">Add New Holding</div>
+        <div class="card-body">
+          <div id="addStatus" class="status-bar"></div>
+          <div class="form-row">
+            <div class="form-group" style="min-width:110px;">
+              <label>Ticker</label>
+              <input type="text" id="inputTicker" placeholder="AAPL" style="text-transform:uppercase;">
+            </div>
+            <div class="form-group">
+              <label>Date Purchased</label>
+              <input type="date" id="inputDate">
+            </div>
+            <div class="form-group" style="min-width:90px;">
+              <label>Shares</label>
+              <input type="number" id="inputQty" placeholder="50" min="0.0001" step="any">
+            </div>
+            <div class="form-group" style="min-width:100px;">
+              <label>Cost/Share</label>
+              <input type="number" id="inputCost" placeholder="150.00" min="0" step="0.01">
+            </div>
+            <div class="form-group" style="min-width:160px;">
+              <label>Account Type</label>
+              <select id="inputAccountType">
+                <option value="Individual">Individual Brokerage</option>
+                <option value="Roth IRA">Roth IRA</option>
+                <option value="Traditional IRA">Traditional IRA</option>
+                <option value="401(k)">Standard 401(k)</option>
+                <option value="Roth 401(k)">Roth 401(k)</option>
+                <option value="SEP IRA">SEP IRA</option>
+                <option value="529 Plan">529 Plan</option>
+                <option value="HSA">HSA</option>
+                <option value="Trust">Trust Account</option>
+                <option value="Custodial">Custodial (UTMA/UGMA)</option>
+                <option value="Joint">Joint Account</option>
+                <option value="Designated Beneficiary">Designated Beneficiary</option>
+              </select>
+            </div>
+            <button class="btn" id="addBtn" onclick="addHolding()">Add Holding</button>
+          </div>
+          <!-- Bulk import section -->
+          <div style="border-top:1px solid var(--border);margin-top:16px;padding-top:16px;">
+            <div style="font-size:12px;font-weight:700;color:var(--navy);margin-bottom:8px;">
+              Bulk Import from File
+            </div>
+            <div class="drop-zone" id="dropZone" onclick="document.getElementById('fileInput').click()">
+              <div class="drop-zone-icon">&#128196;</div>
+              <div class="drop-zone-text">Drop a CSV, Excel, or PDF file here</div>
+              <div class="drop-zone-sub">or click to browse — expects columns: Ticker, Date, Shares, Cost/Share</div>
+              <input type="file" id="fileInput" accept=".csv,.xlsx,.xls,.pdf,.txt" onchange="handleFileSelect(event)">
+            </div>
+            <div id="scanStatus" class="status-bar"></div>
+            <div id="validateArea" style="display:none;">
+              <div style="font-size:12px;font-weight:700;color:var(--navy);margin-bottom:4px;">
+                Validate Before Submitting
+              </div>
+              <div style="font-size:11px;color:var(--text-sec);margin-bottom:10px;">
+                These holdings will be <strong>added</strong> to your existing portfolio. No current holdings will be removed or modified.
+              </div>
+              <div class="validate-wrap">
+                <div class="table-wrap" id="validateTableWrap"></div>
+              </div>
+              <div class="validate-actions">
+                <button class="btn" id="submitBulkBtn" onclick="submitBulkHoldings()">Submit to Portfolio</button>
+                <button class="btn-outline btn-sm" onclick="cancelBulkImport()">Cancel</button>
+                <span class="validate-count" id="validateCount"></span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <!-- Holdings table card -->
+      <div class="card">
+        <div class="card-title">
+          Your Holdings
+          <span style="font-weight:400;font-size:12px;opacity:.7;" id="holdingsCount"></span>
+        </div>
+        <div class="card-body">
+          <div id="holdingsStatus" class="status-bar"></div>
+          <div class="table-wrap" id="holdingsTableWrap"></div>
+          <div style="margin-top:12px;">
+            <button class="btn" onclick="refreshAllPrices()" id="refreshBtn">Refresh All Prices</button>
+          </div>
+        </div>
+        <div class="card-sources">
+          <strong>Sources:</strong><br>
+          &#8226; Yahoo Finance via Cloudflare Worker &#8226; Firebase Firestore
+        </div>
+      </div>
+      <!-- Account Types Reference Guide -->
+      <div class="card">
+        <div class="card-title">Account Types Reference Guide</div>
+        <div class="card-body">
+          <div class="acct-grid" id="acctInfoGrid"></div>
+        </div>
+        <div class="card-sources">
+          <strong>Sources:</strong><br>
+          &#8226; IRS.gov &#8226; SEC.gov &#8226; General financial education — not tax or legal advice
+        </div>
+      </div>
+    </div>
   </div>
 </div>
 
-<!-- ═══════════ ABOUT ═══════════ -->
+<!-- ═══════════ RESEARCH ═══════════ -->
 
 
 <script type="module">

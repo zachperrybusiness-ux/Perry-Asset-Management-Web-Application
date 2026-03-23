@@ -3,8 +3,10 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Home — Perry Asset Management</title>
+<title>Financial Analysis — Perry Asset Management</title>
 <link rel="stylesheet" href="css/style.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2.0.1/dist/chartjs-plugin-zoom.min.js"></script>
 
 </head>
 <body>
@@ -17,7 +19,7 @@
   </div>
   <div class="nav">
     <div class="nav-group">
-      <div class="nav-parent active" data-page="home">
+      <div class="nav-parent" data-page="home">
         <a href="index.html" style="color:inherit;text-decoration:none;">Home</a> <span class="arrow">&#9660;</span>
       </div>
       <div class="nav-dropdown">
@@ -33,7 +35,7 @@
       </div>
     </div>
     <div class="nav-group">
-      <div class="nav-parent" data-page="research">
+      <div class="nav-parent active" data-page="research">
         <a href="research.html" style="color:inherit;text-decoration:none;">Research</a>
       </div>
     </div>
@@ -59,18 +61,83 @@
 
 <div id="page-content">
   <div class="content-wrap">
-    <div class="hero">
-      <h1>Institutional-Grade Investment Intelligence</h1>
-      <p>Perry Asset Management delivers macro-driven portfolio analytics, quantitative modeling, and real-time regime analysis to support disciplined, data-grounded investment decisions.</p>
+    <div class="hero" style="padding:32px 40px;">
+      <h1>Financial Analysis</h1>
+      <p>AI-powered investment analysis using SEC EDGAR filings, real-time market data, and analyst estimates. Enter a ticker to generate a comprehensive CFA-grade financial report.</p>
     </div>
-    <div style="margin-bottom:8px;font-size:12px;font-weight:600;color:var(--text-sec);text-transform:uppercase;letter-spacing:.5px;">
-      Platform Capabilities
+    <div class="card">
+      <div class="card-title">Company Lookup</div>
+      <div class="card-body">
+        <div class="form-row">
+          <div class="form-group" style="min-width:140px;">
+            <label>Ticker</label>
+            <input type="text" id="researchTicker" placeholder="AAPL" style="text-transform:uppercase;" onkeydown="if(event.key==='Enter')runResearch()">
+          </div>
+          <div class="form-group">
+            <label>Analysis Type</label>
+            <select id="researchType">
+              <option value="full" selected>Full Analysis (AI)</option>
+              <option value="quote">Quick Quote</option>
+              <option value="chart">Chart Only</option>
+              <option value="search">Search Tickers</option>
+            </select>
+          </div>
+          <div class="form-group" id="rangeGroup" style="display:none;">
+            <label>Range</label>
+            <select id="researchRange">
+              <option value="1mo">1M</option>
+              <option value="3mo">3M</option>
+              <option value="6mo">6M</option>
+              <option value="1y" selected>1Y</option>
+              <option value="2y">2Y</option>
+              <option value="5y">5Y</option>
+            </select>
+          </div>
+          <button class="btn" onclick="runResearch()">Analyze</button>
+        </div>
+      </div>
     </div>
-    <div class="grid-3" id="featureGrid"></div>
+    <div id="researchResults"></div>
+    <div class="card" id="researchChartCard" style="display:none;">
+      <div class="card-title" id="researchChartTitle">Price Chart</div>
+      <div class="card-body">
+        <div class="chart-wrap">
+          <canvas id="researchChart"></canvas>
+        </div>
+      </div>
+      <div class="card-sources">
+        <strong>Sources:</strong><br>&#8226; Yahoo Finance via Cloudflare Worker
+      </div>
+    </div>
+    <div class="card" id="researchRawCard" style="display:none;">
+      <div class="card-title">Raw SEC Data</div>
+      <div class="card-body">
+        <div class="research-output" id="researchOutput"></div>
+      </div>
+      <div class="card-sources">
+        <strong>Sources:</strong><br>&#8226; SEC EDGAR &bull; FMP &bull; Yahoo Finance
+      </div>
+    </div>
   </div>
 </div>
 
-<!-- ═══════════ ABOUT ═══════════ -->
+<!-- ═══════════ FOOTER ═══════════ -->
+<div class="footer">
+  <div class="footer-inner">
+    <div>&copy; 2026 Perry Asset Management. Not investment advice.</div>
+    <div class="connection-status">
+      <div class="conn-item">
+        <span id="firebase-status-dot" class="conn-dot red"></span>
+        <span id="firebase-status-text">Firebase: Not Connected</span>
+      </div>
+      <div class="conn-item">
+        <span id="worker-status-dot" class="conn-dot red"></span>
+        <span id="worker-status-text">Data Proxy: Not Connected</span>
+      </div>
+    </div>
+  </div>
+</div>
+
 
 
 <script type="module">
