@@ -3557,16 +3557,116 @@ window.runResearch = async function() {
 // ════════════════════════════════════════════════════
 window.runMacroAnalysis = async function() {
   var el = document.getElementById('macroResults');
-  el.innerHTML = '<div class="card"><div class="card-title" style="background:var(--warning);">Coming Soon</div><div class="card-body">' +
-    '<p style="font-size:13px;line-height:1.7;">The AI-powered Macro Regime Analysis requires an Anthropic API key configured in the Cloudflare Worker. Once configured, this page will:</p>' +
-    '<ul style="font-size:12px;color:'+C.textSec+';margin:12px 0;padding-left:20px;line-height:1.8;">' +
-    '<li>Search for live economic data (ISM PMI, NFP, CPI, yield curve, etc.)</li>' +
-    '<li>Score the 10-indicator regime scorecard (+1 expansion / -1 contraction)</li>' +
-    '<li>Classify the current business cycle phase</li>' +
-    '<li>Generate sector rotation recommendations with conviction ratings</li>' +
-    '<li>Produce cross-asset confirmation analysis</li></ul>' +
-    '<p style="font-size:12px;color:'+C.textSec+';">To enable: add your Anthropic API key to the Cloudflare Worker\'s <code>ANTHROPIC_KEY</code> constant.</p>' +
-    '</div></div>';
+  el.innerHTML = '<div style="padding:40px;text-align:center;"><span class="spinner"></span><br><br>' +
+    '<strong style="font-size:14px;">Fetching FRED Economic Data...</strong><br>' +
+    '<span style="font-size:12px;color:'+C.textSec+';">Pulling ISM PMI, yield curve, jobless claims, NFP, Core PCE, HY OAS, LEI, SLOOS from the Federal Reserve...</span></div>';
+
+  try {
+    var r = await fetch(WORKER_URL + "/fred");
+    var d = await r.json();
+    if (d.error) throw new Error(d.error);
+
+    var h = '';
+
+    // ── Regime Verdict Header ──
+    var phaseColors = {
+      "Confirmed Expansion": C.success,
+      "Mid-Cycle": C.navy,
+      "Late Cycle / Transition": '#8B6914',
+      "Confirmed Contraction": C.danger
+    };
+    var pc = phaseColors[d.phase] || C.navy;
+    h += '<div class="card"><div class="card-title" style="background:'+pc+';">Macro Regime Verdict — ' + new Date().toLocaleDateString() + '</div><div class="card-body">';
+    h += '<div style="display:flex;align-items:center;gap:24px;flex-wrap:wrap;">';
+    h += '<div style="text-align:center;min-width:120px;"><div style="font-size:42px;font-weight:800;color:'+pc+';">' + d.totalScore + '</div><div style="font-size:12px;color:'+C.textSec+';">out of ' + d.maxScore + '</div></div>';
+    h += '<div><div style="font-size:18px;font-weight:700;color:'+pc+';">' + d.phase + '</div>';
+    h += '<div style="font-size:13px;color:'+C.textSec+';margin-top:4px;">' + d.phaseDescription + '</div></div>';
+    h += '</div></div></div>';
+
+    // ── 10-Indicator Scorecard Table ──
+    h += '<div class="card"><div class="card-title">10-Indicator Regime Scorecard</div><div class="card-body">';
+    h += '<div style="overflow-x:auto;"><table style="font-size:12px;"><thead><tr>';
+    h += '<th>#</th><th>Indicator</th><th>Value</th><th>Date</th><th>Signal</th><th style="text-align:center;">Score</th><th>Detail</th>';
+    h += '</tr></thead><tbody>';
+    d.scorecard.forEach(function(s) {
+      var scoreColor = s.score > 0 ? C.success : s.score < 0 ? C.danger : C.textSec;
+      var scoreBg = s.score > 0 ? 'rgba(46,125,82,0.08)' : s.score < 0 ? 'rgba(139,42,42,0.08)' : '';
+      var scoreLabel = s.score > 0 ? '+1' : s.score < 0 ? '−1' : '0';
+      h += '<tr style="background:'+scoreBg+';">';
+      h += '<td style="font-weight:700;color:'+C.navy+';">' + s.num + '</td>';
+      h += '<td style="font-weight:600;">' + s.indicator + '</td>';
+      h += '<td style="font-weight:600;">' + (s.value || '—') + '</td>';
+      h += '<td style="color:'+C.textSec+';font-size:11px;">' + (s.date || '') + '</td>';
+      h += '<td style="color:'+scoreColor+';font-weight:700;">' + s.signal + '</td>';
+      h += '<td style="text-align:center;font-weight:800;font-size:14px;color:'+scoreColor+';">' + scoreLabel + '</td>';
+      h += '<td style="font-size:11px;color:'+C.textSec+';">' + (s.detail || '') + '</td>';
+      h += '</tr>';
+    });
+    h += '<tr style="background:'+C.navy+';color:white;font-weight:700;">';
+    h += '<td colspan="5" style="color:white;font-size:13px;">TOTAL SCORE</td>';
+    h += '<td style="text-align:center;color:white;font-size:16px;">' + d.totalScore + ' / 10</td>';
+    h += '<td style="color:white;">' + d.phase + '</td></tr>';
+    h += '</tbody></table></div>';
+    h += '</div><div class="card-sources"><strong>Sources:</strong><br>';
+    h += '&#8226; Data provided by FRED&reg;, Federal Reserve Bank of St. Louis &mdash; <a href="https://fred.stlouisfed.org" target="_blank" style="color:'+C.navy+';">fred.stlouisfed.org</a><br>';
+    h += '&#8226; ISM Manufacturing Report on Business &bull; Bureau of Labor Statistics &bull; Conference Board &bull; Federal Reserve Board &bull; ICE BofA</div></div>';
+
+    // ── Score Interpretation Guide ──
+    h += '<div class="card"><div class="card-title">Score Interpretation (CFA Business Cycle Framework)</div><div class="card-body">';
+    h += '<div style="overflow-x:auto;"><table style="font-size:12px;"><thead><tr><th>Score Range</th><th>Phase</th><th>Positioning</th><th>Top Sectors</th><th>Fixed Income</th></tr></thead><tbody>';
+    var phases = [
+      { range: "+7 to +10", phase: "Confirmed Expansion", pos: "Overweight risk assets, underweight duration", sectors: "Financials, Discretionary, Small Cap", fi: "Short duration; HY credit", color: C.success },
+      { range: "+3 to +6", phase: "Mid-Cycle", pos: "Neutral; lean into growth", sectors: "Technology, Industrials", fi: "Moderate duration; floaters", color: C.navy },
+      { range: "−2 to +2", phase: "Late Cycle / Transition", pos: "Reduce cyclicals, accumulate defensives", sectors: "Energy, Healthcare, Staples", fi: "TIPS; start adding duration", color: '#8B6914' },
+      { range: "−3 to −10", phase: "Contraction", pos: "Underweight equities/credit, overweight duration/gold", sectors: "Staples, Healthcare, Utilities", fi: "Long duration; government bonds", color: C.danger },
+    ];
+    phases.forEach(function(p) {
+      var isActive = d.phase.includes(p.phase.split(" /")[0]) || d.phase === p.phase;
+      h += '<tr style="' + (isActive ? 'background:rgba(91,155,213,0.12);font-weight:600;' : '') + '">';
+      h += '<td style="font-weight:700;color:'+p.color+';">' + p.range + '</td>';
+      h += '<td style="color:'+p.color+';font-weight:600;">' + p.phase + (isActive ? ' ◄ CURRENT' : '') + '</td>';
+      h += '<td>' + p.pos + '</td><td>' + p.sectors + '</td><td>' + p.fi + '</td></tr>';
+    });
+    h += '</tbody></table></div></div></div>';
+
+    // ── Additional Context ──
+    if (d.context) {
+      h += '<div class="grid-3">';
+      var ctx = d.context;
+      h += researchTable('Additional Indicators', [
+        ['Unemployment Rate', ctx.unemployment?.value != null ? ctx.unemployment.value.toFixed(1) + '%' : '—'],
+        ['VIX', ctx.vix?.value != null ? ctx.vix.value.toFixed(2) : '—'],
+        ['2Y/10Y Spread', ctx.yieldCurve2s10s?.value != null ? ctx.yieldCurve2s10s.value.toFixed(2) + '%' : '—'],
+        ['Eff. Fed Funds', ctx.fedFundsEffective?.value != null ? ctx.fedFundsEffective.value.toFixed(2) + '%' : '—'],
+      ]);
+
+      // Expansion/Contraction signal summary
+      var expCount = d.scorecard.filter(function(s) { return s.score > 0; }).length;
+      var conCount = d.scorecard.filter(function(s) { return s.score < 0; }).length;
+      var neuCount = d.scorecard.filter(function(s) { return s.score === 0; }).length;
+      h += researchTable('Signal Summary', [
+        ['Expansion Signals', expCount + ' of 10', C.success],
+        ['Contraction Signals', conCount + ' of 10', C.danger],
+        ['Neutral / Ambiguous', neuCount + ' of 10', C.textSec],
+      ]);
+
+      h += researchTable('Data Freshness', [
+        ['ISM PMI', d.scorecard[0]?.date || '—'],
+        ['Jobless Claims', d.scorecard[2]?.date || '—'],
+        ['Core PCE', d.scorecard[9]?.date || '—'],
+        ['NFP', d.scorecard[8]?.date || '—'],
+      ]);
+      h += '</div>';
+    }
+
+    el.innerHTML = h;
+
+  } catch(e) {
+    el.innerHTML = '<div class="card"><div class="card-title" style="background:var(--danger);">Error</div><div class="card-body">' +
+      '<p style="color:var(--danger);font-weight:600;">' + e.message + '</p>' +
+      '<p style="font-size:12px;color:var(--text-sec);margin-top:8px;">Test: <code>' + WORKER_URL + '/fred</code></p>' +
+      '</div></div>';
+  }
 };
 
 window.runQuantAnalysis = async function() {
