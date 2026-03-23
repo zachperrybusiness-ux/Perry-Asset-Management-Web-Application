@@ -3166,7 +3166,7 @@ window.runResearch = async function() {
         ['Target Low', d.targetLowPrice ? fmt(d.targetLowPrice) : null],
         null,
         ['Upside (Mean)', upside != null ? fmtR(upside) : null, upside != null ? pcC(upside) : C.text],
-        ['Next Earnings', d.earningsDate && d.earningsDate.length ? d.earningsDate.join(' to ') : null]
+        ['Next Earnings', d.earningsDate ? (Array.isArray(d.earningsDate) ? d.earningsDate.join(' to ') : String(d.earningsDate)) : null]
       ]);
       html += '</div>';
 
