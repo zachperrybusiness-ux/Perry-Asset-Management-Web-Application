@@ -1492,7 +1492,8 @@ tr:hover td { background: #EAF1F9; }
   } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
   import {
     getFirestore, collection, addDoc, getDocs, deleteDoc, doc,
-    query, where, orderBy, serverTimestamp, updateDoc
+    query, where, orderBy, serverTimestamp, updateDoc,
+    setDoc, getDoc
   } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
   // ── Firebase Config ──
@@ -1808,6 +1809,44 @@ tr:hover td { background: #EAF1F9; }
       lastUpdated: new Date().toISOString(),
       createdAt: serverTimestamp()
     });
+  };
+
+  // ═══ SEC DATA CACHE (Firestore) ═══
+  // Stores SEC financial data per ticker, refreshes if older than 24 hours
+  const SEC_CACHE_HOURS = 24;
+
+  window._getSecCache = async function(ticker) {
+    try {
+      const ref = doc(db, "sec_data", ticker.toUpperCase());
+      const snap = await getDoc(ref);
+      if (!snap.exists()) return null;
+      const data = snap.data();
+      // Check if stale (older than 24 hours)
+      if (data.cachedAt) {
+        const age = (Date.now() - new Date(data.cachedAt).getTime()) / (1000 * 60 * 60);
+        if (age > SEC_CACHE_HOURS) return null; // stale
+      }
+      return data.secData || null;
+    } catch (e) {
+      console.warn("SEC cache read error:", e);
+      return null;
+    }
+  };
+
+  window._setSecCache = async function(ticker, secData) {
+    try {
+      const ref = doc(db, "sec_data", ticker.toUpperCase());
+      await setDoc(ref, {
+        ticker: ticker.toUpperCase(),
+        secData: secData,
+        cachedAt: new Date().toISOString(),
+        profileName: secData.profile?.name || ticker,
+        sector: secData.profile?.sector || '',
+        industry: secData.profile?.industry || ''
+      });
+    } catch (e) {
+      console.warn("SEC cache write error:", e);
+    }
   };
 </script>
 
@@ -3124,9 +3163,47 @@ function fmtR(v) { return v != null ? (v >= 0 ? '+' : '') + v.toFixed(2) + '%' :
 function pcC(v) { return v != null ? (v >= 0 ? C.success : C.danger) : C.text; }
 
 async function fetchFundamentals(ticker) {
+  ticker = ticker.toUpperCase();
+
+  // 1. Check Firebase cache first (instant if available)
+  if (window._getSecCache) {
+    try {
+      var cached = await window._getSecCache(ticker);
+      if (cached) {
+        console.log("SEC data for " + ticker + " loaded from Firebase cache");
+        // Still fetch fresh price from Yahoo (cache has stale price)
+        try {
+          var freshQuote = await fetchQuote(ticker);
+          if (freshQuote && freshQuote.current) {
+            cached.price = {
+              current: freshQuote.current || freshQuote.price,
+              previousClose: freshQuote.previousClose,
+              change: freshQuote.change,
+              changePercent: freshQuote.changePercent,
+              volume: freshQuote.volume,
+              dayHigh: freshQuote.dayHigh || freshQuote.intradayHigh,
+              dayLow: freshQuote.dayLow || freshQuote.intradayLow,
+              currency: freshQuote.currency,
+              exchange: freshQuote.exchange
+            };
+          }
+        } catch (pe) { /* price refresh failed, use cached price */ }
+        return cached;
+      }
+    } catch (ce) { console.warn("Cache check failed:", ce); }
+  }
+
+  // 2. Cache miss — fetch from Worker (SEC EDGAR + FMP + Yahoo)
   var r = await fetch(WORKER_URL + "/fundamentals?symbol=" + encodeURIComponent(ticker));
   var d = await r.json();
   if (d.error) throw new Error(d.error);
+
+  // 3. Store in Firebase cache for next time
+  if (window._setSecCache && d.incomeStatement) {
+    window._setSecCache(ticker, d); // async, don't await
+    console.log("SEC data for " + ticker + " cached to Firebase");
+  }
+
   return d;
 }
 
