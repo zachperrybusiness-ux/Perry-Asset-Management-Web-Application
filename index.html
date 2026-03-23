@@ -3,9 +3,974 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Home — Perry Asset Management</title>
-<link rel="stylesheet" href="css/style.css">
+<title>Perry Asset Management</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2.0.1/dist/chartjs-plugin-zoom.min.js"></script>
+<script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+<style>
+:root {
+  --navy: #003C71;
+  --blue: #5B9BD5;
+  --blue-light: #A8C8E8;
+  --bg: #FFFFFF;
+  --panel: #F4F6F9;
+  --border: #D0D7E0;
+  --text: #000000;
+  --text-on-dark: #FFFFFF;
+  --text-sec: #5A6A7A;
+  --success: #2E7D52;
+  --warning: #8B6914;
+  --danger: #8B2A2A;
+  --highlight-gray: #C8D0D8;
+  --radius: 6px;
+  --shadow: 0 2px 8px rgba(0,0,0,0.06);
+}
 
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body {
+  font-family: Arial, Helvetica, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+/* ═══ TOPBAR ═══ */
+.topbar {
+  background: var(--navy);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 28px;
+  height: 54px;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+.logo {
+  color: var(--text-on-dark);
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: .3px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.logo-icon {
+  width: 28px;
+  height: 28px;
+  background: var(--blue);
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  font-size: 15px;
+  color: var(--text-on-dark);
+}
+.topbar-right {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+.user-badge {
+  color: var(--blue-light);
+  font-size: 12px;
+  font-weight: 500;
+}
+
+/* ═══ NAV ═══ */
+.nav {
+  display: flex;
+  height: 100%;
+  align-items: stretch;
+}
+.nav-group {
+  position: relative;
+  height: 100%;
+  display: flex;
+  align-items: stretch;
+}
+.nav-parent {
+  color: var(--text-on-dark);
+  font-size: 13px;
+  font-weight: 600;
+  padding: 0 22px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  border-bottom: 3px solid transparent;
+  transition: all .2s;
+  white-space: nowrap;
+  user-select: none;
+  height: 100%;
+}
+.nav-parent:hover {
+  background: rgba(91,155,213,.12);
+}
+.nav-parent.active {
+  border-bottom-color: var(--blue);
+  background: rgba(91,155,213,.12);
+}
+.nav-parent .arrow {
+  font-size: 8px;
+  opacity: .7;
+  transition: transform .2s;
+}
+.nav-group:hover .arrow {
+  transform: rotate(180deg);
+}
+.nav-dropdown {
+  display: none;
+  position: absolute;
+  top: 100%;
+  left: 0;
+  min-width: 200px;
+  background: var(--navy);
+  border-radius: 0 0 var(--radius) var(--radius);
+  box-shadow: 0 8px 24px rgba(0,0,0,.25);
+  overflow: hidden;
+  z-index: 200;
+  border-top: 1px solid rgba(91,155,213,.25);
+}
+.nav-group:hover .nav-dropdown {
+  display: block;
+}
+.nav-child {
+  color: var(--text-on-dark);
+  font-size: 12.5px;
+  font-weight: 500;
+  padding: 12px 22px;
+  display: block;
+  cursor: pointer;
+  transition: all .15s;
+  white-space: nowrap;
+}
+.nav-child:hover {
+  background: rgba(91,155,213,.2);
+}
+.nav-child.active {
+  background: rgba(91,155,213,.15);
+  font-weight: 700;
+}
+
+/* ═══ PAGES & LAYOUT ═══ */
+.page { display: none; }
+.page.active { display: block; }
+.content-wrap {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 24px 28px 56px;
+}
+
+/* ═══ CARDS ═══ */
+.card {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  margin-bottom: 20px;
+  overflow: hidden;
+}
+.card-title {
+  background: var(--navy);
+  color: var(--text-on-dark);
+  font-size: 14px;
+  font-weight: 700;
+  padding: 11px 18px;
+}
+.card-body {
+  padding: 20px;
+}
+.card-sources {
+  background: var(--panel);
+  border-top: 1px solid var(--border);
+  padding: 8px 18px;
+  font-size: 11px;
+  color: var(--text-sec);
+  line-height: 1.7;
+}
+.card-sources strong {
+  color: var(--navy);
+  font-weight: 600;
+}
+
+/* ═══ METRICS ═══ */
+.metrics-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(155px, 1fr));
+  gap: 14px;
+  margin-bottom: 22px;
+}
+.metric-card {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px 18px;
+  box-shadow: var(--shadow);
+}
+.metric-label {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text-sec);
+  text-transform: uppercase;
+  letter-spacing: .5px;
+  margin-bottom: 5px;
+}
+.metric-value {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--navy);
+  line-height: 1.2;
+}
+.metric-sub {
+  font-size: 11px;
+  font-weight: 600;
+  margin-top: 3px;
+}
+
+/* ═══ BENCHMARK CARDS ═══ */
+.bench-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 10px;
+  margin-bottom: 22px;
+}
+.bench-card {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 10px 14px;
+  box-shadow: var(--shadow);
+  overflow: hidden;
+}
+.bench-label {
+  font-size: 9px;
+  font-weight: 700;
+  color: var(--text-sec);
+  text-transform: uppercase;
+  letter-spacing: .5px;
+  margin-bottom: 2px;
+}
+.bench-value {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--navy);
+  line-height: 1.2;
+}
+.bench-sub {
+  font-size: 10px;
+  font-weight: 600;
+  margin-top: 1px;
+}
+
+/* ═══ GRIDS ═══ */
+.grid-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+.grid-3 {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 20px;
+}
+@media(max-width:900px) {
+  .grid-2, .grid-3 { grid-template-columns: 1fr; }
+}
+
+/* ═══ DONUTS ═══ */
+.donut-wrap {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+.donut-canvas-wrap {
+  width: 180px;
+  height: 180px;
+  flex-shrink: 0;
+}
+.donut-legend {
+  flex: 1;
+  min-width: 150px;
+}
+.legend-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 5px;
+  font-size: 12px;
+}
+.legend-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+.legend-label {
+  flex: 1;
+  color: var(--text);
+}
+.legend-val {
+  font-weight: 600;
+  color: var(--text);
+}
+
+/* ═══ BUTTONS ═══ */
+.btn {
+  background: var(--blue);
+  color: var(--text-on-dark);
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 12px;
+  font-weight: 600;
+  border: none;
+  border-radius: 4px;
+  padding: 8px 16px;
+  cursor: pointer;
+  transition: all .15s;
+}
+.btn:hover { background: #4A87BF; }
+.btn:disabled { background: var(--blue-light); cursor: default; }
+.btn-sm { padding: 5px 12px; font-size: 11px; }
+.btn-danger { background: var(--danger); }
+.btn-danger:hover { background: #6e2222; }
+.btn-outline {
+  background: var(--panel);
+  color: var(--text-sec);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 6px 14px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: Arial, Helvetica, sans-serif;
+  transition: all .15s;
+}
+.btn-outline:hover {
+  background: var(--blue-light);
+  color: var(--text-on-dark);
+  border-color: var(--blue-light);
+}
+.btn-outline.active {
+  background: var(--blue);
+  color: var(--text-on-dark);
+  border-color: var(--blue);
+}
+.btn-group {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+
+/* ═══ TABLES ═══ */
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: Arial, Helvetica, sans-serif;
+}
+th {
+  background: var(--navy);
+  color: var(--text-on-dark);
+  font-size: 11px;
+  font-weight: 600;
+  padding: 9px 10px;
+  text-align: left;
+  white-space: nowrap;
+  cursor: pointer;
+  user-select: none;
+}
+th:hover { background: #004a8c; }
+th .sort-arrow {
+  font-size: 9px;
+  opacity: .5;
+  margin-left: 3px;
+}
+th .sort-arrow.active { opacity: 1; }
+td {
+  font-size: 11.5px;
+  color: var(--text);
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--border);
+}
+tr:nth-child(even) td { background: var(--panel); }
+tr:hover td { background: #EAF1F9; }
+.table-wrap { overflow-x: auto; }
+
+/* ═══ FORMS ═══ */
+.form-row {
+  display: flex;
+  gap: 12px;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.form-group label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-sec);
+  text-transform: uppercase;
+  letter-spacing: .4px;
+}
+.form-group input,
+.form-group select {
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 13px;
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--bg);
+  color: var(--text);
+  outline: none;
+  transition: border .15s;
+}
+.form-group input:focus,
+.form-group select:focus { border-color: var(--blue); }
+.form-group input::placeholder { color: var(--highlight-gray); }
+
+/* ═══ HERO ═══ */
+.hero {
+  background: var(--navy);
+  border-radius: var(--radius);
+  padding: 48px 40px;
+  margin-bottom: 28px;
+  color: var(--text-on-dark);
+}
+.hero h1 {
+  font-size: 28px;
+  font-weight: 700;
+  margin-bottom: 10px;
+}
+.hero p {
+  font-size: 14px;
+  color: var(--blue-light);
+  max-width: 640px;
+  line-height: 1.6;
+}
+
+/* ═══ FEATURE CARDS ═══ */
+.feature-card {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 22px 24px;
+  box-shadow: var(--shadow);
+  cursor: pointer;
+  transition: all .2s;
+}
+.feature-card:hover {
+  border-color: var(--blue);
+  box-shadow: 0 4px 16px rgba(0,60,113,.1);
+  transform: translateY(-2px);
+}
+.feature-card.disabled {
+  cursor: default;
+  opacity: .7;
+}
+.feature-card.disabled:hover {
+  border-color: var(--border);
+  box-shadow: var(--shadow);
+  transform: none;
+}
+.feature-tag {
+  display: inline-block;
+  background: var(--navy);
+  color: var(--text-on-dark);
+  font-size: 10px;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 3px;
+  margin-bottom: 10px;
+  text-transform: uppercase;
+  letter-spacing: .5px;
+}
+.feature-tag.soon {
+  background: var(--highlight-gray);
+  color: var(--text-sec);
+}
+.feature-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--navy);
+  margin-bottom: 6px;
+}
+.feature-desc {
+  font-size: 12px;
+  color: var(--text-sec);
+  line-height: 1.5;
+}
+
+/* ═══ ABOUT ═══ */
+.about-section { margin-bottom: 28px; }
+.about-section h3 {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--navy);
+  margin-bottom: 8px;
+  padding-bottom: 6px;
+  border-bottom: 2px solid var(--blue);
+  display: inline-block;
+}
+.about-section p {
+  font-size: 13px;
+  color: var(--text);
+  line-height: 1.65;
+  max-width: 780px;
+}
+.product-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 16px;
+  margin-top: 12px;
+}
+.product-item {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 18px 20px;
+}
+.product-item h4 {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--navy);
+  margin-bottom: 4px;
+}
+.product-item p {
+  font-size: 12px;
+  color: var(--text-sec);
+  line-height: 1.5;
+}
+
+/* ═══ MISC ═══ */
+.research-output {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px 20px;
+  min-height: 100px;
+  font-size: 12px;
+  color: var(--text);
+  white-space: pre-wrap;
+  overflow-y: auto;
+  max-height: 500px;
+  line-height: 1.6;
+}
+.chart-wrap {
+  height: 420px;
+  position: relative;
+}
+.spinner {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  border: 2px solid var(--blue-light);
+  border-top-color: var(--blue);
+  border-radius: 50%;
+  animation: spin .6s linear infinite;
+  vertical-align: middle;
+  margin-right: 6px;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.status-bar {
+  padding: 10px 16px;
+  border-radius: 4px;
+  font-size: 12px;
+  margin-bottom: 16px;
+  display: none;
+}
+.status-bar.info {
+  display: block;
+  background: #e8f0fa;
+  color: var(--navy);
+  border: 1px solid var(--blue-light);
+}
+.status-bar.error {
+  display: block;
+  background: #f9e8e8;
+  color: var(--danger);
+  border: 1px solid #d4a0a0;
+}
+.status-bar.success {
+  display: block;
+  background: #e8f5ee;
+  color: var(--success);
+  border: 1px solid #a0d4b4;
+}
+
+.empty-state {
+  text-align: center;
+  padding: 48px 20px;
+  color: var(--text-sec);
+}
+.empty-state-icon {
+  font-size: 40px;
+  margin-bottom: 12px;
+  opacity: .4;
+}
+.empty-state h3 {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--navy);
+  margin-bottom: 6px;
+}
+.empty-state p {
+  font-size: 13px;
+  max-width: 400px;
+  margin: 0 auto 16px;
+}
+
+.auth-gate {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 40px 32px;
+  text-align: center;
+  margin-bottom: 24px;
+}
+.auth-gate h3 {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--navy);
+  margin-bottom: 8px;
+}
+.auth-gate p {
+  font-size: 13px;
+  color: var(--text-sec);
+  margin-bottom: 16px;
+  max-width: 480px;
+  margin-left: auto;
+  margin-right: auto;
+  line-height: 1.5;
+}
+
+/* ═══ FOOTER ═══ */
+.footer {
+  background: var(--panel);
+  border-top: 1px solid var(--border);
+  padding: 16px 28px;
+  font-size: 11px;
+  color: var(--text-sec);
+}
+.footer-inner {
+  max-width: 1400px;
+  margin: 0 auto;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+.connection-status {
+  display: flex;
+  gap: 20px;
+  align-items: center;
+}
+.conn-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: var(--text-sec);
+}
+.conn-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.conn-dot.green { background: var(--success); }
+.conn-dot.red { background: var(--danger); }
+
+/* ═══ MORNINGSTAR ═══ */
+.mstar-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  grid-template-rows: 1fr 1fr 1fr;
+  width: 240px;
+  height: 240px;
+  border: 2px solid var(--navy);
+  border-radius: 4px;
+  position: relative;
+  margin: 0 auto;
+}
+.mstar-cell {
+  border: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text-sec);
+  text-align: center;
+  line-height: 1.2;
+  padding: 4px;
+}
+.mstar-dot {
+  position: absolute;
+  width: 18px;
+  height: 18px;
+  background: var(--blue);
+  border: 3px solid var(--navy);
+  border-radius: 50%;
+  transform: translate(-50%,-50%);
+  z-index: 10;
+  box-shadow: 0 2px 6px rgba(0,0,0,.25);
+}
+.mstar-labels-top {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  width: 240px;
+  margin: 0 auto;
+  text-align: center;
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--navy);
+  margin-bottom: 4px;
+}
+.mstar-labels-left {
+  position: absolute;
+  left: -60px;
+  top: 0;
+  height: 240px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-around;
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--navy);
+  text-align: right;
+  width: 54px;
+}
+.mstar-container {
+  position: relative;
+  width: 240px;
+  margin: 12px auto 0;
+  padding-left: 64px;
+}
+
+/* ═══ CHART STAT BOXES ═══ */
+.chart-stats {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+.chart-stat-box {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 8px 14px;
+  flex: 1;
+  min-width: 180px;
+}
+.chart-stat-label {
+  font-size: 9px;
+  font-weight: 700;
+  color: var(--text-sec);
+  text-transform: uppercase;
+  letter-spacing: .4px;
+  margin-bottom: 2px;
+}
+.chart-stat-value {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--navy);
+  line-height: 1.3;
+}
+.chart-stat-sub {
+  font-size: 10px;
+  color: var(--text-sec);
+  margin-top: 1px;
+}
+.zoom-hint {
+  font-size: 10px;
+  color: var(--text-sec);
+  text-align: center;
+  margin-top: 6px;
+  font-style: italic;
+}
+
+/* ═══ FILE DROP ZONE ═══ */
+.drop-zone {
+  border: 2px dashed var(--border);
+  border-radius: var(--radius);
+  padding: 28px 20px;
+  text-align: center;
+  cursor: pointer;
+  transition: all .2s;
+  background: var(--panel);
+  margin-bottom: 16px;
+}
+.drop-zone:hover,
+.drop-zone.dragover {
+  border-color: var(--blue);
+  background: #e8f0fa;
+}
+.drop-zone-icon {
+  font-size: 28px;
+  margin-bottom: 8px;
+  opacity: .5;
+}
+.drop-zone-text {
+  font-size: 13px;
+  color: var(--text-sec);
+  font-weight: 600;
+}
+.drop-zone-sub {
+  font-size: 11px;
+  color: var(--highlight-gray);
+  margin-top: 4px;
+}
+.drop-zone input[type="file"] { display: none; }
+
+/* ═══ VALIDATION TABLE ═══ */
+.validate-wrap { margin-top: 16px; }
+.validate-wrap input,
+.validate-wrap select {
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 12px;
+  padding: 4px 8px;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  background: var(--bg);
+  color: var(--text);
+}
+.validate-wrap input:focus,
+.validate-wrap select:focus {
+  border-color: var(--blue);
+  outline: none;
+}
+.validate-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 12px;
+  align-items: center;
+}
+.validate-count {
+  font-size: 12px;
+  color: var(--text-sec);
+}
+
+/* ═══ ACCOUNT FILTER BAR ═══ */
+.account-bar {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  margin-bottom: 18px;
+  flex-wrap: wrap;
+}
+.account-bar label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-sec);
+  text-transform: uppercase;
+  letter-spacing: .4px;
+}
+.account-bar select {
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 13px;
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--bg);
+  color: var(--text);
+  min-width: 200px;
+}
+
+/* ═══ SELL MODAL ═══ */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0,0,0,.4);
+  z-index: 500;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.modal-box {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 24px 28px;
+  max-width: 420px;
+  width: 90%;
+  box-shadow: 0 8px 32px rgba(0,0,0,.15);
+}
+.modal-box h3 {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--navy);
+  margin-bottom: 12px;
+}
+.modal-box .modal-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+/* ═══ ACCOUNT INFO CARDS ═══ */
+.acct-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 16px;
+  margin-top: 16px;
+}
+.acct-info-card {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 20px;
+  box-shadow: var(--shadow);
+}
+.acct-info-card h4 {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--navy);
+  margin-bottom: 8px;
+  padding-bottom: 6px;
+  border-bottom: 2px solid var(--blue);
+}
+.acct-info-card p {
+  font-size: 12px;
+  color: var(--text);
+  line-height: 1.6;
+  margin-bottom: 6px;
+}
+.acct-info-card .acct-detail {
+  font-size: 11px;
+  color: var(--text-sec);
+  line-height: 1.5;
+  margin-bottom: 4px;
+}
+.acct-info-card .acct-tag {
+  display: inline-block;
+  background: var(--navy);
+  color: var(--text-on-dark);
+  font-size: 9px;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 3px;
+  margin-right: 4px;
+  text-transform: uppercase;
+}
+</style>
 </head>
 <body>
 
@@ -13,51 +978,44 @@
 <div class="topbar">
   <div class="logo">
     <div class="logo-icon">P</div>
-    <a href="index.html" style="color:inherit;text-decoration:none;">Perry Asset Management</a>
+    Perry Asset Management
   </div>
   <div class="nav">
     <div class="nav-group">
-      <div class="nav-parent active" data-page="home">
-        <a href="index.html" style="color:inherit;text-decoration:none;">Home</a> <span class="arrow">&#9660;</span>
+      <div class="nav-parent active" data-page="home" onclick="navigateTo('home')">
+        Home <span class="arrow">&#9660;</span>
       </div>
       <div class="nav-dropdown">
-        <div class="nav-child" data-page="about"><a href="about.html" style="color:inherit;text-decoration:none;">About Us</a></div>
+        <div class="nav-child" data-page="about" onclick="navigateTo('about')">About Us</div>
       </div>
     </div>
     <div class="nav-group">
-      <div class="nav-parent" data-page="portfolio">
-        <a href="portfolio.html" style="color:inherit;text-decoration:none;">Portfolio</a> <span class="arrow">&#9660;</span>
+      <div class="nav-parent" data-page="portfolio" onclick="navigateTo('portfolio')">
+        Portfolio <span class="arrow">&#9660;</span>
       </div>
       <div class="nav-dropdown">
-        <div class="nav-child" data-page="holdings"><a href="holdings.html" style="color:inherit;text-decoration:none;">Manage Holdings</a></div>
+        <div class="nav-child" data-page="holdings" onclick="navigateTo('holdings')">Manage Holdings</div>
       </div>
     </div>
     <div class="nav-group">
-      <div class="nav-parent" data-page="research">
-        <a href="research.html" style="color:inherit;text-decoration:none;">Research</a>
-      </div>
+      <div class="nav-parent" data-page="research" onclick="navigateTo('research')">Research</div>
     </div>
     <div class="nav-group">
-      <div class="nav-parent" data-page="macro">
-        <a href="macro.html" style="color:inherit;text-decoration:none;">Macro Analysis</a>
-      </div>
+      <div class="nav-parent" data-page="macro" onclick="navigateTo('macro')">Macro</div>
     </div>
     <div class="nav-group">
-      <div class="nav-parent" data-page="quant">
-        <a href="quant.html" style="color:inherit;text-decoration:none;">Quant Models</a>
-      </div>
+      <div class="nav-parent" data-page="quant" onclick="navigateTo('quant')">Quant</div>
     </div>
   </div>
   <div class="topbar-right">
     <span class="user-badge" id="userBadge"></span>
-    <span id="firebase-status-dot" class="status-dot red"></span>
-    <span id="firebase-status-text" style="font-size:10px;color:#ccc;">Firebase: Loading...</span>
     <button class="btn btn-sm" id="loginBtn" onclick="handleLogin()">Sign In</button>
     <button class="btn btn-sm btn-danger" id="logoutBtn" onclick="handleLogout()" style="display:none;">Sign Out</button>
   </div>
 </div>
 
-<div id="page-content">
+<!-- ═══════════ HOME ═══════════ -->
+<div class="page active" id="page-home">
   <div class="content-wrap">
     <div class="hero">
       <h1>Institutional-Grade Investment Intelligence</h1>
@@ -71,8 +1029,462 @@
 </div>
 
 <!-- ═══════════ ABOUT ═══════════ -->
+<div class="page" id="page-about">
+  <div class="content-wrap">
+    <div class="hero" style="padding:36px 40px;">
+      <h1>About Perry Asset Management</h1>
+      <p>A disciplined, research-driven approach to portfolio management — built on macro intelligence, quantitative rigor, and institutional-grade analytics.</p>
+    </div>
+    <div class="about-section">
+      <h3>Our Approach</h3>
+      <p>Perry Asset Management combines top-down macro regime analysis with bottom-up fundamental and quantitative research. Our investment process begins with a proprietary six-pillar macro framework covering Real Economic Activity, Labor Markets, Inflation, Monetary Policy, Fiscal Policy, and International Dynamics.</p>
+    </div>
+    <div class="about-section">
+      <h3>Products &amp; Services</h3>
+      <div class="product-grid">
+        <div class="product-item">
+          <h4>Macro Regime Analysis</h4>
+          <p>Real-time economic scorecard and sector rotation signals built on a CFA-based regime classification framework.</p>
+        </div>
+        <div class="product-item">
+          <h4>Portfolio Construction</h4>
+          <p>Optimized allocation across equities, fixed income, alternatives, and cash — calibrated to current market conditions.</p>
+        </div>
+        <div class="product-item">
+          <h4>Risk Analytics</h4>
+          <p>Value at Risk, Monte-Carlo stress testing, tracking error analysis, and scenario modeling across VIX and macro regimes.</p>
+        </div>
+        <div class="product-item">
+          <h4>Quantitative Research</h4>
+          <p>ML models including regression, random forest, gradient boosting, and time-series forecasting for alpha generation.</p>
+        </div>
+        <div class="product-item">
+          <h4>Thematic Research</h4>
+          <p>Deep dives into emerging investment themes — AI, crypto, energy transition, space — that adapt as opportunities evolve.</p>
+        </div>
+        <div class="product-item">
+          <h4>Fundamental &amp; Technical Analysis</h4>
+          <p>DCF valuation, ratio analysis, MACD, RSI, momentum indicators, and sector-level profitability and leverage scoring.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
 
+<!-- ═══════════ PORTFOLIO ═══════════ -->
+<div class="page" id="page-portfolio">
+  <div class="content-wrap">
+    <!-- Auth gate -->
+    <div id="portfolioAuth" class="auth-gate">
+      <h3>Sign In to View Portfolio</h3>
+      <p>Connect with your Google account to access your portfolio holdings and analytics.</p>
+      <button class="btn" onclick="handleLogin()">Sign In with Google</button>
+    </div>
+    <!-- Empty state -->
+    <div id="portfolioEmpty" style="display:none;">
+      <div class="empty-state">
+        <div class="empty-state-icon">&#128202;</div>
+        <h3>No Holdings Yet</h3>
+        <p>Add your first holding to start building your portfolio.</p>
+        <button class="btn" onclick="navigateTo('holdings')">Add Holdings</button>
+      </div>
+    </div>
+    <!-- Live portfolio -->
+    <div id="portfolioLive" style="display:none;">
+      <!-- Account filter -->
+      <div class="account-bar">
+        <label>View Account:</label>
+        <select id="portfolioAccountFilter" onchange="renderPortfolioOverview()">
+          <option value="all">All Accounts</option>
+          <option value="Individual">Individual Brokerage</option>
+          <option value="Roth IRA">Roth IRA</option>
+          <option value="Traditional IRA">Traditional IRA</option>
+          <option value="401(k)">Standard 401(k)</option>
+          <option value="Roth 401(k)">Roth 401(k)</option>
+          <option value="SEP IRA">SEP IRA</option>
+          <option value="529 Plan">529 Plan</option>
+          <option value="HSA">HSA</option>
+          <option value="Trust">Trust Account</option>
+          <option value="Custodial">Custodial (UTMA/UGMA)</option>
+          <option value="Joint">Joint Account</option>
+          <option value="Designated Beneficiary">Designated Beneficiary</option>
+        </select>
+      </div>
+      <!-- Portfolio metrics -->
+      <div class="metrics-row" id="metricsRow"></div>
+      <!-- Benchmark cards -->
+      <div class="bench-row" id="benchmarkRow"></div>
+      <!-- Chart card -->
+      <div class="card">
+        <div class="card-title">Portfolio Value Over Time</div>
+        <div class="card-body">
+          <div class="form-row" style="margin-bottom:8px;">
+            <div class="form-group">
+              <label>Benchmark 1</label>
+              <input type="text" id="compare1" placeholder="SPY" value="SPY" style="width:80px;text-transform:uppercase;">
+            </div>
+            <div class="form-group">
+              <label>Benchmark 2</label>
+              <input type="text" id="compare2" placeholder="QQQ" value="QQQ" style="width:80px;text-transform:uppercase;">
+            </div>
+            <button class="btn btn-sm" onclick="renderPortfolioChart()">Update Chart</button>
+            <button class="btn-outline btn-sm" id="btnStress" onclick="toggleStress()" style="margin-left:8px;">Stressed Scenarios</button>
+            <button class="btn-outline btn-sm" id="btnVixRange" onclick="toggleVixRange()" style="margin-left:4px;">VIX Range</button>
+          </div>
+          <div class="chart-stats" id="chartStats"></div>
+          <div id="chartLoading" style="text-align:center;padding:40px;color:var(--text-sec);display:none;">
+            <span class="spinner"></span> Loading chart data...
+          </div>
+          <div class="chart-wrap">
+            <canvas id="portfolioLineChart"></canvas>
+          </div>
+          <div class="zoom-hint">Click and drag to zoom in. Double-click or pinch to reset zoom.</div>
+          <div class="btn-group" id="pfTimeframeBtns" style="margin-top:12px;margin-bottom:0;justify-content:center;">
+            <button class="btn-outline" data-range="1mo">1M</button>
+            <button class="btn-outline" data-range="3mo">3M</button>
+            <button class="btn-outline" data-range="6mo">6M</button>
+            <button class="btn-outline" data-range="ytd">YTD</button>
+            <button class="btn-outline active" data-range="1y">1Y</button>
+            <button class="btn-outline" data-range="3y">3Y</button>
+            <button class="btn-outline" data-range="5y">5Y</button>
+            <button class="btn-outline" data-range="10y">10Y</button>
+            <button class="btn-outline" data-range="15y">15Y</button>
+            <button class="btn-outline" data-range="20y">20Y</button>
+          </div>
+        </div>
+        <div class="card-sources">
+          <strong>Sources:</strong><br>
+          &#8226; Yahoo Finance via Cloudflare Worker &#8226; Firebase Firestore
+        </div>
+      </div>
+      <!-- Holdings table -->
+      <div class="card">
+        <div class="card-title">Portfolio Holdings</div>
+        <div class="card-body">
+          <div class="table-wrap" id="portfolioTableWrap"></div>
+        </div>
+        <div class="card-sources">
+          <strong>Sources:</strong><br>
+          &#8226; Yahoo Finance via Cloudflare Worker &#8226; Firebase Firestore
+        </div>
+      </div>
+      <!-- Pie charts -->
+      <div class="grid-3">
+        <div id="donut-sector"></div>
+        <div id="donut-industry"></div>
+        <div id="donut-mktcap"></div>
+      </div>
+      <div class="grid-2">
+        <div id="donut-weight"></div>
+        <div id="mstar-card"></div>
+      </div>
+    </div>
+  </div>
+</div>
 
+<!-- ═══════════ HOLDINGS ═══════════ -->
+<div class="page" id="page-holdings">
+  <div class="content-wrap">
+    <div class="hero" style="padding:32px 40px;">
+      <h1>Manage Holdings</h1>
+      <p>Add, view, and remove portfolio holdings. Market data is fetched live from Yahoo Finance. All holdings saved to your Firebase account.</p>
+    </div>
+    <!-- Auth gate -->
+    <div id="holdingsAuth" class="auth-gate">
+      <h3>Sign In to Manage Holdings</h3>
+      <p>Connect with your Google account to manage your portfolio.</p>
+      <button class="btn" onclick="handleLogin()">Sign In with Google</button>
+    </div>
+    <!-- Holdings panel (shown when signed in) -->
+    <div id="holdingsPanel" style="display:none;">
+      <!-- Account filter -->
+      <div class="account-bar">
+        <label>View Account:</label>
+        <select id="holdingsAccountFilter" onchange="filterHoldingsByAccount()">
+          <option value="all">All Accounts</option>
+          <option value="Individual">Individual Brokerage</option>
+          <option value="Roth IRA">Roth IRA</option>
+          <option value="Traditional IRA">Traditional IRA</option>
+          <option value="401(k)">Standard 401(k)</option>
+          <option value="Roth 401(k)">Roth 401(k)</option>
+          <option value="SEP IRA">SEP IRA</option>
+          <option value="529 Plan">529 Plan</option>
+          <option value="HSA">HSA</option>
+          <option value="Trust">Trust Account</option>
+          <option value="Custodial">Custodial (UTMA/UGMA)</option>
+          <option value="Joint">Joint Account</option>
+          <option value="Designated Beneficiary">Designated Beneficiary</option>
+        </select>
+      </div>
+      <!-- Add holding card -->
+      <div class="card">
+        <div class="card-title">Add New Holding</div>
+        <div class="card-body">
+          <div id="addStatus" class="status-bar"></div>
+          <div class="form-row">
+            <div class="form-group" style="min-width:110px;">
+              <label>Ticker</label>
+              <input type="text" id="inputTicker" placeholder="AAPL" style="text-transform:uppercase;">
+            </div>
+            <div class="form-group">
+              <label>Date Purchased</label>
+              <input type="date" id="inputDate">
+            </div>
+            <div class="form-group" style="min-width:90px;">
+              <label>Shares</label>
+              <input type="number" id="inputQty" placeholder="50" min="0.0001" step="any">
+            </div>
+            <div class="form-group" style="min-width:100px;">
+              <label>Cost/Share</label>
+              <input type="number" id="inputCost" placeholder="150.00" min="0" step="0.01">
+            </div>
+            <div class="form-group" style="min-width:160px;">
+              <label>Account Type</label>
+              <select id="inputAccountType">
+                <option value="Individual">Individual Brokerage</option>
+                <option value="Roth IRA">Roth IRA</option>
+                <option value="Traditional IRA">Traditional IRA</option>
+                <option value="401(k)">Standard 401(k)</option>
+                <option value="Roth 401(k)">Roth 401(k)</option>
+                <option value="SEP IRA">SEP IRA</option>
+                <option value="529 Plan">529 Plan</option>
+                <option value="HSA">HSA</option>
+                <option value="Trust">Trust Account</option>
+                <option value="Custodial">Custodial (UTMA/UGMA)</option>
+                <option value="Joint">Joint Account</option>
+                <option value="Designated Beneficiary">Designated Beneficiary</option>
+              </select>
+            </div>
+            <button class="btn" id="addBtn" onclick="addHolding()">Add Holding</button>
+          </div>
+          <!-- Bulk import section -->
+          <div style="border-top:1px solid var(--border);margin-top:16px;padding-top:16px;">
+            <div style="font-size:12px;font-weight:700;color:var(--navy);margin-bottom:8px;">
+              Bulk Import from File
+            </div>
+            <div class="drop-zone" id="dropZone" onclick="document.getElementById('fileInput').click()">
+              <div class="drop-zone-icon">&#128196;</div>
+              <div class="drop-zone-text">Drop a CSV, Excel, or PDF file here</div>
+              <div class="drop-zone-sub">or click to browse — expects columns: Ticker, Date, Shares, Cost/Share</div>
+              <input type="file" id="fileInput" accept=".csv,.xlsx,.xls,.pdf,.txt" onchange="handleFileSelect(event)">
+            </div>
+            <div id="scanStatus" class="status-bar"></div>
+            <div id="validateArea" style="display:none;">
+              <div style="font-size:12px;font-weight:700;color:var(--navy);margin-bottom:4px;">
+                Validate Before Submitting
+              </div>
+              <div style="font-size:11px;color:var(--text-sec);margin-bottom:10px;">
+                These holdings will be <strong>added</strong> to your existing portfolio. No current holdings will be removed or modified.
+              </div>
+              <div class="validate-wrap">
+                <div class="table-wrap" id="validateTableWrap"></div>
+              </div>
+              <div class="validate-actions">
+                <button class="btn" id="submitBulkBtn" onclick="submitBulkHoldings()">Submit to Portfolio</button>
+                <button class="btn-outline btn-sm" onclick="cancelBulkImport()">Cancel</button>
+                <span class="validate-count" id="validateCount"></span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <!-- Holdings table card -->
+      <div class="card">
+        <div class="card-title">
+          Your Holdings
+          <span style="font-weight:400;font-size:12px;opacity:.7;" id="holdingsCount"></span>
+        </div>
+        <div class="card-body">
+          <div id="holdingsStatus" class="status-bar"></div>
+          <div class="table-wrap" id="holdingsTableWrap"></div>
+          <div style="margin-top:12px;">
+            <button class="btn" onclick="refreshAllPrices()" id="refreshBtn">Refresh All Prices</button>
+          </div>
+        </div>
+        <div class="card-sources">
+          <strong>Sources:</strong><br>
+          &#8226; Yahoo Finance via Cloudflare Worker &#8226; Firebase Firestore
+        </div>
+      </div>
+      <!-- Account Types Reference Guide -->
+      <div class="card">
+        <div class="card-title">Account Types Reference Guide</div>
+        <div class="card-body">
+          <div class="acct-grid" id="acctInfoGrid"></div>
+        </div>
+        <div class="card-sources">
+          <strong>Sources:</strong><br>
+          &#8226; IRS.gov &#8226; SEC.gov &#8226; General financial education — not tax or legal advice
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════ RESEARCH ═══════════ -->
+<div class="page" id="page-research">
+  <div class="content-wrap">
+    <div class="hero" style="padding:32px 40px;">
+      <h1>Financial Analysis</h1>
+      <p>AI-powered investment analysis using SEC EDGAR filings, real-time market data, and analyst estimates. Enter a ticker to generate a comprehensive CFA-grade financial report.</p>
+    </div>
+    <div class="card">
+      <div class="card-title">Company Lookup</div>
+      <div class="card-body">
+        <div class="form-row">
+          <div class="form-group" style="min-width:140px;">
+            <label>Ticker</label>
+            <input type="text" id="researchTicker" placeholder="AAPL" style="text-transform:uppercase;" onkeydown="if(event.key==='Enter')runResearch()">
+          </div>
+          <div class="form-group">
+            <label>Analysis Type</label>
+            <select id="researchType">
+              <option value="full" selected>Full Analysis (AI)</option>
+              <option value="quote">Quick Quote</option>
+              <option value="chart">Chart Only</option>
+              <option value="search">Search Tickers</option>
+            </select>
+          </div>
+          <div class="form-group" id="rangeGroup" style="display:none;">
+            <label>Range</label>
+            <select id="researchRange">
+              <option value="1mo">1M</option>
+              <option value="3mo">3M</option>
+              <option value="6mo">6M</option>
+              <option value="1y" selected>1Y</option>
+              <option value="2y">2Y</option>
+              <option value="5y">5Y</option>
+            </select>
+          </div>
+          <button class="btn" onclick="runResearch()">Analyze</button>
+        </div>
+      </div>
+    </div>
+    <div id="researchResults"></div>
+    <div class="card" id="researchChartCard" style="display:none;">
+      <div class="card-title" id="researchChartTitle">Price Chart</div>
+      <div class="card-body">
+        <div class="chart-wrap">
+          <canvas id="researchChart"></canvas>
+        </div>
+      </div>
+      <div class="card-sources">
+        <strong>Sources:</strong><br>&#8226; Yahoo Finance via Cloudflare Worker
+      </div>
+    </div>
+    <div class="card" id="researchRawCard" style="display:none;">
+      <div class="card-title">Raw SEC Data</div>
+      <div class="card-body">
+        <div class="research-output" id="researchOutput"></div>
+      </div>
+      <div class="card-sources">
+        <strong>Sources:</strong><br>&#8226; SEC EDGAR &bull; FMP &bull; Yahoo Finance
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════ MACRO ANALYSIS ═══════════ -->
+<div class="page" id="page-macro">
+  <div class="content-wrap">
+    <div class="hero" style="padding:32px 40px;">
+      <h1>Macro Regime Analysis</h1>
+      <p>CFA-based macro regime scoring, business cycle classification, sector rotation maps, and cross-asset confirmation using real-time economic data.</p>
+    </div>
+    <div class="card">
+      <div class="card-title">AI-Powered Macro Briefing</div>
+      <div class="card-body">
+        <p style="margin-bottom:16px;">Generate a complete macro regime analysis using the 10-indicator CFA scorecard framework. The AI agent searches for live economic data (ISM PMI, yield curve, labor, credit conditions, monetary policy) and produces an investment-grade briefing.</p>
+        <div class="form-row">
+          <button class="btn" onclick="runMacroAnalysis()">Run Macro Analysis</button>
+        </div>
+      </div>
+    </div>
+    <div id="macroResults"></div>
+    <div class="grid-3" style="margin-top:20px;">
+      <div class="card">
+        <div class="card-title">Regime Scorecard</div>
+        <div class="card-body">
+          <p style="font-size:12px;color:var(--text-sec);line-height:1.6;">10-indicator expansion/contraction scorecard scored from live economic data. Classifies the current business cycle phase: Early Expansion, Mid-Cycle, Late Cycle, or Contraction.</p>
+          <p style="font-size:11px;color:var(--text-sec);margin-top:8px;"><strong>Indicators:</strong> ISM Mfg PMI, ISM New Orders, Initial Claims, Yield Curve, LEI, SLOOS, HY OAS, Real FFR, NFP, Core PCE</p>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title">Sector Rotation Map</div>
+        <div class="card-body">
+          <p style="font-size:12px;color:var(--text-sec);line-height:1.6;">Ranked sector and asset-class investment opportunity map with conviction ratings. Covers U.S. equities, tech, energy, defense, healthcare, financials, gold, TIPS, Treasuries, credit, EM, and USD.</p>
+          <p style="font-size:11px;color:var(--text-sec);margin-top:8px;"><strong>Output:</strong> Positioning (OW/N/UW) + Conviction + Primary Thesis + Key Risk</p>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title">Risk Assessment</div>
+        <div class="card-body">
+          <p style="font-size:12px;color:var(--text-sec);line-height:1.6;">Active macro risk scoring across five dimensions: monetary policy path, fiscal/deficit dynamics, geopolitical shocks, credit/financial stress, and growth vs. inflation trap risk.</p>
+          <p style="font-size:11px;color:var(--text-sec);margin-top:8px;"><strong>Rated by:</strong> Severity (Low→Critical) × Duration (Transitory→Secular)</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════ QUANT MODELS ═══════════ -->
+<div class="page" id="page-quant">
+  <div class="content-wrap">
+    <div class="hero" style="padding:32px 40px;">
+      <h1>Quantitative Models</h1>
+      <p>Stock decision analysis using Multiple Linear Regression, macro regime backtesting, peer comparison, and Monte Carlo simulation.</p>
+    </div>
+    <div class="card">
+      <div class="card-title">Stock Decision Tree</div>
+      <div class="card-body">
+        <p style="margin-bottom:16px;">Enter a ticker for a full quantitative analysis: peer comparison, 10-year macro regime backtesting, MLR with bootstrapping, indicator importance ranking, and a regime-grounded 12-month investment verdict.</p>
+        <div class="form-row">
+          <div class="form-group" style="min-width:140px;">
+            <label>Ticker</label>
+            <input type="text" id="quantTicker" placeholder="NVDA" style="text-transform:uppercase;" onkeydown="if(event.key==='Enter')runQuantAnalysis()">
+          </div>
+          <button class="btn" onclick="runQuantAnalysis()">Run Analysis</button>
+        </div>
+      </div>
+    </div>
+    <div id="quantResults"></div>
+    <div class="grid-2" style="margin-top:20px;">
+      <div class="card">
+        <div class="card-title">MLR & Indicator Ranking</div>
+        <div class="card-body">
+          <p style="font-size:12px;color:var(--text-sec);line-height:1.6;">Multiple Linear Regression identifies which macro and fundamental indicators have the strongest predictive power for a stock's 12-month forward return. Features include regime score, ISM PMI, yield spread, HY OAS, VIX, revenue growth, operating margin, P/E, and FCF growth.</p>
+          <p style="font-size:11px;color:var(--text-sec);margin-top:8px;"><strong>Output:</strong> R², coefficient significance, indicator ranking by % explanatory power</p>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title">Monte Carlo Simulation</div>
+        <div class="card-body">
+          <p style="font-size:12px;color:var(--text-sec);line-height:1.6;">1,000-path Geometric Brownian Motion simulation calibrated to historical volatility and current VIX regime. Produces probability distributions for 12-month price targets with standard deviation bands.</p>
+          <p style="font-size:11px;color:var(--text-sec);margin-top:8px;"><strong>Output:</strong> Price distribution, confidence intervals, Sharpe-equivalent signal</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════ FOOTER ═══════════ -->
+<div class="footer">
+  <div class="footer-inner">
+    <div>&copy; 2026 Perry Asset Management. Not investment advice.</div>
+    <div class="connection-status">
+      <div class="conn-item">
+        <span id="firebase-status-dot" class="conn-dot red"></span>
+        <span id="firebase-status-text">Firebase: Not Connected</span>
+      </div>
+      <div class="conn-item">
+        <span id="worker-status-dot" class="conn-dot red"></span>
+        <span id="worker-status-text">Data Proxy: Not Connected</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════ FIREBASE MODULE ═══════════ -->
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
   import {
@@ -399,7 +1811,7 @@
   };
 </script>
 
-
+<!-- ═══════════ APP LOGIC ═══════════ -->
 <script>
 // ═══ CONSTANTS ═══
 const WORKER_URL = "https://perry-finance-proxy.zachperrybusiness.workers.dev";
@@ -718,20 +2130,29 @@ let portfolioLineChart = null;
 let donutCharts = {};
 
 // ═══ NAVIGATION ═══
-const parentMap = { home: 'home', about: 'home', portfolio: 'portfolio', holdings: 'portfolio', research: 'research' };
+const parentMap = { home: 'home', about: 'home', portfolio: 'portfolio', holdings: 'portfolio', research: 'research', macro: 'macro', quant: 'quant' };
 function navigateTo(p) {
-  var map = {home:'index.html',about:'about.html',portfolio:'portfolio.html',holdings:'holdings.html',research:'research.html',macro:'macro.html',quant:'quant.html'};
-  window.location.href = map[p] || 'index.html';
+  document.activeElement.blur();
+  document.querySelectorAll('.page').forEach(x => x.classList.remove('active'));
+  document.querySelectorAll('.nav-parent,.nav-child').forEach(x => x.classList.remove('active'));
+  document.getElementById('page-' + p).classList.add('active');
+  const pp = parentMap[p] || p;
+  const pe = document.querySelector('.nav-parent[data-page="' + pp + '"]');
+  if (pe) pe.classList.add('active');
+  const ce = document.querySelector('.nav-child[data-page="' + p + '"]');
+  if (ce) ce.classList.add('active');
+  window.scrollTo(0, 0);
+  if (p === 'portfolio') renderPortfolioOverview();
 }
 
 // ═══ HOME FEATURES ═══
 const FEATURES = [
   { title: "Portfolio Overview", desc: "Live valuation, benchmark comparison, allocation charts, Morningstar style box, and performance history.", page: "portfolio", tag: "Active" },
   { title: "Manage Holdings", desc: "Add/remove holdings stored in Firebase. Prices refresh from Yahoo Finance via Cloudflare Worker.", page: "holdings", tag: "Active" },
-  { title: "Financial Analysis", desc: "AI-powered investment analysis using SEC EDGAR filings, real-time market data, and analyst estimates.", page: "research", tag: "Active" },
+  { title: "Market Research", desc: "Real-time quotes, historical charts, and ticker search via Cloudflare data proxy.", page: "research", tag: "Active" },
   { title: "Macro Regime Analysis", desc: "CFA-based 10-indicator scorecard, business cycle classification, sector rotation, and cross-asset confirmation.", page: "macro", tag: "Active" },
   { title: "Quantitative Models", desc: "Stock decision trees, MLR regression, peer comparison, Monte Carlo simulation, and regime backtesting.", page: "quant", tag: "Active" },
-  { title: "Quantitative Models", desc: "ML models — regression, random forest, XGBoost, LSTM.", page: null, tag: "Coming Soon" }
+  { title: "Risk & Stress Testing", desc: "VaR, Monte-Carlo, tracking error, scenario analysis.", page: null, tag: "Coming Soon" }
 ];
 document.getElementById('featureGrid').innerHTML = FEATURES.map(f =>
   '<div class="feature-card ' + (f.page ? '' : 'disabled') + '" ' +
@@ -1972,9 +3393,54 @@ window.runResearch = async function() {
       '</ul></div></div>';
   }
 };
+
+// ════════════════════════════════════════════════════
+// MACRO ANALYSIS (placeholder — will use /currentmacroanalysis skill)
+// ════════════════════════════════════════════════════
+window.runMacroAnalysis = async function() {
+  var el = document.getElementById('macroResults');
+  el.innerHTML = '<div style="padding:40px;text-align:center;"><span class="spinner"></span><br><br><strong>Running Macro Regime Analysis...</strong><br><span style="font-size:12px;color:'+C.textSec+';">Searching for live economic data, scoring 10 indicators, classifying business cycle phase...</span></div>';
+  try {
+    var secData = await fetchFundamentals('SPY'); // Use SPY as market proxy
+    var prompt = 'You are a macro hedge fund CFA analyst. Run a complete macro regime analysis. Search for the latest ISM Manufacturing PMI, ISM Services PMI, Nonfarm Payrolls, Unemployment Rate, Initial Jobless Claims 4-week MA, CPI (headline + core YoY), Core PCE YoY, Federal Funds Rate, 2s/10s yield spread, 3M/10Y yield spread, Conference Board LEI trend, and HY OAS. Score each of the 10 regime indicators as +1 (expansion) or -1 (contraction). Classify the business cycle phase. Provide sector rotation recommendations. Return your analysis as structured HTML with tables using navy headers (#003C71 background, white text), card styling, and green/red color coding for positive/negative signals. Use Arial font. Make it look professional and investment-grade.';
+    var response = await fetch(WORKER_URL + "/analyze", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ model: "claude-sonnet-4-20250514", max_tokens: 8000, messages: [{ role: "user", content: prompt }] })
+    });
+    var result = await response.json();
+    if (result.error) throw new Error(result.error.message || JSON.stringify(result.error));
+    var text = (result.content || []).map(function(c){return c.text||''}).join('');
+    el.innerHTML = '<div class="card"><div class="card-title">Macro Regime Briefing — ' + new Date().toLocaleDateString() + '</div><div class="card-body">' + text + '</div><div class="card-sources"><strong>Sources:</strong><br>&#8226; Federal Reserve (FRED) &#8226; Bureau of Labor Statistics &#8226; ISM &#8226; Conference Board &#8226; ICE BofA</div></div>';
+  } catch(e) {
+    el.innerHTML = '<div class="card"><div class="card-title" style="background:var(--danger);">Error</div><div class="card-body"><p style="color:var(--danger);">'+e.message+'</p></div></div>';
+  }
+};
+
+// ════════════════════════════════════════════════════
+// QUANT ANALYSIS (placeholder — will use /stockdecisiontree skill)
+// ════════════════════════════════════════════════════
+window.runQuantAnalysis = async function() {
+  var ticker = document.getElementById('quantTicker').value.trim().toUpperCase();
+  if (!ticker) { alert('Enter a ticker.'); return; }
+  var el = document.getElementById('quantResults');
+  el.innerHTML = '<div style="padding:40px;text-align:center;"><span class="spinner"></span><br><br><strong>Running Quantitative Analysis for '+ticker+'...</strong><br><span style="font-size:12px;color:'+C.textSec+';">Identifying peers, backtesting macro regimes, running MLR, ranking indicators...</span></div>';
+  try {
+    var secData = await fetchFundamentals(ticker);
+    var prompt = 'You are a quantitative equity analyst. Given SEC EDGAR financial data for '+ticker+', perform a quantitative stock decision analysis. Include: 1) Sector/industry peer comparison, 2) Valuation relative to peers (P/E, P/S, EV/EBITDA), 3) Growth trajectory analysis, 4) Financial health scoring, 5) A BUY/HOLD/AVOID verdict with conviction level. Use the following SEC data: '+JSON.stringify({income:secData.incomeStatement,balance:secData.balanceSheet,cashflow:secData.cashFlowStatement,profile:secData.profile,price:secData.price,analysts:secData.analystTargets})+'. Return your analysis as structured HTML with tables using navy headers (#003C71 background, white text), card styling, and green/red color coding. Use Arial font. Make it professional and investment-grade.';
+    var response = await fetch(WORKER_URL + "/analyze", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ model: "claude-sonnet-4-20250514", max_tokens: 8000, messages: [{ role: "user", content: prompt }] })
+    });
+    var result = await response.json();
+    if (result.error) throw new Error(result.error.message || JSON.stringify(result.error));
+    var text = (result.content || []).map(function(c){return c.text||''}).join('');
+    el.innerHTML = '<div class="card"><div class="card-title">Quantitative Analysis: '+ticker+' — '+new Date().toLocaleDateString()+'</div><div class="card-body">'+text+'</div><div class="card-sources"><strong>Sources:</strong><br>&#8226; SEC EDGAR 10-K Filings &#8226; FMP Company Profile &#8226; Yahoo Finance</div></div>';
+  } catch(e) {
+    el.innerHTML = '<div class="card"><div class="card-title" style="background:var(--danger);">Error</div><div class="card-body"><p style="color:var(--danger);">'+e.message+'</p></div></div>';
+  }
+};
 </script>
-
-
-
 </body>
 </html>
