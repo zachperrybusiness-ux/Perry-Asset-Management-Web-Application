@@ -3082,11 +3082,42 @@ RULES: Compute ALL ratios from raw data. Margins/returns/growth as percentages (
   const response = await fetch(WORKER_URL + "/analyze", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ model: "claude-sonnet-4-20250514", max_tokens: 4000, messages: [{ role: "user", content: prompt }] })
+    body: JSON.stringify({ model: "claude-sonnet-4-20250514", max_tokens: 8000, messages: [{ role: "user", content: prompt }] })
   });
   const result = await response.json();
-  const text = result.content?.map(function(c){return c.text||""}).join("") || "";
-  return JSON.parse(text.replace(/```json|```/g, "").trim());
+  
+  // Debug: check for API errors
+  if (result.error) {
+    throw new Error("Claude API: " + (result.error.message || JSON.stringify(result.error)));
+  }
+  if (!result.content || !result.content.length) {
+    throw new Error("Claude returned empty response. Status: " + response.status + ". Full response: " + JSON.stringify(result).substring(0, 500));
+  }
+  
+  const text = result.content.map(function(c){return c.text||""}).join("");
+  if (!text.trim()) {
+    throw new Error("Claude returned empty text. Stop reason: " + (result.stop_reason || "unknown"));
+  }
+  
+  // Clean and parse
+  var cleaned = text.replace(/```json\s*/g, "").replace(/```\s*/g, "").trim();
+  // If Claude added text before the JSON, find the first {
+  var jsonStart = cleaned.indexOf("{");
+  if (jsonStart > 0) cleaned = cleaned.substring(jsonStart);
+  // If truncated, try to close it
+  try {
+    return JSON.parse(cleaned);
+  } catch (parseErr) {
+    // Truncated JSON — try to salvage by closing open braces/brackets
+    var opens = (cleaned.match(/\{/g) || []).length;
+    var closes = (cleaned.match(/\}/g) || []).length;
+    while (closes < opens) { cleaned += "}"; closes++; }
+    try {
+      return JSON.parse(cleaned);
+    } catch (e2) {
+      throw new Error("Failed to parse Claude response (length=" + text.length + ", stop=" + (result.stop_reason || "?") + "): " + text.substring(0, 300));
+    }
+  }
 }
 
 // ════════════════════════════════════════════════════
