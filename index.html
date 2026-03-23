@@ -1320,7 +1320,7 @@ tr:hover td { background: #EAF1F9; }
   <div class="content-wrap">
     <div class="hero" style="padding:32px 40px;">
       <h1>Market Research</h1>
-      <p>Real-time quotes, historical charts, and ticker search via Cloudflare Worker proxy.</p>
+      <p>Real-time quotes, comprehensive fundamentals, historical charts, and ticker search powered by your Cloudflare Worker proxy to Yahoo Finance.</p>
     </div>
     <div class="card">
       <div class="card-title">Ticker Lookup</div>
@@ -1333,9 +1333,10 @@ tr:hover td { background: #EAF1F9; }
           <div class="form-group">
             <label>Type</label>
             <select id="researchType">
-              <option value="quote">Quote</option>
-              <option value="chart">Chart</option>
-              <option value="search">Search</option>
+              <option value="full" selected>Full Analysis</option>
+              <option value="quote">Quick Quote</option>
+              <option value="chart">Chart Only</option>
+              <option value="search">Search Tickers</option>
             </select>
           </div>
           <div class="form-group" id="rangeGroup" style="display:none;">
@@ -2998,46 +2999,273 @@ function renderAccountInfoCards() {
 }
 setTimeout(renderAccountInfoCards, 100);
 
+
 // ═══ RESEARCH ═══
 let researchChart = null;
 document.getElementById('researchType').addEventListener('change', function() {
-  document.getElementById('rangeGroup').style.display = this.value === 'chart' ? '' : 'none';
+  document.getElementById('rangeGroup').style.display = (this.value === 'chart') ? '' : 'none';
 });
 
+// Helper: render a data table from key-value pairs
+function researchTable(title, rows) {
+  let html = '<div class="card"><div class="card-title">' + title + '</div><div class="card-body">' +
+    '<table style="font-size:12px;">';
+  rows.forEach(function(r) {
+    if (r === null) {
+      html += '<tr><td colspan="2" style="border-bottom:2px solid var(--border);padding:4px;"></td></tr>';
+      return;
+    }
+    var val = r[1] != null ? r[1] : '—';
+    var color = r[2] || C.text;
+    html += '<tr><td style="font-weight:600;color:' + C.textSec + ';padding:6px 12px 6px 0;white-space:nowrap;">' + r[0] + '</td>' +
+      '<td style="font-weight:600;color:' + color + ';padding:6px 0;">' + val + '</td></tr>';
+  });
+  html += '</table></div><div class="card-sources"><strong>Sources:</strong><br>&#8226; Yahoo Finance via Cloudflare Worker</div></div>';
+  return html;
+}
+
+function fmtB(v) {
+  if (v == null) return '—';
+  if (Math.abs(v) >= 1e12) return '$' + (v / 1e12).toFixed(2) + 'T';
+  if (Math.abs(v) >= 1e9) return '$' + (v / 1e9).toFixed(2) + 'B';
+  if (Math.abs(v) >= 1e6) return '$' + (v / 1e6).toFixed(1) + 'M';
+  return fmt(v);
+}
+function fmtR(v) { return v != null ? (v >= 0 ? '+' : '') + v.toFixed(2) + '%' : '—'; }
+function pcC(v) { return v != null ? (v >= 0 ? C.success : C.danger) : C.text; }
+
+async function fetchFundamentals(ticker) {
+  var r = await fetch(WORKER_URL + "/fundamentals?symbol=" + encodeURIComponent(ticker));
+  var d = await r.json();
+  if (d.error) throw new Error(d.error);
+  return d;
+}
+
 window.runResearch = async function() {
-  const ticker = document.getElementById('researchTicker').value.trim().toUpperCase();
-  const type = document.getElementById('researchType').value;
+  var ticker = document.getElementById('researchTicker').value.trim().toUpperCase();
+  var type = document.getElementById('researchType').value;
   if (!ticker && type !== 'search') { alert('Enter a ticker.'); return; }
+
   document.getElementById('researchRawCard').style.display = '';
-  document.getElementById('researchOutput').textContent = 'Fetching...';
+  document.getElementById('researchOutput').innerHTML = '<span class="spinner"></span> Fetching <strong>' + ticker + '</strong>...';
   document.getElementById('researchChartCard').style.display = 'none';
-  document.getElementById('researchResults').innerHTML = '';
+  document.getElementById('researchResults').innerHTML = '<div style="padding:20px;text-align:center;"><span class="spinner"></span> Loading...</div>';
+
   try {
-    if (type === 'quote') {
-      const d = await fetchQuote(ticker);
-      const chg = d.change || 0, chgPct = d.changePercent || 0;
-      const cc3 = chg >= 0 ? C.success : C.danger;
+    // ════════════════════════════
+    // FULL ANALYSIS
+    // ════════════════════════════
+    if (type === 'full') {
+      var d = await fetchFundamentals(ticker);
+      var chg = d.change || 0;
+      var chgPct = d.changePercent || 0;
+      var cc3 = chg >= 0 ? C.success : C.danger;
+      var priceNow = d.price || 0;
+      var w52H = d.fiftyTwoWeekHigh;
+      var w52L = d.fiftyTwoWeekLow;
+      var w52Pct = (w52H && w52L && w52H !== w52L) ? ((priceNow - w52L) / (w52H - w52L) * 100).toFixed(0) : null;
+
+      // Company header card
+      var html = '<div class="card"><div class="card-title">' + d.name + ' (' + d.symbol + ') — ' +
+        (d.sector || 'N/A') + ' / ' + (d.industry || 'N/A') + '</div><div class="card-body">';
+      if (d.longBusinessSummary) {
+        html += '<p style="font-size:12px;color:' + C.textSec + ';line-height:1.6;margin-bottom:12px;">' +
+          d.longBusinessSummary.substring(0, 600) + (d.longBusinessSummary.length > 600 ? '...' : '') + '</p>';
+      }
+      html += '<div style="font-size:11px;color:' + C.textSec + ';">';
+      if (d.website) html += '<strong>Website:</strong> ' + d.website + ' &nbsp;|&nbsp; ';
+      if (d.city) html += d.city + (d.state ? ', ' + d.state : '') + (d.country ? ', ' + d.country : '') + ' &nbsp;|&nbsp; ';
+      if (d.fullTimeEmployees) html += '<strong>Employees:</strong> ' + Number(d.fullTimeEmployees).toLocaleString();
+      html += '</div></div></div>';
+
+      // Price metrics row
+      html += '<div class="metrics-row">' +
+        mcBig(d.symbol, fmt(priceNow), fmtR(chgPct) + ' (' + fmt(chg) + ')', cc3) +
+        mcBig('Market Cap', d.marketCapFmt || fmtB(d.marketCap), d.quoteType || '', C.textSec) +
+        mcBig('52-Week Range', (w52L ? fmt(w52L) : '—') + ' — ' + (w52H ? fmt(w52H) : '—'),
+          w52Pct ? w52Pct + '% from low' : '', C.textSec) +
+        mcBig('Volume', d.volume ? Number(d.volume).toLocaleString() : '—',
+          'Prev Close: ' + (d.previousClose ? fmt(d.previousClose) : '—'), C.textSec) +
+        '</div>';
+
+      // Two-column: Valuation + Financial Health
+      html += '<div class="grid-2">';
+      html += researchTable('Valuation Ratios', [
+        ['Trailing P/E', d.trailingPE ? d.trailingPE.toFixed(2) : null],
+        ['Forward P/E', d.forwardPE ? d.forwardPE.toFixed(2) : null],
+        ['PEG Ratio', d.pegRatio ? d.pegRatio.toFixed(2) : null],
+        ['Price/Book', d.priceToBook ? d.priceToBook.toFixed(2) : null],
+        ['Price/Sales', d.priceToSales ? d.priceToSales.toFixed(2) : null],
+        ['EV/Revenue', d.evToRevenue ? d.evToRevenue.toFixed(2) : null],
+        ['EV/EBITDA', d.evToEbitda ? d.evToEbitda.toFixed(2) : null],
+        null,
+        ['Enterprise Value', d.enterpriseValueFmt || fmtB(d.enterpriseValue)],
+        ['Trailing EPS', d.trailingEps ? '$' + d.trailingEps.toFixed(2) : null],
+        ['Forward EPS', d.forwardEps ? '$' + d.forwardEps.toFixed(2) : null],
+        ['Book Value/Share', d.bookValuePerShare ? '$' + d.bookValuePerShare.toFixed(2) : null]
+      ]);
+      html += researchTable('Financial Health', [
+        ['Revenue', d.totalRevenueFmt || fmtB(d.totalRevenue)],
+        ['Revenue Growth', fmtR(d.revenueGrowth), pcC(d.revenueGrowth)],
+        ['Earnings Growth', fmtR(d.earningsGrowth), pcC(d.earningsGrowth)],
+        null,
+        ['Gross Margin', fmtR(d.grossMargin)],
+        ['Operating Margin', fmtR(d.operatingMargin)],
+        ['Profit Margin', fmtR(d.profitMargin)],
+        null,
+        ['EBITDA', d.ebitdaFmt || fmtB(d.ebitda)],
+        ['Free Cash Flow', d.freeCashflowFmt || fmtB(d.freeCashflow)],
+        ['Operating Cash Flow', d.operatingCashflowFmt || fmtB(d.operatingCashflow)],
+        null,
+        ['Total Debt', d.totalDebtFmt || fmtB(d.totalDebt)],
+        ['Total Cash', d.totalCashFmt || fmtB(d.totalCash)],
+        ['Debt/Equity', d.debtToEquity ? d.debtToEquity.toFixed(1) : null],
+        ['Current Ratio', d.currentRatio ? d.currentRatio.toFixed(2) : null],
+        ['Return on Equity', fmtR(d.returnOnEquity), pcC(d.returnOnEquity)],
+        ['Return on Assets', fmtR(d.returnOnAssets), pcC(d.returnOnAssets)]
+      ]);
+      html += '</div>';
+
+      // Three-column: Dividends + Key Stats + Analyst
+      html += '<div class="grid-3">';
+      html += researchTable('Dividends', [
+        ['Dividend Rate', d.dividendRate ? '$' + d.dividendRate.toFixed(2) : 'None'],
+        ['Dividend Yield', d.dividendYield ? d.dividendYield.toFixed(2) + '%' : 'None'],
+        ['Payout Ratio', d.payoutRatio ? d.payoutRatio.toFixed(1) + '%' : null],
+        ['5Y Avg Yield', d.fiveYearAvgDividendYield ? d.fiveYearAvgDividendYield.toFixed(2) + '%' : null],
+        ['Ex-Div Date', d.exDividendDate || null],
+        ['Div Pay Date', d.dividendDate || null]
+      ]);
+
+      html += researchTable('Key Statistics', [
+        ['Beta (5Y)', d.beta ? d.beta.toFixed(2) : null],
+        ['50-Day Avg', d.fiftyDayAverage ? fmt(d.fiftyDayAverage) : null],
+        ['200-Day Avg', d.twoHundredDayAverage ? fmt(d.twoHundredDayAverage) : null],
+        null,
+        ['Shares Out', d.sharesOutstandingFmt || null],
+        ['Float', d.floatSharesFmt || null],
+        ['Short Ratio', d.shortRatio ? d.shortRatio.toFixed(2) : null],
+        ['Short % Float', d.shortPercentOfFloat ? d.shortPercentOfFloat.toFixed(2) + '%' : null],
+        null,
+        ['% Insiders', d.heldPercentInsiders ? d.heldPercentInsiders.toFixed(2) + '%' : null],
+        ['% Institutions', d.heldPercentInstitutions ? d.heldPercentInstitutions.toFixed(2) + '%' : null],
+        ['Last Split', d.lastSplitFactor ? d.lastSplitFactor + ' (' + d.lastSplitDate + ')' : null]
+      ]);
+
+      var rec = d.recommendationKey ? d.recommendationKey.toUpperCase() : '—';
+      var recColor = (rec === 'BUY' || rec === 'STRONG_BUY') ? C.success : rec === 'SELL' ? C.danger : C.navy;
+      var upside = (d.targetMeanPrice && priceNow > 0) ? ((d.targetMeanPrice - priceNow) / priceNow) * 100 : null;
+      html += researchTable('Analyst Estimates', [
+        ['Recommendation', rec, recColor],
+        ['Mean Score', d.recommendationMean ? d.recommendationMean.toFixed(1) + ' / 5' : null],
+        ['# Analysts', d.numberOfAnalystOpinions || null],
+        null,
+        ['Target High', d.targetHighPrice ? fmt(d.targetHighPrice) : null],
+        ['Target Mean', d.targetMeanPrice ? fmt(d.targetMeanPrice) : null],
+        ['Target Median', d.targetMedianPrice ? fmt(d.targetMedianPrice) : null],
+        ['Target Low', d.targetLowPrice ? fmt(d.targetLowPrice) : null],
+        null,
+        ['Upside (Mean)', upside != null ? fmtR(upside) : null, upside != null ? pcC(upside) : C.text],
+        ['Next Earnings', d.earningsDate && d.earningsDate.length ? d.earningsDate.join(' to ') : null]
+      ]);
+      html += '</div>';
+
+      // Earnings history table
+      if (d.earningsHistory && d.earningsHistory.length) {
+        html += '<div class="card"><div class="card-title">Recent Earnings</div><div class="card-body">' +
+          '<table style="font-size:12px;"><thead><tr><th>Quarter</th><th>Actual EPS</th><th>Estimate</th><th>Surprise</th></tr></thead><tbody>';
+        d.earningsHistory.forEach(function(q) {
+          var surprise = (q.actual != null && q.estimate != null) ? q.actual - q.estimate : null;
+          var sc = surprise != null ? pcC(surprise) : C.text;
+          html += '<tr><td style="font-weight:600;">' + (q.quarter || '—') + '</td>' +
+            '<td>' + (q.actual != null ? '$' + q.actual.toFixed(2) : '—') + '</td>' +
+            '<td>' + (q.estimate != null ? '$' + q.estimate.toFixed(2) : '—') + '</td>' +
+            '<td style="color:' + sc + ';font-weight:600;">' + (surprise != null ? (surprise >= 0 ? '+' : '') + '$' + surprise.toFixed(2) : '—') + '</td></tr>';
+        });
+        html += '</tbody></table></div><div class="card-sources"><strong>Sources:</strong><br>&#8226; Yahoo Finance</div></div>';
+      }
+
+      // Recommendation trend table
+      if (d.recommendationTrend && d.recommendationTrend.length) {
+        html += '<div class="card"><div class="card-title">Analyst Recommendation Trend</div><div class="card-body">' +
+          '<table style="font-size:12px;"><thead><tr><th>Period</th><th style="color:' + C.success + ';">Strong Buy</th><th style="color:' + C.success + ';">Buy</th><th>Hold</th><th style="color:' + C.danger + ';">Sell</th><th style="color:' + C.danger + ';">Strong Sell</th></tr></thead><tbody>';
+        d.recommendationTrend.forEach(function(t) {
+          html += '<tr><td style="font-weight:600;">' + t.period + '</td>' +
+            '<td>' + (t.strongBuy || 0) + '</td><td>' + (t.buy || 0) + '</td>' +
+            '<td>' + (t.hold || 0) + '</td><td>' + (t.sell || 0) + '</td>' +
+            '<td>' + (t.strongSell || 0) + '</td></tr>';
+        });
+        html += '</tbody></table></div><div class="card-sources"><strong>Sources:</strong><br>&#8226; Yahoo Finance</div></div>';
+      }
+
+      document.getElementById('researchResults').innerHTML = html;
+
+      // Also show 1Y chart
+      try {
+        var chartData = await fetchChart(ticker, '1y', '1d');
+        var pts = (chartData.points || []).filter(function(p) { return p.close !== null; });
+        if (pts.length > 1) {
+          document.getElementById('researchChartCard').style.display = '';
+          document.getElementById('researchChartTitle').textContent = ticker + ' — 1 Year Price History';
+          var ctx = document.getElementById('researchChart').getContext('2d');
+          if (researchChart) researchChart.destroy();
+          researchChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+              labels: pts.map(function(p) { return p.date.slice(0, 10); }),
+              datasets: [{
+                label: ticker, data: pts.map(function(p) { return p.close; }),
+                borderColor: C.navy, backgroundColor: 'rgba(0,60,113,.06)',
+                borderWidth: 2.5, pointRadius: 0, pointHoverRadius: 5,
+                pointHoverBackgroundColor: C.navy, fill: true, tension: .3
+              }]
+            },
+            options: {
+              responsive: true, maintainAspectRatio: false,
+              plugins: { legend: { display: false }, tooltip: { ...chartTooltip, callbacks: { label: function(c) { return ' ' + fmt(c.parsed.y); } } } },
+              scales: {
+                x: { grid: chartGrid, ticks: { ...chartTicks, maxTicksLimit: 12 }, border: { display: false } },
+                y: { grid: chartGrid, ticks: { ...chartTicks, callback: function(v) { return '$' + v.toFixed(2); } }, border: { display: false } }
+              }
+            }
+          });
+        }
+      } catch(e) { /* chart is optional bonus */ }
+
+      document.getElementById('researchOutput').textContent = JSON.stringify(d, null, 2);
+
+    // ════════════════════════════
+    // QUICK QUOTE
+    // ════════════════════════════
+    } else if (type === 'quote') {
+      var d = await fetchQuote(ticker);
+      var chg = d.change || 0, chgPct = d.changePercent || 0, cc3 = chg >= 0 ? C.success : C.danger;
       document.getElementById('researchResults').innerHTML =
         '<div class="metrics-row" style="margin-bottom:20px;">' +
-        mcBig(d.symbol, fmt(d.price), fmtPct(chgPct) + ' (' + fmt(chg) + ')', cc3) +
+        mcBig(d.symbol, fmt(d.price), fmtR(chgPct) + ' (' + fmt(chg) + ')', cc3) +
         mcBig('Prev Close', fmt(d.previousClose), '', C.textSec) +
         mcBig('Day Range', (d.intradayLow ? fmt(d.intradayLow) : '—') + ' — ' + (d.intradayHigh ? fmt(d.intradayHigh) : '—'), '', C.textSec) +
         mcBig('Volume', d.volume ? Number(d.volume).toLocaleString() : '—', '', C.textSec) + '</div>';
       document.getElementById('researchOutput').textContent = JSON.stringify(d, null, 2);
+
+    // ════════════════════════════
+    // CHART ONLY
+    // ════════════════════════════
     } else if (type === 'chart') {
-      const range = document.getElementById('researchRange').value;
-      const d = await fetchChart(ticker, range, '1d');
-      const pts = (d.points || []).filter(p => p.close !== null);
+      var range = document.getElementById('researchRange').value;
+      var d = await fetchChart(ticker, range, '1d');
+      var pts = (d.points || []).filter(function(p) { return p.close !== null; });
+      document.getElementById('researchResults').innerHTML = '';
       document.getElementById('researchChartCard').style.display = '';
       document.getElementById('researchChartTitle').textContent = ticker + ' Price (' + range + ')';
-      const ctx = document.getElementById('researchChart').getContext('2d');
+      var ctx = document.getElementById('researchChart').getContext('2d');
       if (researchChart) researchChart.destroy();
       researchChart = new Chart(ctx, {
         type: 'line',
         data: {
-          labels: pts.map(p => p.date.slice(0, 10)),
+          labels: pts.map(function(p) { return p.date.slice(0, 10); }),
           datasets: [{
-            label: ticker, data: pts.map(p => p.close),
+            label: ticker, data: pts.map(function(p) { return p.close; }),
             borderColor: C.navy, backgroundColor: 'rgba(0,60,113,.06)',
             borderWidth: 2.5, pointRadius: 0, pointHoverRadius: 5,
             pointHoverBackgroundColor: C.navy, fill: true, tension: .3
@@ -3045,19 +3273,23 @@ window.runResearch = async function() {
         },
         options: {
           responsive: true, maintainAspectRatio: false,
-          plugins: { legend: { display: false }, tooltip: { ...chartTooltip, callbacks: { label: c => ' ' + fmt(c.parsed.y) } } },
+          plugins: { legend: { display: false }, tooltip: { ...chartTooltip, callbacks: { label: function(c) { return ' ' + fmt(c.parsed.y); } } } },
           scales: {
             x: { grid: chartGrid, ticks: { ...chartTicks, maxTicksLimit: 12 }, border: { display: false } },
-            y: { grid: chartGrid, ticks: { ...chartTicks, callback: v => '$' + v.toFixed(2) }, border: { display: false } }
+            y: { grid: chartGrid, ticks: { ...chartTicks, callback: function(v) { return '$' + v.toFixed(2); } }, border: { display: false } }
           }
         }
       });
-      document.getElementById('researchOutput').textContent = pts.length + ' points.';
+      document.getElementById('researchOutput').textContent = pts.length + ' data points.';
+
+    // ════════════════════════════
+    // SEARCH
+    // ════════════════════════════
     } else if (type === 'search') {
-      const d = await fetchSearch(ticker);
-      let html = '<div class="card"><div class="card-title">Search: "' + ticker + '"</div><div class="card-body">' +
+      var d = await fetchSearch(ticker);
+      var html = '<div class="card"><div class="card-title">Search: "' + ticker + '"</div><div class="card-body">' +
         '<table><thead><tr><th>Symbol</th><th>Name</th><th>Type</th><th>Exchange</th></tr></thead><tbody>';
-      (d.results || []).forEach(r => {
+      (d.results || []).forEach(function(r) {
         html += '<tr><td style="font-weight:700;color:' + C.navy + ';">' + r.symbol + '</td>' +
           '<td>' + r.name + '</td><td>' + r.type + '</td><td>' + r.exchange + '</td></tr>';
       });
@@ -3067,6 +3299,13 @@ window.runResearch = async function() {
     }
   } catch(e) {
     document.getElementById('researchOutput').textContent = 'Error: ' + e.message;
+    document.getElementById('researchResults').innerHTML =
+      '<div class="card"><div class="card-title" style="background:var(--danger);">Error</div><div class="card-body">' +
+      '<p style="color:var(--danger);font-weight:600;">Failed to fetch data for ' + ticker + '</p>' +
+      '<p style="font-size:12px;color:var(--text-sec);">Error: ' + e.message + '</p>' +
+      '<p style="font-size:12px;color:var(--text-sec);margin-top:8px;">Make sure your Cloudflare Worker has the <code>/fundamentals</code> endpoint.<br>' +
+      'Test: <code style="background:var(--panel);padding:2px 6px;border-radius:3px;">' + WORKER_URL + '/fundamentals?symbol=' + ticker + '</code></p>' +
+      '</div></div>';
   }
 };
 </script>
