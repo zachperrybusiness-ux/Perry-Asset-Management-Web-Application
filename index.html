@@ -1101,6 +1101,8 @@ tr:hover td { background: #EAF1F9; }
           <option value="Traditional IRA">Traditional IRA</option>
           <option value="401(k)">Standard 401(k)</option>
           <option value="Roth 401(k)">Roth 401(k)</option>
+          <option value="BrokerageLink 401(k)">BrokerageLink 401(k)</option>
+          <option value="BrokerageLink Roth IRA">BrokerageLink Roth IRA</option>
           <option value="SEP IRA">SEP IRA</option>
           <option value="529 Plan">529 Plan</option>
           <option value="HSA">HSA</option>
@@ -1207,6 +1209,8 @@ tr:hover td { background: #EAF1F9; }
           <option value="Traditional IRA">Traditional IRA</option>
           <option value="401(k)">Standard 401(k)</option>
           <option value="Roth 401(k)">Roth 401(k)</option>
+          <option value="BrokerageLink 401(k)">BrokerageLink 401(k)</option>
+          <option value="BrokerageLink Roth IRA">BrokerageLink Roth IRA</option>
           <option value="SEP IRA">SEP IRA</option>
           <option value="529 Plan">529 Plan</option>
           <option value="HSA">HSA</option>
@@ -1221,10 +1225,18 @@ tr:hover td { background: #EAF1F9; }
         <div class="card-title">Add New Holding</div>
         <div class="card-body">
           <div id="addStatus" class="status-bar"></div>
-          <div class="form-row">
+          <div style="margin-bottom:10px;">
+            <label style="font-size:11px;font-weight:600;margin-right:12px;">
+              <input type="radio" name="holdingType" value="security" checked onchange="toggleHoldingType()"> Stock / ETF / Fund
+            </label>
+            <label style="font-size:11px;font-weight:600;">
+              <input type="radio" name="holdingType" value="cash" onchange="toggleHoldingType()"> Cash / Money Market / CD / Bond
+            </label>
+          </div>
+          <div class="form-row" id="securityFields">
             <div class="form-group" style="min-width:110px;">
               <label>Ticker</label>
-              <input type="text" id="inputTicker" placeholder="AAPL" style="text-transform:uppercase;">
+              <input type="text" id="inputTicker" placeholder="AAPL, SPAXX, FDRXX" style="text-transform:uppercase;">
             </div>
             <div class="form-group">
               <label>Date Purchased</label>
@@ -1238,6 +1250,10 @@ tr:hover td { background: #EAF1F9; }
               <label>Cost/Share</label>
               <input type="number" id="inputCost" placeholder="150.00" min="0" step="0.01">
             </div>
+            <div class="form-group" style="min-width:80px;">
+              <label>Yield %</label>
+              <input type="number" id="inputYield" placeholder="4.25" min="0" step="0.01">
+            </div>
             <div class="form-group" style="min-width:160px;">
               <label>Account Type</label>
               <select id="inputAccountType">
@@ -1246,6 +1262,8 @@ tr:hover td { background: #EAF1F9; }
                 <option value="Traditional IRA">Traditional IRA</option>
                 <option value="401(k)">Standard 401(k)</option>
                 <option value="Roth 401(k)">Roth 401(k)</option>
+                <option value="BrokerageLink 401(k)">BrokerageLink 401(k)</option>
+                <option value="BrokerageLink Roth IRA">BrokerageLink Roth IRA</option>
                 <option value="SEP IRA">SEP IRA</option>
                 <option value="529 Plan">529 Plan</option>
                 <option value="HSA">HSA</option>
@@ -1256,6 +1274,35 @@ tr:hover td { background: #EAF1F9; }
               </select>
             </div>
             <button class="btn" id="addBtn" onclick="addHolding()">Add Holding</button>
+          </div>
+          <div class="form-row" id="cashFields" style="display:none;">
+            <div class="form-group" style="min-width:140px;">
+              <label>Description</label>
+              <input type="text" id="cashName" placeholder="Cash, SPAXX, CD, Bond">
+            </div>
+            <div class="form-group" style="min-width:120px;">
+              <label>Amount ($)</label>
+              <input type="number" id="cashAmount" placeholder="10000.00" min="0" step="0.01">
+            </div>
+            <div class="form-group" style="min-width:80px;">
+              <label>Yield %</label>
+              <input type="number" id="cashYield" placeholder="4.25" min="0" step="0.01">
+            </div>
+            <div class="form-group" style="min-width:160px;">
+              <label>Account Type</label>
+              <select id="cashAccountType">
+                <option value="Individual">Individual Brokerage</option>
+                <option value="Roth IRA">Roth IRA</option>
+                <option value="Traditional IRA">Traditional IRA</option>
+                <option value="401(k)">Standard 401(k)</option>
+                <option value="Roth 401(k)">Roth 401(k)</option>
+                <option value="BrokerageLink 401(k)">BrokerageLink 401(k)</option>
+                <option value="BrokerageLink Roth IRA">BrokerageLink Roth IRA</option>
+                <option value="SEP IRA">SEP IRA</option>
+                <option value="HSA">HSA</option>
+              </select>
+            </div>
+            <button class="btn" id="addCashBtn" onclick="addCashPosition()">Add Cash Position</button>
           </div>
           <!-- Bulk import section -->
           <div style="border-top:1px solid var(--border);margin-top:16px;padding-top:16px;">
@@ -1626,7 +1673,22 @@ tr:hover td { background: #EAF1F9; }
 
     try {
       const q = await fetchQuote(ticker);
-      const meta = classifyHolding(ticker, q);
+      var meta = classifyHolding(ticker, q);
+
+      // If sector is "Other", try SEC API for better classification
+      if (meta.sector === 'Other' || meta.industry === 'Other') {
+        try {
+          var secProfile = await fetch(WORKER_URL + "/fundamentals?symbol=" + encodeURIComponent(ticker));
+          var secData = await secProfile.json();
+          if (secData.profile) {
+            if (secData.profile.sector) meta.sector = secData.profile.sector;
+            if (secData.profile.industry) meta.industry = secData.profile.industry;
+            if (secData.profile.type === 'ETF') meta.assetClass = 'ETF';
+            if (secData.profile.type === 'FUND') meta.assetClass = 'Mutual Fund';
+            if (secData.profile.marketCap) meta.marketCap = secData.profile.marketCap;
+          }
+        } catch(se) { /* SEC lookup failed, use fallback */ }
+      }
       await addDoc(collection(db, "holdings"), {
         uid: user.uid,
         ticker: ticker,
@@ -1755,6 +1817,118 @@ tr:hover td { background: #EAF1F9; }
         alert(e.message);
       }
     }
+  };
+
+  // ── Edit Holding (modal with all editable fields + versioning) ──
+  window.editHolding = async function(docId) {
+    const h = (window._holdings || []).find(x => x.id === docId);
+    if (!h) return;
+    const isCash = h.assetClass === 'Cash' || h.assetClass === 'Money Market' || h.assetClass === 'CD' || h.assetClass === 'Bond Position';
+    const m = document.createElement('div');
+    m.className = 'modal-overlay';
+    m.innerHTML =
+      '<div class="modal-box" style="max-width:520px;">' +
+        '<h3>Edit: ' + h.ticker + ' — ' + h.companyName + '</h3>' +
+        '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:12px 0;">' +
+          '<div class="form-group"><label>Shares</label><input type="number" id="editQty" value="' + h.quantity + '" step="any" ' + (isCash ? 'disabled' : '') + '></div>' +
+          '<div class="form-group"><label>Cost Basis/Share</label><input type="number" id="editCost" value="' + h.costBasis + '" step="0.01"></div>' +
+          '<div class="form-group"><label>Yield %</label><input type="number" id="editYield" value="' + (h.yieldPct || '') + '" step="0.01" placeholder="0.00"></div>' +
+          '<div class="form-group"><label>Account Type</label>' +
+            '<select id="editAcct">' +
+              ['Individual','Roth IRA','Traditional IRA','401(k)','Roth 401(k)','BrokerageLink 401(k)','BrokerageLink Roth IRA','SEP IRA','529 Plan','HSA','Trust','Custodial','Joint','Designated Beneficiary'].map(function(a) {
+                return '<option value="' + a + '"' + ((h.accountType || 'Individual') === a ? ' selected' : '') + '>' + a + '</option>';
+              }).join('') +
+            '</select></div>' +
+          '<div class="form-group"><label>Sector</label><input type="text" id="editSector" value="' + (h.sector || '') + '"></div>' +
+          '<div class="form-group"><label>Industry</label><input type="text" id="editIndustry" value="' + (h.industry || '') + '"></div>' +
+          '<div class="form-group"><label>Asset Type</label><input type="text" id="editAsset" value="' + (h.assetClass || '') + '"></div>' +
+          '<div class="form-group"><label>Date Purchased</label><input type="date" id="editDate" value="' + (h.datePurchased || '') + '"></div>' +
+        '</div>' +
+        '<div class="modal-actions">' +
+          '<button class="btn" onclick="submitEdit(\'' + docId + '\')">Save Changes</button>' +
+          '<button class="btn-outline" onclick="this.closest(\'.modal-overlay\').remove()">Cancel</button>' +
+        '</div>' +
+      '</div>';
+    document.body.appendChild(m);
+  };
+
+  window.submitEdit = async function(docId) {
+    const h = (window._holdings || []).find(x => x.id === docId);
+    if (!h) return;
+    // Save previous version for undo
+    const prev = { quantity: h.quantity, costBasis: h.costBasis, yieldPct: h.yieldPct || null, accountType: h.accountType, sector: h.sector, industry: h.industry, assetClass: h.assetClass, datePurchased: h.datePurchased };
+    const updates = {
+      quantity: parseFloat(document.getElementById('editQty').value) || h.quantity,
+      costBasis: parseFloat(document.getElementById('editCost').value) || h.costBasis,
+      yieldPct: parseFloat(document.getElementById('editYield').value) || null,
+      accountType: document.getElementById('editAcct').value,
+      sector: document.getElementById('editSector').value || h.sector,
+      industry: document.getElementById('editIndustry').value || h.industry,
+      assetClass: document.getElementById('editAsset').value || h.assetClass,
+      datePurchased: document.getElementById('editDate').value || h.datePurchased,
+      previousVersion: JSON.stringify(prev),
+      lastEdited: new Date().toISOString(),
+      lastUpdated: new Date().toISOString()
+    };
+    try {
+      await updateDoc(doc(db, "holdings", docId), updates);
+      document.querySelector('.modal-overlay')?.remove();
+      showStatus('holdingsStatus', '&#10003; Updated ' + h.ticker, 'success');
+      await loadHoldings();
+    } catch(e) { alert(e.message); }
+  };
+
+  window.undoEdit = async function(docId) {
+    const h = (window._holdings || []).find(x => x.id === docId);
+    if (!h || !h.previousVersion) return;
+    if (!confirm('Undo last edit to ' + h.ticker + '?')) return;
+    try {
+      const prev = JSON.parse(h.previousVersion);
+      prev.previousVersion = null;
+      prev.lastEdited = null;
+      prev.lastUpdated = new Date().toISOString();
+      await updateDoc(doc(db, "holdings", docId), prev);
+      showStatus('holdingsStatus', '&#10003; Reverted ' + h.ticker + ' to previous state', 'success');
+      await loadHoldings();
+    } catch(e) { alert(e.message); }
+  };
+
+  // ── Add Cash Position ──
+  window.addCashPosition = async function() {
+    const user = window._currentUser;
+    if (!user) { alert("Sign in first."); return; }
+    const name = document.getElementById('cashName').value.trim() || 'Cash';
+    const amount = parseFloat(document.getElementById('cashAmount').value);
+    const yieldPct = parseFloat(document.getElementById('cashYield').value) || null;
+    const acctType = document.getElementById('cashAccountType').value;
+    if (!amount || amount <= 0) { showStatus('addStatus', 'Enter a cash amount.', 'error'); return; }
+    var ticker = name.toUpperCase().replace(/\s+/g, '_');
+    if (['SPAXX','FDRXX','FZFXX','SPRXX','VMFXX','SWVXX','TTTXX'].indexOf(ticker) >= 0) ticker = ticker; // known money market tickers
+    else if (name.toLowerCase().includes('cash')) ticker = 'CASH';
+    else if (name.toLowerCase().includes('cd')) ticker = 'CD';
+    else if (name.toLowerCase().includes('bond')) ticker = 'BOND';
+
+    var assetClass = 'Cash';
+    if (['SPAXX','FDRXX','FZFXX','SPRXX','VMFXX','SWVXX','TTTXX'].indexOf(ticker) >= 0) assetClass = 'Money Market';
+    else if (ticker === 'CD') assetClass = 'CD';
+    else if (ticker === 'BOND') assetClass = 'Bond Position';
+
+    try {
+      await addDoc(collection(db, "holdings"), {
+        uid: user.uid, ticker: ticker, companyName: name,
+        datePurchased: new Date().toISOString().slice(0,10),
+        quantity: 1, costBasis: amount, currentPrice: amount, previousClose: amount,
+        sector: 'Cash', industry: 'Cash', assetClass: assetClass,
+        marketCap: 0, mktCapCategory: '—', leverage: '',
+        yieldPct: yieldPct, accountType: acctType,
+        lastUpdated: new Date().toISOString(), createdAt: serverTimestamp()
+      });
+      showStatus('addStatus', '&#10003; Added ' + name + ' ($' + amount.toLocaleString() + ') to ' + acctType, 'success');
+      document.getElementById('cashName').value = '';
+      document.getElementById('cashAmount').value = '';
+      document.getElementById('cashYield').value = '';
+      await loadHoldings();
+    } catch(e) { showStatus('addStatus', 'Error: ' + e.message, 'error'); }
   };
 
   // ── Refresh All Prices ──
@@ -2160,6 +2334,13 @@ function classifyHolding(ticker, quoteData) {
 }
 
 // ═══ HELPERS ═══
+// Toggle between Stock/ETF and Cash input modes
+window.toggleHoldingType = function() {
+  var val = document.querySelector('input[name="holdingType"]:checked')?.value || 'security';
+  document.getElementById('securityFields').style.display = val === 'security' ? '' : 'none';
+  document.getElementById('cashFields').style.display = val === 'cash' ? '' : 'none';
+};
+
 const fmt = v => "$" + Number(v).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const fmtInt = v => "$" + Number(v).toLocaleString("en-US", { maximumFractionDigits: 0 });
 const fmtPct = v => (v >= 0 ? "+" : "") + v.toFixed(2) + "%";
@@ -2174,6 +2355,52 @@ function showStatus(id, msg, type) {
 // ═══ STATE ═══
 let currentRange = "1y";
 let portfolioLineChart = null;
+
+// ═══ CHART.JS PLUGIN: Price Bubble at End of Line ═══
+const priceBubblePlugin = {
+  id: 'priceBubble',
+  afterDatasetsDraw(chart) {
+    const ctx = chart.ctx;
+    chart.data.datasets.forEach(function(ds, i) {
+      const meta = chart.getDatasetMeta(i);
+      if (meta.hidden || !meta.data.length) return;
+      // Find last non-null data point
+      var lastPt = null;
+      for (var j = meta.data.length - 1; j >= 0; j--) {
+        if (ds.data[j] != null) { lastPt = meta.data[j]; break; }
+      }
+      if (!lastPt) return;
+      var x = lastPt.x, y = lastPt.y;
+      var val = ds.data[ds.data.length - 1];
+      if (val == null) return;
+      // Format label
+      var label;
+      if (typeof val === 'number') {
+        if (Math.abs(val) > 1000) label = '$' + Number(val).toLocaleString('en-US', {maximumFractionDigits: 0});
+        else if (Math.abs(val) > 100) label = '$' + val.toFixed(0);
+        else label = (val >= 0 ? '+' : '') + val.toFixed(1) + '%';
+      } else return;
+      var color = ds.borderColor || '#003C71';
+      ctx.save();
+      ctx.font = '600 10px Arial';
+      var tw = ctx.measureText(label).width;
+      var px = 6, py = 3, r = 4;
+      var bx = chart.chartArea.right + 4;
+      var by = y - py - 5;
+      // Draw rounded rect bubble
+      ctx.fillStyle = color;
+      ctx.beginPath();
+      ctx.roundRect(bx, by, tw + px * 2, 16, r);
+      ctx.fill();
+      // Draw text
+      ctx.fillStyle = '#FFFFFF';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(label, bx + px, by + 8);
+      ctx.restore();
+    });
+  }
+};
+Chart.register(priceBubblePlugin);
 let donutCharts = {};
 
 // ═══ NAVIGATION ═══
@@ -2300,34 +2527,37 @@ function renderHoldingsTable(holdings) {
   const tglp = tc > 0 ? (tgl / tc) * 100 : 0;
   const cols = [
     {key:'ticker',label:'Ticker'}, {key:'companyName',label:'Company'}, {key:'quantity',label:'Shares'},
-    {key:'costBasis',label:'Cost'}, {key:'currentPrice',label:'Price'}, {key:'marketValue',label:'Value'},
-    {key:'glPct',label:'G/L'}, {key:'accountType',label:'Account'}, {key:'sector',label:'Sector'},
-    {key:'industry',label:'Industry'}, {key:'assetClass',label:'Asset'}, {key:'mktCapCategory',label:'Mkt Cap'}
+    {key:'costBasis',label:'Cost Basis'}, {key:'currentPrice',label:'Price'}, {key:'marketValue',label:'Mkt Value'},
+    {key:'glPct',label:'G/L'}, {key:'yieldPct',label:'Yield'}, {key:'accountType',label:'Account'}, {key:'sector',label:'Sector'},
+    {key:'industry',label:'Industry'}, {key:'assetClass',label:'Asset'}
   ];
-  let html = '<table><thead><tr>' + sortableHeader(cols, _holdingsSort, null, 'manage') + '<th>Notes</th><th></th></tr></thead><tbody>';
+  let html = '<table><thead><tr>' + sortableHeader(cols, _holdingsSort, null, 'manage') + '<th></th></tr></thead><tbody>';
   sorted.forEach(h => {
     const mv = (h.currentPrice || 0) * h.quantity;
     const cost = h.costBasis * h.quantity;
     const gl = mv - cost;
     const glp = cost > 0 ? (gl / cost) * 100 : 0;
     const gc = gl >= 0 ? C.success : C.danger;
-    const note = h.leverage ? '<span style="color:' + C.warning + ';font-weight:600;font-size:10px;">' + h.leverage + '</span>' : '';
+    const isCash = h.assetClass === 'Cash' || h.assetClass === 'Money Market' || h.assetClass === 'CD' || h.assetClass === 'Bond Position';
+    const yieldVal = h.yieldPct ? h.yieldPct.toFixed(2) + '%' : '—';
+    const editAge = h.lastEdited ? (Date.now() - new Date(h.lastEdited).getTime()) / (1000*60*60) : 999;
+    const canUndo = h.previousVersion && editAge < 24;
     html += '<tr>' +
       '<td style="font-weight:700;color:' + C.navy + ';">' + h.ticker + '</td>' +
       '<td>' + h.companyName + '</td>' +
-      '<td>' + h.quantity + '</td>' +
-      '<td>' + fmt(h.costBasis) + '</td>' +
-      '<td>' + fmt(h.currentPrice || 0) + '</td>' +
-      '<td style="font-weight:600;">' + fmt(mv) + '</td>' +
-      '<td style="color:' + gc + ';font-weight:600;">' + fmtPct(glp) + '</td>' +
+      '<td>' + (isCash ? '—' : h.quantity) + '</td>' +
+      '<td>' + (isCash ? fmt(h.costBasis * h.quantity) : fmt(h.costBasis)) + '</td>' +
+      '<td>' + (isCash ? '—' : fmt(h.currentPrice || 0)) + '</td>' +
+      '<td style="font-weight:600;">' + fmt(isCash ? h.costBasis * h.quantity : mv) + '</td>' +
+      '<td style="color:' + (isCash ? C.textSec : gc) + ';font-weight:600;">' + (isCash ? '—' : fmtPct(glp)) + '</td>' +
+      '<td style="color:' + (h.yieldPct ? C.success : C.textSec) + ';">' + yieldVal + '</td>' +
       '<td>' + (h.accountType || 'Individual') + '</td>' +
       '<td>' + (h.sector || '—') + '</td>' +
       '<td>' + (h.industry || '—') + '</td>' +
       '<td>' + (h.assetClass || 'Equity') + '</td>' +
-      '<td>' + (h.mktCapCategory || '—') + '</td>' +
-      '<td>' + note + '</td>' +
       '<td style="white-space:nowrap;">' +
-        '<button class="btn btn-sm" onclick="sellShares(\'' + h.id + '\')" style="margin-right:3px;">Sell</button>' +
+        (canUndo ? '<button class="btn-outline btn-sm" onclick="undoEdit(\'' + h.id + '\')" title="Undo last edit" style="margin-right:2px;">&#8617;</button>' : '') +
+        '<button class="btn btn-sm" onclick="editHolding(\'' + h.id + '\')" style="margin-right:3px;">Edit</button>' +
         '<button class="btn btn-danger btn-sm" onclick="deleteHolding(\'' + h.id + '\')">&#10005;</button>' +
       '</td></tr>';
   });
@@ -2337,7 +2567,7 @@ function renderHoldingsTable(holdings) {
     '<td></td><td></td><td></td>' +
     '<td style="color:' + C.navy + ';">' + fmt(tv) + '</td>' +
     '<td style="color:' + pctColor(tglp) + ';">' + fmtPct(tglp) + ' (' + fmt(tgl) + ')</td>' +
-    '<td></td><td></td><td></td><td></td><td></td><td></td><td></td></tr>';
+    '<td></td><td></td><td></td><td></td><td></td><td></td></tr>';
   html += '</tbody></table>';
   wrap.innerHTML = html;
 }
@@ -2471,9 +2701,9 @@ function renderPortfolioTable(holdings, tv) {
   const tglp = tc > 0 ? (tgl / tc) * 100 : 0;
   const cols = [
     {key:'ticker',label:'Ticker'}, {key:'companyName',label:'Company'}, {key:'quantity',label:'Shares'},
-    {key:'currentPrice',label:'Price'}, {key:'marketValue',label:'Value'}, {key:'weight',label:'Weight'},
+    {key:'currentPrice',label:'Price'}, {key:'marketValue',label:'Mkt Value'}, {key:'weight',label:'Weight'},
     {key:'glPct',label:'G/L'}, {key:'accountType',label:'Account'}, {key:'sector',label:'Sector'},
-    {key:'industry',label:'Industry'}, {key:'assetClass',label:'Asset'}, {key:'mktCapCategory',label:'Mkt Cap'}
+    {key:'industry',label:'Industry'}, {key:'assetClass',label:'Asset'}
   ];
   let html = '<table><thead><tr>' + sortableHeader(cols, _portfolioSort, null, 'portfolio') + '</tr></thead><tbody>';
   sorted.forEach(h => {
@@ -2703,6 +2933,7 @@ window.renderPortfolioChart = async function() {
 
   // Benchmarks
   _chartBenchmarkSeries = {};
+  var _pfVolume = {};
   const ci = [
     document.getElementById('compare1').value.trim().toUpperCase(),
     document.getElementById('compare2').value.trim().toUpperCase()
@@ -2715,7 +2946,7 @@ window.renderPortfolioChart = async function() {
       const pts = (d.points || []).filter(p => p.close !== null);
       if (pts.length > 1) {
         const pm = {};
-        pts.forEach(p => { pm[p.date.slice(0, 10)] = p.close; });
+        pts.forEach(p => { pm[p.date.slice(0, 10)] = p.close; if (i === 0 && p.volume) _pfVolume[p.date.slice(0,10)] = p.volume; });
         _chartBenchmarkSeries[sym] = pm;
         ds.push({
           label: sym, data: cd.map(d => pm[d] != null ? pm[d] : null),
@@ -2725,6 +2956,16 @@ window.renderPortfolioChart = async function() {
         });
       }
     } catch(e) {}
+  }
+  // Volume bars from primary benchmark
+  var volData = cd.map(function(d) { return _pfVolume[d] || 0; });
+  var maxVol = Math.max.apply(null, volData.length ? volData : [1]);
+  if (maxVol > 0) {
+    ds.push({
+      label: 'Volume', data: volData, type: 'bar',
+      backgroundColor: 'rgba(200,208,216,0.35)', borderWidth: 0,
+      yAxisID: 'yVol', order: 10, barPercentage: 0.8, categoryPercentage: 1.0
+    });
   }
 
   const hb = ds.length > 1;
@@ -2776,7 +3017,9 @@ window.renderPortfolioChart = async function() {
       plugins: {
         legend: {
           display: hb,
-          labels: { font: { family: 'Arial', size: 11 }, color: C.textSec, boxWidth: 10, padding: 16 }
+          labels: { font: { family: 'Arial', size: 11 }, color: C.textSec, boxWidth: 10, padding: 16,
+            filter: function(item) { return item.text !== 'Volume'; }
+          }
         },
         tooltip: {
           backgroundColor: C.bg, titleColor: C.text, bodyColor: C.text,
@@ -2785,6 +3028,7 @@ window.renderPortfolioChart = async function() {
           bodyFont: { family: 'Arial', size: 12 },
           footerFont: { family: 'Arial', size: 11, weight: '600' },
           footerColor: C.navy, padding: 12, boxPadding: 4, usePointStyle: true,
+          filter: function(item) { return item.dataset.label !== 'Volume'; },
           callbacks: {
             title: function(items) { return items[0]?.label || ''; },
             label: function(c) {
@@ -2843,6 +3087,7 @@ window.renderPortfolioChart = async function() {
           limits: { x: { minRange: 5 } }
         }
       },
+      layout: { padding: { right: 70 } },
       scales: {
         x: { grid: chartGrid, ticks: { ...chartTicks, maxTicksLimit: 12 }, border: { display: false } },
         y: {
@@ -2857,6 +3102,12 @@ window.renderPortfolioChart = async function() {
           ticks: { ...chartTicks, callback: function(v) { return '$' + v.toFixed(2); } },
           border: { display: false },
           title: { display: hb, text: 'Benchmark Price ($)', font: { family: 'Arial', size: 12, weight: '600' }, color: C.textSec }
+        },
+        yVol: {
+          position: 'right', display: false,
+          grid: { drawOnChartArea: false },
+          min: 0,
+          max: maxVol * 5
         }
       }
     }
@@ -3191,6 +3442,7 @@ window.updateResearchChart = async function() {
     // Build date labels and datasets
     var labels = mainPts.map(function(p) { return p.date.slice(0, 10); });
     var mainClose = mainPts.map(function(p) { return p.close; });
+    var mainVolume = mainPts.map(function(p) { return p.volume || 0; });
 
     // Normalize benchmarks to percentage return (indexed to first value)
     var mainStart = mainClose[0];
@@ -3206,8 +3458,23 @@ window.updateResearchChart = async function() {
       pointRadius: 0,
       pointHitRadius: 8,
       tension: 0.1,
-      yAxisID: 'y'
+      yAxisID: 'y',
+      order: 1
     }];
+
+    // Volume bars dataset
+    datasets.push({
+      label: 'Volume',
+      data: mainVolume,
+      type: 'bar',
+      backgroundColor: 'rgba(200,208,216,0.4)',
+      borderColor: 'rgba(200,208,216,0.6)',
+      borderWidth: 0,
+      yAxisID: 'yVol',
+      order: 2,
+      barPercentage: 0.8,
+      categoryPercentage: 1.0
+    });
 
     var benchColors = [C.blue, '#C8D0D8'];
     var bi = 0;
@@ -3257,10 +3524,14 @@ window.updateResearchChart = async function() {
       options: {
         responsive: true, maintainAspectRatio: false,
         interaction: { mode: 'index', intersect: false },
+        layout: { padding: { right: 70 } },
         plugins: {
-          legend: { position: 'top', labels: { usePointStyle: true, font: { family: 'Arial', size: 11 } } },
+          legend: { position: 'top', labels: { usePointStyle: true, font: { family: 'Arial', size: 11 },
+            filter: function(item) { return item.text !== 'Volume'; }
+          } },
           tooltip: {
             mode: 'index', intersect: false,
+            filter: function(item) { return item.dataset.label !== 'Volume'; },
             callbacks: {
               label: function(ctx) { return ctx.dataset.label + ': ' + (ctx.parsed.y >= 0 ? '+' : '') + ctx.parsed.y.toFixed(2) + '%'; }
             }
@@ -3276,6 +3547,12 @@ window.updateResearchChart = async function() {
             position: 'left',
             ticks: { callback: function(v) { return (v >= 0 ? '+' : '') + v.toFixed(1) + '%'; }, font: { size: 10, family: 'Arial' }, color: C.textSec },
             grid: { color: 'rgba(208,215,224,0.4)' }
+          },
+          yVol: {
+            position: 'right', display: false,
+            grid: { drawOnChartArea: false },
+            min: 0,
+            max: Math.max.apply(null, mainVolume) * 5
           }
         }
       }
