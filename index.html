@@ -3559,7 +3559,7 @@ window.runMacroAnalysis = async function() {
   var el = document.getElementById('macroResults');
   el.innerHTML = '<div style="padding:40px;text-align:center;"><span class="spinner"></span><br><br>' +
     '<strong style="font-size:14px;">Fetching FRED Economic Data...</strong><br>' +
-    '<span style="font-size:12px;color:'+C.textSec+';">Pulling ISM PMI, yield curve, jobless claims, NFP, Core PCE, HY OAS, LEI, SLOOS from the Federal Reserve...</span></div>';
+    '<span style="font-size:12px;color:'+C.textSec+';">Pulling 24 indicators across 6 pillars from the Federal Reserve...</span></div>';
 
   try {
     var r = await fetch(WORKER_URL + "/fred");
@@ -3567,105 +3567,90 @@ window.runMacroAnalysis = async function() {
     if (d.error) throw new Error(d.error);
 
     var h = '';
-
-    // ── Regime Verdict Header ──
-    var phaseColors = {
-      "Confirmed Expansion": C.success,
-      "Mid-Cycle": C.navy,
-      "Late Cycle / Transition": '#8B6914',
-      "Confirmed Contraction": C.danger
-    };
+    var phaseColors = { "Confirmed Expansion": C.success, "Mid-Cycle": C.navy, "Late Cycle / Transition": '#8B6914', "Confirmed Contraction": C.danger };
     var pc = phaseColors[d.phase] || C.navy;
+
+    // ── Regime Verdict ──
     h += '<div class="card"><div class="card-title" style="background:'+pc+';">Macro Regime Verdict — ' + new Date().toLocaleDateString() + '</div><div class="card-body">';
     h += '<div style="display:flex;align-items:center;gap:24px;flex-wrap:wrap;">';
     h += '<div style="text-align:center;min-width:120px;"><div style="font-size:42px;font-weight:800;color:'+pc+';">' + d.totalScore + '</div><div style="font-size:12px;color:'+C.textSec+';">out of ' + d.maxScore + '</div></div>';
     h += '<div><div style="font-size:18px;font-weight:700;color:'+pc+';">' + d.phase + '</div>';
     h += '<div style="font-size:13px;color:'+C.textSec+';margin-top:4px;">' + d.phaseDescription + '</div></div>';
-    h += '</div></div></div>';
-
-    // ── 10-Indicator Scorecard Table ──
-    h += '<div class="card"><div class="card-title">10-Indicator Regime Scorecard</div><div class="card-body">';
-    h += '<div style="overflow-x:auto;"><table style="font-size:12px;"><thead><tr>';
-    h += '<th>#</th><th>Indicator</th><th>Value</th><th>Date</th><th>Signal</th><th style="text-align:center;">Score</th><th>Detail</th>';
-    h += '</tr></thead><tbody>';
-    d.scorecard.forEach(function(s) {
-      var scoreColor = s.score > 0 ? C.success : s.score < 0 ? C.danger : C.textSec;
-      var scoreBg = s.score > 0 ? 'rgba(46,125,82,0.08)' : s.score < 0 ? 'rgba(139,42,42,0.08)' : '';
-      var scoreLabel = s.score > 0 ? '+1' : s.score < 0 ? '−1' : '0';
-      h += '<tr style="background:'+scoreBg+';">';
-      h += '<td style="font-weight:700;color:'+C.navy+';">' + s.num + '</td>';
-      h += '<td style="font-weight:600;">' + s.indicator + '</td>';
-      h += '<td style="font-weight:600;">' + (s.value || '—') + '</td>';
-      h += '<td style="color:'+C.textSec+';font-size:11px;">' + (s.date || '') + '</td>';
-      h += '<td style="color:'+scoreColor+';font-weight:700;">' + s.signal + '</td>';
-      h += '<td style="text-align:center;font-weight:800;font-size:14px;color:'+scoreColor+';">' + scoreLabel + '</td>';
-      h += '<td style="font-size:11px;color:'+C.textSec+';">' + (s.detail || '') + '</td>';
-      h += '</tr>';
-    });
-    h += '<tr style="background:'+C.navy+';color:white;font-weight:700;">';
-    h += '<td colspan="5" style="color:white;font-size:13px;">TOTAL SCORE</td>';
-    h += '<td style="text-align:center;color:white;font-size:16px;">' + d.totalScore + ' / 10</td>';
-    h += '<td style="color:white;">' + d.phase + '</td></tr>';
-    h += '</tbody></table></div>';
-    h += '</div><div class="card-sources"><strong>Sources:</strong><br>';
-    h += '&#8226; Data provided by FRED&reg;, Federal Reserve Bank of St. Louis &mdash; <a href="https://fred.stlouisfed.org" target="_blank" style="color:'+C.navy+';">fred.stlouisfed.org</a><br>';
-    h += '&#8226; ISM Manufacturing Report on Business &bull; Bureau of Labor Statistics &bull; Conference Board &bull; Federal Reserve Board &bull; ICE BofA</div></div>';
-
-    // ── Score Interpretation Guide ──
-    h += '<div class="card"><div class="card-title">Score Interpretation (CFA Business Cycle Framework)</div><div class="card-body">';
-    h += '<div style="overflow-x:auto;"><table style="font-size:12px;"><thead><tr><th>Score Range</th><th>Phase</th><th>Positioning</th><th>Top Sectors</th><th>Fixed Income</th></tr></thead><tbody>';
-    var phases = [
-      { range: "+7 to +10", phase: "Confirmed Expansion", pos: "Overweight risk assets, underweight duration", sectors: "Financials, Discretionary, Small Cap", fi: "Short duration; HY credit", color: C.success },
-      { range: "+3 to +6", phase: "Mid-Cycle", pos: "Neutral; lean into growth", sectors: "Technology, Industrials", fi: "Moderate duration; floaters", color: C.navy },
-      { range: "−2 to +2", phase: "Late Cycle / Transition", pos: "Reduce cyclicals, accumulate defensives", sectors: "Energy, Healthcare, Staples", fi: "TIPS; start adding duration", color: '#8B6914' },
-      { range: "−3 to −10", phase: "Contraction", pos: "Underweight equities/credit, overweight duration/gold", sectors: "Staples, Healthcare, Utilities", fi: "Long duration; government bonds", color: C.danger },
-    ];
-    phases.forEach(function(p) {
-      var isActive = d.phase.includes(p.phase.split(" /")[0]) || d.phase === p.phase;
-      h += '<tr style="' + (isActive ? 'background:rgba(91,155,213,0.12);font-weight:600;' : '') + '">';
-      h += '<td style="font-weight:700;color:'+p.color+';">' + p.range + '</td>';
-      h += '<td style="color:'+p.color+';font-weight:600;">' + p.phase + (isActive ? ' ◄ CURRENT' : '') + '</td>';
-      h += '<td>' + p.pos + '</td><td>' + p.sectors + '</td><td>' + p.fi + '</td></tr>';
-    });
-    h += '</tbody></table></div></div></div>';
-
-    // ── Additional Context ──
-    if (d.context) {
-      h += '<div class="grid-3">';
-      var ctx = d.context;
-      h += researchTable('Additional Indicators', [
-        ['Unemployment Rate', ctx.unemployment?.value != null ? ctx.unemployment.value.toFixed(1) + '%' : '—'],
-        ['VIX', ctx.vix?.value != null ? ctx.vix.value.toFixed(2) : '—'],
-        ['2Y/10Y Spread', ctx.yieldCurve2s10s?.value != null ? ctx.yieldCurve2s10s.value.toFixed(2) + '%' : '—'],
-        ['Eff. Fed Funds', ctx.fedFundsEffective?.value != null ? ctx.fedFundsEffective.value.toFixed(2) + '%' : '—'],
-      ]);
-
-      // Expansion/Contraction signal summary
-      var expCount = d.scorecard.filter(function(s) { return s.score > 0; }).length;
-      var conCount = d.scorecard.filter(function(s) { return s.score < 0; }).length;
-      var neuCount = d.scorecard.filter(function(s) { return s.score === 0; }).length;
-      h += researchTable('Signal Summary', [
-        ['Expansion Signals', expCount + ' of 10', C.success],
-        ['Contraction Signals', conCount + ' of 10', C.danger],
-        ['Neutral / Ambiguous', neuCount + ' of 10', C.textSec],
-      ]);
-
-      h += researchTable('Data Freshness', [
-        ['ISM PMI', d.scorecard[0]?.date || '—'],
-        ['Jobless Claims', d.scorecard[2]?.date || '—'],
-        ['Core PCE', d.scorecard[9]?.date || '—'],
-        ['NFP', d.scorecard[8]?.date || '—'],
-      ]);
+    h += '</div>';
+    // Pillar score summary bar
+    if (d.pillarScores) {
+      h += '<div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:16px;">';
+      d.pillarScores.forEach(function(ps) {
+        var psc = ps.score > 0 ? C.success : ps.score < 0 ? C.danger : C.textSec;
+        h += '<div style="background:var(--panel);border:1px solid var(--border);border-radius:6px;padding:8px 14px;text-align:center;min-width:100px;">';
+        h += '<div style="font-size:11px;color:'+C.textSec+';font-weight:600;">' + ps.name + '</div>';
+        h += '<div style="font-size:18px;font-weight:800;color:'+psc+';">' + (ps.score >= 0 ? '+' : '') + ps.score + '</div>';
+        h += '<div style="font-size:10px;color:'+C.textSec+';">' + ps.count + ' indicators</div></div>';
+      });
       h += '</div>';
     }
+    h += '</div></div>';
+
+    // ── Pillar Scorecard Tables (one per pillar) ──
+    if (d.pillars) {
+      d.pillars.forEach(function(pillar) {
+        var pillarTotal = pillar.indicators.reduce(function(s, i) { return s + (i.score || 0); }, 0);
+        var pillarColor = pillarTotal > 0 ? C.success : pillarTotal < 0 ? C.danger : C.navy;
+        h += '<div class="card"><div class="card-title">' + pillar.name + ' <span style="float:right;font-size:13px;">Score: ' + (pillarTotal >= 0 ? '+' : '') + pillarTotal + '</span></div>';
+        h += '<div class="card-body"><div style="overflow-x:auto;"><table style="font-size:12px;"><thead><tr>';
+        h += '<th>Indicator</th><th>Value</th><th>Date</th><th>Threshold</th><th>Signal</th><th style="text-align:center;">Score</th><th>Detail</th>';
+        h += '</tr></thead><tbody>';
+        pillar.indicators.forEach(function(ind) {
+          var sc = ind.score > 0 ? C.success : ind.score < 0 ? C.danger : C.textSec;
+          var bg = ind.score > 0 ? 'rgba(46,125,82,0.06)' : ind.score < 0 ? 'rgba(139,42,42,0.06)' : '';
+          var signal = ind.score > 0 ? 'Expansion' : ind.score < 0 ? 'Contraction' : 'Neutral';
+          var scoreLabel = ind.score > 0 ? '+1' : ind.score < 0 ? '−1' : '0';
+          h += '<tr style="background:'+bg+';">';
+          h += '<td style="font-weight:600;">' + ind.indicator + '</td>';
+          h += '<td style="font-weight:600;">' + (ind.value || '—') + '</td>';
+          h += '<td style="color:'+C.textSec+';font-size:11px;">' + (ind.date || '') + '</td>';
+          h += '<td style="font-size:11px;color:'+C.textSec+';">' + (ind.threshold || '') + '</td>';
+          h += '<td style="color:'+sc+';font-weight:700;">' + signal + '</td>';
+          h += '<td style="text-align:center;font-weight:800;font-size:14px;color:'+sc+';">' + scoreLabel + '</td>';
+          h += '<td style="font-size:11px;color:'+C.textSec+';">' + (ind.detail || '') + '</td></tr>';
+        });
+        h += '</tbody></table></div></div></div>';
+      });
+    }
+
+    // ── Total Score Row ──
+    h += '<div class="card"><div class="card-title" style="background:'+pc+';">Total Regime Score</div><div class="card-body">';
+    h += '<div style="display:flex;justify-content:space-between;align-items:center;">';
+    h += '<div style="font-size:24px;font-weight:800;color:'+pc+';">' + d.totalScore + ' / ' + d.maxScore + '</div>';
+    h += '<div style="font-size:16px;font-weight:700;color:'+pc+';">' + d.phase + '</div></div>';
+    h += '</div></div>';
+
+    // ── CFA Business Cycle Guide ──
+    h += '<div class="card"><div class="card-title">CFA Business Cycle Phase Guide</div><div class="card-body">';
+    h += '<div style="overflow-x:auto;"><table style="font-size:12px;"><thead><tr><th>Score</th><th>Phase</th><th>Positioning</th><th>Top Equities</th><th>Fixed Income</th><th>Commodities</th></tr></thead><tbody>';
+    var phases = [
+      { range: "≥ 70%", phase: "Confirmed Expansion", pos: "OW risk assets, UW duration", eq: "Financials, Discretionary, Small Cap", fi: "Short duration; HY credit", cm: "Industrial metals, Energy", color: C.success },
+      { range: "30–70%", phase: "Mid-Cycle", pos: "Neutral; lean growth", eq: "Technology, Industrials", fi: "Moderate duration; floaters", cm: "Energy, Agriculture", color: C.navy },
+      { range: "−20–30%", phase: "Late Cycle / Transition", pos: "Reduce cyclicals, add defensives", eq: "Energy, Healthcare, Staples", fi: "TIPS; add duration", cm: "Energy peaks; gold rises", color: '#8B6914' },
+      { range: "< −20%", phase: "Contraction", pos: "UW equities/credit, OW duration/gold", eq: "Staples, Healthcare, Utilities", fi: "Long duration; govt bonds", cm: "Gold; base metals weak", color: C.danger },
+    ];
+    phases.forEach(function(p) {
+      var isActive = d.phase.includes(p.phase.split(" /")[0]);
+      h += '<tr style="' + (isActive ? 'background:rgba(91,155,213,0.12);font-weight:600;' : '') + '">';
+      h += '<td style="font-weight:700;color:'+p.color+';">' + p.range + '</td>';
+      h += '<td style="color:'+p.color+';font-weight:600;">' + p.phase + (isActive ? ' ◄' : '') + '</td>';
+      h += '<td>' + p.pos + '</td><td>' + p.eq + '</td><td>' + p.fi + '</td><td>' + p.cm + '</td></tr>';
+    });
+    h += '</tbody></table></div></div>';
+    h += '<div class="card-sources"><strong>Sources:</strong><br>&#8226; Data provided by FRED&reg;, Federal Reserve Bank of St. Louis &mdash; <a href="https://fred.stlouisfed.org" target="_blank" style="color:var(--navy);">fred.stlouisfed.org</a><br>';
+    h += '&#8226; ISM Manufacturing Report on Business &bull; Bureau of Labor Statistics &bull; Conference Board &bull; Federal Reserve Board &bull; ICE BofA &bull; U.S. Treasury</div></div>';
 
     el.innerHTML = h;
 
   } catch(e) {
     el.innerHTML = '<div class="card"><div class="card-title" style="background:var(--danger);">Error</div><div class="card-body">' +
       '<p style="color:var(--danger);font-weight:600;">' + e.message + '</p>' +
-      '<p style="font-size:12px;color:var(--text-sec);margin-top:8px;">Test: <code>' + WORKER_URL + '/fred</code></p>' +
-      '</div></div>';
+      '<p style="font-size:12px;color:var(--text-sec);margin-top:8px;">Test: <code>' + WORKER_URL + '/fred</code></p></div></div>';
   }
 };
 
