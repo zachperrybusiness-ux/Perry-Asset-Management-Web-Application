@@ -1387,6 +1387,8 @@ tr:hover td { background: #EAF1F9; }
         </div>
       </div>
     </div>
+    <!-- Company Header + Metrics (shown above chart) -->
+    <div id="researchHeaderResults"></div>
     <!-- Interactive Chart -->
     <div class="card" id="researchChartCard" style="display:none;">
       <div class="card-title" id="researchChartTitle">Price Chart</div>
@@ -1401,6 +1403,9 @@ tr:hover td { background: #EAF1F9; }
             <input type="text" id="researchBench2" placeholder="QQQ" value="QQQ" style="width:80px;text-transform:uppercase;">
           </div>
           <button class="btn btn-sm" onclick="updateResearchChart()">Update Chart</button>
+          <button class="btn-outline btn-sm active" id="btnResearchPct" onclick="toggleResearchChartMode('pct')" style="margin-left:12px;">% Change</button>
+          <button class="btn-outline btn-sm" id="btnResearchPrice" onclick="toggleResearchChartMode('price')">Last Price</button>
+          <button class="btn-outline btn-sm" id="btnResearchDividends" onclick="toggleResearchDividends()" style="margin-left:8px;">With Dividends</button>
         </div>
         <div class="chart-stats" id="researchChartStats"></div>
         <div id="researchChartLoading" style="text-align:center;padding:40px;color:var(--text-sec);display:none;">
@@ -1456,6 +1461,14 @@ tr:hover td { background: #EAF1F9; }
       </div>
     </div>
     <div id="macroResults"></div>
+    <!-- Business Cycle Curve Chart -->
+    <div class="card" id="businessCycleCard">
+      <div class="card-title">Business Cycle Curve</div>
+      <div class="card-body">
+        <div style="position:relative;height:420px;"><canvas id="businessCycleChart"></canvas></div>
+      </div>
+      <div class="card-sources"><strong>Sources:</strong><br>&#8226; FRED&reg; Macro Regime Scorecard &bull; CFA Business Cycle Framework</div>
+    </div>
     <div class="grid-3" style="margin-top:20px;">
       <div class="card">
         <div class="card-title">Regime Scorecard</div>
@@ -3391,6 +3404,23 @@ setTimeout(renderAccountInfoCards, 100);
 let researchChart = null;
 var researchRange = '1y';
 var researchTicker = '';
+var researchChartMode = 'pct'; // 'pct' or 'price'
+var researchShowDividends = false;
+var _researchDividendData = null; // cached dividend info for current ticker
+var _researchMainPtsCache = null; // cached main chart points
+
+window.toggleResearchChartMode = function(mode) {
+  researchChartMode = mode;
+  document.getElementById('btnResearchPct').classList.toggle('active', mode === 'pct');
+  document.getElementById('btnResearchPrice').classList.toggle('active', mode === 'price');
+  if (researchTicker) updateResearchChart();
+};
+
+window.toggleResearchDividends = function() {
+  researchShowDividends = !researchShowDividends;
+  document.getElementById('btnResearchDividends').classList.toggle('active', researchShowDividends);
+  if (researchTicker) updateResearchChart();
+};
 
 // Bind timeframe buttons for research chart
 setTimeout(function() {
@@ -3406,12 +3436,53 @@ setTimeout(function() {
 }, 200);
 
 // ═══ RESEARCH CHART — full interactive chart with benchmarks ═══
+// Helper: build dividend cumulative return series from cached dividend data
+function buildDividendSeries(labels, mainClose, divData) {
+  // divData: { annualDividend, frequency, payoutMonths, lastDividend }
+  if (!divData || !divData.annualDividend || divData.annualDividend <= 0) return null;
+  var freq = divData.frequency || 4; // quarterly default
+  var divPerPayout = divData.annualDividend / freq;
+  // Determine payout months based on frequency
+  var payoutMonths;
+  if (divData.payoutMonths && divData.payoutMonths.length) {
+    payoutMonths = divData.payoutMonths;
+  } else if (freq === 12) {
+    payoutMonths = [1,2,3,4,5,6,7,8,9,10,11,12];
+  } else if (freq === 4) {
+    payoutMonths = [3,6,9,12];
+  } else if (freq === 2) {
+    payoutMonths = [6,12];
+  } else {
+    payoutMonths = [12];
+  }
+  var payoutSet = {};
+  payoutMonths.forEach(function(m) { payoutSet[m] = true; });
+
+  // Build adjusted price series: on payout dates, add dividend to cumulative total
+  var cumulativeDividends = 0;
+  var adjustedClose = [];
+  var lastPayoutMonth = -1;
+  for (var i = 0; i < labels.length; i++) {
+    var dateStr = labels[i];
+    var month = parseInt(dateStr.slice(5, 7));
+    // Check if this is a new payout month we haven't paid yet
+    if (payoutSet[month] && month !== lastPayoutMonth) {
+      cumulativeDividends += divPerPayout;
+      lastPayoutMonth = month;
+    }
+    adjustedClose.push(mainClose[i] + cumulativeDividends);
+  }
+  return adjustedClose;
+}
+
 window.updateResearchChart = async function() {
   if (!researchTicker) return;
   var loadEl = document.getElementById('researchChartLoading');
   if (loadEl) loadEl.style.display = 'block';
   var statsEl = document.getElementById('researchChartStats');
   if (statsEl) statsEl.innerHTML = '';
+  var isPriceMode = researchChartMode === 'price';
+  var showDiv = researchShowDividends;
 
   try {
     // Determine interval based on range
@@ -3443,14 +3514,49 @@ window.updateResearchChart = async function() {
     var labels = mainPts.map(function(p) { return p.date.slice(0, 10); });
     var mainClose = mainPts.map(function(p) { return p.close; });
     var mainVolume = mainPts.map(function(p) { return p.volume || 0; });
-
-    // Normalize benchmarks to percentage return (indexed to first value)
     var mainStart = mainClose[0];
-    var mainPct = mainClose.map(function(v) { return ((v / mainStart) - 1) * 100; });
+
+    // Build dividend-adjusted series if enabled
+    var divAdjusted = null;
+    if (showDiv && _researchDividendData) {
+      divAdjusted = buildDividendSeries(labels, mainClose, _researchDividendData);
+    }
+
+    // Determine main data series based on mode
+    var mainDisplayData, mainLabel, yTickFn, tooltipFn, yTitle;
+    if (isPriceMode) {
+      // LAST PRICE mode
+      var displaySeries = (showDiv && divAdjusted) ? divAdjusted : mainClose;
+      mainDisplayData = displaySeries;
+      mainLabel = researchTicker + (showDiv && divAdjusted ? ' (w/ Div)' : '');
+      yTickFn = function(v) { return '$' + (v >= 1000 ? (v/1000).toFixed(1)+'K' : v.toFixed(2)); };
+      tooltipFn = function(ctx) {
+        if (ctx.dataset.label === 'Volume') return null;
+        var val = ctx.parsed.y;
+        if (val == null) return null;
+        if (ctx.dataset.yAxisID === 'y1') return ' ' + ctx.dataset.label + ': $' + val.toFixed(2);
+        return ' ' + ctx.dataset.label + ': $' + val.toFixed(2);
+      };
+      yTitle = 'Price ($)';
+    } else {
+      // % CHANGE mode
+      var baseSeries = (showDiv && divAdjusted) ? divAdjusted : mainClose;
+      var baseStart = baseSeries[0];
+      mainDisplayData = baseSeries.map(function(v) { return ((v / baseStart) - 1) * 100; });
+      mainLabel = researchTicker + (showDiv && divAdjusted ? ' (w/ Div)' : '');
+      yTickFn = function(v) { return (v >= 0 ? '+' : '') + v.toFixed(1) + '%'; };
+      tooltipFn = function(ctx) {
+        if (ctx.dataset.label === 'Volume') return null;
+        var val = ctx.parsed.y;
+        if (val == null) return null;
+        return ' ' + ctx.dataset.label + ': ' + (val >= 0 ? '+' : '') + val.toFixed(2) + '%';
+      };
+      yTitle = 'Return (%)';
+    }
 
     var datasets = [{
-      label: researchTicker,
-      data: mainPct,
+      label: mainLabel,
+      data: mainDisplayData,
       borderColor: C.navy,
       backgroundColor: 'rgba(0,60,113,0.08)',
       fill: true,
@@ -3461,6 +3567,22 @@ window.updateResearchChart = async function() {
       yAxisID: 'y',
       order: 1
     }];
+
+    // If dividends on and price mode, also show the raw price line for comparison
+    if (showDiv && divAdjusted && isPriceMode) {
+      datasets.push({
+        label: researchTicker + ' (Price Only)',
+        data: mainClose,
+        borderColor: C.highlightGray,
+        borderWidth: 1.5,
+        borderDash: [3, 3],
+        pointRadius: 0,
+        fill: false,
+        tension: 0.1,
+        yAxisID: 'y',
+        order: 1
+      });
+    }
 
     // Volume bars dataset
     datasets.push({
@@ -3476,39 +3598,65 @@ window.updateResearchChart = async function() {
       categoryPercentage: 1.0
     });
 
+    // Benchmark datasets
     var benchColors = [C.blue, '#C8D0D8'];
     var bi = 0;
+    var hasBench = false;
     for (var bkey in benchData) {
       var bm = benchData[bkey];
       var firstBv = null;
-      var bArr = labels.map(function(d) {
-        var v = bm[d];
-        if (v != null && firstBv == null) firstBv = v;
-        return (v != null && firstBv) ? ((v / firstBv) - 1) * 100 : null;
-      });
-      datasets.push({
-        label: bkey,
-        data: bArr,
-        borderColor: benchColors[bi] || '#999',
-        borderWidth: 1.5,
-        borderDash: [4, 3],
-        pointRadius: 0,
-        fill: false,
-        tension: 0.1,
-        yAxisID: 'y'
-      });
+      if (isPriceMode) {
+        // Price mode: benchmarks on secondary axis
+        var bArr = labels.map(function(d) { return bm[d] != null ? bm[d] : null; });
+        datasets.push({
+          label: bkey,
+          data: bArr,
+          borderColor: benchColors[bi] || '#999',
+          borderWidth: 1.5,
+          borderDash: [4, 3],
+          pointRadius: 0,
+          fill: false,
+          tension: 0.1,
+          yAxisID: 'y1'
+        });
+      } else {
+        // % mode: benchmarks indexed from start
+        var bArr = labels.map(function(d) {
+          var v = bm[d];
+          if (v != null && firstBv == null) firstBv = v;
+          return (v != null && firstBv) ? ((v / firstBv) - 1) * 100 : null;
+        });
+        datasets.push({
+          label: bkey,
+          data: bArr,
+          borderColor: benchColors[bi] || '#999',
+          borderWidth: 1.5,
+          borderDash: [4, 3],
+          pointRadius: 0,
+          fill: false,
+          tension: 0.1,
+          yAxisID: 'y'
+        });
+      }
+      hasBench = true;
       bi++;
     }
 
-    // Stats
+    // Stats bar
     var lastPrice = mainClose[mainClose.length - 1];
     var totalReturn = ((lastPrice / mainStart) - 1) * 100;
     var high = Math.max.apply(null, mainClose);
     var low = Math.min.apply(null, mainClose);
+    var divReturnStr = '';
+    if (showDiv && divAdjusted) {
+      var divTotalReturn = ((divAdjusted[divAdjusted.length - 1] / divAdjusted[0]) - 1) * 100;
+      divReturnStr = '<span style="margin-left:16px;font-weight:700;color:' + C.navy + ';">Total w/ Div: ' + (divTotalReturn >= 0 ? '+' : '') + divTotalReturn.toFixed(2) + '%</span>';
+    }
     if (statsEl) {
       var trc = totalReturn >= 0 ? C.success : C.danger;
       statsEl.innerHTML =
-        '<span style="font-weight:700;color:' + trc + ';">' + (totalReturn >= 0 ? '+' : '') + totalReturn.toFixed(2) + '% return</span>' +
+        '<span style="font-weight:700;color:' + trc + ';">' + (totalReturn >= 0 ? '+' : '') + totalReturn.toFixed(2) + '% price return</span>' +
+        divReturnStr +
         '<span style="margin-left:16px;color:' + C.textSec + ';">High: $' + high.toFixed(2) + '</span>' +
         '<span style="margin-left:12px;color:' + C.textSec + ';">Low: $' + low.toFixed(2) + '</span>' +
         '<span style="margin-left:12px;color:' + C.textSec + ';">Current: $' + lastPrice.toFixed(2) + '</span>';
@@ -3532,9 +3680,7 @@ window.updateResearchChart = async function() {
           tooltip: {
             mode: 'index', intersect: false,
             filter: function(item) { return item.dataset.label !== 'Volume'; },
-            callbacks: {
-              label: function(ctx) { return ctx.dataset.label + ': ' + (ctx.parsed.y >= 0 ? '+' : '') + ctx.parsed.y.toFixed(2) + '%'; }
-            }
+            callbacks: { label: tooltipFn }
           },
           zoom: { zoom: { drag: { enabled: true, backgroundColor: 'rgba(91,155,213,0.15)' }, mode: 'x' }, pan: { enabled: false } }
         },
@@ -3545,8 +3691,16 @@ window.updateResearchChart = async function() {
           },
           y: {
             position: 'left',
-            ticks: { callback: function(v) { return (v >= 0 ? '+' : '') + v.toFixed(1) + '%'; }, font: { size: 10, family: 'Arial' }, color: C.textSec },
-            grid: { color: 'rgba(208,215,224,0.4)' }
+            ticks: { callback: yTickFn, font: { size: 10, family: 'Arial' }, color: C.textSec },
+            grid: { color: 'rgba(208,215,224,0.4)' },
+            title: { display: true, text: yTitle, font: { family: 'Arial', size: 12, weight: '600' }, color: C.textSec }
+          },
+          y1: {
+            type: 'linear', position: 'right', display: isPriceMode && hasBench,
+            grid: { drawOnChartArea: false },
+            ticks: { callback: function(v) { return '$' + v.toFixed(2); }, font: { size: 10, family: 'Arial' }, color: C.textSec },
+            border: { display: false },
+            title: { display: isPriceMode && hasBench, text: 'Benchmark Price ($)', font: { family: 'Arial', size: 12, weight: '600' }, color: C.textSec }
           },
           yVol: {
             position: 'right', display: false,
@@ -3996,25 +4150,145 @@ function renderSECAnalysis(ticker, d) {
 
   return h;
 }
+// ═══ HEADER RENDERERS (Company Name + Description + 4 Metric Cards) ═══
+function renderStockHeader(ticker, d) {
+  var profile = d.profile || {};
+  var price = d.price || {};
+  var tech = d.technicals || {};
+  var p = price.current || 0;
+  var chg = price.change || 0;
+  var chgPct = price.changePercent || 0;
+  var cc = chg >= 0 ? C.success : C.danger;
+  var bs = d.balanceSheet || {};
+  var sharesArr = bs.sharesOutstanding || [];
+  var shares = sharesArr.length ? sharesArr[sharesArr.length - 1].value : null;
+  var mktCap = profile.marketCap || (shares && p ? shares * p : null);
+
+  var h = '';
+  // Company header card
+  h += '<div class="card"><div class="card-title">' + (profile.name || ticker) + ' (' + ticker + ')' +
+    (profile.sector ? ' — ' + profile.sector : '') +
+    (profile.industry ? ' / ' + profile.industry : '') + '</div><div class="card-body">';
+  if (profile.description) h += '<p style="font-size:12px;color:'+C.textSec+';line-height:1.6;margin-bottom:10px;">' + profile.description.substring(0, 500) + (profile.description.length > 500 ? '...' : '') + '</p>';
+  h += '<div style="font-size:11px;color:'+C.textSec+';">';
+  if (profile.website) h += '<strong>Website:</strong> ' + profile.website + ' &nbsp;|&nbsp; ';
+  if (profile.city) h += profile.city + (profile.state ? ', ' + profile.state : '') + ' &nbsp;|&nbsp; ';
+  if (profile.employees) h += '<strong>Employees:</strong> ' + Number(profile.employees).toLocaleString() + ' &nbsp;|&nbsp; ';
+  if (profile.ceo) h += '<strong>CEO:</strong> ' + profile.ceo;
+  h += '</div></div></div>';
+
+  // 4 metric cards
+  h += '<div class="metrics-row">';
+  h += mcBig(ticker, '$' + p.toFixed(2), fmtR(chgPct) + ' ($' + chg.toFixed(2) + ')', cc);
+  h += mcBig('Market Cap', mktCap ? fmtB(mktCap) : '—', profile.type || '', C.textSec);
+  h += mcBig('52-Week', (tech.fiftyTwoWeekLow ? '$'+tech.fiftyTwoWeekLow : '—') + ' — ' + (tech.fiftyTwoWeekHigh ? '$'+tech.fiftyTwoWeekHigh : '—'), (tech.fiftyDayAverage ? '50d: $'+tech.fiftyDayAverage : ''), C.textSec);
+  h += mcBig('Volume', price.volume ? Number(price.volume).toLocaleString() : '—', 'Prev Close: $' + (price.previousClose || 0).toFixed(2), C.textSec);
+  h += '</div>';
+  return h;
+}
+
+function renderETFHeader(ticker, d) {
+  var profile = d.profile || {};
+  var price = d.price || {};
+  var tech = d.technicals || {};
+  var p = price.current || 0;
+  var chg = price.change || 0;
+  var chgPct = price.changePercent || 0;
+  var cc = chg >= 0 ? C.success : C.danger;
+
+  var h = '';
+  h += '<div class="card"><div class="card-title">' + (profile.name || ticker) + ' (' + ticker + ') — ETF / Fund</div><div class="card-body">';
+  if (profile.description) h += '<p style="font-size:12px;color:'+C.textSec+';line-height:1.6;margin-bottom:10px;">' + profile.description.substring(0, 500) + '</p>';
+  h += '<div style="font-size:11px;color:'+C.textSec+';">';
+  if (profile.website) h += '<strong>Website:</strong> ' + profile.website + ' &nbsp;|&nbsp; ';
+  if (profile.sector) h += '<strong>Category:</strong> ' + profile.sector + ' &nbsp;|&nbsp; ';
+  if (profile.industry) h += profile.industry;
+  h += '</div></div></div>';
+
+  h += '<div class="metrics-row">';
+  h += mcBig(ticker, '$' + p.toFixed(2), fmtR(chgPct) + ' ($' + chg.toFixed(2) + ')', cc);
+  h += mcBig('AUM / Mkt Cap', profile.marketCap ? fmtB(profile.marketCap) : '—', 'ETF', C.textSec);
+  h += mcBig('52-Week', (tech.fiftyTwoWeekLow ? '$'+tech.fiftyTwoWeekLow : '—') + ' — ' + (tech.fiftyTwoWeekHigh ? '$'+tech.fiftyTwoWeekHigh : '—'), '', C.textSec);
+  h += mcBig('Volume', price.volume ? Number(price.volume).toLocaleString() : '—', 'Prev: $' + (price.previousClose || 0).toFixed(2), C.textSec);
+  h += '</div>';
+  return h;
+}
+
+function renderCryptoHeader(ticker, quote, techData) {
+  var p = quote.price || quote.current || 0;
+  var chg = quote.change || 0;
+  var chgPct = quote.changePercent || 0;
+  var cc = chg >= 0 ? C.success : C.danger;
+  var baseTicker = ticker.replace(/-.*/, '');
+
+  var h = '';
+  h += '<div class="card"><div class="card-title">' + baseTicker + ' — Cryptocurrency</div><div class="card-body">';
+  h += '<p style="font-size:12px;color:'+C.textSec+';line-height:1.6;">Cryptocurrency pricing data sourced from Yahoo Finance. Cryptocurrencies do not file SEC reports, so financial statement analysis is not available.</p>';
+  h += '</div></div>';
+
+  h += '<div class="metrics-row">';
+  h += mcBig(baseTicker, '$' + (p >= 1 ? p.toFixed(2) : p.toFixed(6)), fmtR(chgPct) + ' ($' + chg.toFixed(2) + ')', cc);
+  h += mcBig('24H Volume', quote.volume ? Number(quote.volume).toLocaleString() : '—', '', C.textSec);
+  h += mcBig('24H Range', (quote.dayLow ? '$' + quote.dayLow.toFixed(2) : '—') + ' — ' + (quote.dayHigh ? '$' + quote.dayHigh.toFixed(2) : '—'), '', C.textSec);
+  h += mcBig('Prev Close', '$' + (quote.previousClose || 0).toFixed(2), quote.exchange || '', C.textSec);
+  h += '</div>';
+  return h;
+}
+
+// ═══ DIVIDEND DATA EXTRACTION ═══
+function extractDividendData(secData) {
+  if (!secData) return null;
+  var profile = secData.profile || {};
+  var divArr = secData.dividends || [];
+  var annualDiv = null;
+  var frequency = 4; // default quarterly
+
+  // Try to get annual dividend from dividends array
+  if (divArr.length) {
+    annualDiv = divArr[divArr.length - 1].value;
+  } else if (profile.lastDividend) {
+    annualDiv = profile.lastDividend;
+  }
+
+  if (!annualDiv || annualDiv <= 0) return null;
+
+  // Try to detect frequency from cash flow dividends paid or from profile
+  // Most US stocks are quarterly (4), REITs monthly (12), some semi-annual (2)
+  var name = (profile.name || '').toLowerCase();
+  var sector = (profile.sector || '').toLowerCase();
+  if (sector.includes('real estate') || name.includes('reit') || name.includes('realty')) {
+    frequency = 12; // monthly for REITs
+  }
+  // ETFs with monthly distributions
+  var etfMonthly = ['JEPI','JEPQ','DIVO','NUSI','QYLD','RYLD','XYLD','SCHD'];
+  if (etfMonthly.indexOf(secData.ticker || '') >= 0) frequency = 12;
+
+  return {
+    annualDividend: annualDiv,
+    frequency: frequency,
+    payoutMonths: null, // will use defaults based on frequency
+    lastDividend: profile.lastDividend || annualDiv
+  };
+}
+
 window.runResearch = async function() {
   var ticker = document.getElementById('researchTicker').value.trim().toUpperCase();
   if (!ticker) { alert('Enter a ticker.'); return; }
   researchTicker = ticker;
+  _researchDividendData = null; // reset dividend data
+  researchShowDividends = false;
+  document.getElementById('btnResearchDividends').classList.remove('active');
 
   document.getElementById('researchRawCard').style.display = '';
   document.getElementById('researchOutput').innerHTML = '<span class="spinner"></span> Fetching <strong>' + ticker + '</strong>...';
   document.getElementById('researchChartCard').style.display = 'none';
-  document.getElementById('researchResults').innerHTML = '<div style="padding:20px;text-align:center;"><span class="spinner"></span> Loading data for ' + ticker + '...</div>';
+  document.getElementById('researchHeaderResults').innerHTML = '<div style="padding:20px;text-align:center;"><span class="spinner"></span> Loading data for ' + ticker + '...</div>';
+  document.getElementById('researchResults').innerHTML = '';
 
   try {
-    // ═══ STEP 1: Show the interactive chart immediately ═══
-    document.getElementById('researchChartCard').style.display = '';
-    document.getElementById('researchChartTitle').textContent = ticker + ' — Price Chart';
-    await updateResearchChart();
-
-    // ═══ STEP 2: Detect ticker type and show appropriate data below chart ═══
     if (isCrypto(ticker)) {
-      // CRYPTO — price + technicals only
+      // ═══ CRYPTO ═══
+      // STEP 1: Fetch quote and show header + metrics first
       var quote = await fetchQuote(ticker);
       var techData = null;
       try {
@@ -4029,29 +4303,52 @@ window.runResearch = async function() {
           };
         }
       } catch(e) {}
+
+      // Show header above chart
+      document.getElementById('researchHeaderResults').innerHTML = renderCryptoHeader(ticker, quote, techData);
+
+      // STEP 2: Show chart
+      document.getElementById('researchChartCard').style.display = '';
+      document.getElementById('researchChartTitle').textContent = ticker.replace(/-.*/, '') + ' — Price Chart';
+      await updateResearchChart();
+
+      // STEP 3: Show remaining analysis below chart
       var html = renderCryptoAnalysis(ticker, quote, techData);
       document.getElementById('researchResults').innerHTML = html;
       document.getElementById('researchOutput').textContent = JSON.stringify(quote, null, 2);
 
     } else {
-      // STOCK or ETF — fetch from Worker
-      document.getElementById('researchResults').innerHTML =
+      // ═══ STOCK or ETF ═══
+      // STEP 1: Fetch SEC data and show header + metrics first
+      document.getElementById('researchHeaderResults').innerHTML =
         '<div style="padding:30px;text-align:center;"><span class="spinner"></span><br><br>' +
-        '<strong>Pulling SEC EDGAR Filings for ' + ticker + '...</strong></div>';
+        '<strong>Fetching data for ' + ticker + '...</strong></div>';
 
       var secData = await fetchFundamentals(ticker);
       document.getElementById('researchOutput').textContent = JSON.stringify(secData, null, 2);
 
-      // Update chart title with company name
-      document.getElementById('researchChartTitle').textContent = (secData.profile?.name || ticker) + ' (' + ticker + ') — Price Chart';
-
       // Detect if ETF/Fund
       var isETF = secData.profile?.type === 'ETF' || secData.profile?.type === 'FUND';
-      // Also check if there's no income statement data (ETFs won't have revenue)
       if (!isETF && (!secData.incomeStatement?.revenue?.length || secData.incomeStatement.revenue.length === 0)) {
-        isETF = true; // Likely an ETF/fund if no SEC financial data
+        isETF = true;
       }
 
+      // Extract and cache dividend data for chart toggle
+      _researchDividendData = extractDividendData(secData);
+
+      // Show header above chart
+      if (isETF) {
+        document.getElementById('researchHeaderResults').innerHTML = renderETFHeader(ticker, secData);
+      } else {
+        document.getElementById('researchHeaderResults').innerHTML = renderStockHeader(ticker, secData);
+      }
+
+      // STEP 2: Show chart
+      document.getElementById('researchChartCard').style.display = '';
+      document.getElementById('researchChartTitle').textContent = (secData.profile?.name || ticker) + ' (' + ticker + ') — Price Chart';
+      await updateResearchChart();
+
+      // STEP 3: Show remaining analysis below chart
       if (isETF) {
         var html = renderETFAnalysis(ticker, secData);
       } else {
@@ -4062,6 +4359,7 @@ window.runResearch = async function() {
 
   } catch(e) {
     document.getElementById('researchOutput').textContent = 'Error: ' + e.message;
+    document.getElementById('researchHeaderResults').innerHTML = '';
     document.getElementById('researchResults').innerHTML =
       '<div class="card"><div class="card-title" style="background:var(--danger);">Error</div><div class="card-body">' +
       '<p style="color:var(--danger);font-weight:600;">Failed to analyze ' + ticker + '</p>' +
@@ -4165,6 +4463,8 @@ window.runMacroAnalysis = async function() {
     h += '&#8226; ISM Manufacturing Report on Business &bull; Bureau of Labor Statistics &bull; Conference Board &bull; Federal Reserve Board &bull; ICE BofA &bull; U.S. Treasury</div></div>';
 
     el.innerHTML = h;
+    // Render business cycle chart with detected phase
+    renderBusinessCycleChart(d.phase, d.totalScore, d.maxScore);
 
   } catch(e) {
     el.innerHTML = '<div class="card"><div class="card-title" style="background:var(--danger);">Error</div><div class="card-body">' +
@@ -4172,6 +4472,178 @@ window.runMacroAnalysis = async function() {
       '<p style="font-size:12px;color:var(--text-sec);margin-top:8px;">Test: <code>' + WORKER_URL + '/fred</code></p></div></div>';
   }
 };
+
+var _businessCycleChartInstance = null;
+window.renderBusinessCycleChart = function(currentPhase, totalScore, maxScore) {
+  var ctx = document.getElementById('businessCycleChart');
+  if (!ctx) return;
+  if (_businessCycleChartInstance) { _businessCycleChartInstance.destroy(); _businessCycleChartInstance = null; }
+
+  // Phase definitions with boundaries on the curve
+  // The curve goes: Early Expansion (0-25%) -> Mid-Cycle/Peak (25-50%) -> Late Cycle (50-75%) -> Contraction/Trough (75-100%)
+  var phaseConfig = [
+    { name: 'Early Expansion', shortName: 'Expansion', xStart: 0, xEnd: 0.25, color: 'rgba(46,125,82,0.15)', borderColor: '#2E7D52',
+      topPicks: ['XLF', 'XLY', 'IWM', 'XLI'], matchPhase: 'Confirmed Expansion' },
+    { name: 'Mid-Cycle / Peak', shortName: 'Mid-Cycle', xStart: 0.25, xEnd: 0.50, color: 'rgba(0,60,113,0.12)', borderColor: '#003C71',
+      topPicks: ['XLK', 'QQQ', 'XLI', 'XLE'], matchPhase: 'Mid-Cycle' },
+    { name: 'Late Cycle', shortName: 'Late Cycle', xStart: 0.50, xEnd: 0.75, color: 'rgba(139,105,20,0.15)', borderColor: '#8B6914',
+      topPicks: ['XLE', 'XLV', 'XLP', 'GLD'], matchPhase: 'Late Cycle' },
+    { name: 'Contraction / Trough', shortName: 'Contraction', xStart: 0.75, xEnd: 1.0, color: 'rgba(139,42,42,0.12)', borderColor: '#8B2A2A',
+      topPicks: ['XLP', 'XLU', 'TLT', 'GLD'], matchPhase: 'Contraction' }
+  ];
+
+  // Generate smooth sine-like business cycle curve points
+  var nPts = 200;
+  var labels = [];
+  var curveData = [];
+  for (var i = 0; i <= nPts; i++) {
+    var t = i / nPts;
+    labels.push(t);
+    // Sine curve: starts at 0, peaks at 0.25 (mid-cycle peak), crosses 0 at 0.5, troughs at 0.75, returns to 0 at 1.0
+    curveData.push(Math.sin(2 * Math.PI * (t - 0.0) * 1) * 1);
+  }
+
+  // Determine which phase is active
+  var activeIdx = -1;
+  phaseConfig.forEach(function(p, idx) {
+    if (currentPhase && currentPhase.includes(p.matchPhase.split(" /")[0])) activeIdx = idx;
+  });
+
+  // Custom plugin to draw phase shading, labels, and top picks
+  var businessCyclePlugin = {
+    id: 'businessCycleShading',
+    beforeDraw: function(chart) {
+      var ctx2 = chart.ctx;
+      var xAxis = chart.scales.x;
+      var yAxis = chart.scales.y;
+      var chartArea = chart.chartArea;
+
+      phaseConfig.forEach(function(phase, idx) {
+        var xLeft = xAxis.getPixelForValue(phase.xStart * nPts);
+        var xRight = xAxis.getPixelForValue(phase.xEnd * nPts);
+        var isActive = (idx === activeIdx);
+
+        // Draw phase background
+        ctx2.save();
+        ctx2.fillStyle = isActive ? phase.color.replace(/[\d.]+\)$/, '0.25)') : phase.color;
+        ctx2.fillRect(xLeft, chartArea.top, xRight - xLeft, chartArea.bottom - chartArea.top);
+
+        // Draw active phase border
+        if (isActive) {
+          ctx2.strokeStyle = phase.borderColor;
+          ctx2.lineWidth = 2.5;
+          ctx2.setLineDash([6, 4]);
+          ctx2.strokeRect(xLeft + 1, chartArea.top + 1, xRight - xLeft - 2, chartArea.bottom - chartArea.top - 2);
+          ctx2.setLineDash([]);
+        }
+
+        // Draw phase separator lines
+        if (idx > 0) {
+          ctx2.strokeStyle = 'rgba(90,106,122,0.25)';
+          ctx2.lineWidth = 1;
+          ctx2.beginPath();
+          ctx2.moveTo(xLeft, chartArea.top);
+          ctx2.lineTo(xLeft, chartArea.bottom);
+          ctx2.stroke();
+        }
+        ctx2.restore();
+      });
+    },
+    afterDraw: function(chart) {
+      var ctx2 = chart.ctx;
+      var xAxis = chart.scales.x;
+      var yAxis = chart.scales.y;
+      var chartArea = chart.chartArea;
+
+      phaseConfig.forEach(function(phase, idx) {
+        var xLeft = xAxis.getPixelForValue(phase.xStart * nPts);
+        var xRight = xAxis.getPixelForValue(phase.xEnd * nPts);
+        var xCenter = (xLeft + xRight) / 2;
+        var isActive = (idx === activeIdx);
+
+        // Phase label at top
+        ctx2.save();
+        ctx2.textAlign = 'center';
+        ctx2.textBaseline = 'top';
+        ctx2.font = (isActive ? 'bold 13px' : '12px') + ' "Inter", system-ui, sans-serif';
+        ctx2.fillStyle = isActive ? phase.borderColor : '#5A6A7A';
+        ctx2.fillText(phase.name, xCenter, chartArea.top + 8);
+
+        // "CURRENT" badge for active phase
+        if (isActive) {
+          ctx2.font = 'bold 10px "Inter", system-ui, sans-serif';
+          ctx2.fillStyle = '#fff';
+          var badgeW = 68, badgeH = 18;
+          var badgeX = xCenter - badgeW / 2, badgeY = chartArea.top + 26;
+          ctx2.fillStyle = phase.borderColor;
+          ctx2.beginPath();
+          ctx2.roundRect(badgeX, badgeY, badgeW, badgeH, 4);
+          ctx2.fill();
+          ctx2.fillStyle = '#fff';
+          ctx2.textBaseline = 'middle';
+          ctx2.fillText('CURRENT', xCenter, badgeY + badgeH / 2);
+        }
+
+        // Top Picks at bottom
+        var yBottom = chartArea.bottom - 12;
+        ctx2.font = 'bold 10px "Inter", system-ui, sans-serif';
+        ctx2.fillStyle = isActive ? phase.borderColor : '#5A6A7A';
+        ctx2.textBaseline = 'bottom';
+        ctx2.fillText('Top Picks', xCenter, yBottom - 14);
+        ctx2.font = (isActive ? '600 11px' : '11px') + ' "Inter", system-ui, sans-serif';
+        ctx2.fillStyle = isActive ? phase.borderColor : '#8494A7';
+        ctx2.fillText(phase.topPicks.join(', '), xCenter, yBottom);
+
+        ctx2.restore();
+      });
+    }
+  };
+
+  _businessCycleChartInstance = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: labels,
+      datasets: [{
+        data: curveData,
+        borderColor: '#003C71',
+        borderWidth: 3,
+        pointRadius: 0,
+        tension: 0.4,
+        fill: false
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: { enabled: false },
+        zoom: { zoom: { wheel: { enabled: false } }, pan: { enabled: false } }
+      },
+      scales: {
+        x: {
+          display: false,
+          min: 0,
+          max: nPts
+        },
+        y: {
+          display: false,
+          min: -1.5,
+          max: 1.5
+        }
+      },
+      layout: {
+        padding: { top: 50, bottom: 36 }
+      }
+    },
+    plugins: [businessCyclePlugin]
+  });
+};
+
+// Render default business cycle chart on page load (no active phase until analysis runs)
+document.addEventListener('DOMContentLoaded', function() {
+  setTimeout(function() { renderBusinessCycleChart(null, 0, 21); }, 500);
+});
 
 window.runQuantAnalysis = async function() {
   var ticker = document.getElementById('quantTicker').value.trim().toUpperCase();
