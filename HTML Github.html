@@ -1449,18 +1449,24 @@ tr:hover td { background: #EAF1F9; }
   <div class="content-wrap">
     <div class="hero" style="padding:32px 40px;">
       <h1>Macro Regime Analysis</h1>
-      <p>CFA-based macro regime scoring, business cycle classification, sector rotation maps, and cross-asset confirmation using real-time economic data.</p>
+      <p>CFA-based macro regime scoring across 6 pillars using real-time Federal Reserve data. All indicators in one unified dashboard.</p>
     </div>
-    <div class="card">
-      <div class="card-title">AI-Powered Macro Briefing</div>
-      <div class="card-body">
-        <p style="margin-bottom:16px;">Generate a complete macro regime analysis using the 10-indicator CFA scorecard framework. The AI agent searches for live economic data (ISM PMI, yield curve, labor, credit conditions, monetary policy) and produces an investment-grade briefing.</p>
-        <div class="form-row">
-          <button class="btn" onclick="runMacroAnalysis()">Run Macro Analysis</button>
+    <!-- Regime Verdict Banner — auto-populated -->
+    <div id="macroRegimeVerdict" style="display:none;"></div>
+    <!-- Single Unified Macro Table — all pillars, all indicators -->
+    <div class="card" id="macroLiveTableCard">
+      <div class="card-title">Macro Indicator Dashboard — Live FRED Data</div>
+      <div class="card-body" style="padding:0;" id="macroLiveTableBody">
+        <div style="padding:40px;text-align:center;">
+          <span class="spinner"></span><br><br>
+          <strong style="font-size:14px;">Loading live FRED indicators...</strong><br>
+          <span style="font-size:12px;color:var(--text-sec);">Pulling 24 indicators across 6 categories from the Federal Reserve...</span>
         </div>
       </div>
+      <div class="card-sources"><strong>Sources:</strong><br>&#8226; Data provided by FRED&reg;, Federal Reserve Bank of St. Louis &mdash; <a href="https://fred.stlouisfed.org" target="_blank" style="color:var(--navy);">fred.stlouisfed.org</a></div>
     </div>
-    <div id="macroResults"></div>
+    <!-- CFA Business Cycle Guide -->
+    <div id="macroCycleGuide" style="display:none;"></div>
     <!-- Business Cycle Curve Chart -->
     <div class="card" id="businessCycleCard">
       <div class="card-title">Business Cycle Curve</div>
@@ -1469,18 +1475,7 @@ tr:hover td { background: #EAF1F9; }
       </div>
       <div class="card-sources"><strong>Sources:</strong><br>&#8226; FRED&reg; Macro Regime Scorecard &bull; CFA Business Cycle Framework</div>
     </div>
-    <!-- Live Macro Indicator Table — auto-populated from FRED -->
-    <div class="card" style="margin-top:20px;" id="macroLiveTableCard">
-      <div class="card-title">Macro Indicator Dashboard — Live FRED Data</div>
-      <div class="card-body" style="padding:0;" id="macroLiveTableBody">
-        <div style="padding:40px;text-align:center;">
-          <span class="spinner"></span><br><br>
-          <strong style="font-size:14px;">Loading live FRED indicators...</strong><br>
-          <span style="font-size:12px;color:var(--text-sec);">Pulling 22 indicators across 6 categories from the Federal Reserve...</span>
-        </div>
-      </div>
-      <div class="card-sources"><strong>Sources:</strong><br>&#8226; Data provided by FRED&reg;, Federal Reserve Bank of St. Louis &mdash; <a href="https://fred.stlouisfed.org" target="_blank" style="color:var(--navy);">fred.stlouisfed.org</a></div>
-    </div>
+    <div id="macroResults"></div>
   </div>
 </div>
 
@@ -4364,6 +4359,35 @@ window.runResearch = async function() {
 (function loadMacroLiveTable() {
   fetch(WORKER_URL + "/fred").then(function(r) { return r.json(); }).then(function(d) {
     if (d.error) throw new Error(d.error);
+    var phaseColors = { "Confirmed Expansion": C.success, "Mid-Cycle": C.navy, "Late Cycle / Transition": '#8B6914', "Confirmed Contraction": C.danger };
+    var pc = phaseColors[d.phase] || C.navy;
+
+    // ── Regime Verdict Banner ──
+    var verdictEl = document.getElementById('macroRegimeVerdict');
+    if (verdictEl) {
+      var vh = '<div class="card"><div class="card-title" style="background:'+pc+';">Macro Regime Verdict — ' + new Date().toLocaleDateString() + '</div><div class="card-body">';
+      vh += '<div style="display:flex;align-items:center;gap:24px;flex-wrap:wrap;">';
+      vh += '<div style="text-align:center;min-width:120px;"><div style="font-size:42px;font-weight:800;color:'+pc+';">' + d.totalScore + '</div><div style="font-size:12px;color:'+C.textSec+';">out of ' + d.maxScore + '</div></div>';
+      vh += '<div><div style="font-size:18px;font-weight:700;color:'+pc+';">' + d.phase + '</div>';
+      vh += '<div style="font-size:13px;color:'+C.textSec+';margin-top:4px;">' + (d.phaseDescription || '') + '</div></div>';
+      vh += '</div>';
+      if (d.pillarScores) {
+        vh += '<div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:16px;">';
+        d.pillarScores.forEach(function(ps) {
+          var psc = ps.score > 0 ? C.success : ps.score < 0 ? C.danger : C.textSec;
+          vh += '<div style="background:var(--panel);border:1px solid var(--border);border-radius:6px;padding:8px 14px;text-align:center;min-width:100px;">';
+          vh += '<div style="font-size:11px;color:'+C.textSec+';font-weight:600;">' + ps.name + '</div>';
+          vh += '<div style="font-size:18px;font-weight:800;color:'+psc+';">' + (ps.score >= 0 ? '+' : '') + ps.score + '</div>';
+          vh += '<div style="font-size:10px;color:'+C.textSec+';">' + ps.count + ' indicators</div></div>';
+        });
+        vh += '</div>';
+      }
+      vh += '</div></div>';
+      verdictEl.innerHTML = vh;
+      verdictEl.style.display = 'block';
+    }
+
+    // ── Single Unified Indicator Table ──
     var el = document.getElementById('macroLiveTableBody');
     if (!el) return;
     var h = '<div style="overflow-x:auto;"><table style="font-size:12px;border-collapse:collapse;width:100%;">';
@@ -4404,15 +4428,39 @@ window.runResearch = async function() {
       });
     }
     h += '</tbody></table></div>';
-    // Add total score row below table
-    var phaseColors = { "Confirmed Expansion": C.success, "Mid-Cycle": C.navy, "Late Cycle / Transition": '#8B6914', "Confirmed Contraction": C.danger };
-    var pc = phaseColors[d.phase] || C.navy;
     h += '<div style="padding:16px 20px;border-top:2px solid var(--border);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;">';
     h += '<div style="font-size:13px;font-weight:700;color:'+pc+';">Regime Score: ' + d.totalScore + ' / ' + d.maxScore + '</div>';
     h += '<div style="font-size:13px;font-weight:700;color:'+pc+';">' + d.phase + '</div>';
     h += '<div style="font-size:11px;color:'+C.textSec+';">Updated: ' + new Date(d.timestamp).toLocaleString() + '</div>';
     h += '</div>';
     el.innerHTML = h;
+
+    // ── CFA Business Cycle Guide ──
+    var guideEl = document.getElementById('macroCycleGuide');
+    if (guideEl) {
+      var gh = '<div class="card"><div class="card-title">CFA Business Cycle Phase Guide</div><div class="card-body">';
+      gh += '<div style="overflow-x:auto;"><table style="font-size:12px;"><thead><tr><th>Score</th><th>Phase</th><th>Positioning</th><th>Top Equities</th><th>Fixed Income</th><th>Commodities</th></tr></thead><tbody>';
+      var phases = [
+        { range: "\u2265 70%", phase: "Confirmed Expansion", pos: "OW risk assets, UW duration", eq: "Financials, Discretionary, Small Cap", fi: "Short duration; HY credit", cm: "Industrial metals, Energy", color: C.success },
+        { range: "30\u201370%", phase: "Mid-Cycle", pos: "Neutral; lean growth", eq: "Technology, Industrials", fi: "Moderate duration; floaters", cm: "Energy, Agriculture", color: C.navy },
+        { range: "\u221220\u201330%", phase: "Late Cycle / Transition", pos: "Reduce cyclicals, add defensives", eq: "Energy, Healthcare, Staples", fi: "TIPS; add duration", cm: "Energy peaks; gold rises", color: '#8B6914' },
+        { range: "< \u221220%", phase: "Contraction", pos: "UW equities/credit, OW duration/gold", eq: "Staples, Healthcare, Utilities", fi: "Long duration; govt bonds", cm: "Gold; base metals weak", color: C.danger },
+      ];
+      phases.forEach(function(p) {
+        var isActive = d.phase.includes(p.phase.split(" /")[0]);
+        gh += '<tr style="' + (isActive ? 'background:rgba(91,155,213,0.12);font-weight:600;' : '') + '">';
+        gh += '<td style="font-weight:700;color:'+p.color+';">' + p.range + '</td>';
+        gh += '<td style="color:'+p.color+';font-weight:600;">' + p.phase + (isActive ? ' \u25C4' : '') + '</td>';
+        gh += '<td>' + p.pos + '</td><td>' + p.eq + '</td><td>' + p.fi + '</td><td>' + p.cm + '</td></tr>';
+      });
+      gh += '</tbody></table></div></div></div>';
+      guideEl.innerHTML = gh;
+      guideEl.style.display = 'block';
+    }
+
+    // Render business cycle chart
+    if (typeof renderBusinessCycleChart === 'function') renderBusinessCycleChart(d.phase, d.totalScore, d.maxScore);
+
   }).catch(function(e) {
     var el = document.getElementById('macroLiveTableBody');
     if (el) el.innerHTML = '<div style="padding:24px;text-align:center;color:'+C.danger+';"><strong>Failed to load FRED data:</strong> ' + e.message + '</div>';
@@ -4422,109 +4470,13 @@ window.runResearch = async function() {
 // ════════════════════════════════════════════════════
 // MACRO ANALYSIS (placeholder — will use /currentmacroanalysis skill)
 // ════════════════════════════════════════════════════
-window.runMacroAnalysis = async function() {
-  var el = document.getElementById('macroResults');
-  el.innerHTML = '<div style="padding:40px;text-align:center;"><span class="spinner"></span><br><br>' +
-    '<strong style="font-size:14px;">Fetching FRED Economic Data...</strong><br>' +
-    '<span style="font-size:12px;color:'+C.textSec+';">Pulling 24 indicators across 6 pillars from the Federal Reserve...</span></div>';
-
-  try {
-    var r = await fetch(WORKER_URL + "/fred");
-    var d = await r.json();
-    if (d.error) throw new Error(d.error);
-
-    var h = '';
-    var phaseColors = { "Confirmed Expansion": C.success, "Mid-Cycle": C.navy, "Late Cycle / Transition": '#8B6914', "Confirmed Contraction": C.danger };
-    var pc = phaseColors[d.phase] || C.navy;
-
-    // ── Regime Verdict ──
-    h += '<div class="card"><div class="card-title" style="background:'+pc+';">Macro Regime Verdict — ' + new Date().toLocaleDateString() + '</div><div class="card-body">';
-    h += '<div style="display:flex;align-items:center;gap:24px;flex-wrap:wrap;">';
-    h += '<div style="text-align:center;min-width:120px;"><div style="font-size:42px;font-weight:800;color:'+pc+';">' + d.totalScore + '</div><div style="font-size:12px;color:'+C.textSec+';">out of ' + d.maxScore + '</div></div>';
-    h += '<div><div style="font-size:18px;font-weight:700;color:'+pc+';">' + d.phase + '</div>';
-    h += '<div style="font-size:13px;color:'+C.textSec+';margin-top:4px;">' + d.phaseDescription + '</div></div>';
-    h += '</div>';
-    // Pillar score summary bar
-    if (d.pillarScores) {
-      h += '<div style="display:flex;gap:12px;flex-wrap:wrap;margin-top:16px;">';
-      d.pillarScores.forEach(function(ps) {
-        var psc = ps.score > 0 ? C.success : ps.score < 0 ? C.danger : C.textSec;
-        h += '<div style="background:var(--panel);border:1px solid var(--border);border-radius:6px;padding:8px 14px;text-align:center;min-width:100px;">';
-        h += '<div style="font-size:11px;color:'+C.textSec+';font-weight:600;">' + ps.name + '</div>';
-        h += '<div style="font-size:18px;font-weight:800;color:'+psc+';">' + (ps.score >= 0 ? '+' : '') + ps.score + '</div>';
-        h += '<div style="font-size:10px;color:'+C.textSec+';">' + ps.count + ' indicators</div></div>';
-      });
-      h += '</div>';
-    }
-    h += '</div></div>';
-
-    // ── Combined Scorecard Table (all pillars in one) ──
-    if (d.pillars) {
-      h += '<div class="card"><div class="card-title">Full Indicator Scorecard</div>';
-      h += '<div class="card-body"><div style="overflow-x:auto;"><table style="font-size:12px;border-collapse:collapse;width:100%;">';
-      h += '<thead><tr><th style="min-width:110px;">Pillar</th><th>Indicator</th><th>Value</th><th>Date</th><th style="min-width:140px;">Threshold</th><th>Signal</th><th style="text-align:center;">Score</th><th>Detail</th></tr></thead><tbody>';
-      d.pillars.forEach(function(pillar) {
-        var pillarTotal = pillar.indicators.reduce(function(s, i) { return s + (i.score || 0); }, 0);
-        var pillarColor = pillarTotal > 0 ? C.success : pillarTotal < 0 ? C.danger : C.navy;
-        pillar.indicators.forEach(function(ind, idx) {
-          var sc = ind.score > 0 ? C.success : ind.score < 0 ? C.danger : C.textSec;
-          var bg = ind.score > 0 ? 'rgba(46,125,82,0.06)' : ind.score < 0 ? 'rgba(139,42,42,0.06)' : '';
-          var signal = ind.score > 0 ? 'Expansion' : ind.score < 0 ? 'Contraction' : 'Neutral';
-          var scoreLabel = ind.score > 0 ? '+1' : ind.score < 0 ? '\u22121' : '0';
-          var borderTop = idx === 0 ? 'border-top:2px solid var(--border);' : '';
-          h += '<tr style="background:'+bg+';'+borderTop+'">';
-          // Show pillar name only on first row, with rowspan
-          if (idx === 0) {
-            h += '<td rowspan="'+pillar.indicators.length+'" style="font-weight:700;color:'+pillarColor+';vertical-align:top;padding:10px 12px;border-right:2px solid var(--border);font-size:12px;line-height:1.4;">';
-            h += pillar.name + '<br><span style="font-size:18px;font-weight:800;">' + (pillarTotal >= 0 ? '+' : '') + pillarTotal + '</span></td>';
-          }
-          h += '<td style="font-weight:600;">' + ind.indicator + '</td>';
-          h += '<td style="font-weight:600;">' + (ind.value || '\u2014') + '</td>';
-          h += '<td style="color:'+C.textSec+';font-size:11px;">' + (ind.date || '') + '</td>';
-          h += '<td style="font-size:11px;color:'+C.textSec+';">' + (ind.threshold || '') + '</td>';
-          h += '<td style="color:'+sc+';font-weight:700;">' + signal + '</td>';
-          h += '<td style="text-align:center;font-weight:800;font-size:14px;color:'+sc+';">' + scoreLabel + '</td>';
-          h += '<td style="font-size:11px;color:'+C.textSec+';">' + (ind.detail || '') + '</td></tr>';
-        });
-      });
-      h += '</tbody></table></div></div></div>';
-    }
-
-    // ── Total Score Row ──
-    h += '<div class="card"><div class="card-title" style="background:'+pc+';">Total Regime Score</div><div class="card-body">';
-    h += '<div style="display:flex;justify-content:space-between;align-items:center;">';
-    h += '<div style="font-size:24px;font-weight:800;color:'+pc+';">' + d.totalScore + ' / ' + d.maxScore + '</div>';
-    h += '<div style="font-size:16px;font-weight:700;color:'+pc+';">' + d.phase + '</div></div>';
-    h += '</div></div>';
-
-    // ── CFA Business Cycle Guide ──
-    h += '<div class="card"><div class="card-title">CFA Business Cycle Phase Guide</div><div class="card-body">';
-    h += '<div style="overflow-x:auto;"><table style="font-size:12px;"><thead><tr><th>Score</th><th>Phase</th><th>Positioning</th><th>Top Equities</th><th>Fixed Income</th><th>Commodities</th></tr></thead><tbody>';
-    var phases = [
-      { range: "≥ 70%", phase: "Confirmed Expansion", pos: "OW risk assets, UW duration", eq: "Financials, Discretionary, Small Cap", fi: "Short duration; HY credit", cm: "Industrial metals, Energy", color: C.success },
-      { range: "30–70%", phase: "Mid-Cycle", pos: "Neutral; lean growth", eq: "Technology, Industrials", fi: "Moderate duration; floaters", cm: "Energy, Agriculture", color: C.navy },
-      { range: "−20–30%", phase: "Late Cycle / Transition", pos: "Reduce cyclicals, add defensives", eq: "Energy, Healthcare, Staples", fi: "TIPS; add duration", cm: "Energy peaks; gold rises", color: '#8B6914' },
-      { range: "< −20%", phase: "Contraction", pos: "UW equities/credit, OW duration/gold", eq: "Staples, Healthcare, Utilities", fi: "Long duration; govt bonds", cm: "Gold; base metals weak", color: C.danger },
-    ];
-    phases.forEach(function(p) {
-      var isActive = d.phase.includes(p.phase.split(" /")[0]);
-      h += '<tr style="' + (isActive ? 'background:rgba(91,155,213,0.12);font-weight:600;' : '') + '">';
-      h += '<td style="font-weight:700;color:'+p.color+';">' + p.range + '</td>';
-      h += '<td style="color:'+p.color+';font-weight:600;">' + p.phase + (isActive ? ' ◄' : '') + '</td>';
-      h += '<td>' + p.pos + '</td><td>' + p.eq + '</td><td>' + p.fi + '</td><td>' + p.cm + '</td></tr>';
-    });
-    h += '</tbody></table></div></div>';
-    h += '<div class="card-sources"><strong>Sources:</strong><br>&#8226; Data provided by FRED&reg;, Federal Reserve Bank of St. Louis &mdash; <a href="https://fred.stlouisfed.org" target="_blank" style="color:var(--navy);">fred.stlouisfed.org</a><br>';
-    h += '&#8226; Federal Reserve Board (Industrial Production, CFNAI) &bull; Census Bureau (Mfg New Orders) &bull; Bureau of Labor Statistics &bull; BEA (Core PCE) &bull; ICE BofA &bull; U.S. Treasury &bull; CBOE (VIX)</div></div>';
-
-    el.innerHTML = h;
-    // Render business cycle chart with detected phase
-    renderBusinessCycleChart(d.phase, d.totalScore, d.maxScore);
-
-  } catch(e) {
-    el.innerHTML = '<div class="card"><div class="card-title" style="background:var(--danger);">Error</div><div class="card-body">' +
-      '<p style="color:var(--danger);font-weight:600;">' + e.message + '</p>' +
-      '<p style="font-size:12px;color:var(--text-sec);margin-top:8px;">Test: <code>' + WORKER_URL + '/fred</code></p></div></div>';
+window.runMacroAnalysis = function() {
+  // Data is already loaded in the unified table — just scroll to it
+  var card = document.getElementById('macroLiveTableCard');
+  if (card) {
+    card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    card.style.boxShadow = '0 0 0 3px var(--blue)';
+    setTimeout(function() { card.style.boxShadow = ''; }, 2000);
   }
 };
 
