@@ -970,6 +970,80 @@ tr:hover td { background: #EAF1F9; }
   margin-right: 4px;
   text-transform: uppercase;
 }
+
+/* ═══ QUANT: MONTE CARLO ═══ */
+.mc-stat-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 12px;
+}
+.mc-stat-card {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+.mc-stat-hdr {
+  background: var(--navy);
+  color: var(--text-on-dark);
+  font-size: 10px;
+  font-weight: 600;
+  padding: 5px 10px;
+  text-transform: uppercase;
+  letter-spacing: .4px;
+}
+.mc-stat-val {
+  font-size: 18px;
+  font-weight: 700;
+  padding: 10px;
+  color: var(--text);
+}
+.mc-stat-val small {
+  display: block;
+  font-size: 10px;
+  font-weight: 400;
+  color: var(--text-sec);
+  margin-top: 2px;
+}
+.prob-grid {
+  display: grid;
+  grid-template-columns: 110px repeat(4, 1fr);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+.pg-hdr {
+  background: var(--navy);
+  color: var(--text-on-dark);
+  font-size: 10px;
+  font-weight: 600;
+  padding: 7px 8px;
+  text-align: center;
+}
+.pg-label {
+  background: var(--panel);
+  font-size: 11px;
+  font-weight: 600;
+  padding: 8px;
+  display: flex;
+  align-items: center;
+  border-bottom: 1px solid var(--border);
+}
+.pg-cell {
+  text-align: center;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 8px;
+  border-bottom: 1px solid var(--border);
+  border-left: 1px solid var(--border);
+}
+.badge-bull { color: var(--success); font-weight: 700; }
+.badge-bear { color: var(--danger); font-weight: 700; }
+.badge-base { color: var(--navy); font-weight: 700; }
+.badge-stress { color: var(--warning); font-weight: 700; }
+@media(max-width:600px) {
+  .mc-stat-grid { grid-template-columns: 1fr 1fr; }
+  .prob-grid { grid-template-columns: 90px repeat(4, 1fr); font-size: 10px; }
+}
 </style>
 </head>
 <body>
@@ -995,16 +1069,16 @@ tr:hover td { background: #EAF1F9; }
       </div>
       <div class="nav-dropdown">
         <div class="nav-child" data-page="holdings" onclick="navigateTo('holdings')">Manage Holdings</div>
-        <div class="nav-child" data-page="research" onclick="navigateTo('research')">Financial Analysis</div>
       </div>
     </div>
     <div class="nav-group">
-      <div class="nav-parent" data-page="macro" onclick="navigateTo('macro')">
-        Macro Analysis <span class="arrow">&#9660;</span>
-      </div>
-      <div class="nav-dropdown">
-        <div class="nav-child" data-page="quant" onclick="navigateTo('quant')">Quantitative Analysis</div>
-      </div>  
+      <div class="nav-parent" data-page="research" onclick="navigateTo('research')">Research</div>
+    </div>
+    <div class="nav-group">
+      <div class="nav-parent" data-page="macro" onclick="navigateTo('macro')">Macro</div>
+    </div>
+    <div class="nav-group">
+      <div class="nav-parent" data-page="quant" onclick="navigateTo('quant')">Quant</div>
     </div>
   </div>
   <div class="topbar-right">
@@ -1483,39 +1557,99 @@ tr:hover td { background: #EAF1F9; }
 <div class="page" id="page-quant">
   <div class="content-wrap">
     <div class="hero" style="padding:32px 40px;">
-      <h1>Quantitative Models</h1>
-      <p>Stock decision analysis using Multiple Linear Regression, macro regime backtesting, peer comparison, and Monte Carlo simulation.</p>
+      <h1>Quantitative Analysis</h1>
+      <p>Monte Carlo simulation, probability analysis, market microstructure, and insider trading intelligence — powered by SEC EDGAR, MIDAS, and real-time market data.</p>
     </div>
+    <!-- Ticker Input -->
     <div class="card">
-      <div class="card-title">Stock Decision Tree</div>
+      <div class="card-title">Ticker Lookup — Quantitative Analysis</div>
       <div class="card-body">
-        <p style="margin-bottom:16px;">Enter a ticker for a full quantitative analysis: peer comparison, 10-year macro regime backtesting, MLR with bootstrapping, indicator importance ranking, and a regime-grounded 12-month investment verdict.</p>
         <div class="form-row">
           <div class="form-group" style="min-width:140px;">
             <label>Ticker</label>
-            <input type="text" id="quantTicker" placeholder="NVDA" style="text-transform:uppercase;" onkeydown="if(event.key==='Enter')runQuantAnalysis()">
+            <input type="text" id="quantTicker" placeholder="AAPL, NVDA, TSLA" style="text-transform:uppercase;" onkeydown="if(event.key==='Enter')runQuantAnalysis()">
           </div>
-          <button class="btn" onclick="runQuantAnalysis()">Run Analysis</button>
+          <button class="btn" id="btnRunQuant" onclick="runQuantAnalysis()">Analyze</button>
+          <span id="quantStatus" style="font-size:11px;color:var(--text-sec);margin-left:8px;"></span>
         </div>
       </div>
     </div>
+    <!-- MC Price Chart -->
+    <div class="card" id="mcChartCard" style="display:none;">
+      <div class="card-title" id="mcChartTitle">Monte Carlo Simulation</div>
+      <div class="card-body">
+        <div class="btn-group" style="margin-bottom:8px;">
+          <button class="btn-outline active" onclick="setMcView('combined',this)">Historical + Forecast</button>
+          <button class="btn-outline" onclick="setMcView('forecast',this)">Forecast Only</button>
+          <button class="btn-outline" onclick="rerunMC()">Re-Run Simulation</button>
+        </div>
+        <div class="chart-stats" id="mcChartStats"></div>
+        <div id="mcChartLoading" style="text-align:center;padding:40px;color:var(--text-sec);display:none;">
+          <span class="spinner"></span> Running 100 GBM simulations...
+        </div>
+        <div class="chart-wrap"><canvas id="mcChart"></canvas></div>
+        <div class="zoom-hint">Click and drag to zoom. Double-click to reset. Gray = simulated paths. Blue band = 10th–90th percentile.</div>
+      </div>
+      <div class="card-sources"><strong>Sources:</strong><br>&#8226; Yahoo Finance via Cloudflare Worker &#8226; Geometric Brownian Motion (GBM) with Box-Muller sampling</div>
+    </div>
+    <!-- MC Summary Stats -->
+    <div class="card" id="mcStatsCard" style="display:none;">
+      <div class="card-title" id="mcStatsTitle">Simulation Summary Statistics</div>
+      <div class="card-body"><div class="mc-stat-grid" id="mcStatsGrid"></div></div>
+      <div class="card-sources"><strong>Sources:</strong><br>&#8226; 100-path GBM Monte Carlo &#8226; Parameters calibrated from 1Y historical log returns</div>
+    </div>
+    <!-- Terminal Distribution -->
+    <div class="card" id="mcDistCard" style="display:none;">
+      <div class="card-title" id="mcDistTitle">Terminal Price Distribution</div>
+      <div class="card-body">
+        <div style="height:320px;position:relative;"><canvas id="mcDistChart"></canvas></div>
+      </div>
+      <div class="card-sources"><strong>Sources:</strong><br>&#8226; 100-path GBM terminal prices &#8226; Red = below current, Navy = above current</div>
+    </div>
+    <!-- Stressed Scenarios -->
+    <div class="card" id="mcStressCard" style="display:none;">
+      <div class="card-title" id="mcStressTitle">Stressed Scenario Analysis</div>
+      <div class="card-body" style="padding:0;">
+        <div class="table-wrap"><table><thead><tr>
+          <th>Scenario</th><th>Drift (μ)</th><th>Vol (σ)</th><th>Median</th><th>Expected</th><th>5th Pctl</th><th>95th Pctl</th><th>P(Gain)</th><th>P(Loss&gt;20%)</th>
+        </tr></thead><tbody id="mcStressBody"></tbody></table></div>
+      </div>
+      <div class="card-sources"><strong>Sources:</strong><br>&#8226; 100-path GBM per scenario &#8226; Not investment advice</div>
+    </div>
+    <!-- Probability Matrix -->
+    <div class="card" id="mcProbCard" style="display:none;">
+      <div class="card-title" id="mcProbTitle">Price Threshold Probability Matrix</div>
+      <div class="card-body">
+        <p style="font-size:11px;color:var(--text-sec);margin-bottom:12px;">Probability of reaching various thresholds at different horizons from the base-case Monte Carlo simulation.</p>
+        <div class="prob-grid" id="mcProbGrid"></div>
+      </div>
+      <div class="card-sources"><strong>Sources:</strong><br>&#8226; 100-path GBM base-case paths</div>
+    </div>
+    <!-- Insider Trading -->
+    <div class="card" id="mcInsiderCard" style="display:none;">
+      <div class="card-title" id="mcInsiderTitle">Insider Trading Activity</div>
+      <div class="card-body">
+        <div style="height:300px;position:relative;"><canvas id="mcInsiderChart"></canvas></div>
+      </div>
+      <div class="card-sources"><strong>Sources:</strong><br>&#8226; SEC EDGAR Form 4 filings via Cloudflare Worker</div>
+    </div>
+    <div class="card" id="mcInsiderTableCard" style="display:none;">
+      <div class="card-title">Insider Transactions Detail</div>
+      <div class="card-body" style="padding:0;max-height:350px;overflow-y:auto;">
+        <div class="table-wrap"><table><thead><tr><th>Date</th><th>Insider</th><th>Role</th><th>Type</th><th>Shares</th><th>Price</th><th>Value</th></tr></thead><tbody id="mcInsiderTBody"></tbody></table></div>
+      </div>
+      <div class="card-sources"><strong>Sources:</strong><br>&#8226; SEC EDGAR Form 4</div>
+    </div>
+    <!-- SEC MIDAS -->
+    <div class="card" id="mcMidasCard" style="display:none;">
+      <div class="card-title" id="mcMidasTitle">SEC MIDAS — Market Microstructure Metrics</div>
+      <div class="card-body" id="mcMidasBody">
+        <p style="font-size:11px;color:var(--text-sec);">Requires MIDAS proxy endpoint. Covers Lit Trades, Hidden Orders, Odd Lots, Cancel-to-Trade ratios.</p>
+      </div>
+      <div class="card-sources"><strong>Sources:</strong><br>&#8226; SEC MIDAS — sec.gov/data-research/market-structure-data</div>
+    </div>
+    <!-- SEC Fundamentals (existing) -->
     <div id="quantResults"></div>
-    <div class="grid-2" style="margin-top:20px;">
-      <div class="card">
-        <div class="card-title">MLR & Indicator Ranking</div>
-        <div class="card-body">
-          <p style="font-size:12px;color:var(--text-sec);line-height:1.6;">Multiple Linear Regression identifies which macro and fundamental indicators have the strongest predictive power for a stock's 12-month forward return. Features include regime score, ISM PMI, yield spread, HY OAS, VIX, revenue growth, operating margin, P/E, and FCF growth.</p>
-          <p style="font-size:11px;color:var(--text-sec);margin-top:8px;"><strong>Output:</strong> R², coefficient significance, indicator ranking by % explanatory power</p>
-        </div>
-      </div>
-      <div class="card">
-        <div class="card-title">Monte Carlo Simulation</div>
-        <div class="card-body">
-          <p style="font-size:12px;color:var(--text-sec);line-height:1.6;">1,000-path Geometric Brownian Motion simulation calibrated to historical volatility and current VIX regime. Produces probability distributions for 12-month price targets with standard deviation bands.</p>
-          <p style="font-size:11px;color:var(--text-sec);margin-top:8px;"><strong>Output:</strong> Price distribution, confidence intervals, Sharpe-equivalent signal</p>
-        </div>
-      </div>
-    </div>
   </div>
 </div>
 
@@ -4655,16 +4789,267 @@ document.addEventListener('DOMContentLoaded', function() {
 window.runQuantAnalysis = async function() {
   var ticker = document.getElementById('quantTicker').value.trim().toUpperCase();
   if (!ticker) { alert('Enter a ticker.'); return; }
+  var statusEl = document.getElementById('quantStatus');
+  var btn = document.getElementById('btnRunQuant');
+  btn.disabled = true;
+  statusEl.textContent = 'Fetching price data for ' + ticker + '...';
+
+  // ═══ MC CONSTANTS ═══
+  var MC_PATHS = 100, MC_DAYS = 252;
+
+  // ═══ HELPERS ═══
+  function randn() { var u=0,v=0; while(!u)u=Math.random(); while(!v)v=Math.random(); return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v); }
+  function pctl(sorted,p) { var i=(p/100)*(sorted.length-1),lo=Math.floor(i),hi=Math.ceil(i); return lo===hi?sorted[lo]:sorted[lo]+(sorted[hi]-sorted[lo])*(i-lo); }
+  function fp(n) { return n!=null?'$'+Number(n).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2}):'—'; }
+  function fpc(n) { return n!=null?(n*100).toFixed(1)+'%':'—'; }
+  function fmtD(d) { return new Date(d).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'2-digit'}); }
+  function tradingDays(start,count) {
+    var out=[],d=new Date(start); d.setDate(d.getDate()+1);
+    while(out.length<count){ var dow=d.getDay(); if(dow!==0&&dow!==6) out.push(new Date(d)); d.setDate(d.getDate()+1); }
+    return out;
+  }
+
+  // ═══ FETCH PRICE DATA ═══
+  try {
+    var chartData = await fetchChart(ticker, '1y', '1d');
+    if (!chartData || !chartData.points || chartData.points.length < 30) throw new Error('Insufficient price data');
+  } catch(e) {
+    statusEl.textContent = 'Error: ' + e.message;
+    btn.disabled = false;
+    return;
+  }
+
+  var pts = chartData.points.filter(function(p){ return p.close != null; });
+  var histDates = pts.map(function(p){ return p.date; });
+  var histPrices = pts.map(function(p){ return p.close; });
+
+  // ═══ CALIBRATE GBM ═══
+  statusEl.textContent = 'Calibrating model...';
+  var logRet = [];
+  for (var i=1; i<histPrices.length; i++) {
+    if (histPrices[i]>0 && histPrices[i-1]>0) logRet.push(Math.log(histPrices[i]/histPrices[i-1]));
+  }
+  var n = logRet.length;
+  var meanD = logRet.reduce(function(a,b){return a+b;},0)/n;
+  var varD = logRet.reduce(function(a,b){return a+(b-meanD)*(b-meanD);},0)/(n-1);
+  var sigD = Math.sqrt(varD);
+  var mu = meanD*252, sigma = sigD*Math.sqrt(252), S0 = histPrices[histPrices.length-1];
+
+  // ═══ RUN GBM ═══
+  statusEl.textContent = 'Running ' + MC_PATHS + ' simulations...';
+  document.getElementById('mcChartCard').style.display = '';
+  document.getElementById('mcChartLoading').style.display = '';
+  await new Promise(function(r){setTimeout(r,30);});
+
+  function runGBM(s0,mu_,sig_,nPaths,nDays){
+    var dt=1/252, drift=(mu_-0.5*sig_*sig_)*dt, diff=sig_*Math.sqrt(dt), paths=[];
+    for(var p=0;p<nPaths;p++){
+      var path=new Array(nDays+1); path[0]=s0;
+      for(var t=1;t<=nDays;t++) path[t]=path[t-1]*Math.exp(drift+diff*randn());
+      paths.push(path);
+    }
+    return paths;
+  }
+  function pathStats(paths){
+    var nD=paths[0].length-1, terms=paths.map(function(p){return p[nD];}).sort(function(a,b){return a-b;}), s0=paths[0][0];
+    var p5=[],p10=[],p50=[],p90=[],p95=[],mn=[];
+    for(var t=0;t<=nD;t++){
+      var dp=paths.map(function(p){return p[t];}).sort(function(a,b){return a-b;});
+      p5.push(pctl(dp,5)); p10.push(pctl(dp,10)); p50.push(pctl(dp,50)); p90.push(pctl(dp,90)); p95.push(pctl(dp,95));
+      mn.push(dp.reduce(function(a,b){return a+b;},0)/dp.length);
+    }
+    var wDD=0;
+    paths.forEach(function(path){ var pk=path[0]; for(var t=1;t<path.length;t++){ if(path[t]>pk)pk=path[t]; var dd=(pk-path[t])/pk; if(dd>wDD)wDD=dd; } });
+    var tMean=terms.reduce(function(a,b){return a+b;},0)/terms.length;
+    return {terms:terms, tMean:tMean, tMed:pctl(terms,50), t5:pctl(terms,5), t10:pctl(terms,10), t90:pctl(terms,90), t95:pctl(terms,95),
+      pGain:terms.filter(function(t){return t>s0;}).length/terms.length,
+      pL20:terms.filter(function(t){return t<s0*0.8;}).length/terms.length,
+      wDD:wDD, p5:p5,p10:p10,p50:p50,p90:p90,p95:p95,mn:mn};
+  }
+
+  var mcPaths = runGBM(S0, mu, sigma, MC_PATHS, MC_DAYS);
+  var lastDate = histDates[histDates.length-1];
+  var mcDates = tradingDays(lastDate, MC_DAYS);
+  var stats = pathStats(mcPaths);
+
+  // Store for re-run
+  window._mc = {ticker:ticker, S0:S0, mu:mu, sigma:sigma, histDates:histDates, histPrices:histPrices, mcDates:mcDates, mcPaths:mcPaths, viewMode:'combined'};
+
+  // ═══ RENDER MC CHART ═══
+  function renderMCChart(){
+    var mc=window._mc, st=pathStats(mc.mcPaths);
+    var histLabels=mc.histDates.map(fmtD), foreLabels=mc.mcDates.map(fmtD);
+    var allLabels = mc.viewMode==='forecast' ? ['Now'].concat(foreLabels) : histLabels.concat(foreLabels);
+    var datasets=[];
+    // Historical
+    if(mc.viewMode==='combined'){
+      datasets.push({label:mc.ticker+' Historical', data:mc.histPrices.concat(new Array(MC_DAYS).fill(null)),
+        borderColor:C.navy, borderWidth:2, pointRadius:0, fill:false, order:1});
+    }
+    // Sim paths
+    var pad = mc.viewMode==='combined' ? new Array(mc.histPrices.length-1).fill(null) : [];
+    for(var i=0;i<MC_PATHS;i++){
+      datasets.push({label:i===0?'Simulated Paths':'', data:pad.concat(mc.mcPaths[i]),
+        borderColor:'rgba(90,106,122,0.12)', borderWidth:0.7, pointRadius:0, fill:false, order:5});
+    }
+    // Bands
+    datasets.push({label:'90th Pctl', data:pad.concat(st.p90), borderColor:C.blueLight, borderWidth:1.2, borderDash:[4,3], pointRadius:0, fill:false, order:2});
+    datasets.push({label:'10th Pctl', data:pad.concat(st.p10), borderColor:C.blueLight, borderWidth:1.2, borderDash:[4,3], pointRadius:0, fill:'-1', backgroundColor:'rgba(91,155,213,0.10)', order:2});
+    datasets.push({label:'Median', data:pad.concat(st.p50), borderColor:C.blue, borderWidth:2, borderDash:[6,3], pointRadius:0, fill:false, order:0});
+
+    if(window._mcChart) window._mcChart.destroy();
+    window._mcChart = new Chart(document.getElementById('mcChart').getContext('2d'), {
+      type:'line', data:{labels:allLabels, datasets:datasets},
+      options:{
+        responsive:true, maintainAspectRatio:false,
+        plugins:{
+          legend:{labels:{font:{family:'Arial',size:11},color:C.textSec,boxWidth:10,padding:14,
+            filter:function(item){return item.text!=='';}}},
+          tooltip:chartTooltip,
+          zoom:{pan:{enabled:true,mode:'x'},zoom:{drag:{enabled:true,backgroundColor:'rgba(91,155,213,0.08)'},mode:'x'}}
+        },
+        scales:{
+          x:{grid:chartGrid,ticks:{font:{size:9},color:C.textSec,maxTicksLimit:12},border:{display:false}},
+          y:{grid:chartGrid,ticks:{font:{size:11},color:C.textSec,callback:function(v){return '$'+v.toFixed(0);}},border:{display:false}}
+        },
+        interaction:{mode:'index',intersect:false}
+      }
+    });
+    document.getElementById('mcChartTitle').textContent = mc.ticker+' — Monte Carlo Simulation ('+MC_PATHS+' GBM Paths, 1-Year Forward)';
+    document.getElementById('mcChartLoading').style.display = 'none';
+    // Stats boxes
+    document.getElementById('mcChartStats').innerHTML =
+      '<div class="chart-stat-box"><div class="chart-stat-label">Current Price</div><div class="chart-stat-value">'+fp(mc.S0)+'</div></div>'+
+      '<div class="chart-stat-box"><div class="chart-stat-label">Median 1Y Target</div><div class="chart-stat-value">'+fp(st.tMed)+'</div><div class="chart-stat-sub">'+fpc((st.tMed-mc.S0)/mc.S0)+' return</div></div>'+
+      '<div class="chart-stat-box"><div class="chart-stat-label">Ann. Volatility</div><div class="chart-stat-value">'+fpc(mc.sigma)+'</div></div>'+
+      '<div class="chart-stat-box"><div class="chart-stat-label">P(Gain)</div><div class="chart-stat-value" style="color:'+(st.pGain>=0.5?C.success:C.danger)+'">'+fpc(st.pGain)+'</div></div>';
+  }
+  window.renderMCChart = renderMCChart;
+  renderMCChart();
+
+  // ═══ MC VIEW TOGGLE ═══
+  window.setMcView = function(mode,btn){
+    window._mc.viewMode=mode;
+    document.querySelectorAll('#mcChartCard .btn-outline').forEach(function(b){b.classList.remove('active');});
+    btn.classList.add('active');
+    renderMCChart();
+  };
+  window.rerunMC = function(){
+    window._mc.mcPaths = runGBM(window._mc.S0, window._mc.mu, window._mc.sigma, MC_PATHS, MC_DAYS);
+    renderMCChart(); renderMCStats(); renderMCDist(); renderMCStress(); renderMCProb();
+  };
+
+  // ═══ SUMMARY STATS ═══
+  function renderMCStats(){
+    var mc=window._mc, st=pathStats(mc.mcPaths);
+    var items=[
+      {l:'Current Price',v:fp(mc.S0),s:'Last close'},
+      {l:'Expected (Mean)',v:fp(st.tMean),s:fpc((st.tMean-mc.S0)/mc.S0)+' return'},
+      {l:'Median (50th)',v:fp(st.tMed),s:fpc((st.tMed-mc.S0)/mc.S0)+' return'},
+      {l:'5th Percentile',v:fp(st.t5),s:'Downside tail'},
+      {l:'10th Percentile',v:fp(st.t10),s:'Conservative'},
+      {l:'90th Percentile',v:fp(st.t90),s:'Optimistic'},
+      {l:'95th Percentile',v:fp(st.t95),s:'Upside tail'},
+      {l:'P(Gain)',v:fpc(st.pGain),s:MC_PATHS+' paths'},
+      {l:'Ann. Volatility (σ)',v:fpc(mc.sigma),s:'From log returns'},
+      {l:'Ann. Drift (μ)',v:fpc(mc.mu),s:'From log returns'},
+      {l:'Worst Max Drawdown',v:fpc(st.wDD),s:'Peak to trough'},
+      {l:'P(Loss > 20%)',v:fpc(st.pL20),s:'Severe loss prob'}
+    ];
+    document.getElementById('mcStatsGrid').innerHTML = items.map(function(it){
+      return '<div class="mc-stat-card"><div class="mc-stat-hdr">'+it.l+'</div><div class="mc-stat-val">'+it.v+'<small>'+it.s+'</small></div></div>';
+    }).join('');
+    document.getElementById('mcStatsCard').style.display='';
+    document.getElementById('mcStatsTitle').textContent=mc.ticker+' — Simulation Summary';
+  }
+  window.renderMCStats = renderMCStats;
+  renderMCStats();
+
+  // ═══ DISTRIBUTION HISTOGRAM ═══
+  function renderMCDist(){
+    var mc=window._mc, st=pathStats(mc.mcPaths);
+    var terms=st.terms, min=terms[0], max=terms[terms.length-1], bC=20, bW=(max-min)/bC;
+    var bins=[],bLabels=[],bColors=[];
+    for(var i=0;i<bC;i++){
+      var lo=min+i*bW, hi=lo+bW, mid=(lo+hi)/2;
+      bins.push(terms.filter(function(t){return i===bC-1?(t>=lo&&t<=hi):(t>=lo&&t<hi);}).length);
+      bLabels.push('$'+mid.toFixed(0));
+      bColors.push(mid<mc.S0?'rgba(139,42,42,0.6)':'rgba(0,60,113,0.6)');
+    }
+    if(window._mcDist) window._mcDist.destroy();
+    window._mcDist = new Chart(document.getElementById('mcDistChart').getContext('2d'),{
+      type:'bar', data:{labels:bLabels, datasets:[{label:'Frequency',data:bins,backgroundColor:bColors,borderColor:bColors.map(function(c){return c.replace('0.6','1');}),borderWidth:1}]},
+      options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:chartTooltip},
+        scales:{x:{grid:chartGrid,ticks:{font:{size:9},color:C.textSec},title:{display:true,text:'Terminal Price ($)',font:{size:11,weight:'600'},color:C.textSec}},
+          y:{grid:chartGrid,ticks:{font:{size:11},color:C.textSec},title:{display:true,text:'Frequency',font:{size:11,weight:'600'},color:C.textSec},beginAtZero:true}}}
+    });
+    document.getElementById('mcDistCard').style.display='';
+    document.getElementById('mcDistTitle').textContent=mc.ticker+' — 1-Year Terminal Price Distribution ('+MC_PATHS+' Paths)';
+  }
+  window.renderMCDist = renderMCDist;
+  renderMCDist();
+
+  // ═══ STRESSED SCENARIOS ═══
+  function renderMCStress(){
+    var mc=window._mc;
+    var scenarios=[
+      {name:'Base Case',badge:'badge-base',mu:mc.mu,sig:mc.sigma},
+      {name:'Bull (+1σ Drift)',badge:'badge-bull',mu:mc.mu+mc.sigma,sig:mc.sigma},
+      {name:'Bear (-1σ Drift)',badge:'badge-bear',mu:mc.mu-mc.sigma,sig:mc.sigma},
+      {name:'High Volatility',badge:'badge-stress',mu:mc.mu,sig:mc.sigma*1.5},
+      {name:'Crash',badge:'badge-bear',mu:mc.mu-2*mc.sigma,sig:mc.sigma*2}
+    ];
+    document.getElementById('mcStressBody').innerHTML = scenarios.map(function(sc){
+      var p=runGBM(mc.S0,sc.mu,sc.sig,MC_PATHS,MC_DAYS), st=pathStats(p);
+      return '<tr><td><span class="'+sc.badge+'">'+sc.name+'</span></td><td>'+fpc(sc.mu)+'</td><td>'+fpc(sc.sig)+'</td><td>'+fp(st.tMed)+'</td><td>'+fp(st.tMean)+'</td><td>'+fp(st.t5)+'</td><td>'+fp(st.t95)+'</td><td>'+fpc(st.pGain)+'</td><td>'+fpc(st.pL20)+'</td></tr>';
+    }).join('');
+    document.getElementById('mcStressCard').style.display='';
+    document.getElementById('mcStressTitle').textContent=mc.ticker+' — Stressed Scenarios ('+MC_PATHS+' paths each)';
+  }
+  window.renderMCStress = renderMCStress;
+  renderMCStress();
+
+  // ═══ PROBABILITY MATRIX ═══
+  function renderMCProb(){
+    var mc=window._mc;
+    var thresholds=[{l:'↑ +30%',m:1.3},{l:'↑ +20%',m:1.2},{l:'↑ +10%',m:1.1},{l:'↑ +5%',m:1.05},{l:'↓ -5%',m:0.95},{l:'↓ -10%',m:0.9},{l:'↓ -20%',m:0.8},{l:'↓ -30%',m:0.7}];
+    var horizons=[{l:'1 Month',d:21},{l:'3 Months',d:63},{l:'6 Months',d:126},{l:'1 Year',d:252}];
+    var html='<div class="pg-hdr" style="grid-column:1;">Threshold</div>';
+    horizons.forEach(function(h){html+='<div class="pg-hdr">'+h.l+'</div>';});
+    thresholds.forEach(function(th){
+      var isUp=th.m>=1;
+      html+='<div class="pg-label">'+th.l+' ('+fp(mc.S0*th.m)+')</div>';
+      horizons.forEach(function(hz){
+        var di=Math.min(hz.d,MC_DAYS);
+        var dayP=mc.mcPaths.map(function(p){return p[di];});
+        var prob=isUp ? dayP.filter(function(pr){return pr>=mc.S0*th.m;}).length/dayP.length : dayP.filter(function(pr){return pr<=mc.S0*th.m;}).length/dayP.length;
+        var intensity=Math.min(prob*2.5,1);
+        var bg=isUp?'rgba(46,125,82,'+(0.08+intensity*0.45)+')':'rgba(139,42,42,'+(0.08+intensity*0.45)+')';
+        var tc=prob>0.35?'#fff':'#000';
+        html+='<div class="pg-cell" style="background:'+bg+';color:'+tc+';">'+(prob*100).toFixed(1)+'%</div>';
+      });
+    });
+    document.getElementById('mcProbGrid').innerHTML=html;
+    document.getElementById('mcProbCard').style.display='';
+    document.getElementById('mcProbTitle').textContent=mc.ticker+' — Price Threshold Probability Matrix';
+  }
+  window.renderMCProb = renderMCProb;
+  renderMCProb();
+
+  // ═══ ALSO RUN SEC FUNDAMENTALS (existing functionality) ═══
+  statusEl.textContent = 'Loading SEC data for ' + ticker + '...';
   var el = document.getElementById('quantResults');
   el.innerHTML = '<div style="padding:40px;text-align:center;"><span class="spinner"></span><br><br><strong>Loading SEC data for '+ticker+'...</strong></div>';
   try {
     var secData = await fetchFundamentals(ticker);
-    // Render the same SEC analysis as the Research page
     var html = renderSECAnalysis(ticker, secData);
     el.innerHTML = html;
   } catch(e) {
-    el.innerHTML = '<div class="card"><div class="card-title" style="background:var(--danger);">Error</div><div class="card-body"><p style="color:var(--danger);">'+e.message+'</p></div></div>';
+    el.innerHTML = '<div class="card"><div class="card-title" style="background:var(--danger);">SEC Data</div><div class="card-body"><p style="color:var(--text-sec);">SEC fundamentals not available for '+ticker+'. Monte Carlo simulation completed successfully above.</p></div></div>';
   }
+
+  statusEl.textContent = 'Analysis complete for ' + ticker;
+  btn.disabled = false;
 };
 </script>
 </body>
