@@ -876,6 +876,51 @@ tr:hover td { background: #EAF1F9; }
 }
 .coef-bar-fill { height: 100%; display: block; }
 
+/* ═══ VIEW TOGGLE ═══ */
+.view-toggle {
+  background: rgba(255,255,255,0.12); color: #fff; border: 1px solid rgba(255,255,255,0.25);
+  padding: 5px 12px; border-radius: 4px; cursor: pointer; font-size: 11px; font-weight: 600;
+  font-family: Arial; display: inline-flex; align-items: center; gap: 5px;
+}
+.view-toggle:hover { background: rgba(255,255,255,0.22); }
+
+/* Mobile view (forced, via body class) */
+body.view-mobile .content-wrap { max-width: 420px !important; padding: 12px 10px 40px !important; }
+body.view-mobile .hero { padding: 22px 18px !important; }
+body.view-mobile .hero h1 { font-size: 20px !important; }
+body.view-mobile .hero p { font-size: 12px !important; }
+body.view-mobile .grid-2, body.view-mobile .grid-3 { grid-template-columns: 1fr !important; }
+body.view-mobile .card-body { padding: 14px !important; }
+body.view-mobile .card-title { font-size: 12.5px !important; padding: 9px 14px !important; }
+body.view-mobile .form-row { flex-direction: column !important; align-items: stretch !important; }
+body.view-mobile .form-group input, body.view-mobile .form-group select { width: 100% !important; }
+body.view-mobile .btn-group { flex-wrap: wrap !important; }
+body.view-mobile .metrics-row { grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)) !important; gap: 8px !important; }
+body.view-mobile .metric-card { padding: 10px !important; }
+body.view-mobile .metric-value { font-size: 14px !important; }
+body.view-mobile .chart-wrap { height: auto !important; }
+body.view-mobile table { font-size: 11px !important; }
+body.view-mobile th, body.view-mobile td { padding: 6px 8px !important; }
+body.view-mobile .table-wrap { overflow-x: auto !important; }
+body.view-mobile .nav-parent { padding: 0 12px !important; font-size: 11.5px !important; }
+body.view-mobile .topbar { padding: 0 10px !important; }
+body.view-mobile .logo { font-size: 13px !important; }
+body.view-mobile .logo-icon { width: 22px !important; height: 22px !important; font-size: 12px !important; }
+
+/* Native mobile responsive (always active, even without toggle) */
+@media (max-width: 640px) {
+  .content-wrap { padding: 14px 12px 40px; }
+  .hero { padding: 24px 20px !important; }
+  .hero h1 { font-size: 22px; }
+  .grid-2, .grid-3 { grid-template-columns: 1fr; }
+  .form-row { flex-direction: column; align-items: stretch; }
+  table { font-size: 11px; }
+  th, td { padding: 6px 8px; }
+  .nav-parent { padding: 0 14px; font-size: 12px; }
+  .topbar { padding: 0 12px; height: 48px; }
+  .cmdk-box { width: 96vw; }
+}
+
 /* ═══ FILE DROP ZONE ═══ */
 .drop-zone {
   border: 2px dashed var(--border);
@@ -1059,6 +1104,7 @@ tr:hover td { background: #EAF1F9; }
       </div>
       <div class="nav-dropdown">
         <div class="nav-child" data-page="about" onclick="navigateTo('about')">About Us</div>
+        <div class="nav-child" data-page="resources" onclick="navigateTo('resources')">Resources / Training</div>
       </div>
     </div>
     <div class="nav-group">
@@ -1083,6 +1129,9 @@ tr:hover td { background: #EAF1F9; }
     </div>
   </div>
   <div class="topbar-right">
+    <button class="view-toggle" id="viewToggle" onclick="toggleView()" title="Switch between laptop and mobile view">
+      <span id="viewToggleIcon">&#128187;</span> <span id="viewToggleLabel">Laptop</span>
+    </button>
     <span class="user-badge" id="userBadge"></span>
     <button class="btn btn-sm" id="loginBtn" onclick="handleLogin()">Sign In</button>
     <button class="btn btn-sm btn-danger" id="logoutBtn" onclick="handleLogout()" style="display:none;">Sign Out</button>
@@ -1141,6 +1190,76 @@ tr:hover td { background: #EAF1F9; }
           <h4>Fundamental &amp; Technical Analysis</h4>
           <p>DCF valuation, ratio analysis, MACD, RSI, momentum indicators, and sector-level profitability and leverage scoring.</p>
         </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════ RESOURCES / TRAINING ═══════════ -->
+<div class="page" id="page-resources">
+  <div class="content-wrap">
+    <div class="hero" style="padding:32px 40px;">
+      <h1>Resources &amp; Training</h1>
+      <p>Complete reference for every metric, equation, and concept used across the Perry Asset Management platform. Use the filters and search to find what you need.</p>
+    </div>
+    <div class="card">
+      <div class="card-body">
+        <div class="form-row" style="margin-bottom:0;">
+          <div class="form-group" style="flex:1;min-width:240px;">
+            <label>Search Definitions</label>
+            <input type="text" id="resSearch" placeholder="e.g. Sharpe ratio, VaR, P/E, Cox process..." oninput="resFilter()">
+          </div>
+          <div class="form-group">
+            <label>Category</label>
+            <select id="resCategory" onchange="resFilter()">
+              <option value="all">All Categories</option>
+              <option value="Portfolio Metrics">Portfolio Metrics</option>
+              <option value="Valuation">Valuation</option>
+              <option value="Risk">Risk</option>
+              <option value="Quantitative">Quantitative</option>
+              <option value="Macro">Macro</option>
+              <option value="Accounts">Accounts</option>
+              <option value="Technical">Technical Analysis</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Page Where Used</label>
+            <select id="resPage" onchange="resFilter()">
+              <option value="all">Any Page</option>
+              <option value="Portfolio">Portfolio</option>
+              <option value="Holdings">Holdings</option>
+              <option value="Research">Research</option>
+              <option value="Macro">Macro</option>
+              <option value="Quant">Quant</option>
+              <option value="Markets">Markets</option>
+            </select>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Account Types Reference -->
+    <div class="card">
+      <div class="card-title">Account Types Reference Guide</div>
+      <div class="card-body">
+        <p style="font-size:12px;color:var(--text-sec);margin-bottom:14px;">Every account type supported on the Holdings page, with its contribution limits, tax treatment, withdrawal rules, and ideal use cases. Data is reference information only — consult a tax professional for your specific situation.</p>
+        <div class="acct-grid" id="acctInfoGrid"></div>
+      </div>
+      <div class="card-sources">
+        <strong>Sources:</strong><br>
+        &#8226; IRS.gov (contribution limits &amp; tax rules) &#8226; SEC.gov (regulatory framework) &#8226; General financial education &mdash; not tax or legal advice.
+      </div>
+    </div>
+
+    <!-- Definitions Glossary -->
+    <div class="card">
+      <div class="card-title">Definitions &amp; Equations Glossary</div>
+      <div class="card-body">
+        <div id="resGlossary"></div>
+      </div>
+      <div class="card-sources">
+        <strong>Sources:</strong><br>
+        &#8226; CFA Institute Curriculum (L1–L3) &#8226; Hull (2022) <em>Options, Futures &amp; Other Derivatives</em> &#8226; Bodie, Kane &amp; Marcus (2021) <em>Investments</em> &#8226; Damodaran (2012) <em>Investment Valuation</em> &#8226; Greene (2018) <em>Econometric Analysis</em> &#8226; Academic papers cited inline (Markowitz, Sharpe, Sortino, Cox, Merton, Black-Scholes, etc.)
       </div>
     </div>
   </div>
@@ -1243,6 +1362,34 @@ tr:hover td { background: #EAF1F9; }
         <div class="card-sources">
           <strong>Sources:</strong><br>
           &#8226; Yahoo Finance via Cloudflare Worker &#8226; Firebase Firestore
+        </div>
+      </div>
+      <!-- HISTORICAL STRESS TEST -->
+      <div class="card">
+        <div class="card-title">Historical Crisis Stress Test</div>
+        <div class="card-body">
+          <p style="font-size:12px;color:var(--text-sec);margin-bottom:14px;">Apply historical crisis returns to your <strong>current</strong> portfolio positions. This answers: "If this crisis repeated today with my exact holdings, how would my portfolio perform?" Uses real per-ticker returns from each crisis window; if a ticker didn't exist in that window, its sector-proxy ETF return is used.</p>
+          <div class="btn-group" id="stressScenarioBtns">
+            <button class="btn-outline active" data-scenario="2008_gfc">2008 GFC<br><span style="font-size:10px;opacity:.85;">Oct '07 – Mar '09</span></button>
+            <button class="btn-outline" data-scenario="2020_covid">COVID Crash<br><span style="font-size:10px;opacity:.85;">Feb – Mar '20</span></button>
+            <button class="btn-outline" data-scenario="2022_inflation">2022 Inflation<br><span style="font-size:10px;opacity:.85;">Jan – Oct '22</span></button>
+            <button class="btn-outline" data-scenario="2018_q4">Q4 2018 Selloff<br><span style="font-size:10px;opacity:.85;">Oct – Dec '18</span></button>
+            <button class="btn-outline" data-scenario="dotcom">Dotcom Crash<br><span style="font-size:10px;opacity:.85;">Mar '00 – Oct '02</span></button>
+            <button class="btn-outline" data-scenario="custom">Custom<br><span style="font-size:10px;opacity:.85;">Pick any window</span></button>
+          </div>
+          <div id="stressCustomRow" style="display:none;margin-bottom:14px;">
+            <div class="form-row">
+              <div class="form-group"><label>Start Date</label><input type="date" id="stressStart" value="2008-10-01"></div>
+              <div class="form-group"><label>End Date</label><input type="date" id="stressEnd" value="2009-03-09"></div>
+              <div class="form-group"><label>Scenario Name</label><input type="text" id="stressName" placeholder="e.g. Custom Q4 Selloff"></div>
+            </div>
+          </div>
+          <button class="btn" onclick="runStressTest()" id="stressRunBtn">Run Stress Test</button>
+          <div id="stressResults" style="margin-top:18px;"></div>
+        </div>
+        <div class="card-sources">
+          <strong>Sources:</strong><br>
+          &#8226; Yahoo Finance historical prices via Cloudflare Worker &#8226; Reinhart &amp; Rogoff (2009) <em>This Time is Different</em> &#8226; Federal Reserve crisis chronologies &#8226; Baker, Bloom &amp; Davis (2016) <em>Economic Policy Uncertainty Index</em>.
         </div>
       </div>
       <!-- Pie charts -->
@@ -1428,16 +1575,9 @@ tr:hover td { background: #EAF1F9; }
           &#8226; Yahoo Finance via Cloudflare Worker &#8226; Firebase Firestore
         </div>
       </div>
-      <!-- Account Types Reference Guide -->
-      <div class="card">
-        <div class="card-title">Account Types Reference Guide</div>
-        <div class="card-body">
-          <div class="acct-grid" id="acctInfoGrid"></div>
-        </div>
-        <div class="card-sources">
-          <strong>Sources:</strong><br>
-          &#8226; IRS.gov &#8226; SEC.gov &#8226; General financial education — not tax or legal advice
-        </div>
+      <!-- Account Types Reference — moved to Resources -->
+      <div style="background:var(--panel);border:1px solid var(--border);border-radius:6px;padding:14px 18px;margin-top:4px;font-size:12px;color:var(--text-sec);">
+        <strong style="color:var(--navy);">&#128218; Need help with account types?</strong> The full Account Types Reference Guide is now on the <a href="javascript:navigateTo('resources')" style="color:var(--blue);font-weight:600;">Resources / Training</a> page, along with a comprehensive glossary of every metric, equation, and term used across the platform.
       </div>
     </div>
   </div>
@@ -1507,15 +1647,8 @@ tr:hover td { background: #EAF1F9; }
     </div>
     <!-- Analysis Results -->
     <div id="researchResults"></div>
-    <div class="card" id="researchRawCard" style="display:none;">
-      <div class="card-title">Raw SEC Data</div>
-      <div class="card-body">
-        <div class="research-output" id="researchOutput"></div>
-      </div>
-      <div class="card-sources">
-        <strong>Sources:</strong><br>&#8226; SEC EDGAR &bull; FMP &bull; Yahoo Finance
-      </div>
-    </div>
+    <!-- Hidden compat elements — data still available via window._lastSecData and DOM but not displayed -->
+    <div id="researchRawCard" style="display:none;"><div id="researchOutput"></div></div>
   </div>
 </div>
 
@@ -2418,9 +2551,22 @@ async function fetchQuote(t) {
   return d;
 }
 async function fetchChart(t, range, interval) {
-  const r = await fetch(WORKER_URL + "/chart?symbol=" + encodeURIComponent(t) + "&range=" + range + "&interval=" + (interval || "1d"));
+  // Yahoo Finance accepts: 1d, 5d, 1mo, 3mo, 6mo, ytd, 1y, 2y, 5y, 10y, max
+  // Normalize unsupported ranges (e.g. 15y, 20y) to max
+  var r2 = range;
+  if (range === '15y' || range === '20y' || range === '30y') r2 = 'max';
+  const r = await fetch(WORKER_URL + "/chart?symbol=" + encodeURIComponent(t) + "&range=" + r2 + "&interval=" + (interval || "1d"));
   const d = await r.json();
   if (d.error) throw new Error(d.error);
+  // If requested 15y/20y, truncate to that window client-side
+  if (range !== r2 && d.points && d.points.length) {
+    var yrs = parseInt(range, 10);
+    if (yrs > 0) {
+      var cutoff = new Date(); cutoff.setFullYear(cutoff.getFullYear() - yrs);
+      var cutoffStr = cutoff.toISOString().slice(0,10);
+      d.points = d.points.filter(function(p){ return p.date.slice(0,10) >= cutoffStr; });
+    }
+  }
   return d;
 }
 async function fetchSearch(q) {
@@ -2744,7 +2890,7 @@ Chart.register(priceBubblePlugin);
 let donutCharts = {};
 
 // ═══ NAVIGATION ═══
-const parentMap = { home: 'home', about: 'home', portfolio: 'portfolio', holdings: 'portfolio', research: 'research', macro: 'macro', quant: 'quant', markets: 'markets' };
+const parentMap = { home: 'home', about: 'home', resources: 'home', portfolio: 'portfolio', holdings: 'portfolio', research: 'research', macro: 'macro', quant: 'quant', markets: 'markets' };
 function navigateTo(p) {
   document.activeElement.blur();
   document.querySelectorAll('.page').forEach(x => x.classList.remove('active'));
@@ -2758,9 +2904,34 @@ function navigateTo(p) {
   window.scrollTo(0, 0);
   if (p === 'portfolio') renderPortfolioOverview();
   if (p === 'macro') loadMacroLiveTable();
+  if (p === 'resources' && typeof resourcesInit === 'function') resourcesInit();
   if (p === 'markets' && typeof mktInit === 'function' && !window._mktInitialized) { mktInit(); window._mktInitialized = true; }
   if (p === 'quant' && typeof quantInit === 'function' && !window._quantInitialized) { quantInit(); window._quantInitialized = true; }
 }
+
+// ═══ VIEW TOGGLE (Laptop / Mobile) ═══
+function toggleView() {
+  var isMobile = document.body.classList.toggle('view-mobile');
+  localStorage.setItem('perry_view', isMobile ? 'mobile' : 'laptop');
+  var icon = document.getElementById('viewToggleIcon');
+  var label = document.getElementById('viewToggleLabel');
+  if (icon) icon.innerHTML = isMobile ? '&#128241;' : '&#128187;';
+  if (label) label.textContent = isMobile ? 'Mobile' : 'Laptop';
+  // Trigger chart resize
+  setTimeout(function(){ window.dispatchEvent(new Event('resize')); }, 120);
+}
+// Restore view preference on load
+(function(){
+  var pref = localStorage.getItem('perry_view');
+  if (pref === 'mobile') {
+    setTimeout(function(){ document.body.classList.add('view-mobile');
+      var icon = document.getElementById('viewToggleIcon');
+      var label = document.getElementById('viewToggleLabel');
+      if (icon) icon.innerHTML = '&#128241;';
+      if (label) label.textContent = 'Mobile';
+    }, 100);
+  }
+})();
 
 // ═══ HOME FEATURES ═══
 const FEATURES = [
@@ -2868,13 +3039,37 @@ function renderHoldingsTable(holdings) {
   const tc = sorted.reduce((s, h) => s + h.costBasis * h.quantity, 0);
   const tgl = tv - tc;
   const tglp = tc > 0 ? (tgl / tc) * 100 : 0;
+
+  // Group tickers that appear in multiple accounts for visual indicator
+  var tickerCounts = {};
+  sorted.forEach(function(h){ tickerCounts[h.ticker] = (tickerCounts[h.ticker] || 0) + 1; });
+
+  // Summary bar for tickers across multiple accounts
+  var multiAccountTickers = Object.keys(tickerCounts).filter(function(t){ return tickerCounts[t] > 1; });
+  var summaryHtml = '';
+  if (multiAccountTickers.length && filter === 'all') {
+    summaryHtml = '<div style="background:var(--panel);border:1px solid var(--border);border-left:3px solid var(--blue);border-radius:4px;padding:10px 14px;margin-bottom:12px;font-size:12px;">';
+    summaryHtml += '<strong style="color:var(--navy);">&#128279; Multi-account positions:</strong> ';
+    multiAccountTickers.forEach(function(t, i){
+      var subs = sorted.filter(function(h){ return h.ticker === t; });
+      var totalQty = subs.reduce(function(s,h){return s+h.quantity;}, 0);
+      var totalCost = subs.reduce(function(s,h){return s+h.costBasis*h.quantity;}, 0);
+      var totalMv = subs.reduce(function(s,h){return s+(h.currentPrice||0)*h.quantity;}, 0);
+      var glp = totalCost > 0 ? (totalMv - totalCost)/totalCost*100 : 0;
+      summaryHtml += (i>0?' &middot; ':'') + '<span style="color:var(--navy);font-weight:700;">'+t+'</span> '
+        + '<span style="color:var(--text-sec);">('+subs.length+' accts, '+totalQty+' sh total, '+fmtPct(glp)+')</span>';
+    });
+    summaryHtml += '<div style="font-size:11px;color:var(--text-sec);margin-top:4px;">Positions in the same ticker but different accounts are tracked separately for tax-lot integrity. Portfolio totals aggregate across accounts.</div>';
+    summaryHtml += '</div>';
+  }
+
   const cols = [
     {key:'ticker',label:'Ticker'}, {key:'companyName',label:'Company'}, {key:'quantity',label:'Shares'},
     {key:'costBasis',label:'Cost Basis'}, {key:'currentPrice',label:'Price'}, {key:'marketValue',label:'Mkt Value'},
     {key:'glPct',label:'G/L'}, {key:'yieldPct',label:'Yield'}, {key:'accountType',label:'Account'}, {key:'sector',label:'Sector'},
     {key:'industry',label:'Industry'}, {key:'assetClass',label:'Asset'}
   ];
-  let html = '<table><thead><tr>' + sortableHeader(cols, _holdingsSort, null, 'manage') + '<th></th></tr></thead><tbody>';
+  let html = summaryHtml + '<table><thead><tr>' + sortableHeader(cols, _holdingsSort, null, 'manage') + '<th></th></tr></thead><tbody>';
   sorted.forEach(h => {
     const mv = (h.currentPrice || 0) * h.quantity;
     const cost = h.costBasis * h.quantity;
@@ -2885,8 +3080,9 @@ function renderHoldingsTable(holdings) {
     const yieldVal = h.yieldPct ? h.yieldPct.toFixed(2) + '%' : '—';
     const editAge = h.lastEdited ? (Date.now() - new Date(h.lastEdited).getTime()) / (1000*60*60) : 999;
     const canUndo = h.previousVersion && editAge < 24;
+    var multiBadge = tickerCounts[h.ticker] > 1 ? ' <span title="Also in other accounts" style="background:var(--blue);color:white;font-size:9px;padding:1px 4px;border-radius:2px;font-weight:600;">&#215;'+tickerCounts[h.ticker]+'</span>' : '';
     html += '<tr>' +
-      '<td style="font-weight:700;color:' + C.navy + ';">' + h.ticker + '</td>' +
+      '<td style="font-weight:700;color:' + C.navy + ';">' + h.ticker + multiBadge + '</td>' +
       '<td>' + h.companyName + '</td>' +
       '<td>' + (isCash ? '—' : h.quantity) + '</td>' +
       '<td>' + (isCash ? fmt(h.costBasis * h.quantity) : fmt(h.costBasis)) + '</td>' +
@@ -3234,7 +3430,12 @@ window.renderPortfolioChart = async function() {
       const pts = (d.points || []).filter(p => p.close !== null);
       const m = {};
       pts.forEach(p => { m[p.date.slice(0, 10)] = p.close; });
-      hs[h.ticker] = { map: m, quantity: h.quantity };
+      hs[h.ticker + '|' + (h.accountType||'Individual')] = {
+        map: m,
+        quantity: h.quantity,
+        datePurchased: h.datePurchased || null,
+        ticker: h.ticker
+      };
     } catch(e) {}
   }
 
@@ -3243,10 +3444,14 @@ window.renderPortfolioChart = async function() {
   const dates = Array.from(ad).sort();
   if (!dates.length) { loadEl.style.display = 'none'; return; }
 
-  // Portfolio value per date
+  // Portfolio value per date — only include a holding's contribution on/after its purchase date
   const pv = dates.map(d => {
     let t = 0;
-    Object.values(hs).forEach(s => { if (s.map[d] != null) t += s.map[d] * s.quantity; });
+    Object.values(hs).forEach(s => {
+      if (s.map[d] == null) return;
+      if (s.datePurchased && d < s.datePurchased) return; // skip pre-purchase dates
+      t += s.map[d] * s.quantity;
+    });
     return t;
   });
   const valid = [];
@@ -4615,8 +4820,8 @@ window.runResearch = async function() {
   researchShowDividends = false;
   document.getElementById('btnResearchDividends').classList.remove('active');
 
-  document.getElementById('researchRawCard').style.display = '';
-  document.getElementById('researchOutput').innerHTML = '<span class="spinner"></span> Fetching <strong>' + ticker + '</strong>...';
+  // Raw SEC card is hidden by design now; keep it hidden but update output for data caching
+  document.getElementById('researchOutput').innerHTML = '';
   document.getElementById('researchChartCard').style.display = 'none';
   document.getElementById('researchHeaderResults').innerHTML = '<div style="padding:20px;text-align:center;"><span class="spinner"></span> Loading data for ' + ticker + '...</div>';
   document.getElementById('researchResults').innerHTML = '';
@@ -4662,6 +4867,10 @@ window.runResearch = async function() {
 
       var secData = await fetchFundamentals(ticker);
       document.getElementById('researchOutput').textContent = JSON.stringify(secData, null, 2);
+
+      // Cache secData for future features (industry comparison, forecasting)
+      window._lastSecData = secData;
+      window._lastSecTicker = ticker;
 
       // Detect if ETF/Fund
       var isETF = secData.profile?.type === 'ETF' || secData.profile?.type === 'FUND';
@@ -5743,6 +5952,312 @@ function mktUpdateStatusBar() {
 setInterval(function(){ try { mktUpdateStatusBar(); } catch(e){} }, 60000);
 // Also call initial
 setTimeout(mktUpdateStatusBar, 1000);
+
+// ═══════════════════════════════════════════════════════
+// ═══════════ RESOURCES / TRAINING PAGE ═════════════════
+// ═══════════════════════════════════════════════════════
+var GLOSSARY = [
+  // PORTFOLIO METRICS
+  { term: 'Total Portfolio Value', cat: 'Portfolio Metrics', pages: ['Portfolio'], eq: 'Σ (Price × Quantity) across all holdings', why: 'The current market value of all your positions. Reported as dollar amount; day-change percent shows intraday move.' },
+  { term: 'Total Cost Basis', cat: 'Portfolio Metrics', pages: ['Portfolio', 'Holdings'], eq: 'Σ (Cost/Share × Quantity) across all holdings', why: 'The total amount you paid for all current positions (before dividends or commissions). Used as the anchor point for unrealized gain/loss.' },
+  { term: 'Total Gain/Loss', cat: 'Portfolio Metrics', pages: ['Portfolio'], eq: 'Total Value − Total Cost Basis', why: 'Unrealized P&L. Positive = you\'d profit if you sold everything at current prices; negative = you\'d realize a loss.' },
+  { term: 'Day Change', cat: 'Portfolio Metrics', pages: ['Portfolio'], eq: 'Current Value − Previous Close Value', why: 'The dollar swing in your portfolio since yesterday\'s market close.' },
+  { term: 'Weighted Average Cost Basis', cat: 'Portfolio Metrics', pages: ['Holdings'], eq: '((Existing_Cost × Existing_Qty) + (New_Cost × New_Qty)) / Total_Qty', why: 'Applied when you add to an existing position in the same account. Merges lots into a single average cost per share for reporting (actual tax lots are still tracked separately by your broker).' },
+  { term: 'Market Value per Holding', cat: 'Portfolio Metrics', pages: ['Portfolio', 'Holdings'], eq: 'Current Price × Quantity', why: 'What a single position is worth right now. For cash-like positions (SPAXX, CD, Bond), this is the deposit amount.' },
+
+  // VALUATION
+  { term: 'P/E Ratio (Price-to-Earnings)', cat: 'Valuation', pages: ['Research'], eq: 'Price / Earnings-Per-Share', why: 'How much investors pay per dollar of earnings. Lower = cheaper (but could mean weak growth); higher = expensive or high growth expected.' },
+  { term: 'EV/EBITDA', cat: 'Valuation', pages: ['Research'], eq: '(Market Cap + Debt − Cash) / EBITDA', why: 'Capital-structure-neutral valuation. Good for comparing companies with different debt loads.' },
+  { term: 'Price/Book (P/B)', cat: 'Valuation', pages: ['Research'], eq: 'Price / Book Value per Share', why: 'Market value vs accounting book value. Below 1 = trading below net assets; common screen for value stocks.' },
+  { term: 'Free Cash Flow Yield', cat: 'Valuation', pages: ['Research'], eq: 'Free Cash Flow / Market Cap', why: 'What percentage of your investment the company generates in cash each year. Key input to DCF valuation.' },
+  { term: 'DCF (Discounted Cash Flow)', cat: 'Valuation', pages: ['Research'], eq: 'Σ FCFₜ / (1+r)ᵗ + Terminal Value', why: 'Intrinsic value calculation: sum of all future cash flows discounted to present. r = cost of capital (WACC).' },
+  { term: 'Terminal Value (Gordon Growth)', cat: 'Valuation', pages: ['Research'], eq: 'FCF × (1+g) / (r − g)', why: 'Captures value beyond the explicit forecast window. Assumes cash flows grow at rate g forever.' },
+
+  // RISK
+  { term: 'Value at Risk (VaR)', cat: 'Risk', pages: ['Markets'], eq: 'VaR_95 = μ − 1.645σ (parametric); 5th percentile (historical); μ − z_CF × σ (Cornish-Fisher)', why: 'Worst expected loss at a confidence level. 1-day 95% VaR of 2% means: 95% of days, you won\'t lose more than 2%.' },
+  { term: 'Conditional VaR (CVaR / Expected Shortfall)', cat: 'Risk', pages: ['Markets'], eq: 'E[Loss | Loss ≥ VaR]', why: 'Expected loss given you\'re already in the tail. Unlike VaR, CVaR is a coherent (sub-additive) risk measure (Artzner et al., 1999).' },
+  { term: 'Cornish-Fisher Expansion', cat: 'Risk', pages: ['Markets'], eq: 'z_CF = z + (z²−1)S/6 + (z³−3z)K/24 − (2z³−5z)S²/36', why: 'Adjusts z-scores for skewness (S) and excess kurtosis (K). Corrects normal-distribution VaR for real-world fat tails.' },
+  { term: 'Maximum Drawdown', cat: 'Risk', pages: ['Markets', 'Portfolio'], eq: 'max over t of [Peak(0..t) − Price(t)] / Peak(0..t)', why: 'Worst peak-to-trough decline. Investors often care more about this than volatility because it captures the actual pain of losses.' },
+  { term: 'Sharpe Ratio', cat: 'Risk', pages: ['Markets', 'Quant'], eq: '(μ − r_f) / σ, annualized via ×√252', why: 'Excess return per unit of total volatility. Higher = better risk-adjusted return. r_f = risk-free rate (~4–5%).' },
+  { term: 'Sortino Ratio', cat: 'Risk', pages: ['Markets'], eq: '(μ − r_f) / σ_downside', why: 'Like Sharpe but only penalizes downside volatility. Upside volatility is good and shouldn\'t reduce the score.' },
+  { term: 'Beta (β)', cat: 'Risk', pages: ['Markets', 'Quant'], eq: 'Cov(R_asset, R_mkt) / Var(R_mkt)', why: 'Sensitivity to market. β = 1 moves with market, β = 2 amplifies it 2x, β = 0 uncorrelated.' },
+  { term: 'Annualized Volatility', cat: 'Risk', pages: ['Markets', 'Quant'], eq: 'std(daily log returns) × √252', why: 'Year-equivalent standard deviation. The square-root-of-time scaling assumes i.i.d. returns.' },
+  { term: 'Pearson Correlation (ρ)', cat: 'Risk', pages: ['Markets'], eq: 'Σ[(xᵢ−x̄)(yᵢ−ȳ)] / √[Σ(xᵢ−x̄)² × Σ(yᵢ−ȳ)²]', why: 'Linear association between two return series. ρ = 1 perfect positive, ρ = −1 perfect inverse, ρ = 0 none. Foundation of diversification.' },
+
+  // QUANT
+  { term: 'Multiple Linear Regression (MLR)', cat: 'Quantitative', pages: ['Quant'], eq: 'y = β₀ + β₁x₁ + ... + βₖxₖ + ε; β = (X\'X)⁻¹X\'y', why: 'Estimates how much each feature (x) predicts y (forward return). Standardized coefficients (β) tell you directional impact after scaling.' },
+  { term: 'Bootstrap Confidence Intervals', cat: 'Quantitative', pages: ['Quant'], eq: 'Resample (X,y) with replacement B times; β_CI = [2.5th pct, 97.5th pct]', why: 'Non-parametric alternative to t-tests. Tells you how stable your coefficient estimate is under alternative samples (Efron, 1979).' },
+  { term: 'Sign Stability', cat: 'Quantitative', pages: ['Quant'], eq: 'Fraction of bootstrap samples where β has the same sign as the point estimate', why: '>90% = robust estimate. <75% = flip-prone, probably not a real signal.' },
+  { term: 'R² (Coefficient of Determination)', cat: 'Quantitative', pages: ['Quant'], eq: '1 − SSE/SST', why: 'Fraction of variance in y explained by the model. R² = 0.30 typical for stock return regressions.' },
+  { term: 'Adjusted R²', cat: 'Quantitative', pages: ['Quant'], eq: '1 − (1−R²)(n−1)/(n−p)', why: 'Penalizes for extra predictors. Prevents overfitting from inflating R².' },
+  { term: 'Monte Carlo Simulation (GBM)', cat: 'Quantitative', pages: ['Quant', 'Markets'], eq: 'S_t+1 = S_t × exp((μ − 0.5σ²)dt + σ√dt × Z)', why: 'Geometric Brownian Motion. Simulates thousands of possible price paths; percentiles give you a return distribution instead of a point estimate (Hull, 2022).' },
+  { term: 'Cox (Doubly Stochastic) Process', cat: 'Quantitative', pages: ['Markets'], eq: 'dλ = κ(θ − λ)dt + σ_λ√λ dW (CIR intensity); N(t) | λ(s) ~ Poisson(∫λds)', why: 'Jump model where crash intensity is itself stochastic. Captures volatility clustering — jumps bunch together in some regimes (Cox, 1955).' },
+  { term: 'Efficient Frontier', cat: 'Quantitative', pages: ['Markets'], eq: 'For each target μ_p: min w\'Σw s.t. w\'μ = μ_p, Σw_i = 1', why: 'Upper-left boundary of risk-return space. No rational investor holds a portfolio interior to the frontier (Markowitz, 1952).' },
+  { term: 'Tangency (Max Sharpe) Portfolio', cat: 'Quantitative', pages: ['Markets'], eq: 'argmax_w (w\'μ − r_f) / √(w\'Σw)', why: 'Optimal risky portfolio when combined with the risk-free asset. The starting point for every CFA L3 allocation.' },
+
+  // MACRO
+  { term: 'Business Cycle Regime', cat: 'Macro', pages: ['Macro'], eq: 'Classified from 10-indicator regime scorecard: Early Exp / Mid / Late / Contraction', why: 'Determines sector tilts. Early = Financials/Cyclicals; Mid = Tech/Industrials; Late = Energy/Staples; Contraction = Utilities/Treasuries (CFA L3).' },
+  { term: 'Taylor Rule', cat: 'Macro', pages: ['Macro'], eq: 'FFR* = r* + π + 0.5(π − π*) + 0.5(Y − Y*)', why: 'Model-implied Fed Funds Rate. Gap vs actual tells you if policy is too loose or too tight (Taylor, 1993).' },
+  { term: 'Yield Curve Slope', cat: 'Macro', pages: ['Macro'], eq: '10Y Treasury yield − 2Y (or 3M) Treasury yield', why: 'Every U.S. recession since 1970 preceded by 3M/10Y inversion. Steep curve = healthy expansion; inverted = policy too tight.' },
+  { term: 'Regime Scorecard', cat: 'Macro', pages: ['Macro'], eq: 'Σ of ±1 per indicator based on threshold tests; range [−10, +10]', why: 'Aggregates ISM, claims, curve, SLOOS, LEI, HY OAS, real FFR, NFP, Core PCE into one number for quick regime read.' },
+  { term: 'HY OAS (High-Yield Option-Adjusted Spread)', cat: 'Macro', pages: ['Macro'], eq: 'HY bond yield − duration-matched Treasury yield', why: 'Credit risk premium. Widening HY spreads signal credit stress and typically precede equity drawdowns.' },
+
+  // ACCOUNTS
+  { term: 'Cost Basis per Share', cat: 'Accounts', pages: ['Holdings'], eq: 'Total amount paid for the position / number of shares', why: 'The per-share price at which you purchased. Difference with current price = unrealized gain/loss per share.' },
+  { term: 'Tax Lot', cat: 'Accounts', pages: ['Holdings'], eq: '—', why: 'A specific block of shares bought at a specific date/price. Real tax lots are tracked by your broker; this app merges same-ticker-same-account positions into one weighted-average row for simplicity.' },
+  { term: 'Traditional IRA', cat: 'Accounts', pages: ['Holdings'], eq: '—', why: 'Pre-tax contributions, tax-deferred growth, taxed on withdrawal. 2025 limit: $7,000 ($8,000 if 50+). RMDs at 73.' },
+  { term: 'Roth IRA', cat: 'Accounts', pages: ['Holdings'], eq: '—', why: 'After-tax contributions, tax-free growth, tax-free qualified withdrawals. 2025 limit: $7,000 ($8,000 if 50+). No RMDs during owner\'s life. Income phase-outs apply.' },
+  { term: 'HSA (Health Savings Account)', cat: 'Accounts', pages: ['Holdings'], eq: '—', why: 'Triple-tax-advantaged: deductible contributions, tax-free growth, tax-free qualified medical withdrawals. Requires HDHP. Best tax-advantaged account in the code if used correctly.' },
+
+  // TECHNICAL
+  { term: 'Moving Average (SMA)', cat: 'Technical', pages: ['Markets', 'Research'], eq: 'Σ(last N prices) / N', why: 'Smooths noise. Price crossing above 200-day SMA is a commonly watched bullish signal.' },
+  { term: 'Log Return', cat: 'Technical', pages: ['Markets', 'Quant'], eq: 'r_t = ln(P_t / P_{t−1})', why: 'Additive across time (unlike simple returns). Assumed approximately normal for short horizons — foundation for most statistical models.' },
+  { term: 'Rebased Index', cat: 'Technical', pages: ['Markets'], eq: 'Rebased(t) = P(t) / P(t₀) × 100', why: 'Compares multiple series on the same scale regardless of starting price. Every series starts at 100.' },
+  { term: 'Rolling Window Statistic', cat: 'Technical', pages: ['Markets', 'Quant'], eq: 'Stat computed on [t−N+1, t] for each t', why: 'Lets you see how metrics evolve over time (e.g., is Sharpe improving or deteriorating?).' }
+];
+var ACCOUNT_INFO = [
+  { name: 'Individual Brokerage', tag: 'TAXABLE', limit: 'No limit', tax: 'Dividends/gains taxed annually; long-term capital gains rate if held >1 year', use: 'Flexible, no penalties or age restrictions. Best for goals outside retirement.' },
+  { name: 'Traditional IRA', tag: 'PRE-TAX', limit: '$7,000/yr ($8,000 if 50+)', tax: 'Contributions may be deductible; tax-deferred growth; withdrawals taxed as ordinary income', use: 'Lower-tax-bracket retirees or when expecting lower future tax rate. RMDs begin at age 73.' },
+  { name: 'Roth IRA', tag: 'POST-TAX', limit: '$7,000/yr ($8,000 if 50+)', tax: 'Contributions not deductible; growth and qualified withdrawals tax-free', use: 'Young investors; anyone expecting higher future tax rate. No RMDs during owner\'s lifetime. Income phase-outs apply.' },
+  { name: 'Standard 401(k)', tag: 'PRE-TAX', limit: '$23,500/yr ($31,000 if 50+)', tax: 'Pre-tax contributions; tax-deferred growth; taxed as ordinary income on withdrawal', use: 'Core retirement savings, especially when employer matches. Higher limits than IRAs.' },
+  { name: 'Roth 401(k)', tag: 'POST-TAX', limit: '$23,500/yr ($31,000 if 50+)', tax: 'Post-tax contributions; tax-free growth and qualified withdrawals', use: 'Same limits as standard 401(k) but with Roth tax treatment. Ideal for high earners in a moderate tax bracket today who expect higher rates later.' },
+  { name: 'BrokerageLink 401(k)', tag: 'SELF-DIRECTED', limit: '401(k) limits apply', tax: 'Inherits underlying 401(k)\'s tax treatment', use: 'Fidelity feature that turns part of a 401(k) into a brokerage window, unlocking individual stocks/ETFs beyond plan fund list.' },
+  { name: 'SEP IRA', tag: 'PRE-TAX', limit: 'Up to 25% of compensation, max $70,000', tax: 'Pre-tax; tax-deferred growth; taxed on withdrawal', use: 'Self-employed and small business owners. Very high contribution ceiling.' },
+  { name: '529 Plan', tag: 'EDUCATION', limit: 'State-specific aggregate limits ($300K+)', tax: 'Post-tax; tax-free growth and withdrawals for qualified education expenses', use: 'College (and K-12 up to $10K/yr) savings. Some state income tax deductions on contributions.' },
+  { name: 'HSA', tag: 'TRIPLE-TAX', limit: '$4,300 single / $8,550 family (2025)', tax: 'Pre-tax contributions; tax-free growth; tax-free qualified medical withdrawals', use: 'The most tax-efficient account type if used as a long-term investment vehicle. Requires HDHP.' },
+  { name: 'Trust Account', tag: 'TAXABLE', limit: 'No statutory limit', tax: 'Trust-level or beneficiary-level taxation depending on trust structure', use: 'Estate planning, avoiding probate, controlling asset distribution after death.' },
+  { name: 'Custodial (UTMA/UGMA)', tag: 'TAXABLE', limit: 'No limit; gift-tax rules apply', tax: 'Kiddie tax rules apply to unearned income above thresholds', use: 'Gifts/assets for minors. Transfers to minor at age of majority (18–25 depending on state).' },
+  { name: 'Joint Account', tag: 'TAXABLE', limit: 'No limit', tax: 'Reported to all owners; survivorship rules vary by titling', use: 'Spouses or partners managing assets together. Joint Tenants with Right of Survivorship (JTWROS) is most common.' },
+  { name: 'Designated Beneficiary IRA', tag: 'INHERITED', limit: 'No contributions; RMDs apply', tax: 'Inherits original owner\'s tax treatment; 10-year withdrawal rule (SECURE Act)', use: 'Inherited retirement account. Non-spouse beneficiaries must typically empty account within 10 years.' }
+];
+
+function resourcesInit() {
+  // Render account types
+  var acctGrid = document.getElementById('acctInfoGrid');
+  if (acctGrid && !acctGrid.hasChildNodes()) {
+    var ah = '';
+    for (var i=0;i<ACCOUNT_INFO.length;i++) {
+      var a = ACCOUNT_INFO[i];
+      ah += '<div class="acct-info-card">';
+      ah += '<span class="acct-tag">'+a.tag+'</span>';
+      ah += '<h4 style="margin:6px 0 8px;color:var(--navy);font-size:14px;">'+a.name+'</h4>';
+      ah += '<div class="acct-detail"><strong>Contribution Limit:</strong> '+a.limit+'</div>';
+      ah += '<div class="acct-detail"><strong>Tax Treatment:</strong> '+a.tax+'</div>';
+      ah += '<div class="acct-detail"><strong>Best For:</strong> '+a.use+'</div>';
+      ah += '</div>';
+    }
+    acctGrid.innerHTML = ah;
+  }
+  resFilter();
+}
+
+function resFilter() {
+  var q = (document.getElementById('resSearch').value || '').toLowerCase().trim();
+  var cat = document.getElementById('resCategory').value;
+  var page = document.getElementById('resPage').value;
+  var filtered = GLOSSARY.filter(function(g){
+    if (cat !== 'all' && g.cat !== cat) return false;
+    if (page !== 'all' && g.pages.indexOf(page) < 0) return false;
+    if (q && g.term.toLowerCase().indexOf(q) < 0 && g.why.toLowerCase().indexOf(q) < 0 && g.eq.toLowerCase().indexOf(q) < 0) return false;
+    return true;
+  });
+  // Group by category
+  var grouped = {};
+  filtered.forEach(function(g){ if (!grouped[g.cat]) grouped[g.cat]=[]; grouped[g.cat].push(g); });
+  var cats = Object.keys(grouped);
+  if (!cats.length) { document.getElementById('resGlossary').innerHTML = '<div style="padding:40px;text-align:center;color:var(--text-sec);">No matching terms.</div>'; return; }
+  var html = '';
+  cats.forEach(function(c){
+    html += '<div style="margin-bottom:18px;">';
+    html += '<div style="background:var(--navy);color:var(--text-on-dark);padding:8px 14px;font-size:13px;font-weight:700;border-radius:4px 4px 0 0;">'+c+' <span style="opacity:.7;font-weight:400;font-size:11px;">('+grouped[c].length+' terms)</span></div>';
+    html += '<div style="border:1px solid var(--border);border-top:none;border-radius:0 0 4px 4px;">';
+    grouped[c].forEach(function(g, i){
+      html += '<div style="padding:12px 14px;'+(i<grouped[c].length-1?'border-bottom:1px solid var(--border);':'')+'">';
+      html += '<div style="display:flex;justify-content:space-between;align-items:baseline;gap:10px;margin-bottom:4px;flex-wrap:wrap;">';
+      html += '<strong style="font-size:13px;color:var(--navy);">'+g.term+'</strong>';
+      html += '<span style="font-size:10px;color:var(--text-sec);">Used on: '+g.pages.join(', ')+'</span>';
+      html += '</div>';
+      if (g.eq && g.eq !== '—') html += '<div style="background:var(--panel);border:1px solid var(--border);border-radius:3px;padding:5px 10px;font-family:Arial;font-size:11.5px;margin:4px 0;color:var(--navy);">'+g.eq+'</div>';
+      html += '<div style="font-size:12px;color:var(--text);line-height:1.5;">'+g.why+'</div>';
+      html += '</div>';
+    });
+    html += '</div></div>';
+  });
+  document.getElementById('resGlossary').innerHTML = html;
+}
+
+// ═══════════════════════════════════════════════════════
+// ═══════════ PORTFOLIO STRESS TEST ═════════════════════
+// ═══════════════════════════════════════════════════════
+var STRESS_SCENARIOS = {
+  '2008_gfc':       { name: '2008 Global Financial Crisis', start: '2007-10-09', end: '2009-03-09', spy_ret: -0.55, note: 'Peak to trough. SPY lost ~55%; Financials ~-83%; Real Estate ~-74%.' },
+  '2020_covid':     { name: 'COVID Crash', start: '2020-02-19', end: '2020-03-23', spy_ret: -0.34, note: 'Fastest 30%+ decline in S&P history (23 trading days).' },
+  '2022_inflation': { name: '2022 Inflation/Rate Shock', start: '2022-01-03', end: '2022-10-12', spy_ret: -0.25, note: 'Fed aggressive tightening; both stocks and bonds down simultaneously — a rare 60/40 disaster year.' },
+  '2018_q4':        { name: 'Q4 2018 Selloff', start: '2018-10-01', end: '2018-12-24', spy_ret: -0.19, note: 'Fed hawkishness and trade-war fears.' },
+  'dotcom':         { name: 'Dotcom Crash', start: '2000-03-24', end: '2002-10-09', spy_ret: -0.49, note: 'Tech-led crash. NASDAQ lost ~78%; SPY ~-49%.' }
+};
+// Sector proxy ETF returns during each crisis (fallback when a ticker didn't exist)
+var STRESS_SECTOR_PROXIES = {
+  '2008_gfc':       { 'Technology': -0.51, 'Financials': -0.83, 'Energy': -0.55, 'Health Care': -0.36, 'Industrials': -0.58, 'Consumer Discretionary': -0.54, 'Consumer Staples': -0.26, 'Materials': -0.56, 'Utilities': -0.37, 'Real Estate': -0.74, 'Communication Services': -0.50, 'Cash': 0.00, 'Money Market': 0.00 },
+  '2020_covid':     { 'Technology': -0.30, 'Financials': -0.42, 'Energy': -0.60, 'Health Care': -0.20, 'Industrials': -0.40, 'Consumer Discretionary': -0.34, 'Consumer Staples': -0.17, 'Materials': -0.40, 'Utilities': -0.37, 'Real Estate': -0.43, 'Communication Services': -0.27, 'Cash': 0.00, 'Money Market': 0.00 },
+  '2022_inflation': { 'Technology': -0.33, 'Financials': -0.19, 'Energy': +0.40, 'Health Care': -0.09, 'Industrials': -0.14, 'Consumer Discretionary': -0.37, 'Consumer Staples': -0.06, 'Materials': -0.17, 'Utilities': -0.02, 'Real Estate': -0.32, 'Communication Services': -0.43, 'Cash': 0.00, 'Money Market': 0.00 },
+  '2018_q4':        { 'Technology': -0.22, 'Financials': -0.24, 'Energy': -0.30, 'Health Care': -0.10, 'Industrials': -0.22, 'Consumer Discretionary': -0.23, 'Consumer Staples': -0.08, 'Materials': -0.22, 'Utilities': -0.01, 'Real Estate': -0.07, 'Communication Services': -0.19, 'Cash': 0.00, 'Money Market': 0.00 },
+  'dotcom':         { 'Technology': -0.78, 'Financials': -0.21, 'Energy': -0.01, 'Health Care': -0.24, 'Industrials': -0.32, 'Consumer Discretionary': -0.40, 'Consumer Staples': -0.11, 'Materials': -0.28, 'Utilities': -0.28, 'Real Estate': -0.14, 'Communication Services': -0.68, 'Cash': 0.00, 'Money Market': 0.00 }
+};
+
+// Bind scenario selector
+setTimeout(function(){
+  var btns = document.querySelectorAll('#stressScenarioBtns .btn-outline');
+  btns.forEach(function(b){
+    b.onclick = function(){
+      btns.forEach(function(x){ x.classList.remove('active'); });
+      b.classList.add('active');
+      var s = b.getAttribute('data-scenario');
+      document.getElementById('stressCustomRow').style.display = s === 'custom' ? 'block' : 'none';
+    };
+  });
+}, 800);
+
+async function runStressTest() {
+  var btnEl = document.getElementById('stressRunBtn');
+  btnEl.disabled = true; btnEl.innerHTML = '<span class="spinner"></span> Running stress test...';
+  var resultsEl = document.getElementById('stressResults');
+  resultsEl.innerHTML = '<div style="padding:16px;color:var(--text-sec);"><span class="spinner"></span> Computing per-ticker crisis returns...</div>';
+  try {
+    var activeBtn = document.querySelector('#stressScenarioBtns .btn-outline.active');
+    var key = activeBtn ? activeBtn.getAttribute('data-scenario') : '2008_gfc';
+    var scenario;
+    if (key === 'custom') {
+      var start = document.getElementById('stressStart').value;
+      var end = document.getElementById('stressEnd').value;
+      var name = document.getElementById('stressName').value || 'Custom '+start+' → '+end;
+      if (!start || !end || start >= end) throw new Error('Enter valid start < end date.');
+      scenario = { name: name, start: start, end: end, spy_ret: null, note: 'Custom window.' };
+    } else {
+      scenario = Object.assign({}, STRESS_SCENARIOS[key], { key: key });
+    }
+    var allH = window._holdings || [];
+    if (!allH.length) throw new Error('No holdings. Add positions first.');
+    var af = document.getElementById('portfolioAccountFilter').value || 'all';
+    var holdings = af === 'all' ? allH : allH.filter(function(h){ return (h.accountType||'Individual') === af; });
+    if (!holdings.length) throw new Error('No holdings in this account filter.');
+
+    var stressResults = [];
+    var sectorProxies = key !== 'custom' ? STRESS_SECTOR_PROXIES[key] : null;
+    for (var i=0;i<holdings.length;i++) {
+      var h = holdings[i];
+      var isCash = h.assetClass === 'Cash' || h.assetClass === 'Money Market' || h.assetClass === 'CD' || h.assetClass === 'Bond Position';
+      var ret = null; var source = '';
+      if (isCash) {
+        ret = 0; source = 'Cash-like (zero decline assumed)';
+      } else {
+        try {
+          // Pull price history spanning scenario window
+          var d = await fetchChart(h.ticker, 'max', '1d');
+          var pts = (d.points || []).filter(function(p){ return p.close != null; }).map(function(p){ return { date: p.date.slice(0,10), close: p.close }; });
+          // Find first price >= scenario.start and last price <= scenario.end
+          var startPx = null, endPx = null;
+          for (var j=0;j<pts.length;j++) {
+            if (!startPx && pts[j].date >= scenario.start) startPx = pts[j].close;
+            if (pts[j].date <= scenario.end) endPx = pts[j].close;
+          }
+          if (startPx && endPx && startPx > 0) {
+            ret = (endPx - startPx) / startPx;
+            source = 'Actual ticker return '+scenario.start+' to '+scenario.end;
+          } else if (sectorProxies && h.sector && sectorProxies[h.sector] != null) {
+            ret = sectorProxies[h.sector];
+            source = 'Ticker didn\'t exist; using '+h.sector+' sector proxy';
+          } else if (sectorProxies) {
+            ret = scenario.spy_ret || -0.30;
+            source = 'Ticker didn\'t exist; using SPY proxy';
+          } else {
+            ret = 0;
+            source = 'No historical data for custom window';
+          }
+        } catch(e) {
+          if (sectorProxies && h.sector && sectorProxies[h.sector] != null) {
+            ret = sectorProxies[h.sector];
+            source = 'Fetch failed; using '+h.sector+' sector proxy';
+          } else {
+            ret = scenario.spy_ret || -0.30;
+            source = 'Fetch failed; using SPY proxy';
+          }
+        }
+      }
+      var mv = (h.currentPrice || h.costBasis) * h.quantity;
+      var newMv = mv * (1 + ret);
+      var impact = newMv - mv;
+      stressResults.push({
+        ticker: h.ticker, sector: h.sector || '—', account: h.accountType || 'Individual',
+        mv: mv, ret: ret, newMv: newMv, impact: impact, source: source
+      });
+    }
+    // Sort by impact (most negative first)
+    stressResults.sort(function(a,b){ return a.impact - b.impact; });
+    var totalMvBefore = stressResults.reduce(function(s,r){ return s+r.mv; }, 0);
+    var totalMvAfter = stressResults.reduce(function(s,r){ return s+r.newMv; }, 0);
+    var totalImpact = totalMvAfter - totalMvBefore;
+    var totalRet = totalMvBefore > 0 ? totalImpact/totalMvBefore : 0;
+
+    var html = '';
+    // Summary
+    html += '<div style="background:var(--navy);color:var(--text-on-dark);padding:16px 20px;border-radius:6px;margin-bottom:16px;">';
+    html += '<div style="font-size:11px;opacity:0.85;letter-spacing:.5px;text-transform:uppercase;">Scenario</div>';
+    html += '<div style="font-size:18px;font-weight:700;margin-top:2px;">'+scenario.name+'</div>';
+    html += '<div style="font-size:11px;opacity:0.8;margin-top:4px;">'+scenario.start+' → '+scenario.end+'. '+scenario.note+'</div>';
+    html += '</div>';
+    html += '<div class="chart-stats">';
+    html += '<div class="chart-stat-box"><div class="chart-stat-label">Pre-Crisis Value</div><div class="chart-stat-value">'+fmtInt(totalMvBefore)+'</div></div>';
+    html += '<div class="chart-stat-box"><div class="chart-stat-label">Post-Crisis Value</div><div class="chart-stat-value" style="color:'+(totalImpact>=0?'var(--success)':'var(--danger)')+';">'+fmtInt(totalMvAfter)+'</div></div>';
+    html += '<div class="chart-stat-box"><div class="chart-stat-label">Total Impact</div><div class="chart-stat-value" style="color:'+(totalImpact>=0?'var(--success)':'var(--danger)')+';">'+fmt(totalImpact)+'</div></div>';
+    html += '<div class="chart-stat-box"><div class="chart-stat-label">Portfolio Return</div><div class="chart-stat-value" style="color:'+(totalRet>=0?'var(--success)':'var(--danger)')+';">'+(totalRet*100).toFixed(1)+'%</div></div>';
+    if (scenario.spy_ret != null) html += '<div class="chart-stat-box"><div class="chart-stat-label">vs SPY in Crisis</div><div class="chart-stat-value" style="color:'+((totalRet-scenario.spy_ret)>=0?'var(--success)':'var(--danger)')+';">'+((totalRet-scenario.spy_ret)*100).toFixed(1)+'% better/worse</div><div class="chart-stat-sub">SPY: '+(scenario.spy_ret*100).toFixed(0)+'%</div></div>';
+    html += '</div>';
+    // Per-holding table
+    html += '<div style="margin-top:16px;"><div style="background:var(--navy);color:var(--text-on-dark);padding:6px 12px;font-size:12px;font-weight:700;border-radius:4px 4px 0 0;">Per-Holding Impact (Sorted by Worst)</div>';
+    html += '<div class="table-wrap" style="border:1px solid var(--border);border-top:none;border-radius:0 0 4px 4px;">';
+    html += '<table><thead><tr><th>Ticker</th><th>Account</th><th>Sector</th><th style="text-align:right;">Pre-Crisis</th><th style="text-align:right;">Return</th><th style="text-align:right;">Post-Crisis</th><th style="text-align:right;">Impact ($)</th><th>Source</th></tr></thead><tbody>';
+    stressResults.forEach(function(r){
+      var retColor = r.ret >= 0 ? C.success : C.danger;
+      html += '<tr>';
+      html += '<td style="font-weight:700;color:var(--navy);">'+r.ticker+'</td>';
+      html += '<td style="font-size:11px;">'+r.account+'</td>';
+      html += '<td style="font-size:11px;">'+r.sector+'</td>';
+      html += '<td style="text-align:right;">'+fmtInt(r.mv)+'</td>';
+      html += '<td style="text-align:right;font-weight:700;color:'+retColor+';">'+(r.ret*100).toFixed(1)+'%</td>';
+      html += '<td style="text-align:right;">'+fmtInt(r.newMv)+'</td>';
+      html += '<td style="text-align:right;font-weight:600;color:'+retColor+';">'+fmt(r.impact)+'</td>';
+      html += '<td style="font-size:10px;color:var(--text-sec);">'+r.source+'</td>';
+      html += '</tr>';
+    });
+    html += '</tbody></table></div></div>';
+    // Chart
+    html += '<div style="margin-top:16px;"><div style="background:var(--navy);color:var(--text-on-dark);padding:6px 12px;font-size:12px;font-weight:700;border-radius:4px 4px 0 0;">Impact by Holding ($)</div>';
+    html += '<div style="height:320px;border:1px solid var(--border);border-top:none;border-radius:0 0 4px 4px;padding:10px;"><canvas id="stressChart"></canvas></div></div>';
+    resultsEl.innerHTML = html;
+    // Render chart
+    var labels = stressResults.map(function(r){ return r.ticker+' ('+r.account.substring(0,3)+')'; });
+    var data = stressResults.map(function(r){ return r.impact; });
+    var colors = stressResults.map(function(r){ return r.impact >= 0 ? C.success : C.danger; });
+    if (window._stressChart) window._stressChart.destroy();
+    window._stressChart = new Chart(document.getElementById('stressChart').getContext('2d'), {
+      type: 'bar',
+      data: { labels: labels, datasets: [{ data: data, backgroundColor: colors, borderColor: '#000', borderWidth: 0.5 }] },
+      options: {
+        indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { display: false }, tooltip: Object.assign({}, chartTooltip, { callbacks: { label: function(ctx){ return 'Impact: '+fmt(ctx.parsed.x); } } }) },
+        scales: {
+          x: { grid: chartGrid, ticks: Object.assign({}, chartTicks, { callback: function(v){ return fmtInt(v); } }), title: { display: true, text: 'Dollar Impact', font: { size: 11 }, color: C.textSec } },
+          y: { grid: { display: false }, ticks: Object.assign({}, chartTicks, { font: { size: 10 } }) }
+        }
+      }
+    });
+  } catch(e) {
+    resultsEl.innerHTML = '<div style="padding:20px;color:var(--danger);"><strong>Stress test failed:</strong> '+e.message+'</div>';
+  }
+  btnEl.disabled = false; btnEl.innerHTML = 'Run Stress Test';
+}
+window.runStressTest = runStressTest;
 
 // ═══════════════════════════════════════════════════════
 // ═══════════════════ MARKETS PAGE ══════════════════════
