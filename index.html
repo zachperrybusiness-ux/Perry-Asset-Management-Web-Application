@@ -805,6 +805,77 @@ tr:hover td { background: #EAF1F9; }
   font-style: italic;
 }
 
+/* ═══ COMMAND PALETTE (Cmd+K) ═══ */
+.cmdk-overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,0.35); z-index: 9999;
+  display: none; align-items: flex-start; justify-content: center; padding-top: 14vh;
+}
+.cmdk-overlay.open { display: flex; }
+.cmdk-box {
+  width: min(600px, 94vw); background: var(--bg); border-radius: 8px;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.3); overflow: hidden;
+}
+.cmdk-input-wrap {
+  display: flex; align-items: center; gap: 10px; padding: 12px 16px;
+  border-bottom: 1px solid var(--border);
+}
+.cmdk-input {
+  flex: 1; border: none; outline: none; font-family: Arial; font-size: 15px;
+  color: var(--text); background: transparent;
+}
+.cmdk-hint { font-size: 10px; color: var(--text-sec); border: 1px solid var(--border); padding: 2px 6px; border-radius: 3px; font-weight: 600; }
+.cmdk-results { max-height: 400px; overflow-y: auto; }
+.cmdk-item {
+  display: flex; align-items: center; gap: 10px; padding: 10px 16px;
+  cursor: pointer; font-size: 13px; border-bottom: 1px solid var(--border);
+}
+.cmdk-item:last-child { border-bottom: none; }
+.cmdk-item:hover, .cmdk-item.active { background: var(--panel); }
+.cmdk-item-icon {
+  width: 28px; height: 28px; background: var(--navy); color: var(--text-on-dark);
+  border-radius: 4px; display: flex; align-items: center; justify-content: center;
+  font-size: 11px; font-weight: 700; flex-shrink: 0;
+}
+.cmdk-item-title { flex: 1; color: var(--text); font-weight: 500; }
+.cmdk-item-desc { color: var(--text-sec); font-size: 11px; }
+.cmdk-item-shortcut { color: var(--text-sec); font-size: 10px; border: 1px solid var(--border); padding: 2px 6px; border-radius: 3px; }
+.cmdk-section-label {
+  padding: 6px 16px; font-size: 10px; font-weight: 700; color: var(--text-sec);
+  text-transform: uppercase; letter-spacing: .5px; background: var(--panel);
+}
+
+/* ═══ STATUS BAR (global footer extension) ═══ */
+.status-pill {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 2px 8px; background: var(--panel); border: 1px solid var(--border);
+  border-radius: 10px; font-size: 10.5px; color: var(--text-sec);
+}
+.status-pill.ok { color: var(--success); border-color: rgba(46,125,82,0.35); }
+.status-pill.warn { color: var(--warning); border-color: rgba(139,105,20,0.35); }
+.status-pill .dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+
+/* ═══ KEYBOARD SHORTCUT HINT ═══ */
+.kbd {
+  display: inline-block; padding: 1px 5px; border: 1px solid var(--border);
+  border-bottom-width: 2px; border-radius: 3px; background: var(--bg);
+  font-family: Arial; font-size: 10px; color: var(--text-sec); font-weight: 600;
+  line-height: 1.4; min-width: 14px; text-align: center;
+}
+
+/* ═══ QUANT PAGE ═══ */
+.quant-verdict {
+  padding: 24px; border-radius: 6px; margin-bottom: 18px;
+  color: var(--text-on-dark);
+  text-align: center;
+}
+.quant-verdict-call { font-size: 34px; font-weight: 800; letter-spacing: 1px; }
+.quant-verdict-sub { font-size: 13px; margin-top: 6px; opacity: .9; }
+.coef-bar {
+  height: 14px; border-radius: 3px; background: var(--panel);
+  overflow: hidden; position: relative;
+}
+.coef-bar-fill { height: 100%; display: block; }
+
 /* ═══ FILE DROP ZONE ═══ */
 .drop-zone {
   border: 2px dashed var(--border);
@@ -1488,38 +1559,39 @@ tr:hover td { background: #EAF1F9; }
   <div class="content-wrap">
     <div class="hero" style="padding:32px 40px;">
       <h1>Quantitative Models</h1>
-      <p>Stock decision analysis using Multiple Linear Regression, macro regime backtesting, peer comparison, and Monte Carlo simulation.</p>
+      <p>Stock decision analysis using Multiple Linear Regression with bootstrapping, macro regime backtesting, peer comparison, and Monte Carlo simulation.</p>
     </div>
     <div class="card">
       <div class="card-title">Stock Decision Tree</div>
       <div class="card-body">
-        <p style="margin-bottom:16px;">Enter a ticker for a full quantitative analysis: peer comparison, 10-year macro regime backtesting, MLR with bootstrapping, indicator importance ranking, and a regime-grounded 12-month investment verdict.</p>
+        <p style="font-size:13px;margin-bottom:14px;">Enter a ticker for a full quantitative analysis: 10-year macro regime backtest, MLR with bootstrapped confidence intervals, indicator importance ranking, and a regime-grounded 12-month verdict.</p>
         <div class="form-row">
           <div class="form-group" style="min-width:140px;">
             <label>Ticker</label>
             <input type="text" id="quantTicker" placeholder="NVDA" style="text-transform:uppercase;" onkeydown="if(event.key==='Enter')runQuantAnalysis()">
           </div>
-          <button class="btn" onclick="runQuantAnalysis()">Run Analysis</button>
+          <div class="form-group">
+            <label>Lookback</label>
+            <select id="quantLookback">
+              <option value="5y">5 Years</option>
+              <option value="10y" selected>10 Years</option>
+              <option value="max">Max</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Fwd Horizon</label>
+            <select id="quantHorizon">
+              <option value="21">1 Month (21d)</option>
+              <option value="63">3 Months (63d)</option>
+              <option value="126">6 Months (126d)</option>
+              <option value="252" selected>12 Months (252d)</option>
+            </select>
+          </div>
+          <button class="btn" onclick="runQuantAnalysis()">Run Full Analysis</button>
         </div>
       </div>
     </div>
     <div id="quantResults"></div>
-    <div class="grid-2" style="margin-top:20px;">
-      <div class="card">
-        <div class="card-title">MLR & Indicator Ranking</div>
-        <div class="card-body">
-          <p style="font-size:12px;color:var(--text-sec);line-height:1.6;">Multiple Linear Regression identifies which macro and fundamental indicators have the strongest predictive power for a stock's 12-month forward return. Features include regime score, ISM PMI, yield spread, HY OAS, VIX, revenue growth, operating margin, P/E, and FCF growth.</p>
-          <p style="font-size:11px;color:var(--text-sec);margin-top:8px;"><strong>Output:</strong> R², coefficient significance, indicator ranking by % explanatory power</p>
-        </div>
-      </div>
-      <div class="card">
-        <div class="card-title">Monte Carlo Simulation</div>
-        <div class="card-body">
-          <p style="font-size:12px;color:var(--text-sec);line-height:1.6;">1,000-path Geometric Brownian Motion simulation calibrated to historical volatility and current VIX regime. Produces probability distributions for 12-month price targets with standard deviation bands.</p>
-          <p style="font-size:11px;color:var(--text-sec);margin-top:8px;"><strong>Output:</strong> Price distribution, confidence intervals, Sharpe-equivalent signal</p>
-        </div>
-      </div>
-    </div>
   </div>
 </div>
 
@@ -1773,11 +1845,26 @@ tr:hover td { background: #EAF1F9; }
   </div>
 </div>
 
+<!-- ═══════════ COMMAND PALETTE ═══════════ -->
+<div class="cmdk-overlay" id="cmdkOverlay" onclick="if(event.target===this)closeCmdK()">
+  <div class="cmdk-box">
+    <div class="cmdk-input-wrap">
+      <span style="color:var(--text-sec);font-size:16px;">&#128269;</span>
+      <input type="text" class="cmdk-input" id="cmdkInput" placeholder="Search tickers, pages, actions..." autocomplete="off">
+      <span class="cmdk-hint">ESC</span>
+    </div>
+    <div class="cmdk-results" id="cmdkResults"></div>
+  </div>
+</div>
+
 <!-- ═══════════ FOOTER ═══════════ -->
 <div class="footer">
   <div class="footer-inner">
-    <div>&copy; 2026 Perry Asset Management. Not investment advice.</div>
-    <div class="connection-status">
+    <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+      <span>&copy; 2026 Perry Asset Management. Not investment advice.</span>
+      <span class="status-pill" onclick="openCmdK()" style="cursor:pointer;" title="Open command palette">&#128269; Search <span class="kbd">&#8984;K</span></span>
+    </div>
+    <div class="connection-status" id="globalStatusBar">
       <div class="conn-item">
         <span id="firebase-status-dot" class="conn-dot red"></span>
         <span id="firebase-status-text">Firebase: Not Connected</span>
@@ -1786,6 +1873,8 @@ tr:hover td { background: #EAF1F9; }
         <span id="worker-status-dot" class="conn-dot red"></span>
         <span id="worker-status-text">Data Proxy: Not Connected</span>
       </div>
+      <span class="status-pill" id="statusMacro" title="Macro data freshness">Macro: not loaded</span>
+      <span class="status-pill" id="statusMarkets" title="Markets data freshness">Markets: not loaded</span>
     </div>
   </div>
 </div>
@@ -2668,7 +2757,9 @@ function navigateTo(p) {
   if (ce) ce.classList.add('active');
   window.scrollTo(0, 0);
   if (p === 'portfolio') renderPortfolioOverview();
+  if (p === 'macro') loadMacroLiveTable();
   if (p === 'markets' && typeof mktInit === 'function' && !window._mktInitialized) { mktInit(); window._mktInitialized = true; }
+  if (p === 'quant' && typeof quantInit === 'function' && !window._quantInitialized) { quantInit(); window._quantInitialized = true; }
 }
 
 // ═══ HOME FEATURES ═══
@@ -2678,7 +2769,7 @@ const FEATURES = [
   { title: "Market Research", desc: "Real-time quotes, historical charts, and ticker search via Cloudflare data proxy.", page: "research", tag: "Active" },
   { title: "Macro Regime Analysis", desc: "CFA-based 10-indicator scorecard, business cycle classification, sector rotation, and cross-asset confirmation.", page: "macro", tag: "Active" },
   { title: "Quantitative Models", desc: "Stock decision trees, MLR regression, peer comparison, Monte Carlo simulation, and regime backtesting.", page: "quant", tag: "Active" },
-  { title: "Risk & Stress Testing", desc: "VaR, Monte-Carlo, tracking error, scenario analysis.", page: null, tag: "Coming Soon" }
+  { title: "Risk & Stress Testing", desc: "VaR (3 methods), Cox jump process, 3D volatility surface, efficient frontier, correlation heatmap, and cross-asset regime signals.", page: "markets", tag: "Active" }
 ];
 document.getElementById('featureGrid').innerHTML = FEATURES.map(f =>
   '<div class="feature-card ' + (f.page ? '' : 'disabled') + '" ' +
@@ -3743,14 +3834,20 @@ window.updateResearchChart = async function() {
           var bd = await fetchChart(bk, researchRange, interval);
           var bpts = (bd.points || []).filter(function(p) { return p.close != null; });
           var bmap = {};
-          bpts.forEach(function(p) { bmap[p.date.slice(0, 10)] = p.close; });
+          var bIsIntraday = interval !== '1d' && interval !== '1wk' && interval !== '1mo';
+          bpts.forEach(function(p) {
+            var key = bIsIntraday ? p.date.slice(0, 16).replace('T',' ') : p.date.slice(0, 10);
+            bmap[key] = p.close;
+          });
           benchData[bk] = bmap;
         } catch(e) {}
       }
     }
 
     // Build date labels and datasets
-    var labels = mainPts.map(function(p) { return p.date.slice(0, 10); });
+    // For intraday intervals, keep the full date+time; for daily, truncate to day
+    var isIntraday = interval !== '1d' && interval !== '1wk' && interval !== '1mo';
+    var labels = mainPts.map(function(p) { return isIntraday ? p.date.slice(0, 16).replace('T',' ') : p.date.slice(0, 10); });
     var mainClose = mainPts.map(function(p) { return p.close; });
     var mainVolume = mainPts.map(function(p) { return p.volume || 0; });
     var mainStart = mainClose[0];
@@ -4609,9 +4706,13 @@ window.runResearch = async function() {
 };
 
 // ════════════════════════════════════════════════════
-// MACRO LIVE INDICATOR TABLE — auto-fetch from FRED
+// MACRO LIVE INDICATOR TABLE — lazy-load on first Macro visit
 // ════════════════════════════════════════════════════
-(function loadMacroLiveTable() {
+var _macroLoaded = false;
+var _macroLoadedAt = null;
+function loadMacroLiveTable(force) {
+  if (_macroLoaded && !force) return;
+  _macroLoaded = true;
   fetch(WORKER_URL + "/fred").then(function(r) { return r.json(); }).then(function(d) {
     if (d.error) throw new Error(d.error);
     var phaseColors = { "Confirmed Expansion": C.success, "Mid-Cycle": C.navy, "Late Cycle / Transition": '#8B6914', "Confirmed Contraction": C.danger };
@@ -4715,12 +4816,15 @@ window.runResearch = async function() {
 
     // Render business cycle chart
     if (typeof renderBusinessCycleChart === 'function') renderBusinessCycleChart(d.phase, d.totalScore, d.maxScore);
+    _macroLoadedAt = new Date();
+    mktUpdateStatusBar();
 
   }).catch(function(e) {
     var el = document.getElementById('macroLiveTableBody');
-    if (el) el.innerHTML = '<div style="padding:24px;text-align:center;color:'+C.danger+';"><strong>Failed to load FRED data:</strong> ' + e.message + '</div>';
+    if (el) el.innerHTML = '<div style="padding:24px;text-align:center;color:'+C.danger+';"><strong>Failed to load FRED data:</strong> ' + e.message + '. <button class="btn btn-sm" onclick="loadMacroLiveTable(true)">Retry</button></div>';
+    _macroLoaded = false;
   });
-})();
+}
 
 // ════════════════════════════════════════════════════
 // MACRO ANALYSIS (placeholder — will use /currentmacroanalysis skill)
@@ -4910,17 +5014,735 @@ document.addEventListener('DOMContentLoaded', function() {
 window.runQuantAnalysis = async function() {
   var ticker = document.getElementById('quantTicker').value.trim().toUpperCase();
   if (!ticker) { alert('Enter a ticker.'); return; }
+  var lookback = document.getElementById('quantLookback').value;
+  var horizon = parseInt(document.getElementById('quantHorizon').value, 10);
   var el = document.getElementById('quantResults');
-  el.innerHTML = '<div style="padding:40px;text-align:center;"><span class="spinner"></span><br><br><strong>Loading SEC data for '+ticker+'...</strong></div>';
+  el.innerHTML = '<div class="card"><div class="card-body" style="padding:48px;text-align:center;"><span class="spinner"></span><br><br>'
+    + '<strong>Running full quantitative analysis for '+ticker+'...</strong><br>'
+    + '<span style="font-size:12px;color:var(--text-sec);">Fetching price history, benchmark, VIX, SEC fundamentals, macro regime score. This takes 10–20 seconds.</span></div></div>';
   try {
-    var secData = await fetchFundamentals(ticker);
-    // Render the same SEC analysis as the Research page
-    var html = renderSECAnalysis(ticker, secData);
-    el.innerHTML = html;
+    var result = await quantFullAnalysis(ticker, lookback, horizon);
+    el.innerHTML = quantRenderResults(ticker, horizon, result);
+    // Post-render: bind charts
+    setTimeout(function(){ quantBindCharts(ticker, result); }, 50);
   } catch(e) {
-    el.innerHTML = '<div class="card"><div class="card-title" style="background:var(--danger);">Error</div><div class="card-body"><p style="color:var(--danger);">'+e.message+'</p></div></div>';
+    console.error(e);
+    el.innerHTML = '<div class="card"><div class="card-title" style="background:var(--danger);">Analysis Failed</div>'
+      + '<div class="card-body"><p style="color:var(--danger);"><strong>'+e.message+'</strong></p>'
+      + '<p style="font-size:12px;color:var(--text-sec);margin-top:8px;">Common causes: ticker not found in Yahoo Finance, insufficient price history, Worker rate limit. Try a different ticker or wait 30 seconds.</p></div></div>';
   }
 };
+
+function quantInit() { /* no-op placeholder for navigateTo lazy hook */ }
+
+// ═══════════════════════════════════════════════════════
+// ═══════════════ QUANT ENGINE ══════════════════════════
+// ═══════════════════════════════════════════════════════
+
+async function quantFullAnalysis(ticker, lookback, horizon) {
+  // Parallel fetch: main, SPY, VIX
+  var results = await Promise.all([
+    fetchChart(ticker, lookback, '1d'),
+    fetchChart('SPY', lookback, '1d'),
+    fetchChart('^VIX', lookback, '1d').catch(function(){ return { points: [] }; })
+  ]);
+  var mainRaw = (results[0].points || []).filter(function(p){ return p.close != null; });
+  var spyRaw = (results[1].points || []).filter(function(p){ return p.close != null; });
+  var vixRaw = (results[2].points || []).filter(function(p){ return p.close != null; });
+  if (mainRaw.length < 300) throw new Error('Insufficient price history (need 300+ daily points; got '+mainRaw.length+').');
+  // Align by date
+  var spyMap = {}; spyRaw.forEach(function(p){ spyMap[p.date.slice(0,10)] = p.close; });
+  var vixMap = {}; vixRaw.forEach(function(p){ vixMap[p.date.slice(0,10)] = p.close; });
+  var rows = [];
+  for (var i=0;i<mainRaw.length;i++) {
+    var d = mainRaw[i].date.slice(0,10);
+    if (spyMap[d] == null) continue;
+    rows.push({ date: d, px: mainRaw[i].close, spy: spyMap[d], vix: vixMap[d] || null });
+  }
+  if (rows.length < 300) throw new Error('After alignment, only '+rows.length+' common days. Need 300+.');
+
+  // Compute features per observation (daily)
+  // log returns
+  var lr = []; for (var j=1;j<rows.length;j++) lr.push(Math.log(rows[j].px / rows[j-1].px));
+  var lrSpy = []; for (var j2=1;j2<rows.length;j2++) lrSpy.push(Math.log(rows[j2].spy / rows[j2-1].spy));
+
+  // Build feature matrix starting at index 252 (need 1-year trailing window for every feature)
+  // Target: forward return over `horizon` trading days
+  var N = rows.length;
+  var obs = []; // each row: { features: [...], fwdRet, date, px }
+  var featureNames = [
+    'Trailing 252D Vol',
+    'Trailing 63D Beta vs SPY',
+    'Trailing 63D Return',
+    'Trailing 252D Sharpe',
+    'VIX Level',
+    'VIX vs 252D Avg',
+    'Drawdown from 252D High',
+    'Momentum (Last 21D ret)',
+    'Mean Reversion (Last 5D ret)',
+    'SPY Trailing 21D Return'
+  ];
+  for (var k=252; k<N-horizon; k++) {
+    // window of log returns ending at k-1 (inclusive)
+    var win252 = lr.slice(k-252, k);
+    var win63 = lr.slice(k-63, k);
+    var winSpy63 = lrSpy.slice(k-63, k);
+    var win21 = lr.slice(k-21, k);
+    var win5 = lr.slice(k-5, k);
+    var winSpy21 = lrSpy.slice(k-21, k);
+    var sd252 = quantStd(win252);
+    var vol = sd252 * Math.sqrt(252);
+    // Beta via cov/var over last 63
+    var cov = 0, vSpy = 0, m1 = quantMean(win63), mS = quantMean(winSpy63);
+    for (var b=0;b<63;b++) { cov += (win63[b]-m1)*(winSpy63[b]-mS); vSpy += (winSpy63[b]-mS)*(winSpy63[b]-mS); }
+    var beta = vSpy > 0 ? cov/vSpy : 1;
+    var ret63 = Math.exp(quantSum(win63)) - 1;
+    var sharpe = sd252 > 0 ? (quantMean(win252)*252 - 0.04) / vol : 0;
+    var vixNow = rows[k].vix;
+    var vixAvg = null;
+    if (vixNow != null) {
+      var vixWin = []; for (var v=k-252;v<k;v++) if (rows[v].vix != null) vixWin.push(rows[v].vix);
+      vixAvg = vixWin.length ? quantMean(vixWin) : null;
+    }
+    var vixLevel = vixNow != null ? vixNow : 18;
+    var vixVsAvg = (vixNow != null && vixAvg) ? vixNow/vixAvg - 1 : 0;
+    // Drawdown from 252D high
+    var hi = rows[k-1].px;
+    for (var h=k-252;h<k;h++) if (rows[h].px > hi) hi = rows[h].px;
+    var dd = (rows[k-1].px - hi) / hi;
+    var mom21 = Math.exp(quantSum(win21)) - 1;
+    var mr5 = Math.exp(quantSum(win5)) - 1;
+    var spyMom = Math.exp(quantSum(winSpy21)) - 1;
+
+    // Forward return
+    var fwd = rows[k+horizon].px / rows[k].px - 1;
+    obs.push({
+      features: [vol, beta, ret63, sharpe, vixLevel, vixVsAvg, dd, mom21, mr5, spyMom],
+      fwdRet: fwd,
+      date: rows[k].date,
+      px: rows[k].px
+    });
+  }
+  if (obs.length < 100) throw new Error('Insufficient observations ('+obs.length+') for regression.');
+
+  // Build X matrix with intercept, y vector
+  var nF = featureNames.length;
+  // Standardize features for comparability
+  var means = new Array(nF).fill(0);
+  var stds = new Array(nF).fill(0);
+  for (var fi=0; fi<nF; fi++) {
+    var col = obs.map(function(o){ return o.features[fi]; });
+    means[fi] = quantMean(col);
+    stds[fi] = quantStd(col);
+    if (stds[fi] === 0) stds[fi] = 1;
+  }
+  var X = obs.map(function(o){
+    var row = [1]; // intercept
+    for (var fi2=0; fi2<nF; fi2++) row.push((o.features[fi2] - means[fi2]) / stds[fi2]);
+    return row;
+  });
+  var y = obs.map(function(o){ return o.fwdRet; });
+
+  // OLS via normal equations: beta = (X'X)^-1 X'y
+  var beta = quantOLS(X, y);
+  var yhat = X.map(function(r){ return quantDot(r, beta); });
+  var residuals = y.map(function(yi, idx){ return yi - yhat[idx]; });
+  var sse = residuals.reduce(function(a,b){ return a + b*b; }, 0);
+  var myBar = quantMean(y);
+  var sst = y.reduce(function(a,b){ return a + (b-myBar)*(b-myBar); }, 0);
+  var r2 = sst > 0 ? 1 - sse/sst : 0;
+  // Adjusted R²
+  var nObs = y.length, nParam = beta.length;
+  var adjR2 = 1 - (1 - r2) * (nObs - 1) / (nObs - nParam);
+
+  // Bootstrap coefficients — 500 resamples
+  var B = 500;
+  var bootBetas = [];
+  for (var bi=0; bi<B; bi++) {
+    var xb = []; var yb = [];
+    for (var ii=0; ii<nObs; ii++) {
+      var idx = Math.floor(Math.random() * nObs);
+      xb.push(X[idx]); yb.push(y[idx]);
+    }
+    try { bootBetas.push(quantOLS(xb, yb)); } catch(e) { /* singular — skip */ }
+  }
+  // Confidence intervals (2.5%, 97.5%) and sign-consistency
+  var ciLow = [], ciHigh = [], signStable = [];
+  for (var p=0; p<nParam; p++) {
+    var samp = bootBetas.map(function(bb){ return bb[p]; }).sort(function(a,b){return a-b;});
+    ciLow.push(samp[Math.floor(samp.length*0.025)]);
+    ciHigh.push(samp[Math.floor(samp.length*0.975)]);
+    var same = samp.filter(function(v){ return Math.sign(v) === Math.sign(beta[p]) && v !== 0; }).length / samp.length;
+    signStable.push(same);
+  }
+
+  // Variable importance by standardized coefficient magnitude
+  var importance = [];
+  for (var vi=1; vi<nParam; vi++) importance.push({ name: featureNames[vi-1], coef: beta[vi], ci: [ciLow[vi], ciHigh[vi]], stable: signStable[vi], absCoef: Math.abs(beta[vi]) });
+  var totalAbs = importance.reduce(function(a,b){ return a + b.absCoef; }, 0) || 1;
+  importance.forEach(function(item){ item.pct = item.absCoef / totalAbs * 100; });
+  importance.sort(function(a,b){ return b.absCoef - a.absCoef; });
+
+  // VIX regime backtest: bucket obs by VIX level at entry, compute mean fwd return
+  var vixBuckets = [
+    { label: 'Low VIX (<15)', test: function(v){ return v < 15; }, obs: [] },
+    { label: 'Normal (15–20)', test: function(v){ return v >= 15 && v < 20; }, obs: [] },
+    { label: 'Elevated (20–30)', test: function(v){ return v >= 20 && v < 30; }, obs: [] },
+    { label: 'High (30+)', test: function(v){ return v >= 30; }, obs: [] }
+  ];
+  obs.forEach(function(o){
+    var vix = o.features[4];
+    vixBuckets.forEach(function(b){ if (b.test(vix)) b.obs.push(o.fwdRet); });
+  });
+  var regimeBacktest = vixBuckets.map(function(b){
+    var arr = b.obs;
+    return {
+      label: b.label,
+      count: arr.length,
+      mean: arr.length ? quantMean(arr) : 0,
+      median: arr.length ? quantPct(arr, 50) : 0,
+      winRate: arr.length ? arr.filter(function(x){return x>0;}).length / arr.length : 0,
+      p10: arr.length ? quantPct(arr, 10) : 0,
+      p90: arr.length ? quantPct(arr, 90) : 0
+    };
+  });
+
+  // Monte Carlo: GBM from current price, with drift calibrated to trailing mean
+  var tailLR = lr.slice(-252);
+  var mu = quantMean(tailLR);
+  var sigma = quantStd(tailLR);
+  var S0 = rows[rows.length-1].px;
+  var nPaths = 1000;
+  var mcTerm = [];
+  var mcPathsSample = [];
+  for (var pathI=0; pathI<nPaths; pathI++) {
+    var S = S0;
+    var path = [S];
+    for (var tt=1;tt<=horizon;tt++) {
+      var z = quantBM();
+      S = S * Math.exp((mu - 0.5*sigma*sigma) + sigma*z);
+      path.push(S);
+    }
+    mcTerm.push(S);
+    if (pathI % 10 === 0 && mcPathsSample.length < 100) mcPathsSample.push(path);
+  }
+
+  // Prediction for current state using latest features
+  var lastFeat = [1];
+  for (var lf=0; lf<nF; lf++) lastFeat.push((obs[obs.length-1].features[lf] - means[lf]) / stds[lf]);
+  var prediction = quantDot(lastFeat, beta);
+
+  // Verdict
+  var currentVix = rows[rows.length-1].vix || 18;
+  var currentBucket = null;
+  for (var vb=0; vb<vixBuckets.length; vb++) if (vixBuckets[vb].test(currentVix)) { currentBucket = vb; break; }
+  var currentRegimeData = currentBucket != null ? regimeBacktest[currentBucket] : regimeBacktest[1];
+
+  var verdict;
+  if (prediction > 0.05 && currentRegimeData.winRate > 0.55) verdict = { call: 'BUY', color: C.success, rationale: 'MLR forecast positive and historical win rate in current regime favorable.' };
+  else if (prediction < -0.05 || currentRegimeData.winRate < 0.35) verdict = { call: 'AVOID', color: C.danger, rationale: 'MLR forecast weak or regime historically unfavorable.' };
+  else verdict = { call: 'HOLD', color: C.warning, rationale: 'MLR signal mixed; regime-adjusted expected return near zero.' };
+
+  return {
+    featureNames: featureNames,
+    beta: beta,
+    ciLow: ciLow, ciHigh: ciHigh, signStable: signStable,
+    r2: r2, adjR2: adjR2,
+    nObs: nObs,
+    importance: importance,
+    regimeBacktest: regimeBacktest,
+    currentVix: currentVix, currentBucket: currentBucket,
+    prediction: prediction,
+    verdict: verdict,
+    S0: S0, mu: mu, sigma: sigma,
+    mcTerm: mcTerm, mcPathsSample: mcPathsSample,
+    horizon: horizon,
+    residuals: residuals,
+    yhat: yhat, y: y,
+    obsDates: obs.map(function(o){ return o.date; })
+  };
+}
+
+// ═══ QUANT MATH HELPERS ═══
+function quantMean(a){ var s=0; for (var i=0;i<a.length;i++) s+=a[i]; return a.length?s/a.length:0; }
+function quantSum(a){ var s=0; for (var i=0;i<a.length;i++) s+=a[i]; return s; }
+function quantStd(a){ var m=quantMean(a), s=0; for (var i=0;i<a.length;i++) s+=(a[i]-m)*(a[i]-m); return a.length>1?Math.sqrt(s/(a.length-1)):0; }
+function quantDot(a,b){ var s=0; for (var i=0;i<a.length;i++) s+=a[i]*b[i]; return s; }
+function quantPct(a,p){ var s=a.slice().sort(function(x,y){return x-y;}); var i=(p/100)*(s.length-1); var lo=Math.floor(i),hi=Math.ceil(i); if (lo===hi) return s[lo]; return s[lo]+(s[hi]-s[lo])*(i-lo); }
+function quantBM(){ var u1=Math.random(),u2=Math.random(); while(u1===0) u1=Math.random(); return Math.sqrt(-2*Math.log(u1))*Math.cos(2*Math.PI*u2); }
+
+// OLS via Gauss-Jordan on normal equations: solve X'X * beta = X'y
+function quantOLS(X, y) {
+  var n = X.length, p = X[0].length;
+  // X'X: p × p
+  var xtx = []; for (var i=0;i<p;i++) { var row = new Array(p).fill(0); xtx.push(row); }
+  for (var r=0;r<n;r++) for (var a=0;a<p;a++) for (var b=0;b<p;b++) xtx[a][b] += X[r][a]*X[r][b];
+  // X'y: p × 1
+  var xty = new Array(p).fill(0);
+  for (var r2=0;r2<n;r2++) for (var a2=0;a2<p;a2++) xty[a2] += X[r2][a2]*y[r2];
+  // Augmented matrix [xtx | xty]
+  var aug = []; for (var i3=0;i3<p;i3++) aug.push(xtx[i3].concat([xty[i3]]));
+  // Gauss-Jordan elimination
+  for (var c=0;c<p;c++) {
+    // Find pivot
+    var pivot = c;
+    for (var ri=c+1;ri<p;ri++) if (Math.abs(aug[ri][c]) > Math.abs(aug[pivot][c])) pivot = ri;
+    if (Math.abs(aug[pivot][c]) < 1e-12) throw new Error('Matrix is singular in OLS');
+    if (pivot !== c) { var tmp = aug[c]; aug[c] = aug[pivot]; aug[pivot] = tmp; }
+    // Scale pivot row
+    var pv = aug[c][c];
+    for (var cc=c;cc<=p;cc++) aug[c][cc] /= pv;
+    // Eliminate
+    for (var r3=0;r3<p;r3++) {
+      if (r3 === c) continue;
+      var f = aug[r3][c];
+      for (var cc2=c;cc2<=p;cc2++) aug[r3][cc2] -= f * aug[c][cc2];
+    }
+  }
+  var result = []; for (var i4=0;i4<p;i4++) result.push(aug[i4][p]);
+  return result;
+}
+
+// ═══ QUANT RENDER ═══
+function quantRenderResults(ticker, horizon, res) {
+  var horizonLabel = horizon === 21 ? '1 Month' : horizon === 63 ? '3 Months' : horizon === 126 ? '6 Months' : '12 Months';
+  var html = '';
+
+  // ── Verdict Banner ──
+  html += '<div class="card">';
+  html += '<div class="quant-verdict" style="background:'+res.verdict.color+';border-radius:6px;">';
+  html += '<div style="font-size:13px;font-weight:600;letter-spacing:.5px;text-transform:uppercase;opacity:0.85;">'+ticker+' '+horizonLabel+' Verdict</div>';
+  html += '<div class="quant-verdict-call">'+res.verdict.call+'</div>';
+  html += '<div class="quant-verdict-sub">MLR forecast: <strong>'+(res.prediction*100).toFixed(2)+'%</strong> &middot; Current regime: <strong>'+(res.currentBucket != null ? res.regimeBacktest[res.currentBucket].label : '-')+'</strong> &middot; Historical win rate: <strong>'+((res.currentBucket != null ? res.regimeBacktest[res.currentBucket].winRate : 0)*100).toFixed(0)+'%</strong></div>';
+  html += '<div style="font-size:12px;margin-top:10px;opacity:0.85;max-width:720px;margin-left:auto;margin-right:auto;line-height:1.5;">'+res.verdict.rationale+'</div>';
+  html += '</div></div>';
+
+  // ── Model fit summary ──
+  html += '<div class="card"><div class="card-title">Model Fit Summary — Multiple Linear Regression</div>';
+  html += '<div class="card-body"><div class="chart-stats">';
+  html += '<div class="chart-stat-box"><div class="chart-stat-label">R&sup2;</div><div class="chart-stat-value">'+res.r2.toFixed(3)+'</div><div class="chart-stat-sub">Variance explained</div></div>';
+  html += '<div class="chart-stat-box"><div class="chart-stat-label">Adj. R&sup2;</div><div class="chart-stat-value">'+res.adjR2.toFixed(3)+'</div><div class="chart-stat-sub">Degrees-of-freedom adj.</div></div>';
+  html += '<div class="chart-stat-box"><div class="chart-stat-label">Observations</div><div class="chart-stat-value">'+res.nObs+'</div><div class="chart-stat-sub">Non-overlapping windows</div></div>';
+  html += '<div class="chart-stat-box"><div class="chart-stat-label">Features</div><div class="chart-stat-value">'+res.featureNames.length+'</div><div class="chart-stat-sub">Input variables</div></div>';
+  html += '<div class="chart-stat-box"><div class="chart-stat-label">Bootstrap Samples</div><div class="chart-stat-value">500</div><div class="chart-stat-sub">Resampling iterations</div></div>';
+  html += '</div>';
+  html += '<p style="font-size:12px;color:var(--text-sec);margin-top:12px;line-height:1.6;">MLR regresses <strong>'+horizonLabel.toLowerCase()+' forward returns</strong> on 10 standardized features derived from price history, volatility, trend, and macro (VIX). Coefficients are estimated via OLS; confidence intervals are computed by bootstrapping (500 resamples with replacement). Sign stability measures what fraction of bootstrap samples agree with the point estimate&apos;s sign &mdash; a proxy for coefficient robustness.</p>';
+  html += '</div>';
+  html += '<div class="card-sources"><strong>Sources:</strong> Efron, B. (1979) "Bootstrap Methods," <em>Annals of Statistics</em> &middot; Greene, W.H. (2018) <em>Econometric Analysis</em>, 8th ed. &middot; CFA Institute L2 Quantitative Methods.</div></div>';
+
+  // ── Feature Importance ──
+  html += '<div class="card"><div class="card-title">Feature Importance &amp; Coefficients</div>';
+  html += '<div class="card-body">';
+  html += '<p style="font-size:12px;color:var(--text-sec);margin-bottom:12px;">Features ranked by absolute standardized coefficient. Positive coefficient (green) means higher feature &#8594; higher expected forward return. 95% CI shown from bootstrap. Sign stability &gt; 90% indicates a robust estimate.</p>';
+  html += '<div class="table-wrap"><table><thead><tr>'
+        + '<th>Rank</th><th>Feature</th><th style="text-align:right;">Coefficient</th>'
+        + '<th style="text-align:center;">95% Bootstrap CI</th>'
+        + '<th style="text-align:center;">Sign Stability</th>'
+        + '<th style="text-align:right;">% of Total |&beta;|</th>'
+        + '</tr></thead><tbody>';
+  for (var ii=0; ii<res.importance.length; ii++) {
+    var it = res.importance[ii];
+    var coefColor = it.coef >= 0 ? 'var(--success)' : 'var(--danger)';
+    var stableColor = it.stable > 0.9 ? 'var(--success)' : it.stable > 0.75 ? 'var(--warning)' : 'var(--danger)';
+    var ciStrad = it.ci[0] < 0 && it.ci[1] > 0 ? ' &oslash;' : '';
+    html += '<tr>';
+    html += '<td style="font-weight:700;">'+(ii+1)+'</td>';
+    html += '<td style="font-weight:600;">'+it.name+'</td>';
+    html += '<td style="text-align:right;font-weight:700;color:'+coefColor+';">'+it.coef.toFixed(4)+'</td>';
+    html += '<td style="text-align:center;font-size:11px;color:var(--text-sec);">['+it.ci[0].toFixed(4)+', '+it.ci[1].toFixed(4)+']'+ciStrad+'</td>';
+    html += '<td style="text-align:center;font-weight:700;color:'+stableColor+';">'+(it.stable*100).toFixed(0)+'%</td>';
+    html += '<td style="text-align:right;font-weight:600;">'+it.pct.toFixed(1)+'%</td>';
+    html += '</tr>';
+  }
+  html += '</tbody></table></div>';
+  html += '<p style="font-size:11px;color:var(--text-sec);margin-top:10px;">&oslash; indicates the 95% CI straddles zero &mdash; the coefficient may not be statistically distinguishable from zero.</p>';
+  html += '<div style="margin-top:16px;"><div style="background:var(--navy);color:var(--text-on-dark);padding:6px 12px;font-size:12px;font-weight:700;border-radius:4px 4px 0 0;">Visual Ranking</div>';
+  html += '<div style="height:320px;border:1px solid var(--border);border-top:none;border-radius:0 0 4px 4px;padding:10px;"><canvas id="quantImportanceChart"></canvas></div></div>';
+  html += '</div>';
+  html += '<div class="card-sources"><strong>Sources:</strong> Efron &amp; Tibshirani (1993) <em>An Introduction to the Bootstrap</em> &middot; Hastie, Tibshirani &amp; Friedman (2009) <em>The Elements of Statistical Learning</em>, 2nd ed.</div></div>';
+
+  // ── Regime Backtest ──
+  html += '<div class="card"><div class="card-title">Macro Regime Backtest &mdash; '+horizonLabel+' Forward Returns by VIX Regime</div>';
+  html += '<div class="card-body">';
+  html += '<p style="font-size:12px;color:var(--text-sec);margin-bottom:12px;">Historical forward returns conditional on VIX level at entry. Each row is an independent regime with its own return distribution. Win rate = fraction of entries with positive forward return.</p>';
+  html += '<div class="table-wrap"><table><thead><tr>'
+        + '<th>VIX Regime</th>'
+        + '<th style="text-align:right;">Entries</th>'
+        + '<th style="text-align:right;">Mean Return</th>'
+        + '<th style="text-align:right;">Median</th>'
+        + '<th style="text-align:right;">Win Rate</th>'
+        + '<th style="text-align:right;">10th pctl</th>'
+        + '<th style="text-align:right;">90th pctl</th>'
+        + '</tr></thead><tbody>';
+  for (var ri=0; ri<res.regimeBacktest.length; ri++) {
+    var rb = res.regimeBacktest[ri];
+    var isCurrent = res.currentBucket === ri;
+    var rowBg = isCurrent ? 'background:rgba(91,155,213,0.15);' : '';
+    html += '<tr style="'+rowBg+'">';
+    html += '<td style="font-weight:600;">'+rb.label+(isCurrent?' <span style="font-size:10px;background:var(--blue);color:white;padding:1px 6px;border-radius:3px;">CURRENT</span>':'')+'</td>';
+    html += '<td style="text-align:right;">'+rb.count+'</td>';
+    html += '<td style="text-align:right;font-weight:700;color:'+(rb.mean>=0?'var(--success)':'var(--danger)')+';">'+(rb.mean*100).toFixed(2)+'%</td>';
+    html += '<td style="text-align:right;">'+(rb.median*100).toFixed(2)+'%</td>';
+    html += '<td style="text-align:right;font-weight:600;">'+(rb.winRate*100).toFixed(0)+'%</td>';
+    html += '<td style="text-align:right;color:var(--danger);">'+(rb.p10*100).toFixed(2)+'%</td>';
+    html += '<td style="text-align:right;color:var(--success);">'+(rb.p90*100).toFixed(2)+'%</td>';
+    html += '</tr>';
+  }
+  html += '</tbody></table></div>';
+  html += '<div style="margin-top:16px;"><div style="background:var(--navy);color:var(--text-on-dark);padding:6px 12px;font-size:12px;font-weight:700;border-radius:4px 4px 0 0;">Mean Forward Return by Regime</div>';
+  html += '<div style="height:260px;border:1px solid var(--border);border-top:none;border-radius:0 0 4px 4px;padding:10px;"><canvas id="quantRegimeChart"></canvas></div></div>';
+  html += '<p style="font-size:11px;color:var(--text-sec);margin-top:10px;">Current VIX: <strong>'+res.currentVix.toFixed(1)+'</strong>. Historical win rate in this regime drives the regime-adjusted verdict.</p>';
+  html += '</div>';
+  html += '<div class="card-sources"><strong>Sources:</strong> VIX index via CBOE/Yahoo Finance &middot; CFA Institute L3 Capital Market Expectations framework &middot; Whaley, R.E. (2009) "Understanding the VIX," <em>J. Portfolio Management</em>.</div></div>';
+
+  // ── Monte Carlo ──
+  var mcSorted = res.mcTerm.slice().sort(function(a,b){return a-b;});
+  var mcMean = quantMean(res.mcTerm);
+  var mcMed = mcSorted[Math.floor(mcSorted.length*0.5)];
+  var mcP10 = mcSorted[Math.floor(mcSorted.length*0.10)];
+  var mcP90 = mcSorted[Math.floor(mcSorted.length*0.90)];
+  var mcPosFrac = res.mcTerm.filter(function(v){return v>res.S0;}).length / res.mcTerm.length;
+
+  html += '<div class="card"><div class="card-title">Monte Carlo Simulation &mdash; '+horizonLabel+' Price Path (1,000 paths, GBM)</div>';
+  html += '<div class="card-body">';
+  html += '<div class="chart-stats">';
+  html += '<div class="chart-stat-box"><div class="chart-stat-label">Current</div><div class="chart-stat-value">$'+res.S0.toFixed(2)+'</div></div>';
+  html += '<div class="chart-stat-box"><div class="chart-stat-label">Median '+horizonLabel+'</div><div class="chart-stat-value">$'+mcMed.toFixed(2)+'</div><div class="chart-stat-sub">'+((mcMed/res.S0-1)*100).toFixed(2)+'%</div></div>';
+  html += '<div class="chart-stat-box"><div class="chart-stat-label">Expected</div><div class="chart-stat-value">$'+mcMean.toFixed(2)+'</div><div class="chart-stat-sub">'+((mcMean/res.S0-1)*100).toFixed(2)+'%</div></div>';
+  html += '<div class="chart-stat-box"><div class="chart-stat-label">10th pctl</div><div class="chart-stat-value" style="color:var(--danger);">$'+mcP10.toFixed(2)+'</div><div class="chart-stat-sub">'+((mcP10/res.S0-1)*100).toFixed(2)+'%</div></div>';
+  html += '<div class="chart-stat-box"><div class="chart-stat-label">90th pctl</div><div class="chart-stat-value" style="color:var(--success);">$'+mcP90.toFixed(2)+'</div><div class="chart-stat-sub">'+((mcP90/res.S0-1)*100).toFixed(2)+'%</div></div>';
+  html += '<div class="chart-stat-box"><div class="chart-stat-label">P(positive)</div><div class="chart-stat-value">'+(mcPosFrac*100).toFixed(1)+'%</div><div class="chart-stat-sub">Prob. gain over '+horizonLabel.toLowerCase()+'</div></div>';
+  html += '</div>';
+  html += '<div class="grid-2" style="margin-top:16px;">';
+  html += '<div><div style="background:var(--navy);color:var(--text-on-dark);padding:6px 12px;font-size:12px;font-weight:700;border-radius:4px 4px 0 0;">Sample Paths (100 of 1,000)</div>';
+  html += '<div style="height:280px;border:1px solid var(--border);border-top:none;border-radius:0 0 4px 4px;padding:10px;"><canvas id="quantMcPathsChart"></canvas></div></div>';
+  html += '<div><div style="background:var(--navy);color:var(--text-on-dark);padding:6px 12px;font-size:12px;font-weight:700;border-radius:4px 4px 0 0;">Terminal Price Distribution</div>';
+  html += '<div style="height:280px;border:1px solid var(--border);border-top:none;border-radius:0 0 4px 4px;padding:10px;"><canvas id="quantMcHistChart"></canvas></div></div>';
+  html += '</div>';
+  html += '<p style="font-size:11px;color:var(--text-sec);margin-top:12px;">Calibration: &mu;<sub>daily</sub> = '+(res.mu*100).toFixed(3)+'% (ann. '+(res.mu*252*100).toFixed(1)+'%), &sigma;<sub>daily</sub> = '+(res.sigma*100).toFixed(3)+'% (ann. '+(res.sigma*Math.sqrt(252)*100).toFixed(1)+'%), from last 252 trading days. Paths follow dS/S = &mu;dt + &sigma;dW.</p>';
+  html += '</div>';
+  html += '<div class="card-sources"><strong>Sources:</strong> Hull, J.C. (2022) <em>Options, Futures &amp; Other Derivatives</em>, 10th ed., Ch. 15 &middot; Glasserman, P. (2004) <em>Monte Carlo Methods in Financial Engineering</em>.</div></div>';
+
+  // ── Residual diagnostics ──
+  html += '<div class="card"><div class="card-title">Residual Diagnostics</div>';
+  html += '<div class="card-body">';
+  html += '<p style="font-size:12px;color:var(--text-sec);margin-bottom:12px;">Residuals = actual forward returns &minus; model predictions. Well-behaved residuals should be centered on zero, approximately normally distributed, and not show structure over time. Heavy structure indicates missing features or regime non-stationarity.</p>';
+  html += '<div class="grid-2">';
+  html += '<div><div style="background:var(--navy);color:var(--text-on-dark);padding:6px 12px;font-size:12px;font-weight:700;border-radius:4px 4px 0 0;">Predicted vs. Actual</div>';
+  html += '<div style="height:260px;border:1px solid var(--border);border-top:none;border-radius:0 0 4px 4px;padding:10px;"><canvas id="quantResidScatter"></canvas></div></div>';
+  html += '<div><div style="background:var(--navy);color:var(--text-on-dark);padding:6px 12px;font-size:12px;font-weight:700;border-radius:4px 4px 0 0;">Residual Distribution</div>';
+  html += '<div style="height:260px;border:1px solid var(--border);border-top:none;border-radius:0 0 4px 4px;padding:10px;"><canvas id="quantResidHist"></canvas></div></div>';
+  html += '</div>';
+  html += '</div>';
+  html += '<div class="card-sources"><strong>Sources:</strong> Greene, W.H. (2018) <em>Econometric Analysis</em> &middot; Fox, J. (2015) <em>Applied Regression Analysis and Generalized Linear Models</em>.</div></div>';
+
+  return html;
+}
+
+// Bind charts after render
+function quantBindCharts(ticker, res) {
+  // Importance bar chart
+  var impLabels = res.importance.map(function(i){ return i.name; });
+  var impData = res.importance.map(function(i){ return i.coef; });
+  var impColors = res.importance.map(function(i){ return i.coef >= 0 ? C.success : C.danger; });
+  new Chart(document.getElementById('quantImportanceChart').getContext('2d'), {
+    type: 'bar',
+    data: { labels: impLabels, datasets: [{ data: impData, backgroundColor: impColors, borderColor: C.navy, borderWidth: 1 }] },
+    options: {
+      indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false }, tooltip: Object.assign({}, chartTooltip, { callbacks: { label: function(ctx){ return 'β = '+ctx.parsed.x.toFixed(4); } } }) },
+      scales: {
+        x: { grid: chartGrid, ticks: chartTicks, title: { display: true, text: 'Standardized Coefficient', font: { size: 11 }, color: C.textSec } },
+        y: { grid: { display: false }, ticks: Object.assign({}, chartTicks, { font: { size: 11 } }) }
+      }
+    }
+  });
+  // Regime bar chart
+  var regLabels = res.regimeBacktest.map(function(r){ return r.label; });
+  var regData = res.regimeBacktest.map(function(r){ return r.mean * 100; });
+  var regColors = res.regimeBacktest.map(function(r,i){
+    if (i === res.currentBucket) return C.navy;
+    return r.mean >= 0 ? C.success : C.danger;
+  });
+  new Chart(document.getElementById('quantRegimeChart').getContext('2d'), {
+    type: 'bar',
+    data: { labels: regLabels, datasets: [{ data: regData, backgroundColor: regColors, borderColor: '#000', borderWidth: 1 }] },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false }, tooltip: Object.assign({}, chartTooltip, { callbacks: { label: function(ctx){ return 'Mean: '+ctx.parsed.y.toFixed(2)+'%'; } } }) },
+      scales: {
+        x: { grid: { display: false }, ticks: chartTicks },
+        y: { grid: chartGrid, ticks: Object.assign({}, chartTicks, { callback: function(v){ return v.toFixed(0)+'%'; } }), title: { display: true, text: 'Mean Forward Return', font: { size: 11 }, color: C.textSec } }
+      }
+    }
+  });
+  // MC paths
+  var pathDatasets = res.mcPathsSample.map(function(path){
+    return { data: path, borderColor: 'rgba(0,60,113,0.15)', borderWidth: 0.7, pointRadius: 0, fill: false };
+  });
+  // Add percentile bands
+  var L = res.mcPathsSample[0].length;
+  var med = [], p10 = [], p90 = [];
+  var allPaths = []; // reconstruct from termination samples using sample paths
+  // Use the sample paths only (computing percentiles on 100 paths)
+  for (var t=0;t<L;t++) {
+    var col = res.mcPathsSample.map(function(p){ return p[t]; }).sort(function(a,b){return a-b;});
+    med.push(col[Math.floor(col.length*0.5)]);
+    p10.push(col[Math.floor(col.length*0.1)]);
+    p90.push(col[Math.floor(col.length*0.9)]);
+  }
+  pathDatasets.push({ data: med, borderColor: C.danger, borderWidth: 2, pointRadius: 0, fill: false, label: 'Median' });
+  pathDatasets.push({ data: p10, borderColor: C.blue, borderWidth: 1.5, borderDash: [5,3], pointRadius: 0, fill: false, label: '10th pctl' });
+  pathDatasets.push({ data: p90, borderColor: C.blue, borderWidth: 1.5, borderDash: [5,3], pointRadius: 0, fill: false, label: '90th pctl' });
+  var pathLabels = []; for (var pl=0;pl<L;pl++) pathLabels.push(pl);
+  new Chart(document.getElementById('quantMcPathsChart').getContext('2d'), {
+    type: 'line',
+    data: { labels: pathLabels, datasets: pathDatasets },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { display: true, position: 'bottom', labels: { filter: function(it){ return it.text && (it.text.indexOf('Median')>=0 || it.text.indexOf('pctl')>=0); }, font: { size: 10 }, color: C.textSec } },
+        tooltip: { enabled: false }
+      },
+      scales: {
+        x: { grid: chartGrid, ticks: Object.assign({}, chartTicks, { maxTicksLimit: 6 }), title: { display: true, text: 'Trading Days', font: { size: 10 }, color: C.textSec } },
+        y: { grid: chartGrid, ticks: Object.assign({}, chartTicks, { callback: function(v){ return '$'+v.toFixed(0); } }), title: { display: true, text: 'Price', font: { size: 10 }, color: C.textSec } }
+      }
+    }
+  });
+  // MC histogram
+  var termSorted = res.mcTerm.slice().sort(function(a,b){return a-b;});
+  var minT = termSorted[0], maxT = termSorted[termSorted.length-1];
+  var nb = 25;
+  var bw = (maxT-minT)/nb;
+  var bins = new Array(nb).fill(0);
+  var binLabels = [];
+  for (var bi=0;bi<nb;bi++) binLabels.push('$'+(minT + bi*bw).toFixed(0));
+  for (var ti=0;ti<res.mcTerm.length;ti++) {
+    var bidx = Math.min(nb-1, Math.floor((res.mcTerm[ti] - minT)/bw));
+    bins[bidx]++;
+  }
+  new Chart(document.getElementById('quantMcHistChart').getContext('2d'), {
+    type: 'bar',
+    data: { labels: binLabels, datasets: [{ data: bins, backgroundColor: C.navy, borderColor: C.navy, borderWidth: 1 }] },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false }, tooltip: Object.assign({}, chartTooltip, { callbacks: { label: function(ctx){ return ctx.parsed.y + ' paths'; } } }) },
+      scales: {
+        x: { grid: chartGrid, ticks: Object.assign({}, chartTicks, { maxTicksLimit: 10, maxRotation: 45, font: { size: 9 } }) },
+        y: { grid: chartGrid, ticks: chartTicks, title: { display: true, text: 'Path Count', font: { size: 10 }, color: C.textSec } }
+      }
+    }
+  });
+  // Residual scatter
+  var scatterData = res.y.map(function(yi, idx){ return { x: res.yhat[idx]*100, y: yi*100 }; });
+  new Chart(document.getElementById('quantResidScatter').getContext('2d'), {
+    type: 'scatter',
+    data: { datasets: [
+      { label: 'Obs', data: scatterData, pointRadius: 2.5, pointBackgroundColor: 'rgba(0,60,113,0.45)', pointBorderColor: 'transparent' },
+      { type: 'line', label: 'Perfect fit', data: [{x: Math.min.apply(null, scatterData.map(function(p){return p.x;})), y: Math.min.apply(null, scatterData.map(function(p){return p.x;}))}, {x: Math.max.apply(null, scatterData.map(function(p){return p.x;})), y: Math.max.apply(null, scatterData.map(function(p){return p.x;}))}], borderColor: C.danger, borderWidth: 1.5, borderDash: [4,3], pointRadius: 0, fill: false }
+    ] },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: true, position: 'bottom', labels: { font: { size: 10 }, color: C.textSec } }, tooltip: chartTooltip },
+      scales: {
+        x: { grid: chartGrid, ticks: Object.assign({}, chartTicks, { callback: function(v){return v.toFixed(1)+'%';} }), title: { display: true, text: 'Predicted Return', font: { size: 11 }, color: C.textSec } },
+        y: { grid: chartGrid, ticks: Object.assign({}, chartTicks, { callback: function(v){return v.toFixed(1)+'%';} }), title: { display: true, text: 'Actual Return', font: { size: 11 }, color: C.textSec } }
+      }
+    }
+  });
+  // Residual histogram
+  var resids = res.residuals.map(function(r){ return r*100; }).sort(function(a,b){return a-b;});
+  var minR = resids[0], maxR = resids[resids.length-1];
+  var nrb = 20;
+  var rbw = (maxR-minR)/nrb;
+  var rbins = new Array(nrb).fill(0);
+  var rbinLabels = [];
+  for (var rbi=0;rbi<nrb;rbi++) rbinLabels.push((minR + rbi*rbw).toFixed(1)+'%');
+  for (var rti=0;rti<resids.length;rti++) {
+    var ridx = Math.min(nrb-1, Math.floor((resids[rti] - minR)/rbw));
+    rbins[ridx]++;
+  }
+  new Chart(document.getElementById('quantResidHist').getContext('2d'), {
+    type: 'bar',
+    data: { labels: rbinLabels, datasets: [{ data: rbins, backgroundColor: C.blue, borderColor: C.navy, borderWidth: 1 }] },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { display: false }, tooltip: chartTooltip },
+      scales: {
+        x: { grid: chartGrid, ticks: Object.assign({}, chartTicks, { maxTicksLimit: 10, maxRotation: 45, font: { size: 9 } }) },
+        y: { grid: chartGrid, ticks: chartTicks, title: { display: true, text: 'Frequency', font: { size: 10 }, color: C.textSec } }
+      }
+    }
+  });
+}
+
+// ═══════════════════════════════════════════════════════
+// ═══════════ COMMAND PALETTE + SHORTCUTS ═══════════════
+// ═══════════════════════════════════════════════════════
+var CMDK_ITEMS = [
+  { section: 'Pages', title: 'Home', desc: 'Platform overview', action: function(){ navigateTo('home'); } },
+  { section: 'Pages', title: 'About', desc: 'About Perry Asset Management', action: function(){ navigateTo('about'); } },
+  { section: 'Pages', title: 'Portfolio Overview', desc: 'Holdings, allocation, performance', action: function(){ navigateTo('portfolio'); } },
+  { section: 'Pages', title: 'Manage Holdings', desc: 'Add, edit, or sell positions', action: function(){ navigateTo('holdings'); } },
+  { section: 'Pages', title: 'Financial Analysis', desc: 'Ticker lookup with SEC fundamentals', action: function(){ navigateTo('research'); } },
+  { section: 'Pages', title: 'Macro Regime Analysis', desc: 'CFA regime scorecard, FRED data', action: function(){ navigateTo('macro'); loadMacroLiveTable(); } },
+  { section: 'Pages', title: 'Quantitative Models', desc: 'MLR, regime backtest, Monte Carlo', action: function(){ navigateTo('quant'); } },
+  { section: 'Pages', title: 'Markets', desc: 'Cross-asset analytics, VaR, efficient frontier', action: function(){ navigateTo('markets'); } },
+  { section: 'Actions', title: 'Analyze a ticker', desc: 'Jump to Financial Analysis and pre-fill', action: null, isTickerPrompt: true },
+  { section: 'Actions', title: 'Run Quant analysis', desc: 'Jump to Quant page', action: function(){ navigateTo('quant'); setTimeout(function(){ document.getElementById('quantTicker').focus(); }, 200); } },
+  { section: 'Actions', title: 'Refresh Macro data', desc: 'Re-pull FRED indicators', action: function(){ navigateTo('macro'); loadMacroLiveTable(true); } },
+  { section: 'Actions', title: 'Open Markets &mdash; load default universe', desc: 'Auto-load 7 default tickers', action: function(){ navigateTo('markets'); setTimeout(function(){ if (typeof mktLoadAll === 'function') mktLoadAll(); }, 300); } }
+];
+
+function openCmdK() {
+  var ov = document.getElementById('cmdkOverlay');
+  ov.classList.add('open');
+  var input = document.getElementById('cmdkInput');
+  input.value = '';
+  renderCmdKResults('');
+  setTimeout(function(){ input.focus(); }, 10);
+}
+function closeCmdK() {
+  document.getElementById('cmdkOverlay').classList.remove('open');
+}
+function renderCmdKResults(query) {
+  var q = query.trim().toLowerCase();
+  var results = document.getElementById('cmdkResults');
+  var matches = [];
+  if (!q) {
+    matches = CMDK_ITEMS.slice();
+  } else {
+    // If query looks like a ticker (1-6 uppercase-ish chars, no spaces)
+    var isTicker = /^[A-Z]{1,6}(-[A-Z]{1,4})?$/i.test(query.trim());
+    if (isTicker) {
+      matches.push({
+        section: 'Ticker Action',
+        title: 'Analyze '+query.trim().toUpperCase(),
+        desc: 'Open Financial Analysis for this ticker',
+        action: function(){
+          navigateTo('research');
+          setTimeout(function(){
+            document.getElementById('researchTicker').value = query.trim().toUpperCase();
+            if (typeof runResearch === 'function') runResearch();
+          }, 200);
+        }
+      });
+      matches.push({
+        section: 'Ticker Action',
+        title: 'Run Quant on '+query.trim().toUpperCase(),
+        desc: 'MLR + Monte Carlo analysis',
+        action: function(){
+          navigateTo('quant');
+          setTimeout(function(){
+            document.getElementById('quantTicker').value = query.trim().toUpperCase();
+            runQuantAnalysis();
+          }, 200);
+        }
+      });
+    }
+    CMDK_ITEMS.forEach(function(it){
+      if (it.title.toLowerCase().indexOf(q) >= 0 || it.desc.toLowerCase().indexOf(q) >= 0) matches.push(it);
+    });
+  }
+  var html = '';
+  var currentSection = null;
+  matches.forEach(function(m, idx){
+    if (m.section !== currentSection) { html += '<div class="cmdk-section-label">'+m.section+'</div>'; currentSection = m.section; }
+    html += '<div class="cmdk-item'+(idx===0?' active':'')+'" data-idx="'+idx+'">';
+    html += '<div class="cmdk-item-icon">'+m.section.charAt(0)+'</div>';
+    html += '<div style="flex:1;"><div class="cmdk-item-title">'+m.title+'</div><div class="cmdk-item-desc">'+m.desc+'</div></div>';
+    html += '</div>';
+  });
+  if (!matches.length) html = '<div style="padding:40px;text-align:center;color:var(--text-sec);font-size:13px;">No results. Try typing a page name or ticker.</div>';
+  results.innerHTML = html;
+  // Bind click
+  var nodes = results.querySelectorAll('.cmdk-item');
+  nodes.forEach(function(node, ni){
+    node.onclick = function(){ var m = matches[ni]; if (m && m.action) { closeCmdK(); m.action(); } };
+  });
+  window._cmdkMatches = matches;
+  window._cmdkActive = 0;
+}
+// Arrow navigation
+document.addEventListener('keydown', function(e){
+  // Cmd+K / Ctrl+K to open
+  if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+    e.preventDefault();
+    openCmdK();
+    return;
+  }
+  var ov = document.getElementById('cmdkOverlay');
+  if (ov && ov.classList.contains('open')) {
+    if (e.key === 'Escape') { closeCmdK(); return; }
+    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+      e.preventDefault();
+      var matches = window._cmdkMatches || [];
+      if (!matches.length) return;
+      var idx = window._cmdkActive || 0;
+      idx = idx + (e.key === 'ArrowDown' ? 1 : -1);
+      if (idx < 0) idx = matches.length - 1;
+      if (idx >= matches.length) idx = 0;
+      window._cmdkActive = idx;
+      var nodes = document.querySelectorAll('.cmdk-item');
+      nodes.forEach(function(n,i){ n.classList.toggle('active', i===idx); });
+      return;
+    }
+    if (e.key === 'Enter') {
+      var matches = window._cmdkMatches || [];
+      var idx = window._cmdkActive || 0;
+      if (matches[idx] && matches[idx].action) { closeCmdK(); matches[idx].action(); }
+      return;
+    }
+    return;
+  }
+  // Timeframe shortcuts — only when not in an input
+  if (document.activeElement && (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA' || document.activeElement.tagName === 'SELECT')) return;
+  var shortcutMap = { '1': '1mo', '3': '3mo', '6': '6mo', 'y': 'ytd', 'Y': '1y', '5': '5y' };
+  if (e.key in shortcutMap) {
+    // Find the active page's timeframe buttons
+    var activePage = document.querySelector('.page.active');
+    if (!activePage) return;
+    var range = shortcutMap[e.key];
+    var btns = activePage.querySelectorAll('[data-range="'+range+'"]');
+    if (btns.length) { btns[0].click(); }
+  }
+});
+// Wire input
+setTimeout(function(){
+  var inp = document.getElementById('cmdkInput');
+  if (inp) inp.oninput = function(){ renderCmdKResults(inp.value); };
+}, 500);
+
+// ═══ GLOBAL STATUS BAR UPDATES ═══
+function mktUpdateStatusBar() {
+  var elM = document.getElementById('statusMacro');
+  var elMk = document.getElementById('statusMarkets');
+  if (elM) {
+    if (_macroLoadedAt) {
+      var mins = Math.floor((Date.now() - _macroLoadedAt.getTime())/60000);
+      elM.innerHTML = '<span class="dot" style="background:var(--success);"></span>Macro: '+(mins<1?'just now':mins+'m ago');
+      elM.className = 'status-pill ok';
+    } else {
+      elM.innerHTML = 'Macro: not loaded';
+      elM.className = 'status-pill';
+    }
+  }
+  if (elMk) {
+    if (window._mktLoadedAt) {
+      var minsk = Math.floor((Date.now() - window._mktLoadedAt.getTime())/60000);
+      elMk.innerHTML = '<span class="dot" style="background:var(--success);"></span>Markets: '+(minsk<1?'just now':minsk+'m ago');
+      elMk.className = 'status-pill ok';
+    } else {
+      elMk.innerHTML = 'Markets: not loaded';
+      elMk.className = 'status-pill';
+    }
+  }
+}
+// Refresh status bar every minute
+setInterval(function(){ try { mktUpdateStatusBar(); } catch(e){} }, 60000);
+// Also call initial
+setTimeout(mktUpdateStatusBar, 1000);
 
 // ═══════════════════════════════════════════════════════
 // ═══════════════════ MARKETS PAGE ══════════════════════
@@ -5064,6 +5886,8 @@ async function mktLoadAll() {
   btn.disabled = false; btn.innerHTML = 'Load / Refresh All Modules';
   if (errors.length) mktSetStatus('Loaded with errors: ' + errors.join('; '), 'err');
   else mktSetStatus('Loaded ' + Object.keys(data).length + ' tickers, ' + MKT_STATE.alignedDates.length + ' aligned dates.', 'ok');
+  window._mktLoadedAt = new Date();
+  if (typeof mktUpdateStatusBar === 'function') mktUpdateStatusBar();
   // Render all
   try { mktRenderRebased(); } catch(e) { console.error('Rebased:', e); }
   try { mktRenderCorrelation(); } catch(e) { console.error('Corr:', e); }
