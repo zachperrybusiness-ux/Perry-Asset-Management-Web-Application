@@ -7,6 +7,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2.0.1/dist/chartjs-plugin-zoom.min.js"></script>
 <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <style>
 :root {
   --navy: #003C71;
@@ -970,80 +971,6 @@ tr:hover td { background: #EAF1F9; }
   margin-right: 4px;
   text-transform: uppercase;
 }
-
-/* ═══ QUANT: MONTE CARLO ═══ */
-.mc-stat-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-  gap: 12px;
-}
-.mc-stat-card {
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  overflow: hidden;
-}
-.mc-stat-hdr {
-  background: var(--navy);
-  color: var(--text-on-dark);
-  font-size: 10px;
-  font-weight: 600;
-  padding: 5px 10px;
-  text-transform: uppercase;
-  letter-spacing: .4px;
-}
-.mc-stat-val {
-  font-size: 18px;
-  font-weight: 700;
-  padding: 10px;
-  color: var(--text);
-}
-.mc-stat-val small {
-  display: block;
-  font-size: 10px;
-  font-weight: 400;
-  color: var(--text-sec);
-  margin-top: 2px;
-}
-.prob-grid {
-  display: grid;
-  grid-template-columns: 110px repeat(4, 1fr);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  overflow: hidden;
-}
-.pg-hdr {
-  background: var(--navy);
-  color: var(--text-on-dark);
-  font-size: 10px;
-  font-weight: 600;
-  padding: 7px 8px;
-  text-align: center;
-}
-.pg-label {
-  background: var(--panel);
-  font-size: 11px;
-  font-weight: 600;
-  padding: 8px;
-  display: flex;
-  align-items: center;
-  border-bottom: 1px solid var(--border);
-}
-.pg-cell {
-  text-align: center;
-  font-size: 12px;
-  font-weight: 700;
-  padding: 8px;
-  border-bottom: 1px solid var(--border);
-  border-left: 1px solid var(--border);
-}
-.badge-bull { color: var(--success); font-weight: 700; }
-.badge-bear { color: var(--danger); font-weight: 700; }
-.badge-base { color: var(--navy); font-weight: 700; }
-.badge-stress { color: var(--warning); font-weight: 700; }
-@media(max-width:600px) {
-  .mc-stat-grid { grid-template-columns: 1fr 1fr; }
-  .prob-grid { grid-template-columns: 90px repeat(4, 1fr); font-size: 10px; }
-}
 </style>
 </head>
 <body>
@@ -1079,6 +1006,9 @@ tr:hover td { background: #EAF1F9; }
     </div>
     <div class="nav-group">
       <div class="nav-parent" data-page="quant" onclick="navigateTo('quant')">Quant</div>
+    </div>
+    <div class="nav-group">
+      <div class="nav-parent" data-page="markets" onclick="navigateTo('markets')">Markets</div>
     </div>
   </div>
   <div class="topbar-right">
@@ -1557,99 +1487,289 @@ tr:hover td { background: #EAF1F9; }
 <div class="page" id="page-quant">
   <div class="content-wrap">
     <div class="hero" style="padding:32px 40px;">
-      <h1>Quantitative Analysis</h1>
-      <p>Monte Carlo simulation, probability analysis, market microstructure, and insider trading intelligence — powered by SEC EDGAR, MIDAS, and real-time market data.</p>
+      <h1>Quantitative Models</h1>
+      <p>Stock decision analysis using Multiple Linear Regression, macro regime backtesting, peer comparison, and Monte Carlo simulation.</p>
     </div>
-    <!-- Ticker Input -->
     <div class="card">
-      <div class="card-title">Ticker Lookup — Quantitative Analysis</div>
+      <div class="card-title">Stock Decision Tree</div>
       <div class="card-body">
+        <p style="margin-bottom:16px;">Enter a ticker for a full quantitative analysis: peer comparison, 10-year macro regime backtesting, MLR with bootstrapping, indicator importance ranking, and a regime-grounded 12-month investment verdict.</p>
         <div class="form-row">
           <div class="form-group" style="min-width:140px;">
             <label>Ticker</label>
-            <input type="text" id="quantTicker" placeholder="AAPL, NVDA, TSLA" style="text-transform:uppercase;" onkeydown="if(event.key==='Enter')runQuantAnalysis()">
+            <input type="text" id="quantTicker" placeholder="NVDA" style="text-transform:uppercase;" onkeydown="if(event.key==='Enter')runQuantAnalysis()">
           </div>
-          <button class="btn" id="btnRunQuant" onclick="runQuantAnalysis()">Analyze</button>
-          <span id="quantStatus" style="font-size:11px;color:var(--text-sec);margin-left:8px;"></span>
+          <button class="btn" onclick="runQuantAnalysis()">Run Analysis</button>
         </div>
       </div>
     </div>
-    <!-- MC Price Chart -->
-    <div class="card" id="mcChartCard" style="display:none;">
-      <div class="card-title" id="mcChartTitle">Monte Carlo Simulation</div>
-      <div class="card-body">
-        <div class="btn-group" style="margin-bottom:8px;">
-          <button class="btn-outline active" onclick="setMcView('combined',this)">Historical + Forecast</button>
-          <button class="btn-outline" onclick="setMcView('forecast',this)">Forecast Only</button>
-          <button class="btn-outline" onclick="rerunMC()">Re-Run Simulation</button>
-        </div>
-        <div class="chart-stats" id="mcChartStats"></div>
-        <div id="mcChartLoading" style="text-align:center;padding:40px;color:var(--text-sec);display:none;">
-          <span class="spinner"></span> Running 100 GBM simulations...
-        </div>
-        <div class="chart-wrap"><canvas id="mcChart"></canvas></div>
-        <div class="zoom-hint">Click and drag to zoom. Double-click to reset. Gray = simulated paths. Blue band = 10th–90th percentile.</div>
-      </div>
-      <div class="card-sources"><strong>Sources:</strong><br>&#8226; Yahoo Finance via Cloudflare Worker &#8226; Geometric Brownian Motion (GBM) with Box-Muller sampling</div>
-    </div>
-    <!-- MC Summary Stats -->
-    <div class="card" id="mcStatsCard" style="display:none;">
-      <div class="card-title" id="mcStatsTitle">Simulation Summary Statistics</div>
-      <div class="card-body"><div class="mc-stat-grid" id="mcStatsGrid"></div></div>
-      <div class="card-sources"><strong>Sources:</strong><br>&#8226; 100-path GBM Monte Carlo &#8226; Parameters calibrated from 1Y historical log returns</div>
-    </div>
-    <!-- Terminal Distribution -->
-    <div class="card" id="mcDistCard" style="display:none;">
-      <div class="card-title" id="mcDistTitle">Terminal Price Distribution</div>
-      <div class="card-body">
-        <div style="height:320px;position:relative;"><canvas id="mcDistChart"></canvas></div>
-      </div>
-      <div class="card-sources"><strong>Sources:</strong><br>&#8226; 100-path GBM terminal prices &#8226; Red = below current, Navy = above current</div>
-    </div>
-    <!-- Stressed Scenarios -->
-    <div class="card" id="mcStressCard" style="display:none;">
-      <div class="card-title" id="mcStressTitle">Stressed Scenario Analysis</div>
-      <div class="card-body" style="padding:0;">
-        <div class="table-wrap"><table><thead><tr>
-          <th>Scenario</th><th>Drift (μ)</th><th>Vol (σ)</th><th>Median</th><th>Expected</th><th>5th Pctl</th><th>95th Pctl</th><th>P(Gain)</th><th>P(Loss&gt;20%)</th>
-        </tr></thead><tbody id="mcStressBody"></tbody></table></div>
-      </div>
-      <div class="card-sources"><strong>Sources:</strong><br>&#8226; 100-path GBM per scenario &#8226; Not investment advice</div>
-    </div>
-    <!-- Probability Matrix -->
-    <div class="card" id="mcProbCard" style="display:none;">
-      <div class="card-title" id="mcProbTitle">Price Threshold Probability Matrix</div>
-      <div class="card-body">
-        <p style="font-size:11px;color:var(--text-sec);margin-bottom:12px;">Probability of reaching various thresholds at different horizons from the base-case Monte Carlo simulation.</p>
-        <div class="prob-grid" id="mcProbGrid"></div>
-      </div>
-      <div class="card-sources"><strong>Sources:</strong><br>&#8226; 100-path GBM base-case paths</div>
-    </div>
-    <!-- Insider Trading -->
-    <div class="card" id="mcInsiderCard" style="display:none;">
-      <div class="card-title" id="mcInsiderTitle">Insider Trading Activity</div>
-      <div class="card-body">
-        <div style="height:300px;position:relative;"><canvas id="mcInsiderChart"></canvas></div>
-      </div>
-      <div class="card-sources"><strong>Sources:</strong><br>&#8226; SEC EDGAR Form 4 filings via Cloudflare Worker</div>
-    </div>
-    <div class="card" id="mcInsiderTableCard" style="display:none;">
-      <div class="card-title">Insider Transactions Detail</div>
-      <div class="card-body" style="padding:0;max-height:350px;overflow-y:auto;">
-        <div class="table-wrap"><table><thead><tr><th>Date</th><th>Insider</th><th>Role</th><th>Type</th><th>Shares</th><th>Price</th><th>Value</th></tr></thead><tbody id="mcInsiderTBody"></tbody></table></div>
-      </div>
-      <div class="card-sources"><strong>Sources:</strong><br>&#8226; SEC EDGAR Form 4</div>
-    </div>
-    <!-- SEC MIDAS -->
-    <div class="card" id="mcMidasCard" style="display:none;">
-      <div class="card-title" id="mcMidasTitle">SEC MIDAS — Market Microstructure Metrics</div>
-      <div class="card-body" id="mcMidasBody">
-        <p style="font-size:11px;color:var(--text-sec);">Requires MIDAS proxy endpoint. Covers Lit Trades, Hidden Orders, Odd Lots, Cancel-to-Trade ratios.</p>
-      </div>
-      <div class="card-sources"><strong>Sources:</strong><br>&#8226; SEC MIDAS — sec.gov/data-research/market-structure-data</div>
-    </div>
-    <!-- SEC Fundamentals (existing) -->
     <div id="quantResults"></div>
+    <div class="grid-2" style="margin-top:20px;">
+      <div class="card">
+        <div class="card-title">MLR & Indicator Ranking</div>
+        <div class="card-body">
+          <p style="font-size:12px;color:var(--text-sec);line-height:1.6;">Multiple Linear Regression identifies which macro and fundamental indicators have the strongest predictive power for a stock's 12-month forward return. Features include regime score, ISM PMI, yield spread, HY OAS, VIX, revenue growth, operating margin, P/E, and FCF growth.</p>
+          <p style="font-size:11px;color:var(--text-sec);margin-top:8px;"><strong>Output:</strong> R², coefficient significance, indicator ranking by % explanatory power</p>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title">Monte Carlo Simulation</div>
+        <div class="card-body">
+          <p style="font-size:12px;color:var(--text-sec);line-height:1.6;">1,000-path Geometric Brownian Motion simulation calibrated to historical volatility and current VIX regime. Produces probability distributions for 12-month price targets with standard deviation bands.</p>
+          <p style="font-size:11px;color:var(--text-sec);margin-top:8px;"><strong>Output:</strong> Price distribution, confidence intervals, Sharpe-equivalent signal</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════ MARKETS ═══════════ -->
+<div class="page" id="page-markets">
+  <div class="content-wrap">
+    <div class="hero" style="padding:32px 40px;">
+      <h1>Markets</h1>
+      <p>Cross-asset analytics: rebased performance, correlation, 3D volatility surface, Cox jump process, efficient frontier, rolling risk, VaR, and regime signals.</p>
+    </div>
+
+    <!-- UNIVERSE SELECTOR -->
+    <div class="card">
+      <div class="card-title">Universe Selection & Date Range</div>
+      <div class="card-body">
+        <p style="font-size:12px;color:var(--text-sec);margin-bottom:14px;">Select assets to include across all Markets modules. All fetched data is shared, so changing selection triggers a refetch for every module.</p>
+        <div class="form-row" style="margin-bottom:14px;">
+          <div class="form-group">
+            <label>Start Date</label>
+            <input type="date" id="mktStartDate" value="2022-01-03">
+          </div>
+          <div class="form-group">
+            <label>End Date</label>
+            <input type="date" id="mktEndDate">
+          </div>
+          <div class="form-group">
+            <label>Primary Asset (Modules 4, 6, 7)</label>
+            <select id="mktPrimary"></select>
+          </div>
+          <button class="btn" id="mktLoadBtn" onclick="mktLoadAll()">Load / Refresh All Modules</button>
+        </div>
+        <div id="mktUniverseGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:6px;margin-top:8px;"></div>
+        <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;">
+          <button class="btn-outline" onclick="mktPreset('sectors')">SPDR Sectors</button>
+          <button class="btn-outline" onclick="mktPreset('realassets')">Real Assets</button>
+          <button class="btn-outline" onclick="mktPreset('fixedincome')">Fixed Income</button>
+          <button class="btn-outline" onclick="mktPreset('international')">International</button>
+          <button class="btn-outline" onclick="mktPreset('default')">Default Mix</button>
+          <button class="btn-outline" onclick="mktPreset('none')">Clear All</button>
+        </div>
+        <div id="mktStatus" style="margin-top:12px;font-size:12px;color:var(--text-sec);"></div>
+      </div>
+      <div class="card-sources"><strong>Sources:</strong> Yahoo Finance via Cloudflare Worker proxy (/chart endpoint).</div>
+    </div>
+
+    <!-- MODULE 1: REBASED RETURNS -->
+    <div class="card">
+      <div class="card-title">1 &middot; Rebased Return Chart (Start = 100)</div>
+      <div class="card-body">
+        <p style="font-size:12px;color:var(--text-sec);margin-bottom:14px;">All selected series rebased to 100 at the start date. Formula: <code style="background:var(--navy);color:var(--text-on-dark);padding:1px 6px;border-radius:3px;font-family:Arial;">Rebased(t) = P(t) / P(t&#8320;) &times; 100</code></p>
+        <div id="mktRebasedEmpty" style="text-align:center;padding:32px;color:var(--text-sec);font-size:13px;">Select assets and press <strong>Load / Refresh All Modules</strong> above.</div>
+        <div class="chart-wrap" style="height:420px;display:none;" id="mktRebasedWrap">
+          <canvas id="mktRebasedChart"></canvas>
+        </div>
+        <div style="margin-top:18px;" id="mktRollingReturnsWrap"></div>
+      </div>
+      <div class="card-sources"><strong>Sources:</strong> Yahoo Finance via Cloudflare Worker proxy. Rebasing standard per CFA Institute performance measurement (L1 Quantitative Methods).</div>
+    </div>
+
+    <!-- MODULE 2: CORRELATION HEATMAP -->
+    <div class="card">
+      <div class="card-title">2 &middot; Pairwise Correlation Heatmap (Pearson &rho;)</div>
+      <div class="card-body">
+        <p style="font-size:12px;color:var(--text-sec);margin-bottom:10px;">Computed from daily log returns: <code style="background:var(--navy);color:var(--text-on-dark);padding:1px 6px;border-radius:3px;font-family:Arial;">r(t) = ln(P(t)/P(t-1))</code>. Scale: dark red &rho;=&minus;1, white &rho;=0, navy &rho;=+1.</p>
+        <div class="btn-group" style="margin-bottom:12px;">
+          <span style="font-size:11px;color:var(--text-sec);font-weight:600;align-self:center;margin-right:6px;">Rolling Window:</span>
+          <button class="btn-outline" data-mktwin="21">21D</button>
+          <button class="btn-outline active" data-mktwin="63">63D</button>
+          <button class="btn-outline" data-mktwin="126">126D</button>
+          <button class="btn-outline" data-mktwin="252">252D</button>
+          <button class="btn-outline" data-mktwin="0">Full</button>
+        </div>
+        <div id="mktCorrEmpty" style="text-align:center;padding:24px;color:var(--text-sec);font-size:13px;">Awaiting data.</div>
+        <div style="position:relative;overflow:auto;" id="mktCorrWrap">
+          <canvas id="mktCorrCanvas" style="display:block;"></canvas>
+          <div id="mktCorrTooltip" style="position:absolute;display:none;background:var(--bg);border:1px solid var(--border);box-shadow:0 2px 8px rgba(0,0,0,.12);padding:6px 10px;font-size:11px;pointer-events:none;z-index:5;border-radius:4px;"></div>
+        </div>
+      </div>
+      <div class="card-sources"><strong>Sources:</strong> Pearson, K. (1895) "Notes on regression and inheritance in the case of two parents," Proc. Royal Society. Price data via Cloudflare Worker / Yahoo Finance.</div>
+    </div>
+
+    <!-- MODULE 3: 3D VOL SURFACE -->
+    <div class="card">
+      <div class="card-title">3 &middot; 3D Volatility Surface (Rolling &sigma; Term Structure)</div>
+      <div class="card-body">
+        <p style="font-size:12px;color:var(--text-sec);margin-bottom:10px;">X = asset, Y = rolling window (10/21/42/63/126/252 days), Z = annualized &sigma;. Click &amp; drag to rotate &middot; scroll to zoom.</p>
+        <div id="mktVolEmpty" style="text-align:center;padding:32px;color:var(--text-sec);font-size:13px;">Awaiting data.</div>
+        <div id="mktVolContainer" style="position:relative;width:100%;height:480px;background:var(--panel);border:1px solid var(--border);border-radius:4px;overflow:hidden;display:none;">
+          <div id="mktVolCanvas" style="width:100%;height:100%;"></div>
+          <div style="position:absolute;top:10px;left:10px;background:rgba(255,255,255,0.92);padding:6px 10px;border:1px solid var(--border);font-size:10px;border-radius:3px;pointer-events:none;">
+            <div style="font-weight:700;color:var(--navy);">3D Controls</div>
+            <div style="color:var(--text-sec);">Drag: rotate &middot; Wheel: zoom</div>
+          </div>
+        </div>
+        <div id="mktVolLegend" style="display:none;margin-top:10px;"></div>
+        <div style="margin-top:14px;background:var(--panel);border:1px solid var(--border);border-radius:4px;padding:14px 18px;">
+          <div style="background:var(--navy);color:var(--text-on-dark);padding:6px 10px;margin:-14px -18px 10px;font-size:12px;font-weight:700;">What you are seeing</div>
+          <p style="font-size:12px;color:var(--text);line-height:1.6;">Each point on this surface represents the <strong>annualized historical volatility</strong> of the selected asset computed over a rolling window of the indicated length. Higher peaks indicate periods of elevated risk. The surface shape reveals how volatility <em>term structure</em> differs across asset classes &mdash; a steep rise from short to long windows indicates mean-reverting volatility; a flat surface indicates persistent regimes.</p>
+          <p style="font-size:11px;color:var(--text-sec);line-height:1.6;margin-top:8px;"><strong>Mathematical basis:</strong> <code style="background:var(--navy);color:var(--text-on-dark);padding:1px 6px;border-radius:3px;font-family:Arial;">&sigma;_ann = std(ln(P<sub>t</sub>/P<sub>t-1</sub>)) &times; &radic;252</code> &middot; Hull, <em>Options, Futures &amp; Other Derivatives</em>, 10th ed., Ch. 15.</p>
+        </div>
+      </div>
+      <div class="card-sources"><strong>Sources:</strong> Three.js r128 &middot; Hull, J.C. (2022) <em>Options, Futures &amp; Other Derivatives</em> &middot; Yahoo Finance via Cloudflare Worker.</div>
+    </div>
+
+    <!-- MODULE 4: COX PROCESS -->
+    <div class="card">
+      <div class="card-title">4 &middot; Doubly Stochastic Poisson (Cox) Jump Model</div>
+      <div class="card-body">
+        <p style="font-size:12px;color:var(--text-sec);margin-bottom:14px;">Simulates extreme return events with a stochastic jump intensity &lambda;(t) following a CIR-style diffusion: <code style="background:var(--navy);color:var(--text-on-dark);padding:1px 6px;border-radius:3px;font-family:Arial;">d&lambda; = &kappa;(&theta; &minus; &lambda;)dt + &sigma;<sub>&lambda;</sub>&radic;&lambda; dW</code></p>
+        <div class="form-row">
+          <div class="form-group"><label>&kappa; (Mean Reversion)</label><input type="number" id="mktCoxKappa" value="2.0" step="0.1" min="0.1" max="10"></div>
+          <div class="form-group"><label>&theta; (Long-run &lambda;)</label><input type="number" id="mktCoxTheta" value="0.1" step="0.01" min="0.01" max="1"></div>
+          <div class="form-group"><label>&sigma;<sub>&lambda;</sub> (Intensity Vol)</label><input type="number" id="mktCoxSigmaL" value="0.3" step="0.05" min="0.01" max="1"></div>
+          <div class="form-group"><label>&mu;<sub>J</sub> (Jump Mean)</label><input type="number" id="mktCoxMuJ" value="-0.05" step="0.01" min="-0.3" max="0.1"></div>
+          <div class="form-group"><label>&sigma;<sub>J</sub> (Jump Std)</label><input type="number" id="mktCoxSigmaJ" value="0.08" step="0.01" min="0.01" max="0.3"></div>
+          <button class="btn" onclick="mktRunCox()">Run Simulation</button>
+        </div>
+        <div id="mktCoxEmpty" style="text-align:center;padding:24px;color:var(--text-sec);font-size:13px;">Load data, set parameters, then run simulation. Uses the Primary Asset.</div>
+        <div id="mktCoxResults" style="display:none;">
+          <div class="grid-3" style="margin-top:14px;">
+            <div class="chart-wrap" style="height:260px;"><canvas id="mktCoxPaths"></canvas></div>
+            <div class="chart-wrap" style="height:260px;"><canvas id="mktCoxLambda"></canvas></div>
+            <div class="chart-wrap" style="height:260px;"><canvas id="mktCoxJumps"></canvas></div>
+          </div>
+          <div id="mktCoxStats" class="metrics-row" style="margin-top:16px;"></div>
+        </div>
+        <div style="margin-top:16px;background:var(--panel);border:1px solid var(--border);border-radius:4px;padding:14px 18px;">
+          <div style="background:var(--navy);color:var(--text-on-dark);padding:6px 10px;margin:-14px -18px 10px;font-size:12px;font-weight:700;cursor:pointer;" onclick="this.nextElementSibling.style.display=this.nextElementSibling.style.display==='none'?'block':'none';">Why a Doubly Stochastic Poisson (Cox) Process? &#9660;</div>
+          <div style="display:block;">
+            <p style="font-size:12px;color:var(--text);line-height:1.7;margin-bottom:8px;"><strong>1. Standard GBM is empirically false.</strong> It assumes constant volatility and no sudden discontinuous moves &mdash; real returns exhibit fat tails and jumps (Cont &amp; Tankov, 2004).</p>
+            <p style="font-size:12px;color:var(--text);line-height:1.7;margin-bottom:8px;"><strong>2. Merton (1976) jump-diffusion</strong> adds a fixed-intensity Poisson process: <code style="background:var(--navy);color:var(--text-on-dark);padding:1px 6px;border-radius:3px;font-family:Arial;">dS/S = (&mu; &minus; &lambda;k&#772;)dt + &sigma;dW + (e<sup>J</sup>&minus;1)dN(t)</code>. But real markets show <em>clustering</em> of crashes &mdash; the 2008 crisis, COVID, and 2022 inflation shock all featured jump arrivals in close succession.</p>
+            <p style="font-size:12px;color:var(--text);line-height:1.7;margin-bottom:8px;"><strong>3. The Cox process (Cox, 1955)</strong> allows &lambda; itself to be stochastic. Here &lambda; follows a CIR diffusion (Cox, Ingersoll &amp; Ross, 1985), which guarantees non-negativity via the &radic;&lambda; term. This captures the empirical reality: crash risk is higher in some regimes than others.</p>
+            <p style="font-size:12px;color:var(--text);line-height:1.7;margin-bottom:8px;"><strong>4. Applications:</strong> credit default modeling (Duffie &amp; Singleton, 1999), catastrophe bond pricing, high-frequency jump detection, stress testing.</p>
+            <p style="font-size:11px;color:var(--text-sec);line-height:1.7;margin-top:10px;"><strong>Parameter guide:</strong> Higher <strong>&kappa;</strong> = faster mean reversion in &lambda;. Higher <strong>&theta;</strong> = more frequent jumps on average. Higher <strong>&sigma;<sub>&lambda;</sub></strong> = more regime shifts. Negative <strong>&mu;<sub>J</sub></strong> biases jumps downward (crash risk). Larger <strong>&sigma;<sub>J</sub></strong> = more extreme jump magnitudes.</p>
+          </div>
+        </div>
+      </div>
+      <div class="card-sources">
+        <strong>Sources:</strong>
+        Cox, D.R. (1955) <em>JRSS B</em> &middot;
+        Merton, R.C. (1976) <em>J. Financial Economics</em> &middot;
+        Cont, R. &amp; Tankov, P. (2004) <em>Financial Modelling with Jump Processes</em>, Chapman &amp; Hall &middot;
+        Duffie, D. &amp; Singleton, K. (1999) <em>Review of Financial Studies</em> &middot;
+        Cox, J.C., Ingersoll, J.E. &amp; Ross, S.A. (1985) <em>Econometrica</em>.
+      </div>
+    </div>
+
+    <!-- MODULE 5: EFFICIENT FRONTIER -->
+    <div class="card">
+      <div class="card-title">5 &middot; Efficient Frontier (Mean-Variance Optimization)</div>
+      <div class="card-body">
+        <p style="font-size:12px;color:var(--text-sec);margin-bottom:14px;">5,000 Dirichlet-random long-only portfolios. <code style="background:var(--navy);color:var(--text-on-dark);padding:1px 6px;border-radius:3px;font-family:Arial;">&mu;<sub>p</sub> = w'&mu;</code> &middot; <code style="background:var(--navy);color:var(--text-on-dark);padding:1px 6px;border-radius:3px;font-family:Arial;">&sigma;&sup2;<sub>p</sub> = w'&Sigma;w</code> &middot; <code style="background:var(--navy);color:var(--text-on-dark);padding:1px 6px;border-radius:3px;font-family:Arial;">SR = (&mu;<sub>p</sub> &minus; r<sub>f</sub>)/&sigma;<sub>p</sub></code> &middot; r<sub>f</sub> = 5.3%</p>
+        <div id="mktEffEmpty" style="text-align:center;padding:24px;color:var(--text-sec);font-size:13px;">Awaiting data (need 2+ assets).</div>
+        <div id="mktEffResults" style="display:none;">
+          <div class="chart-wrap" style="height:420px;"><canvas id="mktEffChart"></canvas></div>
+          <div class="grid-2" style="margin-top:16px;">
+            <div>
+              <div style="background:var(--navy);color:var(--text-on-dark);padding:6px 10px;font-size:12px;font-weight:700;border-radius:4px 4px 0 0;">Minimum Variance Portfolio (MVP)</div>
+              <div style="border:1px solid var(--border);border-top:none;padding:10px;border-radius:0 0 4px 4px;">
+                <div id="mktEffMVPStats" style="font-size:11px;color:var(--text-sec);margin-bottom:8px;"></div>
+                <div class="chart-wrap" style="height:180px;"><canvas id="mktEffMVPBar"></canvas></div>
+              </div>
+            </div>
+            <div>
+              <div style="background:var(--navy);color:var(--text-on-dark);padding:6px 10px;font-size:12px;font-weight:700;border-radius:4px 4px 0 0;">Maximum Sharpe Portfolio (Tangency)</div>
+              <div style="border:1px solid var(--border);border-top:none;padding:10px;border-radius:0 0 4px 4px;">
+                <div id="mktEffMSPStats" style="font-size:11px;color:var(--text-sec);margin-bottom:8px;"></div>
+                <div class="chart-wrap" style="height:180px;"><canvas id="mktEffMSPBar"></canvas></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div style="margin-top:14px;background:var(--panel);border:1px solid var(--border);border-radius:4px;padding:12px 16px;">
+          <p style="font-size:12px;color:var(--text);line-height:1.6;"><strong>Markowitz (1952) Mean-Variance Optimization.</strong> Each dot represents a portfolio. The upper-left boundary is the <em>efficient frontier</em> &mdash; portfolios that maximize return for a given level of risk. No rational investor would hold a portfolio interior to this boundary. The <strong>tangency portfolio</strong> (max Sharpe) is the optimal risky portfolio when combined with the risk-free asset (CFA L3 Portfolio Management).</p>
+        </div>
+      </div>
+      <div class="card-sources">
+        <strong>Sources:</strong>
+        Markowitz, H. (1952) "Portfolio Selection," <em>Journal of Finance</em> &middot;
+        Sharpe, W.F. (1966) "Mutual Fund Performance," <em>Journal of Business</em> &middot;
+        CFA Institute L3 Portfolio Management curriculum.
+      </div>
+    </div>
+
+    <!-- MODULE 6: ROLLING RISK -->
+    <div class="card">
+      <div class="card-title">6 &middot; Rolling Risk Metrics (Primary Asset)</div>
+      <div class="card-body">
+        <p style="font-size:12px;color:var(--text-sec);margin-bottom:14px;">63-day rolling windows on primary asset. Beta computed against SPY (auto-fetched as benchmark).</p>
+        <div id="mktRollEmpty" style="text-align:center;padding:24px;color:var(--text-sec);font-size:13px;">Awaiting data.</div>
+        <div id="mktRollResults" style="display:none;">
+          <div style="background:var(--navy);color:var(--text-on-dark);padding:6px 12px;font-size:12px;font-weight:700;border-radius:4px 4px 0 0;margin-top:4px;">A &middot; Rolling Sharpe &amp; Sortino (63D)</div>
+          <div class="chart-wrap" style="height:240px;border:1px solid var(--border);border-top:none;border-radius:0 0 4px 4px;padding:10px;"><canvas id="mktRollSharpe"></canvas></div>
+          <div style="background:var(--navy);color:var(--text-on-dark);padding:6px 12px;font-size:12px;font-weight:700;border-radius:4px 4px 0 0;margin-top:14px;">B &middot; Rolling Beta vs. SPY (63D)</div>
+          <div class="chart-wrap" style="height:200px;border:1px solid var(--border);border-top:none;border-radius:0 0 4px 4px;padding:10px;"><canvas id="mktRollBeta"></canvas></div>
+          <div style="background:var(--navy);color:var(--text-on-dark);padding:6px 12px;font-size:12px;font-weight:700;border-radius:4px 4px 0 0;margin-top:14px;">C &middot; Maximum Drawdown (Underwater Curve)</div>
+          <div class="chart-wrap" style="height:200px;border:1px solid var(--border);border-top:none;border-radius:0 0 4px 4px;padding:10px;"><canvas id="mktRollDD"></canvas></div>
+        </div>
+      </div>
+      <div class="card-sources">
+        <strong>Sources:</strong>
+        Sharpe, W.F. (1966) <em>Journal of Business</em> &middot;
+        Sortino, F.A. &amp; van der Meer, R. (1991) <em>J. Portfolio Management</em> &middot;
+        Magdon-Ismail, M. &amp; Atiya, A. (2004) "Maximum Drawdown," <em>Risk Magazine</em>.
+      </div>
+    </div>
+
+    <!-- MODULE 7: VAR -->
+    <div class="card">
+      <div class="card-title">7 &middot; Value at Risk (Three Methods)</div>
+      <div class="card-body">
+        <p style="font-size:12px;color:var(--text-sec);margin-bottom:14px;">1-day and 10-day VaR at 95% / 99% confidence for the Primary Asset. Parametric, Historical, and Cornish-Fisher (fat-tail adjusted) methods.</p>
+        <div id="mktVarEmpty" style="text-align:center;padding:24px;color:var(--text-sec);font-size:13px;">Awaiting data.</div>
+        <div id="mktVarResults" style="display:none;">
+          <div class="table-wrap">
+            <table id="mktVarTable" style="margin-bottom:16px;"></table>
+          </div>
+          <div id="mktVarMoments" class="chart-stats" style="margin-bottom:14px;"></div>
+          <div class="chart-wrap" style="height:320px;"><canvas id="mktVarHist"></canvas></div>
+        </div>
+        <div style="margin-top:14px;background:var(--panel);border:1px solid var(--border);border-radius:4px;padding:12px 16px;">
+          <p style="font-size:12px;color:var(--text);line-height:1.7;"><strong>Parametric VaR</strong> assumes normal returns &mdash; a known weakness given empirical fat tails. <strong>Historical simulation</strong> makes no distributional assumption but is limited by sample window. The <strong>Cornish-Fisher expansion</strong> (Cornish &amp; Fisher, 1937) adjusts z-scores for skewness and excess kurtosis: <code style="background:var(--navy);color:var(--text-on-dark);padding:1px 6px;border-radius:3px;font-family:Arial;">z<sub>CF</sub> = z + (z&sup2;&minus;1)S/6 + (z&sup3;&minus;3z)K/24 &minus; (2z&sup3;&minus;5z)S&sup2;/36</code>. <strong>CVaR</strong> (Expected Shortfall) answers: <em>given that we are in the tail, what is the expected loss?</em> CVaR is coherent and sub-additive; plain VaR is not (Artzner et al., 1999).</p>
+        </div>
+      </div>
+      <div class="card-sources">
+        <strong>Sources:</strong>
+        J.P. Morgan <em>RiskMetrics Technical Document</em> (1994) &middot;
+        Rockafellar, R.T. &amp; Uryasev, S. (2000) "Optimization of Conditional Value-at-Risk," <em>J. Risk</em> &middot;
+        Cornish, E.A. &amp; Fisher, R.A. (1937) <em>Revue de l'Institut International de Statistique</em> &middot;
+        Artzner, P., Delbaen, F., Eber, J.-M. &amp; Heath, D. (1999) "Coherent Measures of Risk," <em>Mathematical Finance</em>.
+      </div>
+    </div>
+
+    <!-- MODULE 8: CROSS-ASSET REGIME -->
+    <div class="card">
+      <div class="card-title">8 &middot; Cross-Asset Regime Signals</div>
+      <div class="card-body">
+        <p style="font-size:12px;color:var(--text-sec);margin-bottom:14px;">Six intermarket ratios with 20D SMA overlay. Green shading = ratio above SMA (risk-on); red shading = below (risk-off). Grounded in CFA Business Cycle framework and classical intermarket analysis.</p>
+        <div id="mktRegimeEmpty" style="text-align:center;padding:24px;color:var(--text-sec);font-size:13px;">Loads independently of universe selection. <button class="btn btn-sm" onclick="mktLoadRegime()" style="margin-left:10px;">Load Regime Signals</button></div>
+        <div id="mktRegimeGrid" style="display:none;"></div>
+      </div>
+      <div class="card-sources">
+        <strong>Sources:</strong>
+        Murphy, J.J. (1991) <em>Intermarket Analysis</em>, John Wiley &amp; Sons &middot;
+        CFA Institute Business Cycle framework (L1-L3) &middot;
+        Perry Asset Management Macro HF Economic Analysis Framework v1.0 &middot;
+        Price data via Cloudflare Worker / Yahoo Finance.
+      </div>
+    </div>
+
   </div>
 </div>
 
@@ -2535,7 +2655,7 @@ Chart.register(priceBubblePlugin);
 let donutCharts = {};
 
 // ═══ NAVIGATION ═══
-const parentMap = { home: 'home', about: 'home', portfolio: 'portfolio', holdings: 'portfolio', research: 'research', macro: 'macro', quant: 'quant' };
+const parentMap = { home: 'home', about: 'home', portfolio: 'portfolio', holdings: 'portfolio', research: 'research', macro: 'macro', quant: 'quant', markets: 'markets' };
 function navigateTo(p) {
   document.activeElement.blur();
   document.querySelectorAll('.page').forEach(x => x.classList.remove('active'));
@@ -2548,6 +2668,7 @@ function navigateTo(p) {
   if (ce) ce.classList.add('active');
   window.scrollTo(0, 0);
   if (p === 'portfolio') renderPortfolioOverview();
+  if (p === 'markets' && typeof mktInit === 'function' && !window._mktInitialized) { mktInit(); window._mktInitialized = true; }
 }
 
 // ═══ HOME FEATURES ═══
@@ -4789,268 +4910,1482 @@ document.addEventListener('DOMContentLoaded', function() {
 window.runQuantAnalysis = async function() {
   var ticker = document.getElementById('quantTicker').value.trim().toUpperCase();
   if (!ticker) { alert('Enter a ticker.'); return; }
-  var statusEl = document.getElementById('quantStatus');
-  var btn = document.getElementById('btnRunQuant');
-  btn.disabled = true;
-  statusEl.textContent = 'Fetching price data for ' + ticker + '...';
-
-  // ═══ MC CONSTANTS ═══
-  var MC_PATHS = 100, MC_DAYS = 252;
-
-  // ═══ HELPERS ═══
-  function randn() { var u=0,v=0; while(!u)u=Math.random(); while(!v)v=Math.random(); return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v); }
-  function pctl(sorted,p) { var i=(p/100)*(sorted.length-1),lo=Math.floor(i),hi=Math.ceil(i); return lo===hi?sorted[lo]:sorted[lo]+(sorted[hi]-sorted[lo])*(i-lo); }
-  function fp(n) { return n!=null?'$'+Number(n).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2}):'—'; }
-  function fpc(n) { return n!=null?(n*100).toFixed(1)+'%':'—'; }
-  function fmtD(d) { return new Date(d).toLocaleDateString('en-US',{month:'short',day:'numeric',year:'2-digit'}); }
-  function tradingDays(start,count) {
-    var out=[],d=new Date(start); d.setDate(d.getDate()+1);
-    while(out.length<count){ var dow=d.getDay(); if(dow!==0&&dow!==6) out.push(new Date(d)); d.setDate(d.getDate()+1); }
-    return out;
-  }
-
-  // ═══ FETCH PRICE DATA ═══
-  try {
-    var chartData = await fetchChart(ticker, '1y', '1d');
-    if (!chartData || !chartData.points || chartData.points.length < 30) throw new Error('Insufficient price data');
-  } catch(e) {
-    statusEl.textContent = 'Error: ' + e.message;
-    btn.disabled = false;
-    return;
-  }
-
-  var pts = chartData.points.filter(function(p){ return p.close != null; });
-  var histDates = pts.map(function(p){ return p.date; });
-  var histPrices = pts.map(function(p){ return p.close; });
-
-  // ═══ CALIBRATE GBM ═══
-  statusEl.textContent = 'Calibrating model...';
-  var logRet = [];
-  for (var i=1; i<histPrices.length; i++) {
-    if (histPrices[i]>0 && histPrices[i-1]>0) logRet.push(Math.log(histPrices[i]/histPrices[i-1]));
-  }
-  var n = logRet.length;
-  var meanD = logRet.reduce(function(a,b){return a+b;},0)/n;
-  var varD = logRet.reduce(function(a,b){return a+(b-meanD)*(b-meanD);},0)/(n-1);
-  var sigD = Math.sqrt(varD);
-  var mu = meanD*252, sigma = sigD*Math.sqrt(252), S0 = histPrices[histPrices.length-1];
-
-  // ═══ RUN GBM ═══
-  statusEl.textContent = 'Running ' + MC_PATHS + ' simulations...';
-  document.getElementById('mcChartCard').style.display = '';
-  document.getElementById('mcChartLoading').style.display = '';
-  await new Promise(function(r){setTimeout(r,30);});
-
-  function runGBM(s0,mu_,sig_,nPaths,nDays){
-    var dt=1/252, drift=(mu_-0.5*sig_*sig_)*dt, diff=sig_*Math.sqrt(dt), paths=[];
-    for(var p=0;p<nPaths;p++){
-      var path=new Array(nDays+1); path[0]=s0;
-      for(var t=1;t<=nDays;t++) path[t]=path[t-1]*Math.exp(drift+diff*randn());
-      paths.push(path);
-    }
-    return paths;
-  }
-  function pathStats(paths){
-    var nD=paths[0].length-1, terms=paths.map(function(p){return p[nD];}).sort(function(a,b){return a-b;}), s0=paths[0][0];
-    var p5=[],p10=[],p50=[],p90=[],p95=[],mn=[];
-    for(var t=0;t<=nD;t++){
-      var dp=paths.map(function(p){return p[t];}).sort(function(a,b){return a-b;});
-      p5.push(pctl(dp,5)); p10.push(pctl(dp,10)); p50.push(pctl(dp,50)); p90.push(pctl(dp,90)); p95.push(pctl(dp,95));
-      mn.push(dp.reduce(function(a,b){return a+b;},0)/dp.length);
-    }
-    var wDD=0;
-    paths.forEach(function(path){ var pk=path[0]; for(var t=1;t<path.length;t++){ if(path[t]>pk)pk=path[t]; var dd=(pk-path[t])/pk; if(dd>wDD)wDD=dd; } });
-    var tMean=terms.reduce(function(a,b){return a+b;},0)/terms.length;
-    return {terms:terms, tMean:tMean, tMed:pctl(terms,50), t5:pctl(terms,5), t10:pctl(terms,10), t90:pctl(terms,90), t95:pctl(terms,95),
-      pGain:terms.filter(function(t){return t>s0;}).length/terms.length,
-      pL20:terms.filter(function(t){return t<s0*0.8;}).length/terms.length,
-      wDD:wDD, p5:p5,p10:p10,p50:p50,p90:p90,p95:p95,mn:mn};
-  }
-
-  var mcPaths = runGBM(S0, mu, sigma, MC_PATHS, MC_DAYS);
-  var lastDate = histDates[histDates.length-1];
-  var mcDates = tradingDays(lastDate, MC_DAYS);
-  var stats = pathStats(mcPaths);
-
-  // Store for re-run
-  window._mc = {ticker:ticker, S0:S0, mu:mu, sigma:sigma, histDates:histDates, histPrices:histPrices, mcDates:mcDates, mcPaths:mcPaths, viewMode:'combined'};
-
-  // ═══ RENDER MC CHART ═══
-  function renderMCChart(){
-    var mc=window._mc, st=pathStats(mc.mcPaths);
-    var histLabels=mc.histDates.map(fmtD), foreLabels=mc.mcDates.map(fmtD);
-    var allLabels = mc.viewMode==='forecast' ? ['Now'].concat(foreLabels) : histLabels.concat(foreLabels);
-    var datasets=[];
-    // Historical
-    if(mc.viewMode==='combined'){
-      datasets.push({label:mc.ticker+' Historical', data:mc.histPrices.concat(new Array(MC_DAYS).fill(null)),
-        borderColor:C.navy, borderWidth:2, pointRadius:0, fill:false, order:1});
-    }
-    // Sim paths
-    var pad = mc.viewMode==='combined' ? new Array(mc.histPrices.length-1).fill(null) : [];
-    for(var i=0;i<MC_PATHS;i++){
-      datasets.push({label:i===0?'Simulated Paths':'', data:pad.concat(mc.mcPaths[i]),
-        borderColor:'rgba(90,106,122,0.12)', borderWidth:0.7, pointRadius:0, fill:false, order:5});
-    }
-    // Bands
-    datasets.push({label:'90th Pctl', data:pad.concat(st.p90), borderColor:C.blueLight, borderWidth:1.2, borderDash:[4,3], pointRadius:0, fill:false, order:2});
-    datasets.push({label:'10th Pctl', data:pad.concat(st.p10), borderColor:C.blueLight, borderWidth:1.2, borderDash:[4,3], pointRadius:0, fill:'-1', backgroundColor:'rgba(91,155,213,0.10)', order:2});
-    datasets.push({label:'Median', data:pad.concat(st.p50), borderColor:C.blue, borderWidth:2, borderDash:[6,3], pointRadius:0, fill:false, order:0});
-
-    if(window._mcChart) window._mcChart.destroy();
-    window._mcChart = new Chart(document.getElementById('mcChart').getContext('2d'), {
-      type:'line', data:{labels:allLabels, datasets:datasets},
-      options:{
-        responsive:true, maintainAspectRatio:false,
-        plugins:{
-          legend:{labels:{font:{family:'Arial',size:11},color:C.textSec,boxWidth:10,padding:14,
-            filter:function(item){return item.text!=='';}}},
-          tooltip:chartTooltip,
-          zoom:{pan:{enabled:true,mode:'x'},zoom:{drag:{enabled:true,backgroundColor:'rgba(91,155,213,0.08)'},mode:'x'}}
-        },
-        scales:{
-          x:{grid:chartGrid,ticks:{font:{size:9},color:C.textSec,maxTicksLimit:12},border:{display:false}},
-          y:{grid:chartGrid,ticks:{font:{size:11},color:C.textSec,callback:function(v){return '$'+v.toFixed(0);}},border:{display:false}}
-        },
-        interaction:{mode:'index',intersect:false}
-      }
-    });
-    document.getElementById('mcChartTitle').textContent = mc.ticker+' — Monte Carlo Simulation ('+MC_PATHS+' GBM Paths, 1-Year Forward)';
-    document.getElementById('mcChartLoading').style.display = 'none';
-    // Stats boxes
-    document.getElementById('mcChartStats').innerHTML =
-      '<div class="chart-stat-box"><div class="chart-stat-label">Current Price</div><div class="chart-stat-value">'+fp(mc.S0)+'</div></div>'+
-      '<div class="chart-stat-box"><div class="chart-stat-label">Median 1Y Target</div><div class="chart-stat-value">'+fp(st.tMed)+'</div><div class="chart-stat-sub">'+fpc((st.tMed-mc.S0)/mc.S0)+' return</div></div>'+
-      '<div class="chart-stat-box"><div class="chart-stat-label">Ann. Volatility</div><div class="chart-stat-value">'+fpc(mc.sigma)+'</div></div>'+
-      '<div class="chart-stat-box"><div class="chart-stat-label">P(Gain)</div><div class="chart-stat-value" style="color:'+(st.pGain>=0.5?C.success:C.danger)+'">'+fpc(st.pGain)+'</div></div>';
-  }
-  window.renderMCChart = renderMCChart;
-  renderMCChart();
-
-  // ═══ MC VIEW TOGGLE ═══
-  window.setMcView = function(mode,btn){
-    window._mc.viewMode=mode;
-    document.querySelectorAll('#mcChartCard .btn-outline').forEach(function(b){b.classList.remove('active');});
-    btn.classList.add('active');
-    renderMCChart();
-  };
-  window.rerunMC = function(){
-    window._mc.mcPaths = runGBM(window._mc.S0, window._mc.mu, window._mc.sigma, MC_PATHS, MC_DAYS);
-    renderMCChart(); renderMCStats(); renderMCDist(); renderMCStress(); renderMCProb();
-  };
-
-  // ═══ SUMMARY STATS ═══
-  function renderMCStats(){
-    var mc=window._mc, st=pathStats(mc.mcPaths);
-    var items=[
-      {l:'Current Price',v:fp(mc.S0),s:'Last close'},
-      {l:'Expected (Mean)',v:fp(st.tMean),s:fpc((st.tMean-mc.S0)/mc.S0)+' return'},
-      {l:'Median (50th)',v:fp(st.tMed),s:fpc((st.tMed-mc.S0)/mc.S0)+' return'},
-      {l:'5th Percentile',v:fp(st.t5),s:'Downside tail'},
-      {l:'10th Percentile',v:fp(st.t10),s:'Conservative'},
-      {l:'90th Percentile',v:fp(st.t90),s:'Optimistic'},
-      {l:'95th Percentile',v:fp(st.t95),s:'Upside tail'},
-      {l:'P(Gain)',v:fpc(st.pGain),s:MC_PATHS+' paths'},
-      {l:'Ann. Volatility (σ)',v:fpc(mc.sigma),s:'From log returns'},
-      {l:'Ann. Drift (μ)',v:fpc(mc.mu),s:'From log returns'},
-      {l:'Worst Max Drawdown',v:fpc(st.wDD),s:'Peak to trough'},
-      {l:'P(Loss > 20%)',v:fpc(st.pL20),s:'Severe loss prob'}
-    ];
-    document.getElementById('mcStatsGrid').innerHTML = items.map(function(it){
-      return '<div class="mc-stat-card"><div class="mc-stat-hdr">'+it.l+'</div><div class="mc-stat-val">'+it.v+'<small>'+it.s+'</small></div></div>';
-    }).join('');
-    document.getElementById('mcStatsCard').style.display='';
-    document.getElementById('mcStatsTitle').textContent=mc.ticker+' — Simulation Summary';
-  }
-  window.renderMCStats = renderMCStats;
-  renderMCStats();
-
-  // ═══ DISTRIBUTION HISTOGRAM ═══
-  function renderMCDist(){
-    var mc=window._mc, st=pathStats(mc.mcPaths);
-    var terms=st.terms, min=terms[0], max=terms[terms.length-1], bC=20, bW=(max-min)/bC;
-    var bins=[],bLabels=[],bColors=[];
-    for(var i=0;i<bC;i++){
-      var lo=min+i*bW, hi=lo+bW, mid=(lo+hi)/2;
-      bins.push(terms.filter(function(t){return i===bC-1?(t>=lo&&t<=hi):(t>=lo&&t<hi);}).length);
-      bLabels.push('$'+mid.toFixed(0));
-      bColors.push(mid<mc.S0?'rgba(139,42,42,0.6)':'rgba(0,60,113,0.6)');
-    }
-    if(window._mcDist) window._mcDist.destroy();
-    window._mcDist = new Chart(document.getElementById('mcDistChart').getContext('2d'),{
-      type:'bar', data:{labels:bLabels, datasets:[{label:'Frequency',data:bins,backgroundColor:bColors,borderColor:bColors.map(function(c){return c.replace('0.6','1');}),borderWidth:1}]},
-      options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:chartTooltip},
-        scales:{x:{grid:chartGrid,ticks:{font:{size:9},color:C.textSec},title:{display:true,text:'Terminal Price ($)',font:{size:11,weight:'600'},color:C.textSec}},
-          y:{grid:chartGrid,ticks:{font:{size:11},color:C.textSec},title:{display:true,text:'Frequency',font:{size:11,weight:'600'},color:C.textSec},beginAtZero:true}}}
-    });
-    document.getElementById('mcDistCard').style.display='';
-    document.getElementById('mcDistTitle').textContent=mc.ticker+' — 1-Year Terminal Price Distribution ('+MC_PATHS+' Paths)';
-  }
-  window.renderMCDist = renderMCDist;
-  renderMCDist();
-
-  // ═══ STRESSED SCENARIOS ═══
-  function renderMCStress(){
-    var mc=window._mc;
-    var scenarios=[
-      {name:'Base Case',badge:'badge-base',mu:mc.mu,sig:mc.sigma},
-      {name:'Bull (+1σ Drift)',badge:'badge-bull',mu:mc.mu+mc.sigma,sig:mc.sigma},
-      {name:'Bear (-1σ Drift)',badge:'badge-bear',mu:mc.mu-mc.sigma,sig:mc.sigma},
-      {name:'High Volatility',badge:'badge-stress',mu:mc.mu,sig:mc.sigma*1.5},
-      {name:'Crash',badge:'badge-bear',mu:mc.mu-2*mc.sigma,sig:mc.sigma*2}
-    ];
-    document.getElementById('mcStressBody').innerHTML = scenarios.map(function(sc){
-      var p=runGBM(mc.S0,sc.mu,sc.sig,MC_PATHS,MC_DAYS), st=pathStats(p);
-      return '<tr><td><span class="'+sc.badge+'">'+sc.name+'</span></td><td>'+fpc(sc.mu)+'</td><td>'+fpc(sc.sig)+'</td><td>'+fp(st.tMed)+'</td><td>'+fp(st.tMean)+'</td><td>'+fp(st.t5)+'</td><td>'+fp(st.t95)+'</td><td>'+fpc(st.pGain)+'</td><td>'+fpc(st.pL20)+'</td></tr>';
-    }).join('');
-    document.getElementById('mcStressCard').style.display='';
-    document.getElementById('mcStressTitle').textContent=mc.ticker+' — Stressed Scenarios ('+MC_PATHS+' paths each)';
-  }
-  window.renderMCStress = renderMCStress;
-  renderMCStress();
-
-  // ═══ PROBABILITY MATRIX ═══
-  function renderMCProb(){
-    var mc=window._mc;
-    var thresholds=[{l:'↑ +30%',m:1.3},{l:'↑ +20%',m:1.2},{l:'↑ +10%',m:1.1},{l:'↑ +5%',m:1.05},{l:'↓ -5%',m:0.95},{l:'↓ -10%',m:0.9},{l:'↓ -20%',m:0.8},{l:'↓ -30%',m:0.7}];
-    var horizons=[{l:'1 Month',d:21},{l:'3 Months',d:63},{l:'6 Months',d:126},{l:'1 Year',d:252}];
-    var html='<div class="pg-hdr" style="grid-column:1;">Threshold</div>';
-    horizons.forEach(function(h){html+='<div class="pg-hdr">'+h.l+'</div>';});
-    thresholds.forEach(function(th){
-      var isUp=th.m>=1;
-      html+='<div class="pg-label">'+th.l+' ('+fp(mc.S0*th.m)+')</div>';
-      horizons.forEach(function(hz){
-        var di=Math.min(hz.d,MC_DAYS);
-        var dayP=mc.mcPaths.map(function(p){return p[di];});
-        var prob=isUp ? dayP.filter(function(pr){return pr>=mc.S0*th.m;}).length/dayP.length : dayP.filter(function(pr){return pr<=mc.S0*th.m;}).length/dayP.length;
-        var intensity=Math.min(prob*2.5,1);
-        var bg=isUp?'rgba(46,125,82,'+(0.08+intensity*0.45)+')':'rgba(139,42,42,'+(0.08+intensity*0.45)+')';
-        var tc=prob>0.35?'#fff':'#000';
-        html+='<div class="pg-cell" style="background:'+bg+';color:'+tc+';">'+(prob*100).toFixed(1)+'%</div>';
-      });
-    });
-    document.getElementById('mcProbGrid').innerHTML=html;
-    document.getElementById('mcProbCard').style.display='';
-    document.getElementById('mcProbTitle').textContent=mc.ticker+' — Price Threshold Probability Matrix';
-  }
-  window.renderMCProb = renderMCProb;
-  renderMCProb();
-
-  // ═══ ALSO RUN SEC FUNDAMENTALS (existing functionality) ═══
-  statusEl.textContent = 'Loading SEC data for ' + ticker + '...';
   var el = document.getElementById('quantResults');
   el.innerHTML = '<div style="padding:40px;text-align:center;"><span class="spinner"></span><br><br><strong>Loading SEC data for '+ticker+'...</strong></div>';
   try {
     var secData = await fetchFundamentals(ticker);
+    // Render the same SEC analysis as the Research page
     var html = renderSECAnalysis(ticker, secData);
     el.innerHTML = html;
   } catch(e) {
-    el.innerHTML = '<div class="card"><div class="card-title" style="background:var(--danger);">SEC Data</div><div class="card-body"><p style="color:var(--text-sec);">SEC fundamentals not available for '+ticker+'. Monte Carlo simulation completed successfully above.</p></div></div>';
+    el.innerHTML = '<div class="card"><div class="card-title" style="background:var(--danger);">Error</div><div class="card-body"><p style="color:var(--danger);">'+e.message+'</p></div></div>';
   }
-
-  statusEl.textContent = 'Analysis complete for ' + ticker;
-  btn.disabled = false;
 };
+
+// ═══════════════════════════════════════════════════════
+// ═══════════════════ MARKETS PAGE ══════════════════════
+// ═══════════════════════════════════════════════════════
+// All functions prefixed "mkt" to avoid namespace collisions.
+
+var MKT_UNIVERSE = {
+  'SPDR Sectors': ['XLK','XLF','XLE','XLV','XLI','XLY','XLP','XLB','XLU','XLRE','XLC'],
+  'Real Assets': ['GLD','SLV','VNQ','USO'],
+  'Fixed Income': ['TLT','IEF','HYG','LQD','TIP'],
+  'Crypto Proxies': ['IBIT','ETHA'],
+  'International': ['EEM','EFA','VGK']
+};
+var MKT_DEFAULT = ['SPY','XLK','XLF','XLE','GLD','TLT','HYG'];
+var MKT_STATE = {
+  selected: [],
+  dataByTicker: {},       // ticker -> array of {date, close}
+  alignedDates: [],       // common date array after alignment
+  aligned: {},            // ticker -> close[] aligned to alignedDates
+  logRetMatrix: null,     // aligned log returns array[T][N]
+  primary: 'SPY',
+  corrWindow: 63,
+  corrHover: { row: -1, col: -1 }
+};
+var MKT_CHARTS = {};
+var MKT_THREE = { renderer: null, scene: null, camera: null, animId: null, mesh: null, sprites: [], width: 0, height: 0 };
+
+// ═══ MODULE BLACK-BOX: INIT ═══
+function mktInit() {
+  // Set end date to today
+  var today = new Date();
+  var yyyy = today.getFullYear();
+  var mm = String(today.getMonth()+1).padStart(2,'0');
+  var dd = String(today.getDate()).padStart(2,'0');
+  document.getElementById('mktEndDate').value = yyyy+'-'+mm+'-'+dd;
+  mktBuildUniverseGrid();
+  mktPreset('default');
+  // bind rolling-window buttons for Module 2
+  var winBtns = document.querySelectorAll('#page-markets [data-mktwin]');
+  for (var i=0; i<winBtns.length; i++) {
+    (function(b){
+      b.onclick = function(){
+        var all = document.querySelectorAll('#page-markets [data-mktwin]');
+        for (var j=0;j<all.length;j++) all[j].classList.remove('active');
+        b.classList.add('active');
+        MKT_STATE.corrWindow = parseInt(b.getAttribute('data-mktwin'),10);
+        mktRenderCorrelation();
+      };
+    })(winBtns[i]);
+  }
+}
+
+function mktBuildUniverseGrid() {
+  var grid = document.getElementById('mktUniverseGrid');
+  var html = '';
+  // Include SPY at top (for benchmark/beta)
+  var all = ['SPY'];
+  for (var g in MKT_UNIVERSE) { for (var i=0;i<MKT_UNIVERSE[g].length;i++) all.push(MKT_UNIVERSE[g][i]); }
+  // De-dup
+  var seen = {}; var uniq = [];
+  for (var k=0;k<all.length;k++) { if (!seen[all[k]]) { seen[all[k]]=1; uniq.push(all[k]); } }
+  for (var i2=0; i2<uniq.length; i2++) {
+    var t = uniq[i2];
+    html += '<label style="display:flex;align-items:center;gap:6px;padding:5px 8px;background:var(--panel);border:1px solid var(--border);border-radius:4px;cursor:pointer;font-size:12px;">'
+         + '<input type="checkbox" class="mkt-uni-chk" value="'+t+'" style="cursor:pointer;"> '
+         + '<span>'+t+'</span></label>';
+  }
+  grid.innerHTML = html;
+  // Populate primary dropdown
+  var sel = document.getElementById('mktPrimary');
+  sel.innerHTML = uniq.map(function(t){ return '<option value="'+t+'">'+t+'</option>'; }).join('');
+  sel.value = 'SPY';
+  // Change handler for checkboxes
+  var chks = document.querySelectorAll('.mkt-uni-chk');
+  for (var c=0;c<chks.length;c++) {
+    chks[c].onchange = function(){ mktSyncSelection(); };
+  }
+}
+
+function mktSyncSelection() {
+  var chks = document.querySelectorAll('.mkt-uni-chk');
+  var selected = [];
+  for (var i=0;i<chks.length;i++) if (chks[i].checked) selected.push(chks[i].value);
+  MKT_STATE.selected = selected;
+  // Update primary dropdown to be restricted to selected if any
+  var sel = document.getElementById('mktPrimary');
+  if (selected.length) {
+    sel.innerHTML = selected.map(function(t){ return '<option value="'+t+'">'+t+'</option>'; }).join('');
+    if (selected.indexOf(MKT_STATE.primary) >= 0) sel.value = MKT_STATE.primary;
+    else { sel.value = selected[0]; MKT_STATE.primary = selected[0]; }
+  }
+}
+
+function mktPreset(which) {
+  var chks = document.querySelectorAll('.mkt-uni-chk');
+  var set = [];
+  if (which === 'sectors') set = MKT_UNIVERSE['SPDR Sectors'].slice();
+  else if (which === 'realassets') set = MKT_UNIVERSE['Real Assets'].slice();
+  else if (which === 'fixedincome') set = MKT_UNIVERSE['Fixed Income'].slice();
+  else if (which === 'international') set = MKT_UNIVERSE['International'].slice();
+  else if (which === 'default') set = MKT_DEFAULT.slice();
+  else if (which === 'none') set = [];
+  var setMap = {}; for (var i=0;i<set.length;i++) setMap[set[i]]=1;
+  for (var j=0;j<chks.length;j++) chks[j].checked = !!setMap[chks[j].value];
+  mktSyncSelection();
+}
+
+// ═══ CORE: LOAD ALL ═══
+function mktSetStatus(msg, kind) {
+  var el = document.getElementById('mktStatus');
+  var color = kind === 'err' ? 'var(--danger)' : (kind === 'ok' ? 'var(--success)' : 'var(--text-sec)');
+  el.innerHTML = '<span style="color:'+color+';">'+msg+'</span>';
+}
+
+async function mktLoadAll() {
+  mktSyncSelection();
+  MKT_STATE.primary = document.getElementById('mktPrimary').value;
+  var tickers = MKT_STATE.selected.slice();
+  // Ensure SPY in list for beta module
+  if (tickers.indexOf('SPY') < 0) tickers.push('SPY');
+  if (tickers.length < 2) { mktSetStatus('Select at least 1 asset (SPY auto-added for benchmark).', 'err'); return; }
+  var btn = document.getElementById('mktLoadBtn');
+  btn.disabled = true; btn.innerHTML = '<span class="spinner"></span> Fetching ' + tickers.length + '...';
+  mktSetStatus('<span class="spinner"></span> Fetching ' + tickers.length + ' tickers via Cloudflare Worker...', 'info');
+  var data = {};
+  var errors = [];
+  for (var i=0;i<tickers.length;i++) {
+    try {
+      var d = await fetchChart(tickers[i], '5y', '1d');
+      var pts = (d.points || []).filter(function(p){ return p.close != null; });
+      data[tickers[i]] = pts.map(function(p){ return { date: p.date.slice(0,10), close: p.close }; });
+    } catch(e) {
+      errors.push(tickers[i]+': '+e.message);
+    }
+  }
+  MKT_STATE.dataByTicker = data;
+  // Filter to user's date window
+  var start = document.getElementById('mktStartDate').value;
+  var end = document.getElementById('mktEndDate').value;
+  mktAlignData(start, end);
+  btn.disabled = false; btn.innerHTML = 'Load / Refresh All Modules';
+  if (errors.length) mktSetStatus('Loaded with errors: ' + errors.join('; '), 'err');
+  else mktSetStatus('Loaded ' + Object.keys(data).length + ' tickers, ' + MKT_STATE.alignedDates.length + ' aligned dates.', 'ok');
+  // Render all
+  try { mktRenderRebased(); } catch(e) { console.error('Rebased:', e); }
+  try { mktRenderCorrelation(); } catch(e) { console.error('Corr:', e); }
+  try { mktRenderVolSurface(); } catch(e) { console.error('Vol:', e); }
+  try { mktRenderFrontier(); } catch(e) { console.error('Eff Frontier:', e); }
+  try { mktRenderRolling(); } catch(e) { console.error('Rolling:', e); }
+  try { mktRenderVaR(); } catch(e) { console.error('VaR:', e); }
+  // Module 4 (Cox) is on-demand via its own button
+  document.getElementById('mktCoxEmpty').innerHTML = 'Primary asset: <strong>'+MKT_STATE.primary+'</strong>. Adjust parameters and click <strong>Run Simulation</strong>.';
+}
+
+function mktAlignData(startDate, endDate) {
+  var tickers = Object.keys(MKT_STATE.dataByTicker);
+  if (!tickers.length) { MKT_STATE.alignedDates = []; MKT_STATE.aligned = {}; return; }
+  // Build date->close maps and filter by range
+  var maps = {};
+  var commonDates = null;
+  for (var i=0;i<tickers.length;i++) {
+    var t = tickers[i];
+    var pts = MKT_STATE.dataByTicker[t];
+    var m = {};
+    for (var j=0;j<pts.length;j++) {
+      var dt = pts[j].date;
+      if ((!startDate || dt >= startDate) && (!endDate || dt <= endDate)) m[dt] = pts[j].close;
+    }
+    maps[t] = m;
+    var keys = Object.keys(m);
+    if (commonDates === null) commonDates = keys.slice();
+    else {
+      var cmap = {}; for (var k=0;k<keys.length;k++) cmap[keys[k]]=1;
+      commonDates = commonDates.filter(function(d){ return cmap[d]; });
+    }
+  }
+  commonDates.sort();
+  var aligned = {};
+  for (var p=0;p<tickers.length;p++) {
+    var tt = tickers[p];
+    aligned[tt] = commonDates.map(function(d){ return maps[tt][d]; });
+  }
+  MKT_STATE.alignedDates = commonDates;
+  MKT_STATE.aligned = aligned;
+  // Build log return matrix (exclude SPY from universe analytics unless user selected)
+  var T = commonDates.length;
+  if (T < 2) { MKT_STATE.logRetMatrix = null; return; }
+  var matrix = { tickers: [], returns: [] };
+  for (var q=0;q<tickers.length;q++) matrix.tickers.push(tickers[q]);
+  var ret = [];
+  for (var r=1;r<T;r++) {
+    var row = [];
+    for (var s=0;s<matrix.tickers.length;s++) {
+      var prev = aligned[matrix.tickers[s]][r-1];
+      var cur = aligned[matrix.tickers[s]][r];
+      row.push(Math.log(cur / prev));
+    }
+    ret.push(row);
+  }
+  matrix.returns = ret;
+  MKT_STATE.logRetMatrix = matrix;
+}
+
+// ═══ STATISTICAL HELPERS ═══
+function mktMean(a){ var s=0; for (var i=0;i<a.length;i++) s+=a[i]; return a.length ? s/a.length : 0; }
+function mktStd(a){ var m=mktMean(a); var s=0; for (var i=0;i<a.length;i++) s+=(a[i]-m)*(a[i]-m); return a.length>1 ? Math.sqrt(s/(a.length-1)) : 0; }
+function mktPearson(x,y) {
+  var n = Math.min(x.length,y.length); if (n<2) return 0;
+  var mx = mktMean(x), my = mktMean(y);
+  var num=0, dx=0, dy=0;
+  for (var i=0;i<n;i++) { var xd=x[i]-mx, yd=y[i]-my; num += xd*yd; dx += xd*xd; dy += yd*yd; }
+  var den = Math.sqrt(dx*dy);
+  return den > 0 ? num/den : 0;
+}
+function mktSkew(a){ var m=mktMean(a), n=a.length, s=mktStd(a); if (n<3||s===0) return 0; var sum=0; for (var i=0;i<n;i++) sum += Math.pow((a[i]-m)/s, 3); return (n/((n-1)*(n-2))) * sum; }
+function mktKurt(a){ var m=mktMean(a), n=a.length, s=mktStd(a); if (n<4||s===0) return 0; var sum=0; for (var i=0;i<n;i++) sum += Math.pow((a[i]-m)/s, 4); var ekurt = ((n*(n+1))/((n-1)*(n-2)*(n-3))) * sum - (3*(n-1)*(n-1))/((n-2)*(n-3)); return ekurt; }
+function mktPercentile(arr, p) {
+  var s = arr.slice().sort(function(a,b){return a-b;});
+  var idx = (p/100) * (s.length-1);
+  var lo = Math.floor(idx), hi = Math.ceil(idx);
+  if (lo === hi) return s[lo];
+  return s[lo] + (s[hi]-s[lo])*(idx-lo);
+}
+function mktBoxMuller(){
+  var u1 = Math.random(), u2 = Math.random();
+  while (u1 === 0) u1 = Math.random();
+  return Math.sqrt(-2*Math.log(u1)) * Math.cos(2*Math.PI*u2);
+}
+function mktFmtPct(v, digits){ if (v==null||isNaN(v)) return '-'; return (v*100).toFixed(digits==null?2:digits)+'%'; }
+function mktFmtNum(v, digits){ if (v==null||isNaN(v)) return '-'; return (+v).toFixed(digits==null?2:digits); }
+function mktPctColor(v){ return v>0 ? 'var(--success)' : (v<0 ? 'var(--danger)' : 'var(--text-sec)'); }
+
+// ═══ MODULE 1: REBASED RETURN CHART ═══
+function mktRenderRebased() {
+  var tickers = MKT_STATE.selected.slice();
+  if (!tickers.length) { document.getElementById('mktRebasedEmpty').style.display='block'; document.getElementById('mktRebasedWrap').style.display='none'; document.getElementById('mktRollingReturnsWrap').innerHTML=''; return; }
+  document.getElementById('mktRebasedEmpty').style.display='none';
+  document.getElementById('mktRebasedWrap').style.display='block';
+  var dates = MKT_STATE.alignedDates;
+  var datasets = [];
+  for (var i=0;i<tickers.length;i++) {
+    var t = tickers[i];
+    var series = MKT_STATE.aligned[t];
+    if (!series || series.length < 2) continue;
+    var base = series[0];
+    var rebased = series.map(function(v){ return (v/base)*100; });
+    datasets.push({
+      label: t,
+      data: rebased,
+      borderColor: PALETTE[i % PALETTE.length],
+      backgroundColor: PALETTE[i % PALETTE.length],
+      borderWidth: 1.8,
+      pointRadius: 0,
+      tension: 0.1
+    });
+  }
+  if (MKT_CHARTS.rebased) { MKT_CHARTS.rebased.destroy(); }
+  var ctx = document.getElementById('mktRebasedChart').getContext('2d');
+  MKT_CHARTS.rebased = new Chart(ctx, {
+    type: 'line',
+    data: { labels: dates, datasets: datasets },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: { position: 'bottom', labels: { font: { size: 11 }, color: C.textSec, boxWidth: 10 } },
+        tooltip: Object.assign({}, chartTooltip, {
+          callbacks: {
+            label: function(ctx){
+              var pct = ((ctx.parsed.y - 100)).toFixed(2);
+              return ctx.dataset.label + ': ' + ctx.parsed.y.toFixed(2) + ' (' + (pct>=0?'+':'') + pct + '%)';
+            }
+          }
+        })
+      },
+      scales: {
+        x: { grid: chartGrid, ticks: Object.assign({}, chartTicks, { maxTicksLimit: 10, autoSkip: true }) },
+        y: { grid: chartGrid, ticks: chartTicks, title: { display: true, text: 'Rebased (Start = 100)', font: { size: 11, weight: '600' }, color: C.textSec } }
+      }
+    }
+  });
+  mktRenderRollingTable();
+}
+
+function mktRenderRollingTable() {
+  var tickers = MKT_STATE.selected.slice();
+  var dates = MKT_STATE.alignedDates;
+  if (!tickers.length || dates.length < 2) { document.getElementById('mktRollingReturnsWrap').innerHTML=''; return; }
+  var periods = [
+    { key:'1W', days:5 }, { key:'1M', days:21 }, { key:'3M', days:63 },
+    { key:'6M', days:126 }, { key:'YTD', ytd:true }, { key:'1Y', days:252 }
+  ];
+  var html = '<div style="background:var(--navy);color:var(--text-on-dark);padding:8px 12px;font-size:12px;font-weight:700;border-radius:4px 4px 0 0;">Rolling Returns by Asset</div>';
+  html += '<div class="table-wrap" style="border:1px solid var(--border);border-top:none;border-radius:0 0 4px 4px;">';
+  html += '<table><thead><tr><th>Asset</th>';
+  for (var p=0;p<periods.length;p++) html += '<th style="text-align:right;">'+periods[p].key+'</th>';
+  html += '</tr></thead><tbody>';
+  // Determine current year for YTD
+  var latestDate = dates[dates.length-1];
+  var yearStart = latestDate.slice(0,4) + '-01-01';
+  var ytdStartIdx = -1;
+  for (var d=0; d<dates.length; d++) if (dates[d] >= yearStart) { ytdStartIdx = d; break; }
+  for (var i=0;i<tickers.length;i++) {
+    var t = tickers[i];
+    var s = MKT_STATE.aligned[t];
+    if (!s) continue;
+    html += '<tr><td style="font-weight:600;">'+t+'</td>';
+    var end = s[s.length-1];
+    for (var q=0;q<periods.length;q++) {
+      var pr = periods[q];
+      var startIdx;
+      if (pr.ytd) startIdx = ytdStartIdx >= 0 ? ytdStartIdx : 0;
+      else startIdx = Math.max(0, s.length - 1 - pr.days);
+      var startVal = s[startIdx];
+      var ret = startVal > 0 ? ((end/startVal) - 1) : null;
+      var color = ret == null ? 'var(--text-sec)' : mktPctColor(ret);
+      html += '<td style="text-align:right;color:'+color+';font-weight:600;">'+ (ret==null?'-':mktFmtPct(ret)) +'</td>';
+    }
+    html += '</tr>';
+  }
+  html += '</tbody></table></div>';
+  document.getElementById('mktRollingReturnsWrap').innerHTML = html;
+}
+
+// ═══ MODULE 2: CORRELATION HEATMAP ═══
+function mktRenderCorrelation() {
+  var matrix = MKT_STATE.logRetMatrix;
+  if (!matrix || matrix.tickers.length < 2) {
+    document.getElementById('mktCorrEmpty').style.display='block';
+    document.getElementById('mktCorrWrap').style.display='none';
+    return;
+  }
+  // Filter to only selected tickers
+  var selected = MKT_STATE.selected.slice();
+  var indices = [];
+  for (var i=0;i<matrix.tickers.length;i++) if (selected.indexOf(matrix.tickers[i]) >= 0) indices.push(i);
+  if (indices.length < 2) {
+    document.getElementById('mktCorrEmpty').style.display='block';
+    document.getElementById('mktCorrEmpty').innerHTML='Select 2+ assets.';
+    document.getElementById('mktCorrWrap').style.display='none';
+    return;
+  }
+  document.getElementById('mktCorrEmpty').style.display='none';
+  document.getElementById('mktCorrWrap').style.display='block';
+
+  var labels = indices.map(function(k){ return matrix.tickers[k]; });
+  var n = indices.length;
+  // Apply rolling window
+  var T = matrix.returns.length;
+  var win = MKT_STATE.corrWindow;
+  var startR = (win > 0 && T > win) ? (T - win) : 0;
+  // Build column vectors
+  var cols = [];
+  for (var c=0;c<n;c++) {
+    var vec = [];
+    for (var r=startR;r<T;r++) vec.push(matrix.returns[r][indices[c]]);
+    cols.push(vec);
+  }
+  // Compute corr matrix
+  var corr = [];
+  for (var a=0;a<n;a++) {
+    corr.push([]);
+    for (var b=0;b<n;b++) {
+      if (a===b) corr[a].push(1);
+      else if (b<a) corr[a].push(corr[b][a]);
+      else corr[a].push(mktPearson(cols[a], cols[b]));
+    }
+  }
+  // Draw on canvas
+  var canvas = document.getElementById('mktCorrCanvas');
+  var cellSize = Math.max(42, Math.min(72, Math.floor(900 / (n+1))));
+  var labelW = 62;
+  canvas.width = labelW + cellSize * n + 10;
+  canvas.height = labelW + cellSize * n + 10;
+  canvas.style.width = canvas.width + 'px';
+  canvas.style.height = canvas.height + 'px';
+  var ctx = canvas.getContext('2d');
+  ctx.fillStyle = C.bg; ctx.fillRect(0,0,canvas.width,canvas.height);
+  ctx.font = 'bold 11px Arial';
+  ctx.textBaseline = 'middle';
+  ctx.textAlign = 'right';
+  ctx.fillStyle = C.navy;
+  for (var yi=0;yi<n;yi++) {
+    ctx.fillText(labels[yi], labelW-6, labelW + yi*cellSize + cellSize/2);
+  }
+  ctx.textAlign = 'center';
+  ctx.save();
+  for (var xi=0;xi<n;xi++) {
+    ctx.save();
+    ctx.translate(labelW + xi*cellSize + cellSize/2, labelW-8);
+    ctx.rotate(-Math.PI/4);
+    ctx.fillText(labels[xi], 0, 0);
+    ctx.restore();
+  }
+  ctx.restore();
+  // Cells
+  for (var row=0;row<n;row++) {
+    for (var col=0;col<n;col++) {
+      var rho = corr[row][col];
+      var color = mktCorrColor(rho);
+      ctx.fillStyle = color;
+      ctx.fillRect(labelW + col*cellSize, labelW + row*cellSize, cellSize, cellSize);
+      ctx.strokeStyle = C.border; ctx.lineWidth = 1;
+      ctx.strokeRect(labelW + col*cellSize + 0.5, labelW + row*cellSize + 0.5, cellSize-1, cellSize-1);
+      // Text
+      var txtColor = Math.abs(rho) > 0.55 ? '#FFFFFF' : C.text;
+      ctx.fillStyle = txtColor;
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.font = 'bold 11px Arial';
+      ctx.fillText(rho.toFixed(2), labelW + col*cellSize + cellSize/2, labelW + row*cellSize + cellSize/2);
+    }
+  }
+  // Hover interactions
+  canvas.onmousemove = function(e) {
+    var rect = canvas.getBoundingClientRect();
+    var mx = e.clientX - rect.left, my = e.clientY - rect.top;
+    var c = Math.floor((mx - labelW) / cellSize), r = Math.floor((my - labelW) / cellSize);
+    if (c >= 0 && c < n && r >= 0 && r < n) {
+      var tip = document.getElementById('mktCorrTooltip');
+      tip.style.display = 'block';
+      tip.style.left = (mx + 12) + 'px';
+      tip.style.top = (my + 12) + 'px';
+      var winLabel = win === 0 ? 'Full Sample' : (win + 'D');
+      tip.innerHTML = '<strong>'+labels[r]+' vs '+labels[c]+'</strong><br>&rho; = '+corr[r][c].toFixed(3)+'<br>Window: '+winLabel;
+    }
+  };
+  canvas.onmouseleave = function(){ document.getElementById('mktCorrTooltip').style.display='none'; };
+}
+
+function mktCorrColor(rho) {
+  // -1 = danger, 0 = white, 1 = navy
+  var danger = { r: 0x8B, g: 0x2A, b: 0x2A };
+  var white = { r: 0xFF, g: 0xFF, b: 0xFF };
+  var navy = { r: 0x00, g: 0x3C, b: 0x71 };
+  var c;
+  if (rho < 0) {
+    var t = Math.min(1, -rho);
+    c = { r: white.r*(1-t) + danger.r*t, g: white.g*(1-t) + danger.g*t, b: white.b*(1-t) + danger.b*t };
+  } else {
+    var t2 = Math.min(1, rho);
+    c = { r: white.r*(1-t2) + navy.r*t2, g: white.g*(1-t2) + navy.g*t2, b: white.b*(1-t2) + navy.b*t2 };
+  }
+  return 'rgb('+Math.round(c.r)+','+Math.round(c.g)+','+Math.round(c.b)+')';
+}
+
+// ═══ MODULE 3: 3D VOL SURFACE (THREE.JS) ═══
+function mktRenderVolSurface() {
+  var matrix = MKT_STATE.logRetMatrix;
+  var selected = MKT_STATE.selected.slice();
+  if (!matrix || selected.length < 1 || matrix.returns.length < 252) {
+    document.getElementById('mktVolEmpty').style.display='block';
+    document.getElementById('mktVolEmpty').innerHTML = matrix ? 'Need at least 252 trading days of data.' : 'Awaiting data.';
+    document.getElementById('mktVolContainer').style.display='none';
+    document.getElementById('mktVolLegend').style.display='none';
+    return;
+  }
+  document.getElementById('mktVolEmpty').style.display='none';
+  document.getElementById('mktVolContainer').style.display='block';
+  document.getElementById('mktVolLegend').style.display='block';
+
+  var assets = selected;
+  var windows = [10, 21, 42, 63, 126, 252];
+  var T = matrix.returns.length;
+  // vol[asset][window] = annualized rolling std (most recent)
+  var vol = [];
+  var tickIndices = {};
+  for (var i=0;i<matrix.tickers.length;i++) tickIndices[matrix.tickers[i]] = i;
+  for (var a=0;a<assets.length;a++) {
+    var idx = tickIndices[assets[a]];
+    var row = [];
+    for (var w=0;w<windows.length;w++) {
+      var win = Math.min(windows[w], T);
+      var slice = [];
+      for (var k=T-win;k<T;k++) slice.push(matrix.returns[k][idx]);
+      var s = mktStd(slice);
+      row.push(s * Math.sqrt(252));
+    }
+    vol.push(row);
+  }
+  mktBuildThreeSurface(assets, windows, vol);
+  mktBuildVolLegend(vol);
+}
+
+function mktBuildVolLegend(vol) {
+  var flat = [];
+  for (var i=0;i<vol.length;i++) for (var j=0;j<vol[i].length;j++) flat.push(vol[i][j]);
+  var min = Math.min.apply(null, flat), max = Math.max.apply(null, flat);
+  var steps = 10;
+  var html = '<div style="display:flex;align-items:center;gap:4px;flex-wrap:wrap;">'
+    + '<span style="font-size:11px;color:var(--text-sec);font-weight:600;margin-right:6px;">Annualized &sigma;:</span>'
+    + '<span style="font-size:10px;color:var(--text-sec);">'+(min*100).toFixed(1)+'%</span>';
+  for (var s=0;s<steps;s++) {
+    var t = s/(steps-1);
+    html += '<div style="width:26px;height:14px;background:'+mktVolColor(t)+';border:1px solid var(--border);"></div>';
+  }
+  html += '<span style="font-size:10px;color:var(--text-sec);">'+(max*100).toFixed(1)+'%</span></div>';
+  document.getElementById('mktVolLegend').innerHTML = html;
+}
+
+function mktVolColor(t) {
+  // t in [0,1]: low (blue) -> mid (white) -> high (danger red)
+  t = Math.max(0, Math.min(1, t));
+  var blue = { r: 0x5B, g: 0x9B, b: 0xD5 };
+  var white = { r: 0xFF, g: 0xFF, b: 0xFF };
+  var danger = { r: 0x8B, g: 0x2A, b: 0x2A };
+  var c;
+  if (t < 0.5) {
+    var lt = t / 0.5;
+    c = { r: blue.r*(1-lt) + white.r*lt, g: blue.g*(1-lt) + white.g*lt, b: blue.b*(1-lt) + white.b*lt };
+  } else {
+    var ht = (t - 0.5) / 0.5;
+    c = { r: white.r*(1-ht) + danger.r*ht, g: white.g*(1-ht) + danger.g*ht, b: white.b*(1-ht) + danger.b*ht };
+  }
+  return 'rgb('+Math.round(c.r)+','+Math.round(c.g)+','+Math.round(c.b)+')';
+}
+
+function mktVolColorTHREE(t) {
+  t = Math.max(0, Math.min(1, t));
+  var blue = { r: 0x5B/255, g: 0x9B/255, b: 0xD5/255 };
+  var white = { r: 1, g: 1, b: 1 };
+  var danger = { r: 0x8B/255, g: 0x2A/255, b: 0x2A/255 };
+  if (t < 0.5) {
+    var lt = t / 0.5;
+    return { r: blue.r*(1-lt) + white.r*lt, g: blue.g*(1-lt) + white.g*lt, b: blue.b*(1-lt) + white.b*lt };
+  } else {
+    var ht = (t - 0.5) / 0.5;
+    return { r: white.r*(1-ht) + danger.r*ht, g: white.g*(1-ht) + danger.g*ht, b: white.b*(1-ht) + danger.b*ht };
+  }
+}
+
+function mktBuildThreeSurface(assets, windows, vol) {
+  var container = document.getElementById('mktVolCanvas');
+  // Cleanup previous
+  if (MKT_THREE.animId) cancelAnimationFrame(MKT_THREE.animId);
+  if (MKT_THREE.renderer) {
+    container.innerHTML = '';
+    MKT_THREE.renderer.dispose();
+  }
+  var W = container.clientWidth, H = container.clientHeight;
+  MKT_THREE.width = W; MKT_THREE.height = H;
+
+  var scene = new THREE.Scene();
+  scene.background = new THREE.Color(0xF4F6F9);
+
+  var camera = new THREE.PerspectiveCamera(45, W/H, 0.1, 1000);
+  // Spherical camera setup
+  var sph = { radius: 28, theta: Math.PI/4, phi: Math.PI/3.2 };
+  function updateCam() {
+    camera.position.x = sph.radius * Math.sin(sph.phi) * Math.sin(sph.theta);
+    camera.position.y = sph.radius * Math.cos(sph.phi);
+    camera.position.z = sph.radius * Math.sin(sph.phi) * Math.cos(sph.theta);
+    camera.lookAt(0, 2, 0);
+  }
+  updateCam();
+
+  var renderer = new THREE.WebGLRenderer({ antialias: true });
+  renderer.setSize(W, H);
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  container.appendChild(renderer.domElement);
+
+  // Lighting
+  var ambient = new THREE.AmbientLight(0xffffff, 0.65);
+  scene.add(ambient);
+  var dir = new THREE.DirectionalLight(0xffffff, 0.85);
+  dir.position.set(10, 20, 10);
+  scene.add(dir);
+
+  // Compute min/max for coloring
+  var flat = []; for (var i=0;i<vol.length;i++) for (var j=0;j<vol[i].length;j++) flat.push(vol[i][j]);
+  var vmin = Math.min.apply(null, flat), vmax = Math.max.apply(null, flat);
+  var vrange = Math.max(1e-6, vmax - vmin);
+
+  // Grid dimensions
+  var nx = assets.length;   // X axis
+  var ny = windows.length;  // Y axis (time/window)
+  // Surface spans: X from -8..8, Z from -6..6, Y is vol
+  var xSpan = 14, zSpan = 10;
+  var yScale = 10 / vrange;  // scale vol so peaks show up
+
+  // PlaneGeometry with subdivisions. For meaningful topology between cells, we need enough segments.
+  // We'll use nx*2 wide and ny*2 deep for smoother surface.
+  var segX = Math.max(nx-1, 1) * 6;
+  var segZ = Math.max(ny-1, 1) * 6;
+  var geom = new THREE.PlaneGeometry(xSpan, zSpan, segX, segZ);
+  geom.rotateX(-Math.PI/2);
+
+  // Apply heights via bilinear interpolation on vol[asset][window]
+  var positions = geom.attributes.position;
+  var colors = new Float32Array(positions.count * 3);
+  for (var p=0; p<positions.count; p++) {
+    var x = positions.getX(p); // -xSpan/2..xSpan/2
+    var z = positions.getZ(p); // -zSpan/2..zSpan/2
+    var ux = (x + xSpan/2) / xSpan; // 0..1
+    var uz = (z + zSpan/2) / zSpan; // 0..1
+    var fx = ux * (nx - 1);
+    var fz = uz * (ny - 1);
+    var ix0 = Math.floor(fx), ix1 = Math.min(nx-1, ix0+1);
+    var iz0 = Math.floor(fz), iz1 = Math.min(ny-1, iz0+1);
+    var tx = fx - ix0, tz = fz - iz0;
+    var v00 = vol[ix0][iz0], v10 = vol[ix1][iz0], v01 = vol[ix0][iz1], v11 = vol[ix1][iz1];
+    var v = v00*(1-tx)*(1-tz) + v10*tx*(1-tz) + v01*(1-tx)*tz + v11*tx*tz;
+    var height = (v - vmin) * yScale;
+    positions.setY(p, height);
+    var tCol = (v - vmin) / vrange;
+    var col = mktVolColorTHREE(tCol);
+    colors[p*3] = col.r; colors[p*3+1] = col.g; colors[p*3+2] = col.b;
+  }
+  positions.needsUpdate = true;
+  geom.setAttribute('color', new THREE.BufferAttribute(colors, 3));
+  geom.computeVertexNormals();
+
+  var mat = new THREE.MeshPhongMaterial({ vertexColors: true, side: THREE.DoubleSide, shininess: 20, flatShading: false });
+  var mesh = new THREE.Mesh(geom, mat);
+  scene.add(mesh);
+
+  // Wireframe overlay for clarity
+  var wireGeom = new THREE.PlaneGeometry(xSpan, zSpan, nx-1, ny-1);
+  wireGeom.rotateX(-Math.PI/2);
+  var wirePos = wireGeom.attributes.position;
+  for (var wp=0; wp<wirePos.count; wp++) {
+    var wx = wirePos.getX(wp), wz = wirePos.getZ(wp);
+    var wux = (wx + xSpan/2) / xSpan;
+    var wuz = (wz + zSpan/2) / zSpan;
+    var wfx = wux * (nx-1), wfz = wuz * (ny-1);
+    var wix = Math.round(wfx), wiz = Math.round(wfz);
+    wix = Math.max(0, Math.min(nx-1, wix));
+    wiz = Math.max(0, Math.min(ny-1, wiz));
+    wirePos.setY(wp, (vol[wix][wiz] - vmin) * yScale + 0.02);
+  }
+  wirePos.needsUpdate = true;
+  var wireMat = new THREE.LineBasicMaterial({ color: 0x003C71, transparent: true, opacity: 0.35 });
+  var wire = new THREE.LineSegments(new THREE.WireframeGeometry(wireGeom), wireMat);
+  scene.add(wire);
+
+  // Axis lines
+  var axesMat = new THREE.LineBasicMaterial({ color: 0x5A6A7A });
+  var axG = new THREE.BufferGeometry();
+  axG.setFromPoints([
+    new THREE.Vector3(-xSpan/2, 0, zSpan/2), new THREE.Vector3(xSpan/2, 0, zSpan/2),
+    new THREE.Vector3(-xSpan/2, 0, zSpan/2), new THREE.Vector3(-xSpan/2, 0, -zSpan/2),
+    new THREE.Vector3(-xSpan/2, 0, zSpan/2), new THREE.Vector3(-xSpan/2, 12, zSpan/2)
+  ]);
+  scene.add(new THREE.LineSegments(axG, axesMat));
+
+  // Sprite labels
+  function makeTextSprite(text, opts) {
+    opts = opts || {};
+    var canvas = document.createElement('canvas');
+    canvas.width = 256; canvas.height = 64;
+    var ctx = canvas.getContext('2d');
+    ctx.fillStyle = opts.bg || 'rgba(255,255,255,0.9)';
+    ctx.fillRect(0,0,canvas.width,canvas.height);
+    ctx.strokeStyle = '#D0D7E0'; ctx.lineWidth = 2;
+    ctx.strokeRect(0,0,canvas.width,canvas.height);
+    ctx.font = 'bold 26px Arial';
+    ctx.fillStyle = opts.color || '#003C71';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(text, canvas.width/2, canvas.height/2);
+    var tex = new THREE.CanvasTexture(canvas);
+    var spMat = new THREE.SpriteMaterial({ map: tex, transparent: true });
+    var sp = new THREE.Sprite(spMat);
+    sp.scale.set(2.4, 0.6, 1);
+    return sp;
+  }
+  // X-axis (asset names) — below surface at z = zSpan/2 + 0.6
+  for (var la=0; la<assets.length; la++) {
+    var xPos = -xSpan/2 + (la/(Math.max(1,assets.length-1))) * xSpan;
+    if (assets.length === 1) xPos = 0;
+    var sp = makeTextSprite(assets[la]);
+    sp.position.set(xPos, -0.4, zSpan/2 + 1.1);
+    scene.add(sp);
+  }
+  // Z-axis (window labels)
+  for (var lw=0; lw<windows.length; lw++) {
+    var zPos = -zSpan/2 + (lw/(windows.length-1)) * zSpan;
+    var sp2 = makeTextSprite(windows[lw]+'D');
+    sp2.position.set(-xSpan/2 - 1.4, -0.4, zPos);
+    scene.add(sp2);
+  }
+  // Y-axis label
+  var ysp = makeTextSprite('σ ann.');
+  ysp.position.set(-xSpan/2 - 1.4, 12.6, zSpan/2);
+  scene.add(ysp);
+
+  // Manual orbit controls
+  var isDrag = false;
+  var lastX, lastY;
+  var dom = renderer.domElement;
+  dom.style.cursor = 'grab';
+  dom.addEventListener('mousedown', function(e){
+    isDrag = true; lastX = e.clientX; lastY = e.clientY;
+    dom.style.cursor = 'grabbing';
+  });
+  window.addEventListener('mousemove', function(e){
+    if (!isDrag) return;
+    var dx = e.clientX - lastX, dy = e.clientY - lastY;
+    lastX = e.clientX; lastY = e.clientY;
+    sph.theta -= dx * 0.008;
+    sph.phi -= dy * 0.008;
+    sph.phi = Math.max(0.15, Math.min(Math.PI - 0.15, sph.phi));
+    updateCam();
+  });
+  window.addEventListener('mouseup', function(){ isDrag = false; dom.style.cursor='grab'; });
+  dom.addEventListener('wheel', function(e){
+    e.preventDefault();
+    sph.radius += e.deltaY * 0.02;
+    sph.radius = Math.max(10, Math.min(80, sph.radius));
+    updateCam();
+  }, { passive: false });
+
+  function animate() {
+    MKT_THREE.animId = requestAnimationFrame(animate);
+    renderer.render(scene, camera);
+  }
+  animate();
+
+  MKT_THREE.renderer = renderer;
+  MKT_THREE.scene = scene;
+  MKT_THREE.camera = camera;
+  MKT_THREE.mesh = mesh;
+
+  // Handle resize
+  window.addEventListener('resize', function(){
+    var nw = container.clientWidth, nh = container.clientHeight;
+    if (nw && nh && (nw !== MKT_THREE.width || nh !== MKT_THREE.height)) {
+      MKT_THREE.width = nw; MKT_THREE.height = nh;
+      camera.aspect = nw/nh; camera.updateProjectionMatrix();
+      renderer.setSize(nw, nh);
+    }
+  });
+}
+
+// ═══ MODULE 4: COX PROCESS ═══
+function mktRunCox() {
+  if (!MKT_STATE.logRetMatrix) { alert('Please load data first.'); return; }
+  var primary = MKT_STATE.primary;
+  var idx = -1;
+  var tickers = MKT_STATE.logRetMatrix.tickers;
+  for (var i=0;i<tickers.length;i++) if (tickers[i]===primary) { idx = i; break; }
+  if (idx < 0) { alert('Primary asset not in loaded data.'); return; }
+  // Get calibration: mu, sigma from historical returns
+  var retCol = [];
+  for (var r=0;r<MKT_STATE.logRetMatrix.returns.length;r++) retCol.push(MKT_STATE.logRetMatrix.returns[r][idx]);
+  var muDaily = mktMean(retCol), sigmaDaily = mktStd(retCol);
+  var mu = muDaily * 252;
+  var sigma = sigmaDaily * Math.sqrt(252);
+  var S0 = MKT_STATE.aligned[primary][MKT_STATE.aligned[primary].length-1];
+
+  var kappa = parseFloat(document.getElementById('mktCoxKappa').value);
+  var theta = parseFloat(document.getElementById('mktCoxTheta').value);
+  var sigmaL = parseFloat(document.getElementById('mktCoxSigmaL').value);
+  var muJ = parseFloat(document.getElementById('mktCoxMuJ').value);
+  var sigmaJ = parseFloat(document.getElementById('mktCoxSigmaJ').value);
+  var nPaths = 200;
+  var H = 252;
+  var dt = 1/252;
+  var kbar = Math.exp(muJ + 0.5*sigmaJ*sigmaJ) - 1; // E[e^J - 1]
+
+  var paths = [];
+  var lambdaPaths = [];
+  var jumpCounts = [];
+  for (var p=0;p<nPaths;p++) {
+    var S = [S0];
+    var lam = [theta];
+    var jc = 0;
+    for (var t=1;t<=H;t++) {
+      var Z1 = mktBoxMuller(), Z2 = mktBoxMuller();
+      var curLam = lam[t-1];
+      var lamNew = curLam + kappa*(theta - curLam)*dt + sigmaL*Math.sqrt(Math.max(0,curLam))*Math.sqrt(dt)*Z1;
+      if (lamNew < 0) lamNew = 0;
+      lam.push(lamNew);
+      // Poisson(lamNew * dt) — for small dt, approximate with small-number sampling
+      var pmean = lamNew * dt;
+      var nJumps = mktPoissonSample(pmean);
+      var jumpSum = 0;
+      for (var jj=0;jj<nJumps;jj++) jumpSum += muJ + sigmaJ*mktBoxMuller();
+      jc += nJumps;
+      var Sn = S[t-1] * Math.exp((mu - 0.5*sigma*sigma - lamNew*kbar)*dt + sigma*Math.sqrt(dt)*Z2 + jumpSum);
+      S.push(Sn);
+    }
+    paths.push(S);
+    lambdaPaths.push(lam);
+    jumpCounts.push(jc);
+  }
+  mktRenderCoxCharts(paths, lambdaPaths, jumpCounts, S0, theta);
+  document.getElementById('mktCoxResults').style.display='block';
+  document.getElementById('mktCoxEmpty').style.display='none';
+}
+
+function mktPoissonSample(lambda) {
+  // Knuth's algorithm; sufficient for small lambda
+  if (lambda <= 0) return 0;
+  if (lambda > 30) { return Math.max(0, Math.round(lambda + Math.sqrt(lambda)*mktBoxMuller())); }
+  var L = Math.exp(-lambda);
+  var k = 0, pr = 1;
+  do { k++; pr *= Math.random(); } while (pr > L);
+  return k - 1;
+}
+
+function mktRenderCoxCharts(paths, lambdaPaths, jumpCounts, S0, thetaVal) {
+  var H = paths[0].length;
+  var labels = []; for (var i=0;i<H;i++) labels.push(i);
+
+  // Chart A: price paths
+  var pathDatasets = paths.map(function(p){
+    return { data: p, borderColor: 'rgba(0,60,113,0.05)', borderWidth: 0.6, pointRadius: 0, fill: false };
+  });
+  // Percentile bands at each time step
+  var median = [], p10 = [], p90 = [];
+  for (var t=0;t<H;t++) {
+    var slice = paths.map(function(pp){ return pp[t]; });
+    slice.sort(function(a,b){return a-b;});
+    median.push(slice[Math.floor(slice.length*0.5)]);
+    p10.push(slice[Math.floor(slice.length*0.1)]);
+    p90.push(slice[Math.floor(slice.length*0.9)]);
+  }
+  pathDatasets.push({ data: median, borderColor: C.danger, borderWidth: 2, pointRadius: 0, fill: false, label: 'Median' });
+  pathDatasets.push({ data: p10, borderColor: C.blue, borderWidth: 1.5, borderDash: [4,3], pointRadius: 0, fill: false, label: '10th pctl' });
+  pathDatasets.push({ data: p90, borderColor: C.blue, borderWidth: 1.5, borderDash: [4,3], pointRadius: 0, fill: false, label: '90th pctl' });
+
+  if (MKT_CHARTS.coxPaths) MKT_CHARTS.coxPaths.destroy();
+  MKT_CHARTS.coxPaths = new Chart(document.getElementById('mktCoxPaths').getContext('2d'), {
+    type: 'line',
+    data: { labels: labels, datasets: pathDatasets },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { display: true, position: 'bottom', labels: { filter: function(it){ return it.text && (it.text.indexOf('Median')>=0 || it.text.indexOf('pctl')>=0); }, font: { size: 10 }, color: C.textSec } },
+        tooltip: { enabled: false },
+        title: { display: true, text: 'Simulated Price Paths (200)', color: C.navy, font: { size: 12, weight: '700' } }
+      },
+      scales: {
+        x: { grid: chartGrid, ticks: Object.assign({}, chartTicks, { maxTicksLimit: 6 }), title: { display: true, text: 'Trading Days', font: { size: 10 }, color: C.textSec } },
+        y: { grid: chartGrid, ticks: chartTicks, title: { display: true, text: 'Price', font: { size: 10 }, color: C.textSec } }
+      }
+    }
+  });
+
+  // Chart B: 5 lambda paths
+  var lamDatasets = [];
+  var sampleIdx = [0, Math.floor(lambdaPaths.length*0.25), Math.floor(lambdaPaths.length*0.5), Math.floor(lambdaPaths.length*0.75), lambdaPaths.length-1];
+  for (var s=0;s<sampleIdx.length;s++) {
+    lamDatasets.push({
+      data: lambdaPaths[sampleIdx[s]],
+      borderColor: PALETTE[s % PALETTE.length],
+      borderWidth: 1.3, pointRadius: 0, fill: false,
+      label: 'Path '+(s+1)
+    });
+  }
+  // Long-run theta line
+  var thetaLine = []; for (var th=0;th<H+1;th++) thetaLine.push(thetaVal);
+  lamDatasets.push({ data: thetaLine, borderColor: C.danger, borderWidth: 1.5, borderDash: [5,3], pointRadius: 0, fill: false, label: 'θ (long-run)' });
+
+  if (MKT_CHARTS.coxLambda) MKT_CHARTS.coxLambda.destroy();
+  MKT_CHARTS.coxLambda = new Chart(document.getElementById('mktCoxLambda').getContext('2d'), {
+    type: 'line',
+    data: { labels: labels.concat([H]), datasets: lamDatasets },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { display: true, position: 'bottom', labels: { font: { size: 10 }, color: C.textSec, boxWidth: 8 } },
+        tooltip: { enabled: false },
+        title: { display: true, text: 'Stochastic Intensity λ(t) — 5 sample paths', color: C.navy, font: { size: 12, weight: '700' } }
+      },
+      scales: {
+        x: { grid: chartGrid, ticks: Object.assign({}, chartTicks, { maxTicksLimit: 6 }) },
+        y: { grid: chartGrid, ticks: chartTicks, title: { display: true, text: 'λ (jumps/yr)', font: { size: 10 }, color: C.textSec } }
+      }
+    }
+  });
+
+  // Chart C: histogram of jump counts
+  var minJ = Math.min.apply(null, jumpCounts), maxJ = Math.max.apply(null, jumpCounts);
+  var bins = 12;
+  var binW = Math.max(1, Math.ceil((maxJ - minJ + 1)/bins));
+  var binLabels = [], binCounts = new Array(bins).fill(0);
+  for (var b=0;b<bins;b++) binLabels.push((minJ + b*binW)+'–'+(minJ + (b+1)*binW - 1));
+  for (var jc=0;jc<jumpCounts.length;jc++) {
+    var bi = Math.min(bins-1, Math.floor((jumpCounts[jc] - minJ)/binW));
+    binCounts[bi]++;
+  }
+  if (MKT_CHARTS.coxJumps) MKT_CHARTS.coxJumps.destroy();
+  MKT_CHARTS.coxJumps = new Chart(document.getElementById('mktCoxJumps').getContext('2d'), {
+    type: 'bar',
+    data: { labels: binLabels, datasets: [{ data: binCounts, backgroundColor: C.navy, borderColor: C.navy, borderWidth: 1 }] },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: Object.assign({}, chartTooltip, { callbacks: { label: function(ctx){ return ctx.parsed.y + ' paths'; } } }),
+        title: { display: true, text: 'Total Jump Events (per path, over horizon)', color: C.navy, font: { size: 12, weight: '700' } }
+      },
+      scales: {
+        x: { grid: chartGrid, ticks: Object.assign({}, chartTicks, { font: { size: 9 }, maxRotation: 45 }) },
+        y: { grid: chartGrid, ticks: chartTicks, title: { display: true, text: 'Path Count', font: { size: 10 }, color: C.textSec } }
+      }
+    }
+  });
+
+  // Stats
+  var terminal = paths.map(function(p){ return p[H-1]; });
+  terminal.sort(function(a,b){return a-b;});
+  var expT = mktMean(terminal);
+  var medT = terminal[Math.floor(terminal.length/2)];
+  var pCrash20 = terminal.filter(function(v){ return v < S0*0.8; }).length / terminal.length;
+  var pCrash30 = terminal.filter(function(v){ return v < S0*0.7; }).length / terminal.length;
+  var meanJumps = mktMean(jumpCounts);
+  var lamFlat = []; for (var lp=0;lp<lambdaPaths.length;lp++) for (var lq=0;lq<lambdaPaths[lp].length;lq++) lamFlat.push(lambdaPaths[lp][lq]);
+  var lamMean = mktMean(lamFlat);
+  // Max drawdown on median path
+  var medPath = []; for (var tt=0;tt<H;tt++) {
+    var slc = paths.map(function(p){ return p[tt]; }); slc.sort(function(a,b){return a-b;});
+    medPath.push(slc[Math.floor(slc.length/2)]);
+  }
+  var peak = -Infinity, mdd = 0;
+  for (var md=0;md<medPath.length;md++) { if (medPath[md]>peak) peak = medPath[md]; var ddv = (peak - medPath[md])/peak; if (ddv>mdd) mdd = ddv; }
+  var var95 = mktPercentile(terminal, 5);
+  var cvar95 = 0, cnt = 0;
+  for (var tv=0;tv<terminal.length;tv++) if (terminal[tv] <= var95) { cvar95 += terminal[tv]; cnt++; }
+  cvar95 = cnt > 0 ? cvar95/cnt : var95;
+  var termRets = terminal.map(function(v){ return (v/S0) - 1; });
+  var skewT = mktSkew(termRets), kurtT = mktKurt(termRets);
+  var stdT = mktStd(terminal);
+
+  var cards = [
+    { l: 'Expected Terminal', v: '$'+mktFmtNum(expT), sub: 'S₀ = $'+mktFmtNum(S0) },
+    { l: 'Median Terminal', v: '$'+mktFmtNum(medT), sub: mktFmtPct((medT/S0)-1) },
+    { l: 'P(Crash > 20%)', v: (pCrash20*100).toFixed(1)+'%', sub: 'Below $'+mktFmtNum(S0*0.8) },
+    { l: 'P(Crash > 30%)', v: (pCrash30*100).toFixed(1)+'%', sub: 'Below $'+mktFmtNum(S0*0.7) },
+    { l: 'Expected # Jumps', v: mktFmtNum(meanJumps, 1), sub: 'Over horizon' },
+    { l: 'λ Mean (horizon)', v: mktFmtNum(lamMean, 3), sub: 'jumps/yr avg' },
+    { l: 'Max DD (median)', v: (mdd*100).toFixed(1)+'%', sub: 'Peak-to-trough' },
+    { l: 'VaR 95%', v: '$'+mktFmtNum(var95), sub: mktFmtPct((var95/S0)-1) },
+    { l: 'CVaR 95%', v: '$'+mktFmtNum(cvar95), sub: 'Expected shortfall' },
+    { l: 'Skewness', v: skewT.toFixed(2), sub: skewT < 0 ? 'Left tail' : 'Right tail' },
+    { l: 'Excess Kurtosis', v: kurtT.toFixed(2), sub: kurtT > 0 ? 'Fat tails' : 'Thin tails' },
+    { l: 'Std Dev Terminal', v: '$'+mktFmtNum(stdT), sub: 'Dispersion' }
+  ];
+  var html = '';
+  for (var cc=0;cc<cards.length;cc++) {
+    html += '<div class="metric-card"><div class="metric-label">'+cards[cc].l+'</div>'
+          + '<div class="metric-value">'+cards[cc].v+'</div>'
+          + '<div class="metric-sub">'+cards[cc].sub+'</div></div>';
+  }
+  document.getElementById('mktCoxStats').innerHTML = html;
+}
+
+// ═══ MODULE 5: EFFICIENT FRONTIER ═══
+function mktRenderFrontier() {
+  var matrix = MKT_STATE.logRetMatrix;
+  var selected = MKT_STATE.selected.slice();
+  // Filter SPY out unless user explicitly selected it (keep simple: use user selection)
+  var assets = selected.slice();
+  if (!matrix || assets.length < 2) {
+    document.getElementById('mktEffEmpty').style.display='block';
+    document.getElementById('mktEffResults').style.display='none';
+    return;
+  }
+  document.getElementById('mktEffEmpty').style.display='none';
+  document.getElementById('mktEffResults').style.display='block';
+
+  var tickIdx = {}; for (var i=0;i<matrix.tickers.length;i++) tickIdx[matrix.tickers[i]] = i;
+  var n = assets.length;
+  var T = matrix.returns.length;
+
+  // Mean vector (annualized)
+  var muVec = [];
+  for (var a=0;a<n;a++) {
+    var col = []; for (var r=0;r<T;r++) col.push(matrix.returns[r][tickIdx[assets[a]]]);
+    muVec.push(mktMean(col) * 252);
+  }
+  // Covariance matrix (annualized)
+  var cov = [];
+  for (var a1=0;a1<n;a1++) {
+    cov.push([]);
+    var col1 = []; for (var r1=0;r1<T;r1++) col1.push(matrix.returns[r1][tickIdx[assets[a1]]]);
+    var m1 = mktMean(col1);
+    for (var a2=0;a2<n;a2++) {
+      var col2 = []; for (var r2=0;r2<T;r2++) col2.push(matrix.returns[r2][tickIdx[assets[a2]]]);
+      var m2 = mktMean(col2);
+      var s = 0;
+      for (var k=0;k<T;k++) s += (col1[k]-m1)*(col2[k]-m2);
+      cov[a1].push((s/(T-1)) * 252);
+    }
+  }
+  // Monte Carlo
+  var nSim = 5000;
+  var rf = 0.053;
+  var pts = [];
+  var bestSR = -Infinity, bestSRW = null, bestSRRet = 0, bestSRVol = 0;
+  var minVol = Infinity, minVolW = null, minVolRet = 0, minVolV = 0;
+  for (var s=0;s<nSim;s++) {
+    // Dirichlet via Gamma(1,1) i.e. Exponential(1)
+    var w = []; var sum = 0;
+    for (var ww=0;ww<n;ww++) { var g = -Math.log(Math.random()); w.push(g); sum += g; }
+    for (var ww2=0;ww2<n;ww2++) w[ww2] /= sum;
+    var pRet = 0;
+    for (var pr=0;pr<n;pr++) pRet += w[pr] * muVec[pr];
+    var pVar = 0;
+    for (var pi2=0;pi2<n;pi2++) for (var pj=0;pj<n;pj++) pVar += w[pi2]*w[pj]*cov[pi2][pj];
+    var pVol = Math.sqrt(Math.max(0, pVar));
+    var sr = pVol > 0 ? (pRet - rf) / pVol : 0;
+    pts.push({ x: pVol, y: pRet, sr: sr });
+    if (sr > bestSR) { bestSR = sr; bestSRW = w.slice(); bestSRRet = pRet; bestSRVol = pVol; }
+    if (pVol < minVol) { minVol = pVol; minVolW = w.slice(); minVolRet = pRet; minVolV = pVol; }
+  }
+  // Equal-weight portfolio
+  var ew = []; for (var ei=0;ei<n;ei++) ew.push(1/n);
+  var ewRet = 0; for (var er=0;er<n;er++) ewRet += ew[er] * muVec[er];
+  var ewVar = 0; for (var ei1=0;ei1<n;ei1++) for (var ei2=0;ei2<n;ei2++) ewVar += ew[ei1]*ew[ei2]*cov[ei1][ei2];
+  var ewVol = Math.sqrt(Math.max(0, ewVar));
+
+  // Color by Sharpe
+  var srs = pts.map(function(p){return p.sr;});
+  var srMin = Math.min.apply(null, srs), srMax = Math.max.apply(null, srs);
+  var scatterData = pts.map(function(p){
+    var t = (p.sr - srMin) / Math.max(1e-9, srMax - srMin);
+    // navy (low) -> blue -> success green (high)
+    var r, g, b;
+    if (t < 0.5) {
+      var lt = t/0.5;
+      r = 0x00*(1-lt) + 0x5B*lt; g = 0x3C*(1-lt) + 0x9B*lt; b = 0x71*(1-lt) + 0xD5*lt;
+    } else {
+      var ht = (t-0.5)/0.5;
+      r = 0x5B*(1-ht) + 0x2E*ht; g = 0x9B*(1-ht) + 0x7D*ht; b = 0xD5*(1-ht) + 0x52*ht;
+    }
+    return { x: p.x, y: p.y, _color: 'rgba('+Math.round(r)+','+Math.round(g)+','+Math.round(b)+',0.5)' };
+  });
+
+  if (MKT_CHARTS.eff) MKT_CHARTS.eff.destroy();
+  MKT_CHARTS.eff = new Chart(document.getElementById('mktEffChart').getContext('2d'), {
+    type: 'scatter',
+    data: {
+      datasets: [
+        { label: 'Random Portfolios', data: scatterData, pointRadius: 2.2, pointBackgroundColor: scatterData.map(function(p){return p._color;}), pointBorderColor: 'transparent' },
+        { label: 'Min Variance (MVP)', data: [{x: minVolV, y: minVolRet}], pointRadius: 9, pointStyle: 'triangle', pointBackgroundColor: C.warning, pointBorderColor: '#000', pointBorderWidth: 1.5 },
+        { label: 'Max Sharpe (Tangency)', data: [{x: bestSRVol, y: bestSRRet}], pointRadius: 10, pointStyle: 'star', pointBackgroundColor: C.success, pointBorderColor: '#000', pointBorderWidth: 1.5 },
+        { label: 'Equal Weight', data: [{x: ewVol, y: ewRet}], pointRadius: 8, pointStyle: 'rectRot', pointBackgroundColor: C.blue, pointBorderColor: '#000', pointBorderWidth: 1.5 }
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { position: 'bottom', labels: { font: { size: 11 }, color: C.textSec, boxWidth: 10 } },
+        tooltip: Object.assign({}, chartTooltip, {
+          callbacks: {
+            label: function(ctx){
+              return ctx.dataset.label + ': σ ' + (ctx.parsed.x*100).toFixed(2) + '%, μ ' + (ctx.parsed.y*100).toFixed(2) + '%';
+            }
+          }
+        })
+      },
+      scales: {
+        x: { grid: chartGrid, ticks: Object.assign({}, chartTicks, { callback: function(v){ return (v*100).toFixed(1)+'%'; } }), title: { display: true, text: 'Annualized Volatility (σ)', font: { size: 11, weight: '600' }, color: C.textSec } },
+        y: { grid: chartGrid, ticks: Object.assign({}, chartTicks, { callback: function(v){ return (v*100).toFixed(1)+'%'; } }), title: { display: true, text: 'Annualized Return (μ)', font: { size: 11, weight: '600' }, color: C.textSec } }
+      }
+    }
+  });
+
+  document.getElementById('mktEffMVPStats').innerHTML =
+    '<strong>Annualized σ:</strong> '+(minVolV*100).toFixed(2)+'%  &nbsp; <strong>μ:</strong> '+(minVolRet*100).toFixed(2)+'%  &nbsp; <strong>Sharpe:</strong> '+((minVolRet-rf)/Math.max(1e-9,minVolV)).toFixed(2);
+  document.getElementById('mktEffMSPStats').innerHTML =
+    '<strong>Annualized σ:</strong> '+(bestSRVol*100).toFixed(2)+'%  &nbsp; <strong>μ:</strong> '+(bestSRRet*100).toFixed(2)+'%  &nbsp; <strong>Sharpe:</strong> '+bestSR.toFixed(2);
+
+  mktRenderWeightBar('mktEffMVPBar', assets, minVolW, 'MVP');
+  mktRenderWeightBar('mktEffMSPBar', assets, bestSRW, 'MSP');
+}
+
+function mktRenderWeightBar(canvasId, labels, weights, tag) {
+  var key = 'eff_'+canvasId;
+  if (MKT_CHARTS[key]) MKT_CHARTS[key].destroy();
+  MKT_CHARTS[key] = new Chart(document.getElementById(canvasId).getContext('2d'), {
+    type: 'bar',
+    data: {
+      labels: labels,
+      datasets: [{ data: weights.map(function(w){return w*100;}), backgroundColor: C.blue, borderColor: C.navy, borderWidth: 1 }]
+    },
+    options: {
+      indexAxis: 'y',
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: Object.assign({}, chartTooltip, { callbacks: { label: function(ctx){ return ctx.parsed.x.toFixed(2)+'%'; } } })
+      },
+      scales: {
+        x: { grid: chartGrid, ticks: Object.assign({}, chartTicks, { callback: function(v){ return v.toFixed(0)+'%'; } }) },
+        y: { grid: { display: false }, ticks: Object.assign({}, chartTicks, { font: { size: 10 } }) }
+      }
+    }
+  });
+}
+
+// ═══ MODULE 6: ROLLING RISK ═══
+function mktRenderRolling() {
+  var matrix = MKT_STATE.logRetMatrix;
+  if (!matrix || matrix.returns.length < 65) {
+    document.getElementById('mktRollEmpty').style.display='block';
+    document.getElementById('mktRollResults').style.display='none';
+    return;
+  }
+  var primary = MKT_STATE.primary;
+  var tickIdx = {}; for (var i=0;i<matrix.tickers.length;i++) tickIdx[matrix.tickers[i]] = i;
+  if (!(primary in tickIdx)) {
+    document.getElementById('mktRollEmpty').style.display='block';
+    document.getElementById('mktRollEmpty').innerHTML='Primary asset not in loaded data.';
+    document.getElementById('mktRollResults').style.display='none';
+    return;
+  }
+  var spy = 'SPY';
+  if (!(spy in tickIdx)) {
+    document.getElementById('mktRollEmpty').style.display='block';
+    document.getElementById('mktRollEmpty').innerHTML='SPY is required as benchmark for beta. It should be auto-fetched.';
+    document.getElementById('mktRollResults').style.display='none';
+    return;
+  }
+  document.getElementById('mktRollEmpty').style.display='none';
+  document.getElementById('mktRollResults').style.display='block';
+
+  var T = matrix.returns.length;
+  var rp = [], rspy = [];
+  for (var r=0;r<T;r++) { rp.push(matrix.returns[r][tickIdx[primary]]); rspy.push(matrix.returns[r][tickIdx[spy]]); }
+  var WIN = 63;
+  var rfDaily = 0.053 / 252;
+  var labels = MKT_STATE.alignedDates.slice(1); // returns are T-1 long vs dates T long, so align from 1
+
+  var sharpe = [], sortino = [], beta = [];
+  for (var t=WIN-1;t<T;t++) {
+    var slice = rp.slice(t-WIN+1, t+1);
+    var slSpy = rspy.slice(t-WIN+1, t+1);
+    var mu = mktMean(slice);
+    var std = mktStd(slice);
+    var neg = slice.filter(function(v){ return v < 0; });
+    var negVar = 0;
+    if (neg.length) { for (var nv=0;nv<neg.length;nv++) negVar += neg[nv]*neg[nv]; negVar = negVar/neg.length; }
+    var downside = Math.sqrt(negVar);
+    sharpe.push(std > 0 ? (mu - rfDaily)/std * Math.sqrt(252) : 0);
+    sortino.push(downside > 0 ? (mu - rfDaily)/downside * Math.sqrt(252) : 0);
+    // Beta
+    var mSpy = mktMean(slSpy);
+    var mA = mu;
+    var cov = 0, varSpy = 0;
+    for (var k=0;k<WIN;k++) { cov += (slice[k]-mA)*(slSpy[k]-mSpy); varSpy += (slSpy[k]-mSpy)*(slSpy[k]-mSpy); }
+    beta.push(varSpy > 0 ? cov/varSpy : 1);
+  }
+  var rollingLabels = labels.slice(WIN-1);
+
+  // Max drawdown on cumulative price
+  var prices = MKT_STATE.aligned[primary];
+  var ddSeries = [];
+  var peak = -Infinity;
+  for (var pi=0;pi<prices.length;pi++) { if (prices[pi] > peak) peak = prices[pi]; ddSeries.push(-((peak - prices[pi])/peak)*100); }
+
+  // Chart A — Sharpe & Sortino
+  if (MKT_CHARTS.rollSharpe) MKT_CHARTS.rollSharpe.destroy();
+  MKT_CHARTS.rollSharpe = new Chart(document.getElementById('mktRollSharpe').getContext('2d'), {
+    type: 'line',
+    data: {
+      labels: rollingLabels,
+      datasets: [
+        { label: 'Sharpe (63D ann.)', data: sharpe, borderColor: C.navy, borderWidth: 1.8, pointRadius: 0, fill: false, tension: 0.1 },
+        { label: 'Sortino (63D ann.)', data: sortino, borderColor: C.blue, borderWidth: 1.8, pointRadius: 0, fill: false, tension: 0.1 }
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { position: 'bottom', labels: { font: { size: 11 }, color: C.textSec, boxWidth: 10 } },
+        tooltip: chartTooltip
+      },
+      scales: {
+        x: { grid: chartGrid, ticks: Object.assign({}, chartTicks, { maxTicksLimit: 8, autoSkip: true }) },
+        y: { grid: chartGrid, ticks: chartTicks, title: { display: true, text: 'Ratio', font: { size: 11 }, color: C.textSec } }
+      }
+    }
+  });
+  // Chart B — Beta
+  if (MKT_CHARTS.rollBeta) MKT_CHARTS.rollBeta.destroy();
+  MKT_CHARTS.rollBeta = new Chart(document.getElementById('mktRollBeta').getContext('2d'), {
+    type: 'line',
+    data: {
+      labels: rollingLabels,
+      datasets: [
+        { label: 'β vs SPY', data: beta, borderColor: C.navy, borderWidth: 1.8, pointRadius: 0, fill: false, tension: 0.1 },
+        { label: 'β = 1', data: beta.map(function(){return 1;}), borderColor: C.textSec, borderWidth: 1, borderDash: [4,3], pointRadius: 0, fill: false }
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { position: 'bottom', labels: { font: { size: 11 }, color: C.textSec, boxWidth: 10 } },
+        tooltip: chartTooltip
+      },
+      scales: {
+        x: { grid: chartGrid, ticks: Object.assign({}, chartTicks, { maxTicksLimit: 8, autoSkip: true }) },
+        y: { grid: chartGrid, ticks: chartTicks, title: { display: true, text: 'β', font: { size: 11 }, color: C.textSec } }
+      }
+    }
+  });
+  // Chart C — Drawdown
+  if (MKT_CHARTS.rollDD) MKT_CHARTS.rollDD.destroy();
+  MKT_CHARTS.rollDD = new Chart(document.getElementById('mktRollDD').getContext('2d'), {
+    type: 'line',
+    data: {
+      labels: MKT_STATE.alignedDates,
+      datasets: [
+        { label: 'Drawdown %', data: ddSeries, borderColor: C.danger, backgroundColor: 'rgba(139,42,42,0.18)', borderWidth: 1.5, pointRadius: 0, fill: true, tension: 0.05 }
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: Object.assign({}, chartTooltip, { callbacks: { label: function(ctx){ return 'DD: '+ctx.parsed.y.toFixed(2)+'%'; } } })
+      },
+      scales: {
+        x: { grid: chartGrid, ticks: Object.assign({}, chartTicks, { maxTicksLimit: 8, autoSkip: true }) },
+        y: { grid: chartGrid, ticks: Object.assign({}, chartTicks, { callback: function(v){ return v.toFixed(0)+'%'; } }), title: { display: true, text: 'Drawdown from Peak', font: { size: 11 }, color: C.textSec }, max: 0 }
+      }
+    }
+  });
+}
+
+// ═══ MODULE 7: VaR ═══
+function mktRenderVaR() {
+  var matrix = MKT_STATE.logRetMatrix;
+  if (!matrix) { document.getElementById('mktVarEmpty').style.display='block'; document.getElementById('mktVarResults').style.display='none'; return; }
+  var primary = MKT_STATE.primary;
+  var tickIdx = {}; for (var i=0;i<matrix.tickers.length;i++) tickIdx[matrix.tickers[i]] = i;
+  if (!(primary in tickIdx)) {
+    document.getElementById('mktVarEmpty').style.display='block';
+    document.getElementById('mktVarEmpty').innerHTML='Primary asset not loaded.';
+    document.getElementById('mktVarResults').style.display='none';
+    return;
+  }
+  document.getElementById('mktVarEmpty').style.display='none';
+  document.getElementById('mktVarResults').style.display='block';
+
+  var T = matrix.returns.length;
+  var rets = [];
+  var startK = Math.max(0, T - 252);
+  for (var r=startK;r<T;r++) rets.push(matrix.returns[r][tickIdx[primary]]);
+  var mu = mktMean(rets), sigma = mktStd(rets);
+  var skew = mktSkew(rets), ekurt = mktKurt(rets);
+
+  var z95 = 1.645, z99 = 2.326;
+  // Parametric
+  var parVaR1_95 = -(mu - z95*sigma);
+  var parVaR1_99 = -(mu - z99*sigma);
+  var parVaR10_95 = parVaR1_95 * Math.sqrt(10);
+  var parVaR10_99 = parVaR1_99 * Math.sqrt(10);
+  // Historical
+  var sorted = rets.slice().sort(function(a,b){return a-b;});
+  var histVaR1_95 = -sorted[Math.floor(sorted.length*0.05)];
+  var histVaR1_99 = -sorted[Math.floor(sorted.length*0.01)];
+  var histVaR10_95 = histVaR1_95 * Math.sqrt(10);
+  var histVaR10_99 = histVaR1_99 * Math.sqrt(10);
+  // Cornish-Fisher
+  function zCF(z, s, k) { return z + ((z*z-1)/6)*s + ((z*z*z-3*z)/24)*k - ((2*z*z*z-5*z)/36)*s*s; }
+  var zcf95 = zCF(z95, skew, ekurt);
+  var zcf99 = zCF(z99, skew, ekurt);
+  var cfVaR1_95 = -(mu - zcf95*sigma);
+  var cfVaR1_99 = -(mu - zcf99*sigma);
+  var cfVaR10_95 = cfVaR1_95 * Math.sqrt(10);
+  var cfVaR10_99 = cfVaR1_99 * Math.sqrt(10);
+
+  function fmt(v) { return (v*100).toFixed(2)+'%'; }
+
+  var cols = [[parVaR1_95,parVaR1_99,parVaR10_95,parVaR10_99],[histVaR1_95,histVaR1_99,histVaR10_95,histVaR10_99],[cfVaR1_95,cfVaR1_99,cfVaR10_95,cfVaR10_99]];
+  // Find max (most conservative) per column
+  var maxCol = [0,0,0,0];
+  for (var cc=0;cc<4;cc++) {
+    var mv = -Infinity, mrow = 0;
+    for (var rr=0;rr<3;rr++) if (cols[rr][cc] > mv) { mv = cols[rr][cc]; mrow = rr; }
+    maxCol[cc] = mrow;
+  }
+  var methods = ['Parametric (Gaussian)', 'Historical Simulation', 'Cornish-Fisher (fat-tail)'];
+  var html = '<thead><tr><th>Method</th><th style="text-align:right;">1D 95%</th><th style="text-align:right;">1D 99%</th><th style="text-align:right;">10D 95%</th><th style="text-align:right;">10D 99%</th></tr></thead><tbody>';
+  for (var m=0;m<3;m++) {
+    html += '<tr><td style="font-weight:600;">'+methods[m]+'</td>';
+    for (var cc2=0;cc2<4;cc2++) {
+      var isMax = maxCol[cc2] === m;
+      var style = isMax ? 'background:rgba(139,105,20,0.18);font-weight:700;' : '';
+      html += '<td style="text-align:right;'+style+'">'+fmt(cols[m][cc2])+'</td>';
+    }
+    html += '</tr>';
+  }
+  html += '</tbody>';
+  document.getElementById('mktVarTable').innerHTML = html;
+
+  // Stat cards
+  var stats = [
+    { l: 'Daily Mean', v: mktFmtPct(mu,3), sub: 'μ over '+rets.length+' days' },
+    { l: 'Daily σ', v: mktFmtPct(sigma,3), sub: 'Annualized: '+mktFmtPct(sigma*Math.sqrt(252),2) },
+    { l: 'Skewness', v: skew.toFixed(3), sub: skew<0?'Left-tailed':'Right-tailed' },
+    { l: 'Excess Kurtosis', v: ekurt.toFixed(3), sub: ekurt>0?'Fat-tailed':'Thin-tailed' }
+  ];
+  var shtml = '';
+  for (var ss=0;ss<stats.length;ss++) {
+    shtml += '<div class="chart-stat-box"><div class="chart-stat-label">'+stats[ss].l+'</div><div class="chart-stat-value">'+stats[ss].v+'</div><div class="chart-stat-sub">'+stats[ss].sub+'</div></div>';
+  }
+  document.getElementById('mktVarMoments').innerHTML = shtml;
+
+  // Histogram
+  var bins = 20;
+  var minR = Math.min.apply(null, rets), maxR = Math.max.apply(null, rets);
+  var binW = (maxR - minR) / bins;
+  var binLabels = [], binCounts = new Array(bins).fill(0);
+  for (var bn=0;bn<bins;bn++) binLabels.push((100*(minR+bn*binW)).toFixed(2)+'%');
+  for (var rn=0;rn<rets.length;rn++) {
+    var bi = Math.min(bins-1, Math.floor((rets[rn]-minR)/binW));
+    binCounts[bi]++;
+  }
+  // Build vertical line datasets for each VaR (map -VaR value to bin index)
+  function vLine(name, varVal, color) {
+    var x = -varVal;
+    var idx = Math.min(bins-1, Math.max(0, Math.floor((x - minR)/binW)));
+    var d = new Array(bins).fill(null);
+    d[idx] = Math.max.apply(null, binCounts) * 1.05;
+    return { type:'bar', label: name, data: d, backgroundColor: color, borderColor: color, borderWidth: 0, barPercentage: 0.12, categoryPercentage: 0.5 };
+  }
+  if (MKT_CHARTS.varHist) MKT_CHARTS.varHist.destroy();
+  MKT_CHARTS.varHist = new Chart(document.getElementById('mktVarHist').getContext('2d'), {
+    type: 'bar',
+    data: {
+      labels: binLabels,
+      datasets: [
+        { label: 'Return Distribution', data: binCounts, backgroundColor: 'rgba(0,60,113,0.75)', borderColor: C.navy, borderWidth: 1 },
+        vLine('Par. 95%', parVaR1_95, C.blue),
+        vLine('Hist. 95%', histVaR1_95, C.success),
+        vLine('CF 99%', cfVaR1_99, C.danger)
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: {
+        legend: { position: 'bottom', labels: { font: { size: 11 }, color: C.textSec, boxWidth: 10 } },
+        tooltip: chartTooltip,
+        title: { display: true, text: '1-Day Return Distribution (last 252 days) with VaR overlays', color: C.navy, font: { size: 13, weight: '700' } }
+      },
+      scales: {
+        x: { grid: chartGrid, ticks: Object.assign({}, chartTicks, { maxRotation: 45, font: { size: 9 } }) },
+        y: { grid: chartGrid, ticks: chartTicks, title: { display: true, text: 'Frequency', font: { size: 10 }, color: C.textSec } }
+      }
+    }
+  });
+}
+
+// ═══ MODULE 8: CROSS-ASSET REGIME ═══
+var MKT_REGIME_PAIRS = [
+  { a: 'XLY', b: 'XLP', label: 'Cyclicals vs. Defensives', interp: 'Rising = risk appetite expanding; falling = defensive rotation and late-cycle concern.' },
+  { a: 'XLF', b: 'XLU', label: 'Financials vs. Utilities', interp: 'Rising = steepening curve favoring banks; falling = flattening curve / flight to duration.' },
+  { a: 'GLD', b: 'TLT', label: 'Gold vs. Long Bonds', interp: 'Rising = inflation concern dominant; falling = deflationary / disinflationary regime.' },
+  { a: 'HYG', b: 'LQD', label: 'High Yield vs. IG Credit', interp: 'Rising = credit risk appetite healthy; falling = spreads widening, credit deterioration.' },
+  { a: 'XLB', b: 'XLU', label: 'Materials vs. Utilities', interp: 'Rising = global growth / reflation signal; falling = defensive positioning.' },
+  { a: 'XLRE', b: 'TLT', label: 'Real Estate vs. Bonds', interp: 'Rising = real assets favored over duration; falling = rate sensitivity dominant.' }
+];
+
+async function mktLoadRegime() {
+  var emptyEl = document.getElementById('mktRegimeEmpty');
+  emptyEl.innerHTML = '<span class="spinner"></span> Loading 12 tickers for ratio pairs...';
+  var needed = {};
+  for (var p=0;p<MKT_REGIME_PAIRS.length;p++) { needed[MKT_REGIME_PAIRS[p].a] = 1; needed[MKT_REGIME_PAIRS[p].b] = 1; }
+  var tickers = Object.keys(needed);
+  var data = {};
+  var errors = [];
+  for (var i=0;i<tickers.length;i++) {
+    try {
+      var d = await fetchChart(tickers[i], '2y', '1d');
+      data[tickers[i]] = (d.points || []).filter(function(p){ return p.close != null; }).map(function(p){ return { date: p.date.slice(0,10), close: p.close }; });
+    } catch(e) { errors.push(tickers[i]); }
+  }
+  if (errors.length) { emptyEl.innerHTML = 'Failed to load: ' + errors.join(', ') + '. <button class="btn btn-sm" onclick="mktLoadRegime()">Retry</button>'; return; }
+  emptyEl.style.display = 'none';
+  var grid = document.getElementById('mktRegimeGrid');
+  grid.style.display = 'grid';
+  grid.style.gridTemplateColumns = 'repeat(auto-fit, minmax(340px, 1fr))';
+  grid.style.gap = '14px';
+  grid.innerHTML = '';
+
+  for (var pi=0; pi<MKT_REGIME_PAIRS.length; pi++) {
+    var pair = MKT_REGIME_PAIRS[pi];
+    // Align dates
+    var mapA = {}; data[pair.a].forEach(function(p){ mapA[p.date]=p.close; });
+    var mapB = {}; data[pair.b].forEach(function(p){ mapB[p.date]=p.close; });
+    var dates = data[pair.a].map(function(p){return p.date;}).filter(function(d){ return mapB[d]; });
+    dates.sort();
+    var ratio = dates.map(function(d){ return mapA[d]/mapB[d]; });
+    // 20D SMA
+    var sma = [];
+    for (var k=0;k<ratio.length;k++) {
+      if (k < 19) { sma.push(null); continue; }
+      var ss = 0; for (var kk=k-19;kk<=k;kk++) ss += ratio[kk];
+      sma.push(ss/20);
+    }
+    var cur = ratio[ratio.length-1];
+    var prev = ratio[ratio.length-2];
+    var curSMA = sma[sma.length-1];
+    var direction = cur > prev ? '▲' : (cur < prev ? '▼' : '●');
+    var regime = curSMA != null && cur > curSMA ? 'Risk-On' : 'Risk-Off';
+    var regimeColor = regime === 'Risk-On' ? C.success : C.danger;
+
+    var canvasId = 'mktReg_'+pi;
+    var html = '<div style="background:var(--bg);border:1px solid var(--border);border-radius:4px;overflow:hidden;">'
+      + '<div style="background:var(--navy);color:var(--text-on-dark);padding:6px 10px;font-size:11.5px;font-weight:700;display:flex;justify-content:space-between;align-items:center;">'
+      + '<span>'+pair.a+' / '+pair.b+' &mdash; '+pair.label+'</span>'
+      + '<span style="font-size:10px;background:'+regimeColor+';padding:2px 8px;border-radius:10px;">'+regime+'</span>'
+      + '</div>'
+      + '<div style="padding:8px 10px;display:flex;justify-content:space-between;align-items:center;font-size:11px;">'
+      + '<div><span style="color:var(--text-sec);">Current:</span> <strong>'+cur.toFixed(3)+'</strong> <span style="color:'+regimeColor+';font-weight:700;">'+direction+'</span></div>'
+      + '<div style="color:var(--text-sec);">20D SMA: '+(curSMA != null ? curSMA.toFixed(3) : '-')+'</div>'
+      + '</div>'
+      + '<div style="height:160px;padding:4px 8px 8px;"><canvas id="'+canvasId+'"></canvas></div>'
+      + '<div style="padding:6px 10px;font-size:10.5px;color:var(--text-sec);border-top:1px solid var(--border);background:var(--panel);line-height:1.5;">'+pair.interp+'</div>'
+      + '</div>';
+    grid.innerHTML += html;
+  }
+  // After injecting all cards, render charts
+  for (var ri=0; ri<MKT_REGIME_PAIRS.length; ri++) {
+    (function(ri){
+      var pair = MKT_REGIME_PAIRS[ri];
+      var mapA = {}; data[pair.a].forEach(function(p){ mapA[p.date]=p.close; });
+      var mapB = {}; data[pair.b].forEach(function(p){ mapB[p.date]=p.close; });
+      var dates = data[pair.a].map(function(p){return p.date;}).filter(function(d){ return mapB[d]; });
+      dates.sort();
+      var ratio = dates.map(function(d){ return mapA[d]/mapB[d]; });
+      var sma = [];
+      for (var k=0;k<ratio.length;k++) {
+        if (k < 19) { sma.push(null); continue; }
+        var ss = 0; for (var kk=k-19;kk<=k;kk++) ss += ratio[kk];
+        sma.push(ss/20);
+      }
+      // Shaded above/below SMA
+      var aboveData = ratio.map(function(v,idx){ return sma[idx] != null && v >= sma[idx] ? v : null; });
+      var belowData = ratio.map(function(v,idx){ return sma[idx] != null && v < sma[idx] ? v : null; });
+      var canvas = document.getElementById('mktReg_'+ri);
+      if (!canvas) return;
+      if (MKT_CHARTS['reg_'+ri]) MKT_CHARTS['reg_'+ri].destroy();
+      MKT_CHARTS['reg_'+ri] = new Chart(canvas.getContext('2d'), {
+        type: 'line',
+        data: {
+          labels: dates,
+          datasets: [
+            { label: 'Ratio', data: ratio, borderColor: C.navy, borderWidth: 1.5, pointRadius: 0, fill: false, tension: 0.1 },
+            { label: '20D SMA', data: sma, borderColor: C.blue, borderWidth: 1.2, borderDash: [5,3], pointRadius: 0, fill: false },
+            { label: 'Risk-On', data: aboveData, borderColor: 'transparent', backgroundColor: 'rgba(46,125,82,0.12)', pointRadius: 0, fill: '+1' },
+            { label: 'Risk-Off', data: belowData, borderColor: 'transparent', backgroundColor: 'rgba(139,42,42,0.12)', pointRadius: 0, fill: 'origin' }
+          ]
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          plugins: { legend: { display: false }, tooltip: Object.assign({}, chartTooltip, { callbacks: { label: function(ctx){ return ctx.parsed.y != null ? ctx.parsed.y.toFixed(3) : ''; } } }) },
+          scales: {
+            x: { grid: chartGrid, ticks: Object.assign({}, chartTicks, { maxTicksLimit: 5, font: { size: 9 }, autoSkip: true }) },
+            y: { grid: chartGrid, ticks: Object.assign({}, chartTicks, { font: { size: 9 } }) }
+          }
+        }
+      });
+    })(ri);
+  }
+}
+
+// ═══════════ END MARKETS PAGE ═══════════
+
+
 </script>
 </body>
 </html>
