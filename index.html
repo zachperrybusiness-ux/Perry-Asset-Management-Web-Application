@@ -2165,12 +2165,12 @@ body.view-mobile .logo-icon { width: 22px !important; height: 22px !important; f
       await addDoc(collection(db, "holdings"), {
         uid: user.uid,
         ticker: ticker,
-        companyName: q.name || ticker,
+        companyName: getQuoteName(q) || ticker,
         datePurchased: date,
         quantity: qty,
         costBasis: cost,
-        currentPrice: q.price || 0,
-        previousClose: q.previousClose || 0,
+        currentPrice: getQuotePrice(q) || cost,
+        previousClose: getQuotePrev(q) || getQuotePrice(q) || cost,
         sector: meta.sector,
         industry: meta.industry,
         assetClass: meta.assetClass,
@@ -2230,10 +2230,11 @@ body.view-mobile .logo-icon { width: 22px !important; height: 22px !important; f
       var fetchResults = await Promise.all(uniqueTickers.map(async function(t){
         try {
           var qu = await fetchQuote(t);
-          if (qu && typeof qu.price === 'number' && qu.price > 0) {
-            return { ticker: t, price: qu.price, prev: qu.previousClose || null, name: qu.name, ok: true };
+          var px = getQuotePrice(qu);
+          if (px != null) {
+            return { ticker: t, price: px, prev: getQuotePrev(qu), name: getQuoteName(qu), ok: true };
           }
-          return { ticker: t, ok: false, reason: 'no price in response' };
+          return { ticker: t, ok: false, reason: 'no price field (keys: ' + (qu ? Object.keys(qu).join(',') : 'null') + ')' };
         } catch(e) {
           return { ticker: t, ok: false, reason: e.message };
         }
@@ -2598,6 +2599,22 @@ const chartTicks = { font: { family: 'Arial', size: 11 }, color: C.textSec };
 })();
 
 // ═══ WORKER FETCH HELPERS ═══
+// Extract current price from a quote response, accepting either `.current` or `.price` field name
+function getQuotePrice(q) {
+  if (!q) return null;
+  if (typeof q.current === 'number' && q.current > 0) return q.current;
+  if (typeof q.price === 'number' && q.price > 0) return q.price;
+  return null;
+}
+function getQuotePrev(q) {
+  if (!q) return null;
+  if (typeof q.previousClose === 'number' && q.previousClose > 0) return q.previousClose;
+  return null;
+}
+function getQuoteName(q) {
+  if (!q) return null;
+  return q.name || q.shortName || q.longName || null;
+}
 async function fetchQuote(t) {
   const r = await fetch(WORKER_URL + "/quote?symbol=" + encodeURIComponent(t));
   const d = await r.json();
@@ -4086,7 +4103,7 @@ window.submitBulkHoldings = async function() {
     try {
       const q = await fetchQuote(r.ticker);
       const meta = classifyHolding(r.ticker, q);
-      await window._addHoldingDirect(r.ticker, q.name || r.ticker, r.date, r.shares, r.cost, q.price || 0, q.previousClose || 0, meta, acctType);
+      await window._addHoldingDirect(r.ticker, getQuoteName(q) || r.ticker, r.date, r.shares, r.cost, getQuotePrice(q) || r.cost, getQuotePrev(q) || getQuotePrice(q) || r.cost, meta, acctType);
       n++;
     } catch(e) { console.warn(r.ticker, e); }
   }
