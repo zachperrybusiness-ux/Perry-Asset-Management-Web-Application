@@ -2208,56 +2208,83 @@ body.view-mobile .logo-icon { width: 22px !important; height: 22px !important; f
       const h = [];
       snap.forEach(d => h.push({ id: d.id, ...d.data() }));
 
-      // Auto-refresh live prices from Yahoo — parallel, non-blocking for UI
-      // Cash-like instruments (SPAXX, FDRXX, CD, Bond) keep their stored value
+      // Show table immediately with whatever prices are in Firestore
+      // (so user sees SOMETHING while quotes fetch in background)
+      window._holdings = h;
+      renderHoldingsTable(h);
+      if (typeof renderPortfolioOverview === 'function') renderPortfolioOverview();
+      document.getElementById('holdingsCount').textContent =
+        h.length ? '(' + h.length + ' positions)' : '';
+
+      // Now fetch live prices in parallel
       var uniqueTickers = [];
       var seen = {};
       h.forEach(function(x){
         var isCash = x.assetClass === 'Cash' || x.assetClass === 'Money Market' || x.assetClass === 'CD' || x.assetClass === 'Bond Position';
         if (!isCash && x.ticker && !seen[x.ticker]) { seen[x.ticker] = 1; uniqueTickers.push(x.ticker); }
       });
-      if (uniqueTickers.length) {
-        showStatus('holdingsStatus', '<span class="spinner"></span> Refreshing live prices for ' + uniqueTickers.length + ' tickers...', 'info');
-        var quotes = {};
-        await Promise.all(uniqueTickers.map(async function(t){
-          try {
-            var qu = await fetchQuote(t);
-            if (qu && qu.price) quotes[t] = qu;
-          } catch(e) { /* keep stored price on failure */ }
-        }));
-        // Apply quotes to in-memory holdings
-        h.forEach(function(x){
-          if (quotes[x.ticker]) {
-            x.currentPrice = quotes[x.ticker].price;
-            if (quotes[x.ticker].previousClose) x.previousClose = quotes[x.ticker].previousClose;
-          }
-        });
-        // Persist updated prices to Firestore (non-blocking)
-        h.forEach(function(x){
-          if (quotes[x.ticker]) {
-            updateHoldingDoc(x.id, {
-              currentPrice: x.currentPrice,
-              previousClose: x.previousClose,
-              lastUpdated: new Date().toISOString()
-            }).catch(function(){});
-          }
-        });
-        var freshCount = Object.keys(quotes).length;
-        var staleCount = uniqueTickers.length - freshCount;
-        if (staleCount > 0) {
-          showStatus('holdingsStatus', '&#10003; ' + freshCount + ' refreshed, ' + staleCount + ' using last known price (fetch failed)', 'info');
-        } else {
-          showStatus('holdingsStatus', '&#10003; All ' + freshCount + ' prices up-to-date as of ' + new Date().toLocaleTimeString(), 'success');
-        }
-      }
+      if (!uniqueTickers.length) return;
 
+      showStatus('holdingsStatus', '<span class="spinner"></span> Fetching live prices for ' + uniqueTickers.length + ' tickers via Cloudflare Worker...', 'info');
+
+      var fetchResults = await Promise.all(uniqueTickers.map(async function(t){
+        try {
+          var qu = await fetchQuote(t);
+          if (qu && typeof qu.price === 'number' && qu.price > 0) {
+            return { ticker: t, price: qu.price, prev: qu.previousClose || null, name: qu.name, ok: true };
+          }
+          return { ticker: t, ok: false, reason: 'no price in response' };
+        } catch(e) {
+          return { ticker: t, ok: false, reason: e.message };
+        }
+      }));
+
+      var quotes = {};
+      var failed = [];
+      fetchResults.forEach(function(r){
+        if (r.ok) quotes[r.ticker] = r;
+        else failed.push(r.ticker + ' (' + r.reason + ')');
+      });
+
+      // Apply to in-memory holdings
+      h.forEach(function(x){
+        if (quotes[x.ticker]) {
+          x.currentPrice = quotes[x.ticker].price;
+          if (quotes[x.ticker].prev != null) x.previousClose = quotes[x.ticker].prev;
+        }
+      });
+
+      // Persist to Firestore in background — non-blocking, don't await
+      h.forEach(function(x){
+        if (quotes[x.ticker]) {
+          updateHoldingDoc(x.id, {
+            currentPrice: x.currentPrice,
+            previousClose: x.previousClose != null ? x.previousClose : x.currentPrice,
+            lastUpdated: new Date().toISOString()
+          }).catch(function(e){ console.warn('Firestore update failed for '+x.ticker+':', e); });
+        }
+      });
+
+      // Re-render with fresh prices
       window._holdings = h;
       renderHoldingsTable(h);
-      document.getElementById('holdingsCount').textContent =
-        h.length ? '(' + h.length + ' positions)' : '';
+      // If Portfolio page is currently active, re-render it too
+      if (typeof renderPortfolioOverview === 'function' && document.getElementById('page-portfolio') && document.getElementById('page-portfolio').classList.contains('active')) {
+        renderPortfolioOverview();
+      }
+
+      var freshCount = Object.keys(quotes).length;
+      if (failed.length === 0) {
+        showStatus('holdingsStatus', '&#10003; All ' + freshCount + ' prices live as of ' + new Date().toLocaleTimeString(), 'success');
+      } else {
+        showStatus('holdingsStatus',
+          '&#10003; ' + freshCount + '/' + uniqueTickers.length + ' prices live. Failed: ' + failed.join(', ') + '. Using last known price for failures.',
+          'warning');
+        console.warn('Quote fetch failures:', failed);
+      }
     } catch(e) {
-      console.error(e);
-      showStatus('holdingsStatus', 'Error: ' + e.message, 'error');
+      console.error('loadHoldings error:', e);
+      showStatus('holdingsStatus', 'Error loading holdings: ' + e.message, 'error');
     }
   };
 
@@ -2450,39 +2477,22 @@ body.view-mobile .logo-icon { width: 22px !important; height: 22px !important; f
 
   // ── Refresh All Prices ──
   window.refreshAllPrices = async function() {
-    const holdings = window._holdings || [];
-    if (!holdings.length) return;
     const btn = document.getElementById('refreshBtn');
-    btn.disabled = true;
-    btn.innerHTML = '<span class="spinner"></span>Refreshing...';
-    showStatus('holdingsStatus',
-      '<span class="spinner"></span> Refreshing ' + holdings.length + ' holdings...', 'info');
-    let n = 0;
-    for (const h of holdings) {
-      try {
-        const q = await fetchQuote(h.ticker);
-        const meta = classifyHolding(h.ticker, q);
-        await updateHoldingDoc(h.id, {
-          currentPrice: q.price || h.currentPrice,
-          previousClose: q.previousClose || h.previousClose,
-          companyName: q.name || h.companyName,
-          sector: meta.sector,
-          industry: meta.industry,
-          assetClass: meta.assetClass,
-          marketCap: meta.marketCap,
-          mktCapCategory: meta.mktCapCategory,
-          leverage: meta.leverage || '',
-          lastUpdated: new Date().toISOString()
-        });
-        n++;
-      } catch(e) {
-        console.warn(h.ticker, e);
-      }
+    if (btn) {
+      btn.disabled = true;
+      btn.innerHTML = '<span class="spinner"></span>Refreshing...';
     }
-    showStatus('holdingsStatus', '&#10003; Refreshed ' + n + '/' + holdings.length, 'success');
-    await loadHoldings();
-    btn.disabled = false;
-    btn.textContent = 'Refresh All Prices';
+    // loadHoldings() now always fetches live prices from the Worker in parallel
+    try {
+      await loadHoldings();
+    } catch(e) {
+      console.error('refreshAllPrices error:', e);
+      showStatus('holdingsStatus', 'Refresh failed: ' + e.message, 'error');
+    }
+    if (btn) {
+      btn.disabled = false;
+      btn.textContent = 'Refresh All Prices';
+    }
   };
 
   // ── Direct Add (for bulk import) ──
@@ -3506,9 +3516,41 @@ window.renderPortfolioChart = async function() {
   loadEl.style.display = 'block';
   document.getElementById('chartStats').innerHTML = '';
 
-  // Fetch historical data
+  // ── Determine effective date window based on currentRange ──
+  // This bounds the chart to what the user actually asked for, regardless of
+  // each ticker's inception date or user purchase date.
+  var today = new Date();
+  var effectiveStart = null;
+  var r = currentRange;
+  if (r === '1mo') { effectiveStart = new Date(today); effectiveStart.setMonth(today.getMonth() - 1); }
+  else if (r === '3mo') { effectiveStart = new Date(today); effectiveStart.setMonth(today.getMonth() - 3); }
+  else if (r === '6mo') { effectiveStart = new Date(today); effectiveStart.setMonth(today.getMonth() - 6); }
+  else if (r === 'ytd') { effectiveStart = new Date(today.getFullYear(), 0, 1); }
+  else if (r === '1y') { effectiveStart = new Date(today); effectiveStart.setFullYear(today.getFullYear() - 1); }
+  else if (r === '3y') { effectiveStart = new Date(today); effectiveStart.setFullYear(today.getFullYear() - 3); }
+  else if (r === '5y') { effectiveStart = new Date(today); effectiveStart.setFullYear(today.getFullYear() - 5); }
+  else if (r === '10y') { effectiveStart = new Date(today); effectiveStart.setFullYear(today.getFullYear() - 10); }
+  else if (r === '15y') { effectiveStart = new Date(today); effectiveStart.setFullYear(today.getFullYear() - 15); }
+  else if (r === '20y') { effectiveStart = new Date(today); effectiveStart.setFullYear(today.getFullYear() - 20); }
+  var effectiveStartStr = effectiveStart ? effectiveStart.toISOString().slice(0,10) : null;
+
+  // Fetch historical data — in parallel for speed
   const hs = {};
-  for (const h of holdings) {
+  // Helper: determine cash-like
+  function isCashH(x) { return x.assetClass === 'Cash' || x.assetClass === 'Money Market' || x.assetClass === 'CD' || x.assetClass === 'Bond Position'; }
+  await Promise.all(holdings.map(async function(h){
+    if (isCashH(h)) {
+      // Cash has no historical price; treat as constant value from purchase date
+      hs[h.ticker + '|' + (h.accountType||'Individual')] = {
+        isCash: true,
+        cashValue: (h.costBasis || 0) * h.quantity,
+        quantity: h.quantity,
+        datePurchased: h.datePurchased || null,
+        ticker: h.ticker,
+        map: {}
+      };
+      return;
+    }
     try {
       const d = await fetchChart(h.ticker, currentRange, "1d");
       const pts = (d.points || []).filter(p => p.close !== null);
@@ -3518,36 +3560,106 @@ window.renderPortfolioChart = async function() {
         map: m,
         quantity: h.quantity,
         datePurchased: h.datePurchased || null,
-        ticker: h.ticker
+        ticker: h.ticker,
+        isCash: false
       };
     } catch(e) {}
-  }
+  }));
 
+  // Build union of all dates, bounded by effectiveStart
   const ad = new Set();
-  Object.values(hs).forEach(s => Object.keys(s.map).forEach(d => ad.add(d)));
+  Object.values(hs).forEach(function(s){
+    if (s.isCash) return; // cash contributes nothing to date grid
+    Object.keys(s.map).forEach(function(d){
+      if (!effectiveStartStr || d >= effectiveStartStr) ad.add(d);
+    });
+  });
+  // If every holding is cash, need to synthesize a minimal date grid
+  if (!ad.size && Object.keys(hs).length) {
+    // Create monthly dates from effectiveStart (or earliest cash purchase date) to today
+    var earliestCashDate = effectiveStartStr;
+    Object.values(hs).forEach(function(s){
+      if (s.isCash && s.datePurchased && (!earliestCashDate || s.datePurchased > earliestCashDate)) {
+        // Use the later of effectiveStart or cash purchase
+      }
+    });
+    if (!earliestCashDate) earliestCashDate = new Date(today.getFullYear()-1, today.getMonth(), today.getDate()).toISOString().slice(0,10);
+    var cur = new Date(earliestCashDate);
+    while (cur <= today) {
+      ad.add(cur.toISOString().slice(0,10));
+      cur.setDate(cur.getDate() + 7); // weekly
+    }
+  }
   const dates = Array.from(ad).sort();
   if (!dates.length) { loadEl.style.display = 'none'; return; }
 
-  // Portfolio value per date — only include a holding's contribution on/after its purchase date
-  const pv = dates.map(d => {
-    let t = 0;
-    Object.values(hs).forEach(s => {
-      if (s.map[d] == null) return;
-      if (s.datePurchased && d < s.datePurchased) return; // skip pre-purchase dates
-      t += s.map[d] * s.quantity;
+  // Determine the earliest date where the user actually owned ANY of their current holdings
+  // (prevents the chart from showing a bunch of $0 or near-$0 history before the first purchase)
+  var earliestOwnedDate = null;
+  Object.values(hs).forEach(function(s){
+    if (!s.datePurchased) return;
+    if (!earliestOwnedDate || s.datePurchased < earliestOwnedDate) earliestOwnedDate = s.datePurchased;
+  });
+  // If any holding has no purchase date, assume it was owned from the beginning
+  var hasUndatedHolding = Object.values(hs).some(function(s){ return !s.datePurchased; });
+  if (hasUndatedHolding) earliestOwnedDate = null;
+
+  // Forward-fill missing prices so gaps don't create artificial drops
+  // (e.g., if SPAXX has no daily data on a Saturday but AAPL does)
+  // We build a per-holding forward-filled price lookup
+  Object.values(hs).forEach(function(s){
+    if (s.isCash) return;
+    s._forwardFilled = {};
+    var lastSeen = null;
+    for (var i=0;i<dates.length;i++) {
+      var d = dates[i];
+      if (s.map[d] != null) lastSeen = s.map[d];
+      s._forwardFilled[d] = lastSeen; // null before first observation
+    }
+  });
+
+  // Portfolio value per date — forward-fill, skip pre-purchase dates
+  const pv = dates.map(function(d){
+    var t = 0;
+    Object.values(hs).forEach(function(s){
+      // Skip if we require this holding to have been purchased by date d
+      if (s.datePurchased && d < s.datePurchased) return;
+      if (s.isCash) {
+        t += s.cashValue;
+      } else {
+        var px = s._forwardFilled[d];
+        if (px != null) t += px * s.quantity;
+      }
     });
     return t;
   });
+
+  // Keep only dates that (a) are within effective window and (b) have a real portfolio value
+  // (c) are on/after earliestOwnedDate when that's defined
   const valid = [];
-  dates.forEach((d, i) => { if (pv[i] > 0) valid.push({ date: d, value: pv[i] }); });
+  dates.forEach(function(d, i){
+    if (pv[i] <= 0) return;
+    if (earliestOwnedDate && d < earliestOwnedDate) return;
+    if (effectiveStartStr && d < effectiveStartStr) return;
+    valid.push({ date: d, value: pv[i] });
+  });
   if (!valid.length) { loadEl.style.display = 'none'; return; }
 
-  const cd = valid.map(d => d.date);
-  const cv = valid.map(d => d.value);
+  // Downsample for very long windows to keep the chart snappy
+  // (10Y = ~2,500 points, 20Y = ~5,000 points — Chart.js handles this but rendering lags)
+  var targetMax = 800;
+  var reduced = valid;
+  if (valid.length > targetMax) {
+    var stride = Math.ceil(valid.length / targetMax);
+    reduced = valid.filter(function(_, i){ return i % stride === 0 || i === valid.length - 1; });
+  }
+
+  const cd = reduced.map(function(d){ return d.date; });
+  const cv = reduced.map(function(d){ return d.value; });
   _chartDatesGlobal = cd;
   _chartPortfolioSeries = cv;
 
-  // Fetch VIX
+  // Fetch VIX (for overlays) — may fail gracefully on long windows
   try {
     const vD = await fetchChart("^VIX", currentRange, "1d");
     const vP = (vD.points || []).filter(p => p.close !== null);
@@ -3604,12 +3716,12 @@ window.renderPortfolioChart = async function() {
   const pfRet = pfS > 0 ? ((pfE - pfS) / pfS * 100) : 0;
   let bmRet = null, bmSym = ci[0] || '';
   if (bmSym && _chartBenchmarkSeries[bmSym]) {
-    const bd = Object.keys(_chartBenchmarkSeries[bmSym]).sort();
-    if (bd.length >= 2) {
-      const bf = _chartBenchmarkSeries[bmSym][bd[0]];
-      const bl = _chartBenchmarkSeries[bmSym][bd[bd.length - 1]];
-      bmRet = bf > 0 ? ((bl - bf) / bf * 100) : 0;
-    }
+    // Use the same date window as the portfolio (cd[0] and cd[last]) — with forward-fill for missing points
+    var bmMap = _chartBenchmarkSeries[bmSym];
+    var bf = null, bl = null;
+    for (var i2 = 0; i2 < cd.length; i2++) { if (bmMap[cd[i2]] != null) { bf = bmMap[cd[i2]]; break; } }
+    for (var j2 = cd.length - 1; j2 >= 0; j2--) { if (bmMap[cd[j2]] != null) { bl = bmMap[cd[j2]]; break; } }
+    if (bf != null && bl != null && bf > 0) bmRet = ((bl - bf) / bf) * 100;
   }
   const alpha = bmRet != null ? (pfRet - bmRet) : null;
   const gPf = pfS > 0 ? (10000 * (pfE / pfS)) : 10000;
