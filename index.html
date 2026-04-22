@@ -2207,6 +2207,50 @@ body.view-mobile .logo-icon { width: 22px !important; height: 22px !important; f
       const snap = await getDocs(q);
       const h = [];
       snap.forEach(d => h.push({ id: d.id, ...d.data() }));
+
+      // Auto-refresh live prices from Yahoo — parallel, non-blocking for UI
+      // Cash-like instruments (SPAXX, FDRXX, CD, Bond) keep their stored value
+      var uniqueTickers = [];
+      var seen = {};
+      h.forEach(function(x){
+        var isCash = x.assetClass === 'Cash' || x.assetClass === 'Money Market' || x.assetClass === 'CD' || x.assetClass === 'Bond Position';
+        if (!isCash && x.ticker && !seen[x.ticker]) { seen[x.ticker] = 1; uniqueTickers.push(x.ticker); }
+      });
+      if (uniqueTickers.length) {
+        showStatus('holdingsStatus', '<span class="spinner"></span> Refreshing live prices for ' + uniqueTickers.length + ' tickers...', 'info');
+        var quotes = {};
+        await Promise.all(uniqueTickers.map(async function(t){
+          try {
+            var qu = await fetchQuote(t);
+            if (qu && qu.price) quotes[t] = qu;
+          } catch(e) { /* keep stored price on failure */ }
+        }));
+        // Apply quotes to in-memory holdings
+        h.forEach(function(x){
+          if (quotes[x.ticker]) {
+            x.currentPrice = quotes[x.ticker].price;
+            if (quotes[x.ticker].previousClose) x.previousClose = quotes[x.ticker].previousClose;
+          }
+        });
+        // Persist updated prices to Firestore (non-blocking)
+        h.forEach(function(x){
+          if (quotes[x.ticker]) {
+            updateHoldingDoc(x.id, {
+              currentPrice: x.currentPrice,
+              previousClose: x.previousClose,
+              lastUpdated: new Date().toISOString()
+            }).catch(function(){});
+          }
+        });
+        var freshCount = Object.keys(quotes).length;
+        var staleCount = uniqueTickers.length - freshCount;
+        if (staleCount > 0) {
+          showStatus('holdingsStatus', '&#10003; ' + freshCount + ' refreshed, ' + staleCount + ' using last known price (fetch failed)', 'info');
+        } else {
+          showStatus('holdingsStatus', '&#10003; All ' + freshCount + ' prices up-to-date as of ' + new Date().toLocaleTimeString(), 'success');
+        }
+      }
+
       window._holdings = h;
       renderHoldingsTable(h);
       document.getElementById('holdingsCount').textContent =
@@ -3066,9 +3110,20 @@ function renderHoldingsTable(holdings) {
   const cols = [
     {key:'ticker',label:'Ticker'}, {key:'companyName',label:'Company'}, {key:'quantity',label:'Shares'},
     {key:'costBasis',label:'Cost Basis'}, {key:'currentPrice',label:'Price'}, {key:'marketValue',label:'Mkt Value'},
+    {key:'pctOfAccount',label:'% of Acct'},
     {key:'glPct',label:'G/L'}, {key:'yieldPct',label:'Yield'}, {key:'accountType',label:'Account'}, {key:'sector',label:'Sector'},
     {key:'industry',label:'Industry'}, {key:'assetClass',label:'Asset'}
   ];
+  // Pre-compute per-account totals for percentage-of-account column
+  var acctTotals = {};
+  sorted.forEach(function(h){
+    var mv = (h.currentPrice || 0) * h.quantity;
+    var isCash = h.assetClass === 'Cash' || h.assetClass === 'Money Market' || h.assetClass === 'CD' || h.assetClass === 'Bond Position';
+    if (isCash) mv = h.costBasis * h.quantity;
+    var a = h.accountType || 'Individual';
+    acctTotals[a] = (acctTotals[a] || 0) + mv;
+  });
+
   let html = summaryHtml + '<table><thead><tr>' + sortableHeader(cols, _holdingsSort, null, 'manage') + '<th></th></tr></thead><tbody>';
   sorted.forEach(h => {
     const mv = (h.currentPrice || 0) * h.quantity;
@@ -3077,9 +3132,12 @@ function renderHoldingsTable(holdings) {
     const glp = cost > 0 ? (gl / cost) * 100 : 0;
     const gc = gl >= 0 ? C.success : C.danger;
     const isCash = h.assetClass === 'Cash' || h.assetClass === 'Money Market' || h.assetClass === 'CD' || h.assetClass === 'Bond Position';
+    const mvDisplay = isCash ? h.costBasis * h.quantity : mv;
     const yieldVal = h.yieldPct ? h.yieldPct.toFixed(2) + '%' : '—';
     const editAge = h.lastEdited ? (Date.now() - new Date(h.lastEdited).getTime()) / (1000*60*60) : 999;
     const canUndo = h.previousVersion && editAge < 24;
+    const acct = h.accountType || 'Individual';
+    const pctOfAcct = acctTotals[acct] > 0 ? (mvDisplay / acctTotals[acct]) * 100 : 0;
     var multiBadge = tickerCounts[h.ticker] > 1 ? ' <span title="Also in other accounts" style="background:var(--blue);color:white;font-size:9px;padding:1px 4px;border-radius:2px;font-weight:600;">&#215;'+tickerCounts[h.ticker]+'</span>' : '';
     html += '<tr>' +
       '<td style="font-weight:700;color:' + C.navy + ';">' + h.ticker + multiBadge + '</td>' +
@@ -3087,10 +3145,11 @@ function renderHoldingsTable(holdings) {
       '<td>' + (isCash ? '—' : h.quantity) + '</td>' +
       '<td>' + (isCash ? fmt(h.costBasis * h.quantity) : fmt(h.costBasis)) + '</td>' +
       '<td>' + (isCash ? '—' : fmt(h.currentPrice || 0)) + '</td>' +
-      '<td style="font-weight:600;">' + fmt(isCash ? h.costBasis * h.quantity : mv) + '</td>' +
+      '<td style="font-weight:600;">' + fmt(mvDisplay) + '</td>' +
+      '<td style="font-weight:600;color:' + C.navy + ';">' + pctOfAcct.toFixed(1) + '%</td>' +
       '<td style="color:' + (isCash ? C.textSec : gc) + ';font-weight:600;">' + (isCash ? '—' : fmtPct(glp)) + '</td>' +
       '<td style="color:' + (h.yieldPct ? C.success : C.textSec) + ';">' + yieldVal + '</td>' +
-      '<td>' + (h.accountType || 'Individual') + '</td>' +
+      '<td>' + acct + '</td>' +
       '<td>' + (h.sector || '—') + '</td>' +
       '<td>' + (h.industry || '—') + '</td>' +
       '<td>' + (h.assetClass || 'Equity') + '</td>' +
@@ -3105,6 +3164,7 @@ function renderHoldingsTable(holdings) {
     '<td style="color:' + C.navy + ';">TOTAL</td><td>' + sorted.length + ' positions</td>' +
     '<td></td><td></td><td></td>' +
     '<td style="color:' + C.navy + ';">' + fmt(tv) + '</td>' +
+    '<td style="color:' + C.navy + ';">100.0%</td>' +
     '<td style="color:' + pctColor(tglp) + ';">' + fmtPct(tglp) + ' (' + fmt(tgl) + ')</td>' +
     '<td></td><td></td><td></td><td></td><td></td><td></td></tr>';
   html += '</tbody></table>';
@@ -3140,11 +3200,20 @@ async function renderPortfolioOverview() {
     return;
   }
 
-  const tv = holdings.reduce((s, h) => s + (h.currentPrice || 0) * h.quantity, 0);
+  // Compute totals — cash-like positions use costBasis × qty as market value (cash doesn't have a "current price")
+  function mvOf(h) {
+    var isCash = h.assetClass === 'Cash' || h.assetClass === 'Money Market' || h.assetClass === 'CD' || h.assetClass === 'Bond Position';
+    return isCash ? (h.costBasis || 0) * h.quantity : (h.currentPrice || 0) * h.quantity;
+  }
+  function pvOf(h) {
+    var isCash = h.assetClass === 'Cash' || h.assetClass === 'Money Market' || h.assetClass === 'CD' || h.assetClass === 'Bond Position';
+    return isCash ? (h.costBasis || 0) * h.quantity : (h.previousClose || h.currentPrice || 0) * h.quantity;
+  }
+  const tv = holdings.reduce((s, h) => s + mvOf(h), 0);
   const tc = holdings.reduce((s, h) => s + h.costBasis * h.quantity, 0);
   const tgl = tv - tc;
   const tglp = tc > 0 ? (tgl / tc) * 100 : 0;
-  const tpv = holdings.reduce((s, h) => s + (h.previousClose || 0) * h.quantity, 0);
+  const tpv = holdings.reduce((s, h) => s + pvOf(h), 0);
   const dayChg = tv - tpv;
   const dayPct = tpv > 0 ? (dayChg / tpv) * 100 : 0;
 
@@ -3170,7 +3239,7 @@ async function renderPortfolioOverview() {
   const group = (key) => {
     const g = {};
     holdings.forEach(h => {
-      const mv = (h.currentPrice || 0) * h.quantity;
+      const mv = mvOf(h);
       const k = h[key] || 'Other';
       g[k] = (g[k] || 0) + mv;
     });
@@ -3185,7 +3254,7 @@ async function renderPortfolioOverview() {
   renderDonut('donut-weight', 'Portfolio Allocation by Holding',
     holdings.map(h => ({
       label: h.ticker,
-      value: tv > 0 ? Math.round(((h.currentPrice || 0) * h.quantity / tv) * 100) : 0
+      value: tv > 0 ? Math.round(mvOf(h) / tv * 100) : 0
     })).sort((a, b) => b.value - a.value)
   );
   renderMorningstarBox(holdings);
@@ -3238,42 +3307,57 @@ function renderPortfolioTable(holdings, tv) {
   const tc = sorted.reduce((s, h) => s + h.costBasis * h.quantity, 0);
   const tgl = tv - tc;
   const tglp = tc > 0 ? (tgl / tc) * 100 : 0;
+
+  // Pre-compute per-account totals for "% of Account" column
+  var acctTotals = {};
+  sorted.forEach(function(h){
+    var isCashH = h.assetClass === 'Cash' || h.assetClass === 'Money Market' || h.assetClass === 'CD' || h.assetClass === 'Bond Position';
+    var mv = isCashH ? h.costBasis * h.quantity : (h.currentPrice || 0) * h.quantity;
+    var a = h.accountType || 'Individual';
+    acctTotals[a] = (acctTotals[a] || 0) + mv;
+  });
+
   const cols = [
     {key:'ticker',label:'Ticker'}, {key:'companyName',label:'Company'}, {key:'quantity',label:'Shares'},
-    {key:'currentPrice',label:'Price'}, {key:'marketValue',label:'Mkt Value'}, {key:'weight',label:'Weight'},
+    {key:'currentPrice',label:'Price'}, {key:'marketValue',label:'Mkt Value'},
+    {key:'weight',label:'% Portfolio'}, {key:'pctOfAccount',label:'% Account'},
     {key:'glPct',label:'G/L'}, {key:'accountType',label:'Account'}, {key:'sector',label:'Sector'},
     {key:'industry',label:'Industry'}, {key:'assetClass',label:'Asset'}
   ];
   let html = '<table><thead><tr>' + sortableHeader(cols, _portfolioSort, null, 'portfolio') + '</tr></thead><tbody>';
   sorted.forEach(h => {
-    const mv = (h.currentPrice || 0) * h.quantity;
+    const isCash = h.assetClass === 'Cash' || h.assetClass === 'Money Market' || h.assetClass === 'CD' || h.assetClass === 'Bond Position';
+    const mv = isCash ? h.costBasis * h.quantity : (h.currentPrice || 0) * h.quantity;
     const cost = h.costBasis * h.quantity;
     const gl = mv - cost;
     const glp = cost > 0 ? (gl / cost) * 100 : 0;
     const pp = tv > 0 ? (mv / tv) * 100 : 0;
+    const acct = h.accountType || 'Individual';
+    const pctAcct = acctTotals[acct] > 0 ? (mv / acctTotals[acct]) * 100 : 0;
     const gc = gl >= 0 ? C.success : C.danger;
     const ad = h.leverage ? h.assetClass + ' <span style="color:' + C.warning + ';font-size:10px;">(' + h.leverage + ')</span>' : (h.assetClass || 'Equity');
     html += '<tr>' +
       '<td style="font-weight:700;color:' + C.navy + ';">' + h.ticker + '</td>' +
       '<td>' + h.companyName + '</td>' +
-      '<td>' + h.quantity + '</td>' +
-      '<td>' + fmt(h.currentPrice || 0) + '</td>' +
+      '<td>' + (isCash ? '—' : h.quantity) + '</td>' +
+      '<td>' + (isCash ? '—' : fmt(h.currentPrice || 0)) + '</td>' +
       '<td style="font-weight:600;">' + fmt(mv) + '</td>' +
       '<td>' + pp.toFixed(1) + '%</td>' +
-      '<td style="color:' + gc + ';font-weight:600;">' + fmtPct(glp) + '</td>' +
-      '<td>' + (h.accountType || 'Individual') + '</td>' +
+      '<td style="font-weight:600;color:' + C.navy + ';">' + pctAcct.toFixed(1) + '%</td>' +
+      '<td style="color:' + (isCash ? C.textSec : gc) + ';font-weight:600;">' + (isCash ? '—' : fmtPct(glp)) + '</td>' +
+      '<td>' + acct + '</td>' +
       '<td>' + (h.sector || '—') + '</td>' +
       '<td>' + (h.industry || '—') + '</td>' +
-      '<td>' + ad + '</td>' +
-      '<td>' + (h.mktCapCategory || '—') + '</td></tr>';
+      '<td>' + ad + '</td></tr>';
   });
   // Total row
   html += '<tr style="font-weight:700;background:var(--panel);">' +
     '<td style="color:' + C.navy + ';">TOTAL</td><td>' + sorted.length + ' positions</td>' +
     '<td></td><td></td>' +
     '<td style="color:' + C.navy + ';">' + fmt(tv) + '</td><td>100.0%</td>' +
+    '<td style="color:' + C.navy + ';">—</td>' +
     '<td style="color:' + pctColor(tglp) + ';">' + fmtPct(tglp) + ' (' + fmt(tgl) + ')</td>' +
-    '<td></td><td></td><td></td><td></td><td></td></tr>';
+    '<td></td><td></td><td></td><td></td></tr>';
   html += '</tbody></table>';
   document.getElementById('portfolioTableWrap').innerHTML = html;
 }
