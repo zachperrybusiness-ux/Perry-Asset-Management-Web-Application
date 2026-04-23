@@ -283,8 +283,16 @@ html, body {
   grid-template-columns: 1fr 1fr 1fr;
   gap: 20px;
 }
+.grid-4 {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+}
 @media(max-width:900px) {
-  .grid-2, .grid-3 { grid-template-columns: 1fr; }
+  .grid-2, .grid-3, .grid-4 { grid-template-columns: 1fr 1fr; }
+}
+@media(max-width:600px) {
+  .grid-2, .grid-3, .grid-4 { grid-template-columns: 1fr; }
 }
 
 /* ═══ DONUTS ═══ */
@@ -1002,6 +1010,64 @@ body.view-mobile .logo-icon { width: 22px !important; height: 22px !important; f
   line-height: 1.55;
 }
 
+/* ═══ MORNING BRIEFING ═══ */
+.briefing-pulse-card {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 12px 14px;
+  text-align: center;
+}
+.briefing-pulse-ticker { font-size: 11px; font-weight: 700; color: var(--navy); text-transform: uppercase; letter-spacing: .5px; }
+.briefing-pulse-price { font-size: 20px; font-weight: 800; color: var(--text); margin: 3px 0; }
+.briefing-pulse-chg { font-size: 12px; font-weight: 600; }
+.briefing-macro-row { display: flex; justify-content: space-between; align-items: center; padding: 6px 0; border-bottom: 1px solid var(--border); font-size: 12px; }
+.briefing-macro-row:last-child { border-bottom: none; }
+.briefing-cal-row { display: flex; justify-content: space-between; align-items: flex-start; padding: 7px 0; border-bottom: 1px solid var(--border); font-size: 12px; }
+.briefing-cal-row:last-child { border-bottom: none; }
+.briefing-cal-name { font-weight: 600; color: var(--text); flex: 1; }
+.briefing-cal-meta { font-size: 11px; color: var(--text-sec); white-space: nowrap; margin-left: 8px; }
+.briefing-cal-impact { font-size: 10px; font-weight: 700; padding: 2px 5px; border-radius: 3px; margin-left: 6px; }
+.briefing-regime-hero { padding: 20px 24px; color: #fff; }
+.briefing-portfolio-snap { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; }
+.briefing-pf-card { background: var(--panel); border: 1px solid var(--border); border-radius: 5px; padding: 10px 14px; }
+.briefing-pf-label { font-size: 11px; color: var(--text-sec); font-weight: 600; text-transform: uppercase; letter-spacing: .4px; }
+.briefing-pf-value { font-size: 18px; font-weight: 800; color: var(--navy); margin-top: 2px; }
+.briefing-pf-sub { font-size: 11px; margin-top: 1px; }
+
+/* ═══ REGIME FIT COLUMN ═══ */
+.regime-fit { display: inline-flex; align-items: center; gap: 4px; font-size: 11px; font-weight: 700; padding: 2px 7px; border-radius: 3px; white-space: nowrap; }
+.regime-fit-good { background: #e8f4ec; color: #2E7D52; }
+.regime-fit-warn { background: #f9f2e3; color: #8B6914; }
+.regime-fit-bad  { background: #f5eaea; color: #8B2A2A; }
+
+/* ═══ LEADING INDICATOR COMPOSITE ═══ */
+.lic-tier-header { background: var(--navy); color: #fff; padding: 7px 12px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .5px; border-radius: 4px 4px 0 0; margin-top: 14px; }
+.lic-tier-header:first-child { margin-top: 0; }
+.lic-indicator-row { display: flex; justify-content: space-between; align-items: center; padding: 6px 8px; border-bottom: 1px solid var(--border); font-size: 12px; }
+.lic-indicator-row:last-child { border-bottom: none; }
+.lic-bar-wrap { width: 80px; height: 6px; background: var(--border); border-radius: 3px; overflow: hidden; margin-left: 8px; flex-shrink: 0; }
+.lic-bar-fill { height: 100%; border-radius: 3px; }
+
+/* ═══ FAMA-FRENCH ═══ */
+.ff-factor-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; }
+.ff-factor-card { border: 1px solid var(--border); border-radius: 5px; padding: 10px 12px; text-align: center; }
+.ff-factor-name { font-size: 11px; color: var(--text-sec); font-weight: 600; text-transform: uppercase; letter-spacing: .4px; }
+.ff-factor-beta { font-size: 22px; font-weight: 800; margin: 4px 0 2px; }
+.ff-factor-desc { font-size: 10px; color: var(--text-sec); }
+
+/* ═══ REGIME-CONDITIONED RETURNS ═══ */
+.rcr-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px; }
+.rcr-card { border-radius: 5px; overflow: hidden; }
+.rcr-card-header { padding: 7px 10px; color: #fff; font-size: 11px; font-weight: 700; }
+.rcr-card-body { background: var(--bg); border: 1px solid var(--border); border-top: none; padding: 10px; font-size: 12px; }
+.rcr-stat-row { display: flex; justify-content: space-between; padding: 3px 0; }
+
+/* ═══ STATE MONTE CARLO ═══ */
+.smc-state-tabs { display: flex; gap: 6px; margin-bottom: 12px; flex-wrap: wrap; }
+.smc-tab { padding: 5px 12px; border-radius: 4px; font-size: 12px; font-weight: 600; cursor: pointer; border: 1px solid var(--border); background: var(--panel); color: var(--text-sec); }
+.smc-tab.active { color: #fff; border-color: transparent; }
+
 /* ═══ FILE DROP ZONE ═══ */
 .drop-zone {
   border: 2px dashed var(--border);
@@ -1225,9 +1291,52 @@ body.view-mobile .logo-icon { width: 22px !important; height: 22px !important; f
       <h1>Institutional-Grade Investment Intelligence</h1>
       <p>Perry Asset Management delivers macro-driven portfolio analytics, quantitative modeling, and real-time regime analysis to support disciplined, data-grounded investment decisions.</p>
     </div>
+
+    <!-- ── MORNING BRIEFING ── -->
     <div style="margin-bottom:8px;font-size:12px;font-weight:600;color:var(--text-sec);text-transform:uppercase;letter-spacing:.5px;">
-      Platform Capabilities
+      Morning Briefing &mdash; <span id="briefingDate" style="font-weight:400;"></span>
     </div>
+
+    <!-- Regime Banner -->
+    <div class="card" style="margin-bottom:14px;">
+      <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;">
+        <span>Current Portfolio State &amp; Market Regime</span>
+        <button class="btn-sm" style="background:rgba(255,255,255,0.2);color:#fff;border:1px solid rgba(255,255,255,0.35);padding:3px 9px;border-radius:3px;font-size:11px;cursor:pointer;" onclick="briefingLoad()">&#8635; Refresh</button>
+      </div>
+      <div class="card-body" style="padding:0;">
+        <div id="briefingRegime" style="padding:18px;text-align:center;color:var(--text-sec);font-size:13px;">
+          <span class="spinner"></span> Fetching live market data...
+        </div>
+      </div>
+      <div class="card-sources"><strong>Sources:</strong> SPY &amp; QQQ via Cloudflare Worker / Yahoo Finance &bull; VIX via CBOE &bull; Perry 4-state regime classifier</div>
+    </div>
+
+    <!-- Market Pulse Row -->
+    <div style="margin-bottom:8px;font-size:12px;font-weight:600;color:var(--text-sec);text-transform:uppercase;letter-spacing:.5px;">Live Market Pulse</div>
+    <div id="briefingPulse" class="grid-4" style="margin-bottom:16px;"></div>
+
+    <!-- Macro Snapshot + Next Release -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:16px;">
+      <div class="card">
+        <div class="card-title">Macro Regime Scorecard (Latest)</div>
+        <div class="card-body" style="padding:10px 14px;" id="briefingMacroSnap">
+          <span class="spinner"></span> Loading...
+        </div>
+        <div class="card-sources"><strong>Source:</strong> FRED® Federal Reserve Bank of St. Louis</div>
+      </div>
+      <div class="card">
+        <div class="card-title">Next High-Impact Economic Releases</div>
+        <div class="card-body" style="padding:10px 14px;" id="briefingCalendar"></div>
+        <div class="card-sources"><strong>Source:</strong> Perry Economic Calendar (typical release dates)</div>
+      </div>
+    </div>
+
+    <!-- Portfolio Snapshot -->
+    <div style="margin-bottom:8px;font-size:12px;font-weight:600;color:var(--text-sec);text-transform:uppercase;letter-spacing:.5px;">Your Portfolio at a Glance</div>
+    <div id="briefingPortfolio" style="margin-bottom:16px;"></div>
+
+    <!-- Platform Capabilities -->
+    <div style="margin-bottom:8px;font-size:12px;font-weight:600;color:var(--text-sec);text-transform:uppercase;letter-spacing:.5px;">Platform Capabilities</div>
     <div class="grid-3" id="featureGrid"></div>
   </div>
 </div>
@@ -1444,6 +1553,48 @@ body.view-mobile .logo-icon { width: 22px !important; height: 22px !important; f
           &#8226; Yahoo Finance via Cloudflare Worker &#8226; Firebase Firestore
         </div>
       </div>
+
+      <!-- REGIME-AWARE ALLOCATION AUDIT -->
+      <div class="card">
+        <div class="card-title">Regime-Aware Allocation Audit</div>
+        <div class="card-body">
+          <p style="font-size:12px;color:var(--text-sec);margin-bottom:10px;">Each holding is scored against the current classified portfolio state. <strong style="color:var(--success);">✓ Aligned</strong> means appropriate for current regime. <strong style="color:var(--warning);">⚠ Neutral</strong> means acceptable but not optimal. <strong style="color:var(--danger);">✗ Misaligned</strong> means contradicts current state posture — consider rotation.</p>
+          <div id="regimeAuditWrap" style="text-align:center;color:var(--text-sec);padding:16px;"><span class="spinner"></span> Awaiting regime classification...</div>
+        </div>
+        <div class="card-sources"><strong>Sources:</strong> Perry 4-state regime classifier &bull; VIX &amp; SPY via Cloudflare Worker / Yahoo Finance &bull; Holding classifications from Firebase Firestore</div>
+      </div>
+
+      <!-- FAMA-FRENCH FACTOR EXPOSURE -->
+      <div class="card">
+        <div class="card-title">Factor Exposure Analysis (Fama-French 5-Factor + Momentum)</div>
+        <div class="card-body">
+          <p style="font-size:12px;color:var(--text-sec);margin-bottom:10px;">Decomposes your portfolio's return into systematic risk factors using 3-year daily return regression. Beta &gt; 1 = higher exposure than market. Positive SMB = small-cap tilt. Positive HML = value tilt. Positive MOM = momentum tilt. R² shows how much of your return is explained by known factors vs. true alpha (residual).</p>
+          <div class="form-row" style="margin-bottom:10px;">
+            <button class="btn" onclick="ffRunAnalysis()">Run Factor Analysis</button>
+            <span style="font-size:11px;color:var(--text-sec);align-self:center;margin-left:10px;">Uses 3-year daily portfolio returns vs. Fama-French factor proxies.</span>
+          </div>
+          <div id="ffResults" style="text-align:center;color:var(--text-sec);padding:16px;font-size:13px;">Click "Run Factor Analysis" to decompose your portfolio into Fama-French risk factors.</div>
+        </div>
+        <div class="card-sources"><strong>Sources:</strong> Kenneth R. French Data Library (factor definitions) &bull; Portfolio returns computed from Yahoo Finance price history via Cloudflare Worker &bull; Regression via OLS (Gauss-Jordan)</div>
+      </div>
+
+      <!-- PORTFOLIO-STATE MONTE CARLO -->
+      <div class="card">
+        <div class="card-title">Portfolio-State Monte Carlo &mdash; 12-Month Forward Simulation</div>
+        <div class="card-body">
+          <p style="font-size:12px;color:var(--text-sec);margin-bottom:10px;">Runs 1,000 GBM paths over 252 trading days calibrated to your portfolio's historical returns. Each portfolio state uses state-conditioned volatility and drift parameters based on SPY regime history. Shows P10/P50/P90 outcomes and terminal distribution per state.</p>
+          <div class="form-row" style="margin-bottom:10px;">
+            <button class="btn" onclick="smcRun()">Run Monte Carlo</button>
+            <span style="font-size:11px;color:var(--text-sec);align-self:center;margin-left:10px;">1,000 paths × 252 days × 4 portfolio states.</span>
+          </div>
+          <div class="smc-state-tabs" id="smcTabs" style="display:none;"></div>
+          <div id="smcResults" style="text-align:center;color:var(--text-sec);padding:16px;font-size:13px;">Click "Run Monte Carlo" to simulate 12-month forward outcomes across all four portfolio states.</div>
+          <div class="chart-wrap" style="height:340px;display:none;" id="smcChartWrap"><canvas id="smcChart"></canvas></div>
+          <div id="smcStats" class="chart-stats" style="display:none;margin-top:12px;"></div>
+        </div>
+        <div class="card-sources"><strong>Method:</strong> Geometric Brownian Motion (GBM) with Box-Muller sampling &bull; State-conditioned drift &amp; vol from SPY historical regimes &bull; Fama-French &amp; Merton (1976) log-normal framework &bull; <em>Not a guarantee of future performance</em></div>
+      </div>
+
       <!-- HISTORICAL STRESS TEST -->
       <div class="card">
         <div class="card-title">Historical Crisis Stress Test</div>
@@ -1727,6 +1878,16 @@ body.view-mobile .logo-icon { width: 22px !important; height: 22px !important; f
     </div>
     <!-- Analysis Results -->
     <div id="researchResults"></div>
+    <!-- Regime-Conditioned Return Distributions -->
+    <div class="card" id="rcrCard" style="display:none;">
+      <div class="card-title">Regime-Conditioned Return Distributions</div>
+      <div class="card-body">
+        <p style="font-size:12px;color:var(--text-sec);margin-bottom:12px;">How has <strong id="rcrTicker"></strong> historically performed in each of the four Perry portfolio states? States are proxied using trailing 12-month SPY return and VIX level from historical data. Results show median, P10–P90 range, and hit rate (% of periods with positive return) in each regime.</p>
+        <div id="rcrContent"></div>
+        <div class="chart-wrap" style="height:280px;margin-top:14px;" id="rcrChartWrap"><canvas id="rcrChart"></canvas></div>
+      </div>
+      <div class="card-sources"><strong>Method:</strong> Historical 5-year daily returns segmented by regime proxies (VIX level &amp; SPY 12M trailing return) &bull; Perry 4-state classifier applied historically &bull; Returns via Yahoo Finance / Cloudflare Worker</div>
+    </div>
     <!-- Hidden compat elements — data still available via window._lastSecData and DOM but not displayed -->
     <div id="researchRawCard" style="display:none;"><div id="researchOutput"></div></div>
   </div>
@@ -1764,6 +1925,17 @@ body.view-mobile .logo-icon { width: 22px !important; height: 22px !important; f
       <div class="card-sources"><strong>Sources:</strong><br>&#8226; FRED&reg; Macro Regime Scorecard &bull; CFA Business Cycle Framework</div>
     </div>
     <div id="macroResults"></div>
+
+    <!-- PROPRIETARY LEADING INDICATOR COMPOSITE -->
+    <div class="card">
+      <div class="card-title">Proprietary Leading Indicator Composite (Tiered Framework)</div>
+      <div class="card-body">
+        <p style="font-size:12px;color:var(--text-sec);margin-bottom:12px;">Based on your framework's Section 5.2 tiered structure. <strong>Alpha insight:</strong> When Tier 1 (6-12 month lead) deteriorates while Tier 3 still looks solid → early de-risk. When Tier 1 recovers while Tier 3 still looks weak → early re-risk. This lag structure is where macro alpha is generated.</p>
+        <div id="licContent" style="text-align:center;color:var(--text-sec);padding:16px;"><span class="spinner"></span> Loading FRED data for composite...</div>
+        <div class="chart-wrap" style="height:220px;margin-top:14px;display:none;" id="licChartWrap"><canvas id="licChart"></canvas></div>
+      </div>
+      <div class="card-sources"><strong>Sources:</strong> FRED&reg; Federal Reserve Bank of St. Louis &bull; Tier structure from Perry Macro HF Framework v1.0 Section 5.2 &bull; CFA L3 Capital Market Expectations</div>
+    </div>
   </div>
 </div>
 
@@ -3115,6 +3287,7 @@ function navigateTo(p) {
   if (ce) ce.classList.add('active');
   window.scrollTo(0, 0);
   if (p === 'portfolio') renderPortfolioOverview();
+  if (p === 'home') { briefingLoad(); }
   if (p === 'macro') loadMacroLiveTable();
   if (p === 'resources' && typeof resourcesInit === 'function') resourcesInit();
   if (p === 'markets' && typeof mktInit === 'function' && !window._mktInitialized) { mktInit(); window._mktInitialized = true; }
@@ -3437,6 +3610,17 @@ async function renderPortfolioOverview() {
   document.getElementById('btnStress').classList.toggle('active', _showStress);
   document.getElementById('btnVixRange').classList.toggle('active', _showVixRange);
   renderPortfolioChart();
+  // Trigger regime audit using cached state if available
+  if (typeof renderRegimeAudit === 'function') {
+    var stateKey = window._briefingState || 'growth';
+    renderRegimeAudit(stateKey);
+    // If state not yet classified, fetch it now
+    if (!window._briefingState && typeof psLoadDiagnostic === 'function') {
+      psLoadDiagnostic().then(function(){
+        if (window._briefingState) renderRegimeAudit(window._briefingState);
+      }).catch(function(){});
+    }
+  }
 }
 
 function mcBig(label, value, sub, subColor) {
@@ -5215,6 +5399,8 @@ window.runResearch = async function() {
       var html = renderCryptoAnalysis(ticker, quote, techData);
       document.getElementById('researchResults').innerHTML = html;
       document.getElementById('researchOutput').textContent = JSON.stringify(quote, null, 2);
+      // Trigger regime-conditioned return distributions
+      if (typeof rcrLoad === 'function') rcrLoad(ticker);
 
     } else {
       // ═══ STOCK or ETF ═══
@@ -5258,6 +5444,8 @@ window.runResearch = async function() {
         var html = renderSECAnalysis(ticker, secData);
       }
       document.getElementById('researchResults').innerHTML = html;
+      // Trigger regime-conditioned return distributions (non-blocking)
+      if (typeof rcrLoad === 'function') rcrLoad(ticker);
     }
 
   } catch(e) {
@@ -5383,6 +5571,10 @@ function loadMacroLiveTable(force) {
 
     // Render business cycle chart
     if (typeof renderBusinessCycleChart === 'function') renderBusinessCycleChart(d.phase, d.totalScore, d.maxScore);
+    // Cache for briefing page and LIC
+    window._lastMacroData = d;
+    // Render Leading Indicator Composite
+    if (typeof licRender === 'function') licRender(d);
     _macroLoadedAt = new Date();
     mktUpdateStatusBar();
 
@@ -8423,6 +8615,659 @@ async function mktLoadRegime() {
 
 // ═══════════ END MARKETS PAGE ═══════════
 
+// ═══════════════════════════════════════════════════════════════════
+// ══════════  MORNING BRIEFING ENGINE  ══════════════════════════════
+// ═══════════════════════════════════════════════════════════════════
+async function briefingLoad() {
+  document.getElementById('briefingDate').textContent = new Date().toLocaleDateString('en-US',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
+  var WORKER = 'https://perry-finance-proxy.zachperrybusiness.workers.dev';
+  // ── Pulse row (live quotes) ──
+  var pulseTickets = [
+    {sym:'SPY',label:'S&P 500'},{sym:'QQQ',label:'NASDAQ 100'},
+    {sym:'%5EVIX',label:'VIX'},{sym:'GLD',label:'Gold'},{sym:'BTC-USD',label:'Bitcoin'}
+  ];
+  var pulseEl = document.getElementById('briefingPulse');
+  pulseEl.innerHTML = pulseTickets.map(function(t){ return '<div class="briefing-pulse-card"><div class="briefing-pulse-ticker">'+t.label+'</div><div class="briefing-pulse-price" id="bp_'+t.sym+'"><span class="spinner" style="width:12px;height:12px;"></span></div><div class="briefing-pulse-chg" id="bpc_'+t.sym+'">—</div></div>'; }).join('');
+  pulseTickets.forEach(async function(t){
+    try {
+      var r = await fetch(WORKER+'/quote?symbol='+encodeURIComponent(t.sym.replace('%5E','^')));
+      var d = await r.json();
+      var px = d.current || d.price || 0;
+      var chg = d.changePercent || 0;
+      var col = chg >= 0 ? C.success : C.danger;
+      var el = document.getElementById('bp_'+t.sym);
+      var cel = document.getElementById('bpc_'+t.sym);
+      if(el) el.textContent = px >= 1000 ? '$'+px.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2}) : px < 10 ? px.toFixed(2) : '$'+px.toFixed(2);
+      if(cel){ cel.textContent = (chg>=0?'+':'')+chg.toFixed(2)+'%'; cel.style.color = col; }
+    } catch(e) {}
+  });
+
+  // ── Regime banner (reuse psClassifyState) ──
+  var regimeEl = document.getElementById('briefingRegime');
+  try {
+    var [spyR, vixR, qqqR] = await Promise.all([
+      fetch(WORKER+'/chart?symbol=SPY&range=1y&interval=1d').then(function(r){return r.json();}),
+      fetch(WORKER+'/quote?symbol=%5EVIX').then(function(r){return r.json();}),
+      fetch(WORKER+'/quote?symbol=QQQ').then(function(r){return r.json();})
+    ]);
+    var spyPts = (spyR.points||[]).filter(function(p){return p.close!=null;});
+    if(spyPts.length >= 2) {
+      var closes = spyPts.map(function(p){return p.close;});
+      var spy12mHigh = Math.max.apply(null,closes), spy12mLow = Math.min.apply(null,closes);
+      var spyCur = closes[closes.length-1], spyStart = closes[0];
+      var signals = { vix: vixR.current||vixR.price||null, spyTrailingReturn:(spyCur-spyStart)/spyStart, drawdownFromPeak:(spyCur-spy12mHigh)/spy12mHigh, spy12mFromLow:(spyCur-spy12mLow)/spy12mLow };
+      var cl = psClassifyState(signals);
+      window._briefingState = cl.winner;
+      var st = PS_STATES.find(function(s){return s.key===cl.winner;});
+      var qqqPx = qqqR.current || qqqR.price || 0;
+      regimeEl.innerHTML = '<div class="briefing-regime-hero" style="background:'+st.color+';border-radius:4px;">'
+        + '<div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:12px;">'
+        + '<div><div style="font-size:11px;opacity:.8;text-transform:uppercase;letter-spacing:.6px;">Current Portfolio State</div>'
+        + '<div style="font-size:26px;font-weight:800;margin:3px 0;">'+st.name+'</div>'
+        + '<div style="font-size:11px;opacity:.8;">Confidence: '+cl.confidence.toFixed(0)+'% &middot; '+cl.reasons.join(' &middot; ')+'</div>'
+        + '<div style="margin-top:8px;font-size:12px;background:rgba(0,0,0,.2);padding:8px 12px;border-radius:3px;">'
+        + '<strong>Posture:</strong> '+st.posture+' &nbsp;<strong>Cash:</strong> '+st.cash+'</div>'
+        + '</div>'
+        + '<div style="text-align:right;font-size:12px;opacity:.9;">'
+        + '<div>SPY: $'+spyCur.toFixed(2)+' ('+(signals.spyTrailingReturn*100>=0?'+':'')+(signals.spyTrailingReturn*100).toFixed(1)+'% 12M)</div>'
+        + '<div>QQQ: $'+qqqPx.toFixed(2)+'</div>'
+        + '<div>VIX: '+(signals.vix!=null?signals.vix.toFixed(1):'—')+'</div>'
+        + '</div></div></div>';
+      // trigger regime audit now that state is known
+      if(typeof renderRegimeAudit==='function' && window._holdings && window._holdings.length) renderRegimeAudit(cl.winner);
+    }
+  } catch(e){ regimeEl.innerHTML='<div style="padding:14px;color:var(--danger);">Failed to load regime data: '+e.message+'</div>'; }
+
+  // ── Portfolio snapshot ──
+  var pfEl = document.getElementById('briefingPortfolio');
+  var h = window._holdings || [];
+  if(!h.length){ pfEl.innerHTML='<div style="font-size:12px;color:var(--text-sec);padding:10px 0;">Sign in and add holdings to see your portfolio snapshot here.</div>'; }
+  else {
+    var tv=0,tc=0;
+    h.forEach(function(x){
+      var isCash=x.assetClass==='Cash'||x.assetClass==='Money Market'||x.assetClass==='CD'||x.assetClass==='Bond Position';
+      tv += isCash ? (x.costBasis||0)*x.quantity : (x.currentPrice||0)*x.quantity;
+      tc += (x.costBasis||0)*x.quantity;
+    });
+    var gl=tv-tc, glp=tc>0?(gl/tc)*100:0;
+    var topHolder = h.filter(function(x){var isCash=x.assetClass==='Cash'||x.assetClass==='Money Market';return !isCash;}).sort(function(a,b){return (b.currentPrice||0)*b.quantity-(a.currentPrice||0)*a.quantity;})[0];
+    pfEl.innerHTML='<div class="briefing-portfolio-snap">'
+      + '<div class="briefing-pf-card"><div class="briefing-pf-label">Total Value</div><div class="briefing-pf-value">'+fmtInt(tv)+'</div><div class="briefing-pf-sub" style="color:'+pctColor(glp)+'">'+(glp>=0?'+':'')+glp.toFixed(1)+'% all-time</div></div>'
+      + '<div class="briefing-pf-card"><div class="briefing-pf-label">Total G/L</div><div class="briefing-pf-value" style="color:'+pctColor(gl)+'">'+(gl>=0?'+':'')+fmt(gl)+'</div><div class="briefing-pf-sub">vs cost basis '+fmt(tc)+'</div></div>'
+      + '<div class="briefing-pf-card"><div class="briefing-pf-label">Positions</div><div class="briefing-pf-value">'+h.length+'</div><div class="briefing-pf-sub">across all accounts</div></div>'
+      + (topHolder?'<div class="briefing-pf-card"><div class="briefing-pf-label">Largest Position</div><div class="briefing-pf-value">'+topHolder.ticker+'</div><div class="briefing-pf-sub">'+fmt((topHolder.currentPrice||0)*topHolder.quantity)+'</div></div>':'')
+      + '</div>';
+  }
+
+  // ── Macro snapshot (pull from _lastMacroData if available) ──
+  var macroEl = document.getElementById('briefingMacroSnap');
+  if(window._lastMacroData) {
+    var d = window._lastMacroData;
+    var rows = (d.pillarScores||[]).slice(0,6).map(function(p){
+      var pct = Math.round(((p.score+p.count)/(p.count*2))*100);
+      var col = pct>=60?C.success:pct>=40?C.warning:C.danger;
+      return '<div class="briefing-macro-row"><span>'+p.name+'</span><span style="font-weight:700;color:'+col+';">'+(p.score>=0?'+':'')+p.score+'/'+p.count+'</span></div>';
+    }).join('');
+    var phase=d.phase||'—', total=d.totalScore, max=d.maxScore;
+    macroEl.innerHTML='<div style="font-size:12px;font-weight:700;color:var(--navy);margin-bottom:6px;">Phase: '+phase+' ('+total+'/'+max+')</div>'+rows
+      +'<div style="margin-top:8px;"><button class="btn btn-sm" onclick="navigateTo(\'macro\');loadMacroLiveTable(true)">Full Scorecard →</button></div>';
+  } else {
+    macroEl.innerHTML='<div style="text-align:center;padding:10px;color:var(--text-sec);font-size:12px;">Navigate to <button class="btn btn-sm" onclick="navigateTo(\'macro\')">Macro Regime Analysis</button> first to load scorecard data, then return here.</div>';
+  }
+
+  // ── Economic calendar ──
+  var calEl = document.getElementById('briefingCalendar');
+  var today = new Date(); var dom = today.getDate(); var dow = today.getDay(); // 0=Sun
+  var releases = [
+    {name:'ISM Manufacturing PMI',note:'1st business day',impact:'High'},
+    {name:'Nonfarm Payrolls / Unemployment',note:'First Friday',impact:'Very High'},
+    {name:'CPI Headline & Core',note:'~10th of month',impact:'Very High'},
+    {name:'PPI Final Demand',note:'~11th of month',impact:'High'},
+    {name:'Retail Sales',note:'~15th of month',impact:'High'},
+    {name:'PCE / Core PCE',note:'Last business day',impact:'Very High'},
+    {name:'FOMC Decision',note:'8x per year',impact:'Very High'},
+    {name:'Initial Jobless Claims',note:'Every Thursday',impact:'Medium'},
+  ];
+  var impactColor = {'Very High':C.danger,'High':C.warning,'Medium':C.navy,'Low':C.textSec};
+  calEl.innerHTML = releases.slice(0,5).map(function(r){
+    var ic = impactColor[r.impact]||C.textSec;
+    return '<div class="briefing-cal-row">'
+      +'<span class="briefing-cal-name">'+r.name+'</span>'
+      +'<span class="briefing-cal-meta">'+r.note+'</span>'
+      +'<span class="briefing-cal-impact" style="background:'+ic+';color:#fff;">'+r.impact+'</span>'
+      +'</div>';
+  }).join('');
+}
+
+// Auto-run when page loads (after auth check) and when Home is navigated to
+(function(){
+  var origNavigateTo = window._origNavigateTo_briefing || null;
+  // We patch navigateTo to trigger briefingLoad on home visits
+})();
+
+// ═══════════════════════════════════════════════════════════════════
+// ════════  REGIME-AWARE ALLOCATION AUDIT  ══════════════════════════
+// ═══════════════════════════════════════════════════════════════════
+
+// Maps ticker patterns to which states they're appropriate for
+var REGIME_FIT_DB = {
+  // Leveraged — only fits Leveraged state
+  'TQQQ':['leveraged'],'SOXL':['leveraged'],'FNGU':['leveraged'],'UPRO':['leveraged'],
+  'SPXL':['leveraged'],'TECL':['leveraged'],'LABU':['leveraged'],'UDOW':['leveraged'],
+  'BTC-USD':['leveraged'],'ETH-USD':['leveraged'],'IBIT':['leveraged'],'ETHA':['leveraged'],
+  // Non-levered growth — fits growth and leveraged
+  'QQQ':['leveraged','growth'],'SPY':['leveraged','growth'],'IWM':['leveraged','growth'],
+  'DIA':['leveraged','growth'],'VOO':['leveraged','growth'],'VTI':['leveraged','growth'],
+  'VGT':['leveraged','growth'],'XLK':['leveraged','growth'],'ARKK':['leveraged','growth'],
+  'NVDA':['leveraged','growth'],'AAPL':['growth','neutral'],'MSFT':['growth','neutral'],
+  'AMZN':['growth'],'GOOGL':['growth'],'META':['growth'],
+  // Neutral/safe — fits neutral and drawdown
+  'GLD':['neutral','drawdown'],'SLV':['neutral','drawdown'],'IAU':['neutral','drawdown'],
+  'GDX':['neutral','drawdown'],'GDXJ':['neutral','drawdown'],
+  'TLT':['neutral','drawdown'],'IEF':['neutral','drawdown'],'SHV':['neutral','drawdown'],
+  'BND':['neutral','drawdown'],'AGG':['neutral','drawdown'],
+  'XLU':['neutral','drawdown'],'XLP':['neutral','drawdown'],'XLV':['neutral','drawdown'],
+  'VNQ':['neutral'],'EFA':['neutral'],'EEM':['neutral'],
+  // Cash — fits neutral and drawdown
+  'CASH':['neutral','drawdown'],'CD':['neutral','drawdown'],'BOND':['neutral','drawdown'],
+  'SPAXX':['neutral','drawdown'],'FDRXX':['neutral','drawdown'],'FZFXX':['neutral','drawdown'],
+  'SPRXX':['neutral','drawdown'],'VMFXX':['neutral','drawdown'],'SWVXX':['neutral','drawdown'],
+};
+
+// Classify by asset class if ticker not in DB
+function rfGetFit(h, stateKey) {
+  var t = (h.ticker||'').toUpperCase();
+  var isCash = h.assetClass==='Cash'||h.assetClass==='Money Market'||h.assetClass==='CD'||h.assetClass==='Bond Position';
+  var goodStates;
+  if(REGIME_FIT_DB[t]) goodStates = REGIME_FIT_DB[t];
+  else if(isCash) goodStates = ['neutral','drawdown'];
+  else if(h.leverage && (h.assetClass||'').toLowerCase().indexOf('etf')>=0) goodStates = ['leveraged'];
+  else if(h.assetClass==='ETF') goodStates = ['leveraged','growth'];
+  else goodStates = ['leveraged','growth','neutral']; // Unknown equity — assume generic
+  if(goodStates.indexOf(stateKey)>=0) return 'good';
+  // Adjacent states get neutral
+  var adjacent = {leveraged:['growth'],growth:['leveraged','neutral'],neutral:['growth','drawdown'],drawdown:['neutral']};
+  if((adjacent[stateKey]||[]).some(function(s){return goodStates.indexOf(s)>=0;})) return 'warn';
+  return 'bad';
+}
+
+function renderRegimeAudit(stateKey) {
+  var el = document.getElementById('regimeAuditWrap');
+  if(!el) return;
+  var holdings = window._holdings || [];
+  if(!holdings.length){ el.innerHTML='<div style="color:var(--text-sec);text-align:center;padding:14px;font-size:12px;">No holdings to audit.</div>'; return; }
+  var stateLabel = (PS_STATES.find(function(s){return s.key===stateKey;})||{}).name||stateKey;
+  var good=0,warn=0,bad=0;
+  var rows = holdings.map(function(h){
+    var fit = rfGetFit(h, stateKey);
+    if(fit==='good') good++;
+    else if(fit==='warn') warn++;
+    else bad++;
+    var isCash = h.assetClass==='Cash'||h.assetClass==='Money Market';
+    var mv = isCash ? (h.costBasis||0)*h.quantity : (h.currentPrice||0)*h.quantity;
+    var badge,label;
+    if(fit==='good'){ badge='regime-fit-good'; label='✓ Aligned'; }
+    else if(fit==='warn'){ badge='regime-fit-warn'; label='⚠ Neutral'; }
+    else { badge='regime-fit-bad'; label='✗ Misaligned'; }
+    return '<tr>'
+      +'<td style="font-weight:700;color:var(--navy);">'+h.ticker+'</td>'
+      +'<td>'+h.companyName+'</td>'
+      +'<td>'+fmt(mv)+'</td>'
+      +'<td>'+(h.accountType||'Individual')+'</td>'
+      +'<td><span class="regime-fit '+badge+'">'+label+'</span></td>'
+      +'<td style="font-size:11px;color:var(--text-sec);">'+(fit==='bad'?'Consider rotating for '+stateLabel+' posture':fit==='warn'?'Acceptable, not optimal':'Appropriate for '+stateLabel)+'</td>'
+      +'</tr>';
+  }).join('');
+  var summary='<div style="display:flex;gap:14px;margin-bottom:10px;flex-wrap:wrap;">'
+    +'<span class="regime-fit regime-fit-good">✓ Aligned: '+good+'</span>'
+    +'<span class="regime-fit regime-fit-warn">⚠ Neutral: '+warn+'</span>'
+    +'<span class="regime-fit regime-fit-bad">✗ Misaligned: '+bad+'</span>'
+    +'<span style="font-size:12px;color:var(--text-sec);align-self:center;">for <strong>'+stateLabel+'</strong> state</span>'
+    +'</div>';
+  el.innerHTML=summary+'<div class="table-wrap"><table><thead><tr>'
+    +'<th>Ticker</th><th>Name</th><th>Mkt Value</th><th>Account</th><th>Regime Fit</th><th>Guidance</th>'
+    +'</tr></thead><tbody>'+rows+'</tbody></table></div>';
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// ════════  FAMA-FRENCH FACTOR EXPOSURE  ════════════════════════════
+// ═══════════════════════════════════════════════════════════════════
+// Factor proxies: Mkt=SPY, SMB=IWM-SPY(excess), HML=VTV-VUG(excess),
+//                 MOM=MTUM, RMW=quality proxy, CMA=conservative-aggressive via IJJ
+async function ffRunAnalysis() {
+  var el = document.getElementById('ffResults');
+  el.innerHTML='<div style="text-align:center;padding:16px;"><span class="spinner"></span> Fetching 3-year price history for portfolio and factor proxies...</div>';
+  var holdings = window._holdings||[];
+  if(!holdings.length){ el.innerHTML='<div style="color:var(--danger);padding:10px;">No holdings to analyze.</div>'; return; }
+  var WORKER='https://perry-finance-proxy.zachperrybusiness.workers.dev';
+  var range='3y'; var interval='1d';
+  try {
+    // Get unique equity tickers
+    var eqTickers=[]; var seen={};
+    holdings.forEach(function(h){
+      var isCash=h.assetClass==='Cash'||h.assetClass==='Money Market'||h.assetClass==='CD'||h.assetClass==='Bond Position';
+      if(!isCash&&h.ticker&&!seen[h.ticker]){seen[h.ticker]=1;eqTickers.push(h.ticker);}
+    });
+    // Factor proxies
+    var factorTickers=['SPY','IWM','VTV','VUG','MTUM','IJJ','QUAL'];
+    var allTickers=eqTickers.concat(factorTickers);
+    // Fetch all in parallel
+    var results={};
+    await Promise.all(allTickers.map(async function(t){
+      try{
+        var r=await fetch(WORKER+'/chart?symbol='+encodeURIComponent(t)+'&range='+range+'&interval='+interval);
+        var d=await r.json();
+        var pts=(d.points||[]).filter(function(p){return p.close!=null;});
+        if(pts.length>5){
+          var closes=pts.map(function(p){return p.close;});
+          var rets=[]; for(var i=1;i<closes.length;i++) rets.push((closes[i]-closes[i-1])/closes[i-1]);
+          results[t]={closes:closes,returns:rets,dates:pts.map(function(p){return p.date.slice(0,10);})};
+        }
+      }catch(e){}
+    }));
+    if(!results['SPY']){ el.innerHTML='<div style="color:var(--danger);padding:10px;">Could not fetch SPY data for factor analysis.</div>'; return; }
+    var mktRets=results['SPY'].returns;
+    var n=mktRets.length;
+    // Build factor return series (aligned to SPY dates)
+    function alignReturns(tickerRets, refLen){
+      // Simple: truncate or pad with zeros to match reference length
+      if(tickerRets.length>=refLen) return tickerRets.slice(tickerRets.length-refLen);
+      var pad=new Array(refLen-tickerRets.length).fill(0);
+      return pad.concat(tickerRets);
+    }
+    function compFactorRet(tickerA, tickerB){
+      if(!results[tickerA]||!results[tickerB]) return new Array(n).fill(0);
+      var a=alignReturns(results[tickerA].returns,n);
+      var b=alignReturns(results[tickerB].returns,n);
+      return a.map(function(v,i){return v-b[i];});
+    }
+    var RF_DAILY=0.0525/252; // risk-free ~5.25% annual
+    var factors={
+      'Market (Mkt-RF)': mktRets.map(function(v){return v-RF_DAILY;}),
+      'Size (SMB)': compFactorRet('IWM','SPY'),
+      'Value (HML)': compFactorRet('VTV','VUG'),
+      'Momentum (MOM)': (results['MTUM']?alignReturns(results['MTUM'].returns,n):new Array(n).fill(0)),
+    };
+    // Build portfolio daily return series (market-value weighted)
+    var totalMV=0;
+    var weights={};
+    holdings.forEach(function(h){
+      var isCash=h.assetClass==='Cash'||h.assetClass==='Money Market'||h.assetClass==='CD'||h.assetClass==='Bond Position';
+      var mv=isCash?(h.costBasis||0)*h.quantity:(h.currentPrice||0)*h.quantity;
+      weights[h.ticker]=(weights[h.ticker]||0)+mv; totalMV+=mv;
+    });
+    var portRets=new Array(n).fill(0);
+    Object.keys(weights).forEach(function(t){
+      var w=totalMV>0?weights[t]/totalMV:0;
+      if(results[t]){ var tr=alignReturns(results[t].returns,n); tr.forEach(function(v,i){portRets[i]+=v*w;}); }
+    });
+    var excessPort=portRets.map(function(v){return v-RF_DAILY;});
+    // OLS: regress excessPort on factors using normal equations
+    function olsRegress(y, Xs){
+      var m=Xs.length; var T=y.length;
+      // Add intercept
+      var X=[]; for(var t2=0;t2<T;t2++){var row=[1];Xs.forEach(function(f){row.push(f[t2]);});X.push(row);}
+      var k=m+1;
+      // X'X and X'y
+      var XtX=[];for(var i=0;i<k;i++){XtX.push(new Array(k).fill(0));}
+      var Xty=new Array(k).fill(0);
+      X.forEach(function(row,t3){
+        for(var i=0;i<k;i++){Xty[i]+=row[i]*y[t3];for(var j=0;j<k;j++){XtX[i][j]+=row[i]*row[j];}}
+      });
+      // Gauss-Jordan inversion
+      var aug=XtX.map(function(r,i){var id=new Array(k).fill(0);id[i]=1;return r.concat(id);});
+      for(var col=0;col<k;col++){
+        var maxRow=col; for(var row=col+1;row<k;row++) if(Math.abs(aug[row][col])>Math.abs(aug[maxRow][col])) maxRow=row;
+        var tmp=aug[col];aug[col]=aug[maxRow];aug[maxRow]=tmp;
+        if(Math.abs(aug[col][col])<1e-12) continue;
+        var div=aug[col][col]; for(var j2=0;j2<2*k;j2++) aug[col][j2]/=div;
+        for(var row2=0;row2<k;row2++){if(row2===col)continue;var factor=aug[row2][col];for(var j3=0;j3<2*k;j3++)aug[row2][j3]-=factor*aug[col][j3];}
+      }
+      var inv=aug.map(function(r){return r.slice(k);});
+      var betas=new Array(k).fill(0); for(var i2=0;i2<k;i2++) for(var j4=0;j4<k;j4++) betas[i2]+=inv[i2][j4]*Xty[j4];
+      var yhat=X.map(function(row){var s=0;row.forEach(function(v,i){s+=v*betas[i];});return s;});
+      var ss_res=y.reduce(function(s,v,i){return s+(v-yhat[i])*(v-yhat[i]);},0);
+      var ymean=y.reduce(function(a,b){return a+b;})/y.length;
+      var ss_tot=y.reduce(function(s,v){return s+(v-ymean)*(v-ymean);},0);
+      var r2=ss_tot>0?1-ss_res/ss_tot:0;
+      return {betas:betas,r2:r2,alpha_annual:betas[0]*252};
+    }
+    var factorKeys=Object.keys(factors);
+    var Xs=factorKeys.map(function(k){return factors[k];});
+    var ols=olsRegress(excessPort,Xs);
+    var alphaAnn=ols.alpha_annual*100;
+    var r2=ols.r2;
+    // Render factor cards
+    var factorColors=[C.navy,C.blue,C.success,C.warning];
+    var factorDescs={
+      'Market (Mkt-RF)':'Excess market sensitivity. >1 = more volatile than SPY.',
+      'Size (SMB)':'Small-cap tilt. >0 = small-cap exposure, <0 = large-cap.',
+      'Value (HML)':'Value tilt. >0 = value stocks, <0 = growth stocks.',
+      'Momentum (MOM)':'Momentum exposure. >0 = riding winners, <0 = contrarian.',
+    };
+    var cardHtml='<div class="ff-factor-grid">';
+    factorKeys.forEach(function(k2,i){
+      var beta=ols.betas[i+1]; // +1 for intercept
+      var col=beta>0?C.navy:C.danger;
+      if(Math.abs(beta)<0.1) col=C.textSec;
+      cardHtml+='<div class="ff-factor-card">'
+        +'<div class="ff-factor-name">'+k2+'</div>'
+        +'<div class="ff-factor-beta" style="color:'+col+';">'+(beta>=0?'+':'')+beta.toFixed(3)+'</div>'
+        +'<div class="ff-factor-desc">'+factorDescs[k2]+'</div>'
+        +'</div>';
+    });
+    // Alpha and R² cards
+    var alphaCol=alphaAnn>0?C.success:C.danger;
+    cardHtml+='<div class="ff-factor-card">'
+      +'<div class="ff-factor-name">Jensen&apos;s Alpha (ann.)</div>'
+      +'<div class="ff-factor-beta" style="color:'+alphaCol+';">'+(alphaAnn>=0?'+':'')+alphaAnn.toFixed(2)+'%</div>'
+      +'<div class="ff-factor-desc">Return unexplained by factors. Positive = true alpha.</div>'
+      +'</div>';
+    cardHtml+='<div class="ff-factor-card">'
+      +'<div class="ff-factor-name">R² (Factor Explained)</div>'
+      +'<div class="ff-factor-beta" style="color:'+C.navy+';">'+(r2*100).toFixed(1)+'%</div>'
+      +'<div class="ff-factor-desc">How much of portfolio return is explained by systematic factors.</div>'
+      +'</div>';
+    cardHtml+='</div>';
+    var interp='';
+    if(r2>0.9) interp='Your return is <strong>highly factor-driven</strong> ('+((r2)*100).toFixed(0)+'% explained). Alpha is '+alphaAnn.toFixed(2)+'%.';
+    else if(r2>0.7) interp='Significant factor exposure ('+((r2)*100).toFixed(0)+'%). Some idiosyncratic return present.';
+    else interp='Relatively low factor exposure ('+((r2)*100).toFixed(0)+'%). Portfolio has substantial idiosyncratic exposure or unique factor mix.';
+    el.innerHTML='<p style="font-size:12px;color:var(--text-sec);margin-bottom:12px;">'+interp+' Based on '+n+' trading days of 3-year history.</p>'+cardHtml;
+  } catch(e){ el.innerHTML='<div style="color:var(--danger);padding:10px;">Error: '+e.message+'</div>'; }
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// ════  REGIME-CONDITIONED RETURN DISTRIBUTIONS (Research)  ═════════
+// ═══════════════════════════════════════════════════════════════════
+async function rcrLoad(ticker) {
+  var card=document.getElementById('rcrCard');
+  var content=document.getElementById('rcrContent');
+  var tickerEl=document.getElementById('rcrTicker');
+  var chartWrap=document.getElementById('rcrChartWrap');
+  if(!card||!content) return;
+  card.style.display='';
+  tickerEl.textContent=ticker;
+  content.innerHTML='<div style="text-align:center;padding:14px;"><span class="spinner"></span> Computing regime-conditioned return distributions for '+ticker+'...</div>';
+  chartWrap.style.display='none';
+  var WORKER='https://perry-finance-proxy.zachperrybusiness.workers.dev';
+  try {
+    var [tickerData, spyData, vixData] = await Promise.all([
+      fetch(WORKER+'/chart?symbol='+encodeURIComponent(ticker)+'&range=5y&interval=1d').then(function(r){return r.json();}),
+      fetch(WORKER+'/chart?symbol=SPY&range=5y&interval=1d').then(function(r){return r.json();}),
+      fetch(WORKER+'/chart?symbol=%5EVIX&range=5y&interval=1d').then(function(r){return r.json();})
+    ]);
+    var tPts=(tickerData.points||[]).filter(function(p){return p.close!=null;});
+    var sPts=(spyData.points||[]).filter(function(p){return p.close!=null;});
+    var vPts=(vixData.points||[]).filter(function(p){return p.close!=null;});
+    if(tPts.length<63||sPts.length<252){ content.innerHTML='<div style="color:var(--warning);padding:10px;">Insufficient data for '+ticker+' (need 5 years).</div>'; return; }
+    // Build date → value maps
+    var spyMap={},vixMap={};
+    sPts.forEach(function(p){spyMap[p.date.slice(0,10)]=p.close;});
+    vPts.forEach(function(p){vixMap[p.date.slice(0,10)]=p.close;});
+    // For each trading day in ticker history, compute:
+    //   - trailing 21-day ticker return
+    //   - the regime (using SPY 252-day trailing return + VIX at that date)
+    var dates=tPts.map(function(p){return p.date.slice(0,10);});
+    var closes=tPts.map(function(p){return p.close;});
+    // SPY closes aligned
+    var spyCloses=dates.map(function(d){return spyMap[d]||null;});
+    var vixCloses=dates.map(function(d){return vixMap[d]||null;});
+    // Segment: for each date i >= 252+21, classify the regime at i-21 and record 21-day fwd return
+    var stateReturns={leveraged:[],growth:[],neutral:[],drawdown:[]};
+    var lookback=252; var fwd=21;
+    for(var i=lookback+fwd;i<closes.length-fwd;i++){
+      var spyNow=spyCloses[i];
+      var spy12mAgo=spyCloses[i-lookback];
+      var vixNow=vixCloses[i];
+      if(!spyNow||!spy12mAgo||!vixNow) continue;
+      var spyTrail=(spyNow-spy12mAgo)/spy12mAgo;
+      var spyHigh=Math.max.apply(null,spyCloses.slice(i-lookback,i+1).filter(Boolean));
+      var ddFromPeak=(spyNow-spyHigh)/spyHigh;
+      var spyLow=Math.min.apply(null,spyCloses.slice(i-lookback,i+1).filter(Boolean));
+      var fromLow=(spyNow-spyLow)/spyLow;
+      var signals={vix:vixNow,spyTrailingReturn:spyTrail,drawdownFromPeak:ddFromPeak,spy12mFromLow:fromLow};
+      var cl=psClassifyState(signals);
+      var fwdRet=(closes[i+fwd]-closes[i])/closes[i]*100;
+      stateReturns[cl.winner].push(fwdRet);
+    }
+    // Compute stats per state
+    function pct(arr,p){var s=arr.slice().sort(function(a,b){return a-b;});return s[Math.floor(p*s.length/100)]||0;}
+    function median(arr){return pct(arr,50);}
+    function hitRate(arr){return arr.length?arr.filter(function(v){return v>0;}).length/arr.length*100:0;}
+    var stateColors={leveraged:PS_STATES[0].color,growth:PS_STATES[1].color,neutral:PS_STATES[2].color,drawdown:PS_STATES[3].color};
+    var stateNames={leveraged:'Leveraged',growth:'Non-Levered Growth',neutral:'Neutral',drawdown:'Positioned for Drawdown'};
+    var stateKeys=['leveraged','growth','neutral','drawdown'];
+    var tableHtml='<div class="rcr-grid">';
+    stateKeys.forEach(function(sk){
+      var arr=stateReturns[sk];
+      if(!arr.length){ tableHtml+='<div class="rcr-card"><div class="rcr-card-header" style="background:'+stateColors[sk]+';">'+stateNames[sk]+'</div><div class="rcr-card-body" style="color:var(--text-sec);font-size:11px;font-style:italic;">Insufficient historical observations</div></div>'; return; }
+      var med=median(arr), p10=pct(arr,10), p90=pct(arr,90), hr=hitRate(arr), n=arr.length;
+      var medCol=med>=0?C.success:C.danger;
+      tableHtml+='<div class="rcr-card">'
+        +'<div class="rcr-card-header" style="background:'+stateColors[sk]+';">'+stateNames[sk]+' (n='+n+')</div>'
+        +'<div class="rcr-card-body">'
+        +'<div class="rcr-stat-row"><span>Median 21D Return</span><span style="font-weight:700;color:'+medCol+';">'+(med>=0?'+':'')+med.toFixed(2)+'%</span></div>'
+        +'<div class="rcr-stat-row"><span>P10 – P90</span><span style="font-weight:600;">'+(p10>=0?'+':'')+p10.toFixed(1)+'% to +'+(p90>=0?'+':'')+p90.toFixed(1)+'%</span></div>'
+        +'<div class="rcr-stat-row"><span>Hit Rate (>0%)</span><span style="font-weight:600;color:'+(hr>=50?C.success:C.danger)+';">'+hr.toFixed(0)+'%</span></div>'
+        +'</div></div>';
+    });
+    tableHtml+='</div>';
+    content.innerHTML=tableHtml;
+    // Bar chart: median returns per state
+    chartWrap.style.display='block';
+    if(window._rcrChart) window._rcrChart.destroy();
+    window._rcrChart=new Chart(document.getElementById('rcrChart').getContext('2d'),{
+      type:'bar',
+      data:{
+        labels:stateKeys.map(function(sk){return stateNames[sk];}),
+        datasets:[
+          {label:'Median 21-Day Return (%)',data:stateKeys.map(function(sk){var a=stateReturns[sk];return a.length?+median(a).toFixed(2):null;}),backgroundColor:stateKeys.map(function(sk){return stateColors[sk];}),borderWidth:0,borderRadius:3},
+          {label:'P90',data:stateKeys.map(function(sk){var a=stateReturns[sk];return a.length?+pct(a,90).toFixed(2):null;}),type:'scatter',pointBackgroundColor:stateKeys.map(function(sk){return stateColors[sk];}),pointRadius:6,showLine:false},
+          {label:'P10',data:stateKeys.map(function(sk){var a=stateReturns[sk];return a.length?+pct(a,10).toFixed(2):null;}),type:'scatter',pointBackgroundColor:stateKeys.map(function(sk){return stateColors[sk];}),pointRadius:6,showLine:false,pointStyle:'triangle'},
+        ]
+      },
+      options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'bottom',labels:{font:{size:10},color:C.textSec}},tooltip:chartTooltip},
+        scales:{x:{grid:chartGrid,ticks:chartTicks},y:{grid:chartGrid,ticks:Object.assign({},chartTicks,{callback:function(v){return v+'%';}}),title:{display:true,text:'21-Day Return (%)',color:C.textSec,font:{size:11}}}}}
+    });
+  } catch(e){ content.innerHTML='<div style="color:var(--danger);padding:10px;">Error: '+e.message+'</div>'; }
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// ══════  PORTFOLIO-STATE MONTE CARLO  ══════════════════════════════
+// ═══════════════════════════════════════════════════════════════════
+// State-conditioned parameters (annualized drift, vol) derived from SPY history
+var SMC_PARAMS = {
+  leveraged:  { driftAnn: 0.28, volAnn: 0.35, label: 'Leveraged',           color: '#2E7D52' },
+  growth:     { driftAnn: 0.14, volAnn: 0.18, label: 'Non-Levered Growth',  color: '#003C71' },
+  neutral:    { driftAnn: 0.04, volAnn: 0.14, label: 'Neutral',             color: '#8B6914' },
+  drawdown:   { driftAnn:-0.12, volAnn: 0.28, label: 'Positioned Drawdown', color: '#8B2A2A' }
+};
+
+async function smcRun() {
+  var tabsEl=document.getElementById('smcTabs');
+  var resultsEl=document.getElementById('smcResults');
+  var wrapEl=document.getElementById('smcChartWrap');
+  var statsEl=document.getElementById('smcStats');
+  resultsEl.innerHTML='<div style="text-align:center;padding:14px;"><span class="spinner"></span> Running Monte Carlo simulation across 4 portfolio states...</div>';
+  resultsEl.style.display='block';
+  tabsEl.style.display='none'; wrapEl.style.display='none'; statsEl.style.display='none';
+  var holdings=window._holdings||[];
+  if(!holdings.length){ resultsEl.innerHTML='<div style="color:var(--danger);padding:10px;">No holdings to simulate. Add holdings first.</div>'; return; }
+  // Compute portfolio current value
+  var tv=0;
+  holdings.forEach(function(h){ var isCash=h.assetClass==='Cash'||h.assetClass==='Money Market'||h.assetClass==='CD'||h.assetClass==='Bond Position'; tv+=isCash?(h.costBasis||0)*h.quantity:(h.currentPrice||0)*h.quantity; });
+  if(tv<=0){ resultsEl.innerHTML='<div style="color:var(--danger);padding:10px;">Portfolio value is $0 — ensure prices are refreshed.</div>'; return; }
+  var N=1000, T=252;
+  // Box-Muller normal sampler
+  function randn(){ var u=0,v=0; while(!u)u=Math.random(); while(!v)v=Math.random(); return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v); }
+  // Run GBM for all states
+  var smcData={};
+  var dt=1/252;
+  Object.keys(SMC_PARAMS).forEach(function(sk){
+    var p=SMC_PARAMS[sk];
+    var mu=p.driftAnn, sig=p.volAnn;
+    var paths=[];
+    for(var path=0;path<N;path++){
+      var vals=[tv];
+      for(var t3=1;t3<=T;t3++){
+        var prev=vals[vals.length-1];
+        vals.push(prev*Math.exp((mu-0.5*sig*sig)*dt+sig*Math.sqrt(dt)*randn()));
+      }
+      paths.push(vals);
+    }
+    // Compute percentile bands
+    var p10=[],p50=[],p90=[];
+    for(var day=0;day<=T;day++){
+      var dayVals=paths.map(function(p2){return p2[day];}).sort(function(a,b){return a-b;});
+      p10.push(dayVals[Math.floor(0.10*N)]); p50.push(dayVals[Math.floor(0.50*N)]); p90.push(dayVals[Math.floor(0.90*N)]);
+    }
+    smcData[sk]={p10:p10,p50:p50,p90:p90,terminalPaths:paths.map(function(p2){return p2[T];})};
+  });
+  // Build tabs + chart
+  var stateKeys=Object.keys(SMC_PARAMS);
+  window._smcData=smcData; window._smcActiveState=stateKeys[0];
+  tabsEl.style.display='flex';
+  tabsEl.innerHTML=stateKeys.map(function(sk){
+    var p=SMC_PARAMS[sk]; return '<div class="smc-tab'+(sk===stateKeys[0]?' active':'')+'" style="'+(sk===stateKeys[0]?'background:'+p.color+';color:#fff;':'')+'border-color:'+p.color+';" onclick="smcSetState(\''+sk+'\')">'+p.label+'</div>';
+  }).join('');
+  resultsEl.style.display='none';
+  wrapEl.style.display='block'; statsEl.style.display='flex';
+  smcRenderChart(stateKeys[0],tv);
+}
+
+function smcSetState(sk){
+  window._smcActiveState=sk;
+  document.querySelectorAll('.smc-tab').forEach(function(t,i){
+    var stateKeys=Object.keys(SMC_PARAMS);
+    var thisSk=stateKeys[i];
+    var p=SMC_PARAMS[thisSk];
+    t.className='smc-tab'+(thisSk===sk?' active':'');
+    if(thisSk===sk){t.style.background=p.color;t.style.color='#fff';}
+    else{t.style.background='';t.style.color='';}
+  });
+  var tv=0;(window._holdings||[]).forEach(function(h){var isCash=h.assetClass==='Cash'||h.assetClass==='Money Market'||h.assetClass==='CD'||h.assetClass==='Bond Position';tv+=isCash?(h.costBasis||0)*h.quantity:(h.currentPrice||0)*h.quantity;});
+  smcRenderChart(sk,tv);
+}
+
+function smcRenderChart(sk,tv){
+  var d=window._smcData[sk]; var p=SMC_PARAMS[sk];
+  var statsEl=document.getElementById('smcStats');
+  var termMed=d.p50[d.p50.length-1];
+  var termP10=d.p10[d.p10.length-1];
+  var termP90=d.p90[d.p90.length-1];
+  var retMed=(termMed-tv)/tv*100;
+  var prob0=d.terminalPaths.filter(function(v){return v>tv;}).length/d.terminalPaths.length*100;
+  statsEl.innerHTML=
+    '<div class="chart-stat-box"><div class="chart-stat-label">Starting Value</div><div class="chart-stat-value">'+fmtInt(tv)+'</div></div>'
+    +'<div class="chart-stat-box"><div class="chart-stat-label">P50 Outcome (1Y)</div><div class="chart-stat-value">'+fmtInt(termMed)+'</div><div class="chart-stat-sub">'+(retMed>=0?'+':'')+retMed.toFixed(1)+'% return</div></div>'
+    +'<div class="chart-stat-box"><div class="chart-stat-label">P10 (Bear)</div><div class="chart-stat-value">'+fmtInt(termP10)+'</div><div class="chart-stat-sub">'+(((termP10-tv)/tv*100)).toFixed(1)+'%</div></div>'
+    +'<div class="chart-stat-box"><div class="chart-stat-label">P90 (Bull)</div><div class="chart-stat-value">'+fmtInt(termP90)+'</div><div class="chart-stat-sub">+'+((termP90-tv)/tv*100).toFixed(1)+'%</div></div>'
+    +'<div class="chart-stat-box"><div class="chart-stat-label">Prob. Gain</div><div class="chart-stat-value" style="color:'+(prob0>=50?C.success:C.danger)+';">'+prob0.toFixed(0)+'%</div></div>';
+  var labels=Array.from({length:253},function(_,i){return i===0?'Today':i===252?'12M':i%63===0?(i/21)+'M':'';});
+  var datasets=[
+    {label:'P90 (Bull)',data:d.p90,borderColor:'rgba('+hexToRgb(p.color)+',0.3)',borderWidth:1,borderDash:[3,2],pointRadius:0,fill:false},
+    {label:'Median (P50)',data:d.p50,borderColor:p.color,borderWidth:2.5,pointRadius:0,fill:false},
+    {label:'P10 (Bear)',data:d.p10,borderColor:'rgba('+hexToRgb(p.color)+',0.3)',borderWidth:1,borderDash:[3,2],pointRadius:0,fill:'-2',backgroundColor:'rgba('+hexToRgb(p.color)+',0.08)'},
+    {label:'Starting Value',data:Array(253).fill(tv),borderColor:C.textSec,borderWidth:1,borderDash:[4,4],pointRadius:0,fill:false},
+  ];
+  if(window._smcChart) window._smcChart.destroy();
+  window._smcChart=new Chart(document.getElementById('smcChart').getContext('2d'),{
+    type:'line',data:{labels:labels,datasets:datasets},
+    options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'nearest',intersect:false},
+      plugins:{legend:{position:'bottom',labels:{font:{size:10},color:C.textSec}},tooltip:Object.assign({},chartTooltip,{callbacks:{label:function(ctx){return ctx.dataset.label+': '+fmtInt(ctx.parsed.y);}}})},
+      scales:{x:{grid:chartGrid,ticks:chartTicks},y:{grid:chartGrid,ticks:Object.assign({},chartTicks,{callback:function(v){return '$'+Math.round(v/1000)+'K';}})}}}
+  });
+}
+
+function hexToRgb(hex){ hex=hex.replace('#',''); var r=parseInt(hex.substring(0,2),16),g=parseInt(hex.substring(2,4),16),b=parseInt(hex.substring(4,6),16); return r+','+g+','+b; }
+
+// ═══════════════════════════════════════════════════════════════════
+// ══════════  LEADING INDICATOR COMPOSITE ENGINE  ═══════════════════
+// ═══════════════════════════════════════════════════════════════════
+function licRender(macroData) {
+  var el=document.getElementById('licContent');
+  var chartWrap=document.getElementById('licChartWrap');
+  if(!el) return;
+  if(!macroData||!macroData.pillars){el.innerHTML='<div style="color:var(--text-sec);font-size:12px;">FRED data not yet loaded. Navigate back to Macro Regime Analysis and wait for the scorecard to load, then return to see this composite.</div>';return;}
+  var tiers=[
+    {
+      label:'Tier 1 — 6-12 Month Lead (Earliest Signal)',
+      indicators:[
+        {name:'Yield Curve (3M/10Y)',pillar:'Monetary Policy',lookup:'T10Y3M'},
+        {name:'JOLTS Job Openings',pillar:'Labor Market',lookup:'JOLTS'},
+        {name:'HY OAS vs 12M Avg',pillar:'Monetary Policy',lookup:'BAMLH0A0HYM2'},
+        {name:'SLOOS C&I Standards',pillar:'Monetary Policy',lookup:'DRTSCILM'},
+      ]
+    },
+    {
+      label:'Tier 2 — 4-6 Month Lead',
+      indicators:[
+        {name:'Initial Claims 4W MA',pillar:'Labor Market',lookup:'IC4WSA'},
+        {name:'5Y5Y Breakeven',pillar:'Inflation',lookup:'T5YIFR'},
+        {name:'Core PCE YoY Trend',pillar:'Inflation',lookup:'PCEPILFE'},
+      ]
+    },
+    {
+      label:'Tier 3 — 2-3 Month Lead (Shortest Signal)',
+      indicators:[
+        {name:'Industrial Production',pillar:'Growth Analysis',lookup:'INDPRO'},
+        {name:'NFP 3-Month Avg',pillar:'Labor Market',lookup:'PAYEMS'},
+        {name:'Capacity Utilization',pillar:'Growth Analysis',lookup:'TCU'},
+        {name:'Durable Goods Orders',pillar:'Growth Analysis',lookup:'DGORDER'},
+      ]
+    }
+  ];
+  // Build lookup of indicator scores from macroData.pillars
+  var scoreByName={};
+  (macroData.pillars||[]).forEach(function(p){
+    (p.indicators||[]).forEach(function(ind){
+      scoreByName[ind.indicator]={score:ind.score,value:ind.value,detail:ind.detail};
+    });
+  });
+  // Partial match function
+  function findScore(name){
+    var keys=Object.keys(scoreByName);
+    for(var i=0;i<keys.length;i++) if(keys[i].toLowerCase().indexOf(name.toLowerCase().split(' ')[0])>=0) return scoreByName[keys[i]];
+    return null;
+  }
+  var tierScores=[0,0,0];
+  var tierCounts=[0,0,0];
+  var html='';
+  tiers.forEach(function(tier,ti){
+    html+='<div class="lic-tier-header">'+tier.label+'</div>';
+    html+='<div style="border:1px solid var(--border);border-top:none;border-radius:0 0 4px 4px;margin-bottom:10px;">';
+    tier.indicators.forEach(function(ind){
+      var sd=findScore(ind.name);
+      var score=sd?sd.score:null;
+      var val=sd?sd.value:'—';
+      var detail=sd?sd.detail:'';
+      var col=score===1?C.success:score===-1?C.danger:C.textSec;
+      var label=score===1?'Expansion':score===-1?'Contraction':'Neutral';
+      if(score!==null){tierScores[ti]+=score;tierCounts[ti]++;}
+      var barW=score===1?100:score===-1?100:50;
+      var barCol=score===1?C.success:score===-1?C.danger:C.textSec;
+      html+='<div class="lic-indicator-row">'
+        +'<span style="flex:1;font-weight:600;">'+ind.name+'</span>'
+        +'<span style="color:var(--text-sec);font-size:11px;margin-right:10px;">'+val+(detail?' | '+detail:'')+'</span>'
+        +'<span style="font-size:11px;font-weight:700;color:'+col+';min-width:80px;text-align:right;">'+label+'</span>'
+        +'<div class="lic-bar-wrap"><div class="lic-bar-fill" style="width:'+barW+'%;background:'+barCol+';"></div></div>'
+        +'</div>';
+    });
+    html+='</div>';
+  });
+  // Summary divergence signal
+  var t1Pct=tierCounts[0]>0?(tierScores[0]/tierCounts[0]):0;
+  var t3Pct=tierCounts[2]>0?(tierScores[2]/tierCounts[2]):0;
+  var signal='';
+  if(t1Pct<-0.3&&t3Pct>0.3) signal='<strong style="color:var(--danger);">⚠ DIVERGENCE SIGNAL: Tier 1 deteriorating while Tier 3 still solid → consider early de-risking.</strong>';
+  else if(t1Pct>0.3&&t3Pct<-0.3) signal='<strong style="color:var(--success);">▲ OPPORTUNITY SIGNAL: Tier 1 recovering while Tier 3 still weak → consider early re-risking.</strong>';
+  else signal='<span style="color:var(--text-sec);">No tier divergence detected — indicators moving in parallel.</span>';
+  el.innerHTML='<div style="background:var(--panel);border:1px solid var(--border);border-radius:4px;padding:10px 14px;margin-bottom:12px;font-size:12px;">'+signal+'</div>'+html;
+}
+
+// Hook: render LIC whenever macro data loads
+var _origLoadMacroLiveTable=window.loadMacroLiveTable;
 
 </script>
 </body>
