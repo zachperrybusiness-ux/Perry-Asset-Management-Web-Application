@@ -921,6 +921,87 @@ body.view-mobile .logo-icon { width: 22px !important; height: 22px !important; f
   .cmdk-box { width: 96vw; }
 }
 
+/* ═══ PORTFOLIO STATE FRAMEWORK ═══ */
+.ps-framework-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 12px;
+}
+.ps-state-card {
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  transition: all .15s;
+}
+.ps-state-card.active {
+  border: 2px solid var(--blue);
+  box-shadow: 0 0 0 3px rgba(91,155,213,0.2);
+  transform: translateY(-2px);
+}
+.ps-state-header {
+  padding: 10px 14px;
+  color: #fff;
+  font-weight: 700;
+  font-size: 13px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.ps-state-body { padding: 12px 14px; font-size: 12px; flex: 1; background: var(--bg); }
+.ps-state-row { display: flex; gap: 6px; margin-bottom: 6px; align-items: flex-start; line-height: 1.4; }
+.ps-state-label { font-weight: 700; color: var(--navy); min-width: 78px; }
+.ps-state-value { color: var(--text); }
+.ps-state-active-pill {
+  background: rgba(255,255,255,0.95);
+  color: var(--navy);
+  font-size: 9px;
+  padding: 2px 7px;
+  border-radius: 8px;
+  font-weight: 700;
+  letter-spacing: .5px;
+}
+
+.ps-diagnostic-hero {
+  padding: 24px 28px;
+  color: #fff;
+}
+.ps-diag-state-name {
+  font-size: 30px;
+  font-weight: 800;
+  letter-spacing: .5px;
+  margin: 4px 0;
+}
+.ps-diag-confidence {
+  font-size: 12px;
+  opacity: 0.85;
+  letter-spacing: .3px;
+}
+.ps-diag-signals {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 10px;
+  margin-top: 18px;
+}
+.ps-diag-signal {
+  background: rgba(255,255,255,0.12);
+  border: 1px solid rgba(255,255,255,0.2);
+  border-radius: 4px;
+  padding: 8px 12px;
+}
+.ps-diag-signal-label { font-size: 10px; opacity: 0.8; letter-spacing: .4px; text-transform: uppercase; }
+.ps-diag-signal-value { font-size: 16px; font-weight: 700; margin-top: 2px; }
+.ps-diag-signal-detail { font-size: 10px; opacity: 0.75; margin-top: 1px; }
+.ps-diag-posture {
+  background: rgba(0,0,0,0.22);
+  border-radius: 4px;
+  padding: 12px 16px;
+  margin-top: 16px;
+  font-size: 13px;
+  line-height: 1.55;
+}
+
 /* ═══ FILE DROP ZONE ═══ */
 .drop-zone {
   border: 2px dashed var(--border);
@@ -1113,19 +1194,18 @@ body.view-mobile .logo-icon { width: 22px !important; height: 22px !important; f
       </div>
       <div class="nav-dropdown">
         <div class="nav-child" data-page="holdings" onclick="navigateTo('holdings')">Manage Holdings</div>
+        <div class="nav-child" data-page="research" onclick="navigateTo('research')">Stock Research</div>
       </div>
     </div>
     <div class="nav-group">
-      <div class="nav-parent" data-page="research" onclick="navigateTo('research')">Research</div>
-    </div>
-    <div class="nav-group">
-      <div class="nav-parent" data-page="macro" onclick="navigateTo('macro')">Macro</div>
-    </div>
-    <div class="nav-group">
-      <div class="nav-parent" data-page="quant" onclick="navigateTo('quant')">Quant</div>
-    </div>
-    <div class="nav-group">
-      <div class="nav-parent" data-page="markets" onclick="navigateTo('markets')">Markets</div>
+      <div class="nav-parent" data-page="analysis" onclick="navigateTo('macro')">
+        Analysis <span class="arrow">&#9660;</span>
+      </div>
+      <div class="nav-dropdown">
+        <div class="nav-child" data-page="macro" onclick="navigateTo('macro')">Macro Regime Analysis</div>
+        <div class="nav-child" data-page="quant" onclick="navigateTo('quant')">Project Stock Values</div>
+        <div class="nav-child" data-page="markets" onclick="navigateTo('markets')">Cross-Asset Analysis</div>
+      </div>
     </div>
   </div>
   <div class="topbar-right">
@@ -1587,7 +1667,7 @@ body.view-mobile .logo-icon { width: 22px !important; height: 22px !important; f
 <div class="page" id="page-research">
   <div class="content-wrap">
     <div class="hero" style="padding:32px 40px;">
-      <h1>Financial Analysis</h1>
+      <h1>Stock Research</h1>
       <p>Enter any stock ticker, ETF, or crypto to view a full interactive price chart and comprehensive financial analysis powered by SEC EDGAR filings and real-time market data.</p>
     </div>
     <div class="card">
@@ -1691,7 +1771,7 @@ body.view-mobile .logo-icon { width: 22px !important; height: 22px !important; f
 <div class="page" id="page-quant">
   <div class="content-wrap">
     <div class="hero" style="padding:32px 40px;">
-      <h1>Quantitative Models</h1>
+      <h1>Project Stock Values</h1>
       <p>Stock decision analysis using Multiple Linear Regression with bootstrapping, macro regime backtesting, peer comparison, and Monte Carlo simulation.</p>
     </div>
     <div class="card">
@@ -1732,8 +1812,54 @@ body.view-mobile .logo-icon { width: 22px !important; height: 22px !important; f
 <div class="page" id="page-markets">
   <div class="content-wrap">
     <div class="hero" style="padding:32px 40px;">
-      <h1>Markets</h1>
-      <p>Cross-asset analytics: rebased performance, correlation, 3D volatility surface, Cox jump process, efficient frontier, rolling risk, VaR, and regime signals.</p>
+      <h1>Cross-Asset Analysis</h1>
+      <p>Portfolio-state framework tied to four market regimes &mdash; Leveraged, Non-Levered Positive Growth, Neutral, and Positioned for Drawdown &mdash; plus cross-asset analytics: rebased performance, correlation, 3D volatility surface, Cox jump process, efficient frontier, rolling risk, VaR, and regime signals.</p>
+    </div>
+
+    <!-- ═══════════ PORTFOLIO STATE FRAMEWORK (NEW) ═══════════ -->
+    <div class="card">
+      <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;">
+        <span>Current Market Regime &amp; Recommended Portfolio State</span>
+        <button class="btn-sm" style="background:rgba(255,255,255,0.2);color:#fff;border:1px solid rgba(255,255,255,0.4);padding:4px 10px;border-radius:3px;cursor:pointer;font-size:11px;" onclick="psLoadDiagnostic()">Refresh</button>
+      </div>
+      <div class="card-body" style="padding:0;">
+        <div id="psDiagnostic" style="padding:20px;text-align:center;color:var(--text-sec);">
+          <span class="spinner"></span> Analyzing current market state...
+        </div>
+      </div>
+      <div class="card-sources">
+        <strong>Framework:</strong> Perry Asset Management 4-state portfolio regime classifier &middot; Inputs: VIX (CBOE), SPY / QQQ price data via Cloudflare Worker, trailing 12-month return, distance-from-52W-high, drawdown-from-peak, Fibonacci retracements.
+      </div>
+    </div>
+
+    <!-- 4-State Framework Reference -->
+    <div class="card">
+      <div class="card-title">The Four Portfolio States &mdash; Framework Reference</div>
+      <div class="card-body">
+        <div class="ps-framework-grid" id="psFrameworkGrid"></div>
+      </div>
+      <div class="card-sources">
+        <strong>Approach:</strong> State-based allocation informed by mean-reversion at extremes (Lo 2004), contrarian entry at VIX &gt; 30 (Whaley 2009), Fibonacci retracement cycles (Frost &amp; Prechter, Elliott Wave Principle), and defensive positioning when trailing returns compress forward expected returns (Shiller CAPE).
+      </div>
+    </div>
+
+    <!-- QQQ Fibonacci Projection -->
+    <div class="card">
+      <div class="card-title">QQQ Daily Chart with Fibonacci Projections</div>
+      <div class="card-body">
+        <p style="font-size:12px;color:var(--text-sec);margin-bottom:12px;">Auto-detects the most recent significant swing low and swing high on QQQ, then plots Fibonacci retracement levels (23.6%, 38.2%, 50%, 61.8%, 78.6%) and projection levels (127.2%, 161.8%, 261.8%). Use these as price pivots &mdash; QQQ approaching a key level during a rip is a signal that "Positioned for Drawdown" posture may be appropriate.</p>
+        <div class="form-row" style="margin-bottom:10px;">
+          <div class="form-group"><label>Swing Lookback</label><select id="psFibLookback"><option value="126">6 Months</option><option value="252" selected>12 Months</option><option value="504">2 Years</option><option value="1260">5 Years</option></select></div>
+          <div class="form-group"><label>Direction</label><select id="psFibDir"><option value="auto" selected>Auto-detect</option><option value="bull">Up (low → high)</option><option value="bear">Down (high → low)</option></select></div>
+          <button class="btn" onclick="psLoadFib()">Update Fibonacci</button>
+        </div>
+        <div id="psFibEmpty" style="text-align:center;padding:24px;color:var(--text-sec);font-size:13px;"><span class="spinner"></span> Loading QQQ data...</div>
+        <div id="psFibStats" class="chart-stats" style="display:none;"></div>
+        <div class="chart-wrap" style="height:460px;display:none;" id="psFibWrap"><canvas id="psFibChart"></canvas></div>
+      </div>
+      <div class="card-sources">
+        <strong>Sources:</strong> QQQ price data via Cloudflare Worker / Yahoo Finance &middot; Fibonacci ratios from the golden ratio &phi; = 1.618 (Frost &amp; Prechter, <em>Elliott Wave Principle</em>) &middot; Swing detection via local-extremum algorithm.
+      </div>
     </div>
 
     <!-- UNIVERSE SELECTOR -->
@@ -2197,7 +2323,8 @@ body.view-mobile .logo-icon { width: 22px !important; height: 22px !important; f
   // ── Load Holdings ──
   window.loadHoldings = async function() {
     const user = window._currentUser;
-    if (!user) return;
+    if (!user) { console.log('[loadHoldings] No user signed in, aborting'); return; }
+    console.log('[loadHoldings] Starting for user:', user.email);
     try {
       const q = query(
         collection(db, "holdings"),
@@ -2207,9 +2334,9 @@ body.view-mobile .logo-icon { width: 22px !important; height: 22px !important; f
       const snap = await getDocs(q);
       const h = [];
       snap.forEach(d => h.push({ id: d.id, ...d.data() }));
+      console.log('[loadHoldings] Loaded ' + h.length + ' holdings from Firestore');
 
       // Show table immediately with whatever prices are in Firestore
-      // (so user sees SOMETHING while quotes fetch in background)
       window._holdings = h;
       renderHoldingsTable(h);
       if (typeof renderPortfolioOverview === 'function') renderPortfolioOverview();
@@ -2223,19 +2350,31 @@ body.view-mobile .logo-icon { width: 22px !important; height: 22px !important; f
         var isCash = x.assetClass === 'Cash' || x.assetClass === 'Money Market' || x.assetClass === 'CD' || x.assetClass === 'Bond Position';
         if (!isCash && x.ticker && !seen[x.ticker]) { seen[x.ticker] = 1; uniqueTickers.push(x.ticker); }
       });
-      if (!uniqueTickers.length) return;
+      if (!uniqueTickers.length) { console.log('[loadHoldings] No non-cash tickers to refresh'); return; }
 
+      console.log('[loadHoldings] Fetching live quotes from Worker for:', uniqueTickers);
       showStatus('holdingsStatus', '<span class="spinner"></span> Fetching live prices for ' + uniqueTickers.length + ' tickers via Cloudflare Worker...', 'info');
 
+      // INLINE: call Worker directly — no external helper dependencies
+      var WORKER = "https://perry-finance-proxy.zachperrybusiness.workers.dev";
       var fetchResults = await Promise.all(uniqueTickers.map(async function(t){
         try {
-          var qu = await fetchQuote(t);
-          var px = getQuotePrice(qu);
+          var res = await fetch(WORKER + "/quote?symbol=" + encodeURIComponent(t));
+          var qu = await res.json();
+          console.log('[loadHoldings] Worker response for ' + t + ':', qu);
+          if (qu && qu.error) {
+            return { ticker: t, ok: false, reason: 'Worker error: ' + qu.error };
+          }
+          // Worker returns `current` as the price field (see fetchYahooPrice in worker source)
+          var px = null;
+          if (qu && typeof qu.current === 'number' && qu.current > 0) px = qu.current;
+          else if (qu && typeof qu.price === 'number' && qu.price > 0) px = qu.price;
           if (px != null) {
-            return { ticker: t, price: px, prev: getQuotePrev(qu), name: getQuoteName(qu), ok: true };
+            return { ticker: t, price: px, prev: (qu.previousClose || null), ok: true };
           }
           return { ticker: t, ok: false, reason: 'no price field (keys: ' + (qu ? Object.keys(qu).join(',') : 'null') + ')' };
         } catch(e) {
+          console.error('[loadHoldings] Fetch error for ' + t + ':', e);
           return { ticker: t, ok: false, reason: e.message };
         }
       }));
@@ -2246,12 +2385,15 @@ body.view-mobile .logo-icon { width: 22px !important; height: 22px !important; f
         if (r.ok) quotes[r.ticker] = r;
         else failed.push(r.ticker + ' (' + r.reason + ')');
       });
+      console.log('[loadHoldings] Summary — ' + Object.keys(quotes).length + ' succeeded, ' + failed.length + ' failed');
 
       // Apply to in-memory holdings
       h.forEach(function(x){
         if (quotes[x.ticker]) {
+          var oldPrice = x.currentPrice;
           x.currentPrice = quotes[x.ticker].price;
           if (quotes[x.ticker].prev != null) x.previousClose = quotes[x.ticker].prev;
+          console.log('[loadHoldings] Updated ' + x.ticker + ' (' + (x.accountType||'Individual') + '): $' + (oldPrice||0).toFixed(2) + ' -> $' + x.currentPrice.toFixed(2));
         }
       });
 
@@ -2262,7 +2404,7 @@ body.view-mobile .logo-icon { width: 22px !important; height: 22px !important; f
             currentPrice: x.currentPrice,
             previousClose: x.previousClose != null ? x.previousClose : x.currentPrice,
             lastUpdated: new Date().toISOString()
-          }).catch(function(e){ console.warn('Firestore update failed for '+x.ticker+':', e); });
+          }).catch(function(e){ console.warn('[loadHoldings] Firestore update failed for '+x.ticker+':', e); });
         }
       });
 
@@ -2281,10 +2423,9 @@ body.view-mobile .logo-icon { width: 22px !important; height: 22px !important; f
         showStatus('holdingsStatus',
           '&#10003; ' + freshCount + '/' + uniqueTickers.length + ' prices live. Failed: ' + failed.join(', ') + '. Using last known price for failures.',
           'warning');
-        console.warn('Quote fetch failures:', failed);
       }
     } catch(e) {
-      console.error('loadHoldings error:', e);
+      console.error('[loadHoldings] Fatal error:', e);
       showStatus('holdingsStatus', 'Error loading holdings: ' + e.message, 'error');
     }
   };
@@ -2961,7 +3102,7 @@ Chart.register(priceBubblePlugin);
 let donutCharts = {};
 
 // ═══ NAVIGATION ═══
-const parentMap = { home: 'home', about: 'home', resources: 'home', portfolio: 'portfolio', holdings: 'portfolio', research: 'research', macro: 'macro', quant: 'quant', markets: 'markets' };
+const parentMap = { home: 'home', about: 'home', resources: 'home', portfolio: 'portfolio', holdings: 'portfolio', research: 'portfolio', macro: 'analysis', quant: 'analysis', markets: 'analysis' };
 function navigateTo(p) {
   document.activeElement.blur();
   document.querySelectorAll('.page').forEach(x => x.classList.remove('active'));
@@ -2977,6 +3118,10 @@ function navigateTo(p) {
   if (p === 'macro') loadMacroLiveTable();
   if (p === 'resources' && typeof resourcesInit === 'function') resourcesInit();
   if (p === 'markets' && typeof mktInit === 'function' && !window._mktInitialized) { mktInit(); window._mktInitialized = true; }
+  if (p === 'markets' && typeof psLoadDiagnostic === 'function') {
+    psRenderFrameworkGrid && psRenderFrameworkGrid(null); // show framework grid immediately
+    if (!window._psLoaded) { psLoadDiagnostic(); psLoadFib(); window._psLoaded = true; }
+  }
   if (p === 'quant' && typeof quantInit === 'function' && !window._quantInitialized) { quantInit(); window._quantInitialized = true; }
 }
 
@@ -6166,6 +6311,10 @@ setInterval(function(){ try { mktUpdateStatusBar(); } catch(e){} }, 60000);
 // Also call initial
 setTimeout(mktUpdateStatusBar, 1000);
 
+// BUILD VERSION — helps debugging: confirm this is the latest deploy
+console.log('%c[Perry Asset Management] Build v2026.04.21-pricefix-v3 loaded', 'background:#003C71;color:#fff;padding:4px 10px;border-radius:3px;font-weight:700;');
+console.log('[Perry] If prices still show $0 in Holdings table after sign-in, paste this entire console output into the chat.');
+
 // ═══════════════════════════════════════════════════════
 // ═══════════ RESOURCES / TRAINING PAGE ═════════════════
 // ═══════════════════════════════════════════════════════
@@ -6471,6 +6620,343 @@ async function runStressTest() {
   btnEl.disabled = false; btnEl.innerHTML = 'Run Stress Test';
 }
 window.runStressTest = runStressTest;
+
+// ═══════════════════════════════════════════════════════
+// ═══════════ PORTFOLIO STATE FRAMEWORK ═════════════════
+// ═══════════════════════════════════════════════════════
+// Perry 4-state regime classifier tied to user's trading framework
+
+var PS_STATES = [
+  {
+    key: 'leveraged',
+    name: 'Leveraged',
+    color: '#2E7D52',
+    trigger: 'Major dip + VIX >30 + risk assets drastically discounted',
+    instruments: 'TQQQ, FNGU, SOXL, crypto (BTC/ETH via IBIT/ETHA), individual high-beta names',
+    cash: '0&ndash;10%',
+    posture: 'Aggressive contrarian entry. "Blood in the streets." Size up while fear is priced in.',
+    historical: 'Mar 2009 (GFC bottom), Mar 2020 (COVID bottom), Oct 2022 (CPI peak reversal)'
+  },
+  {
+    key: 'growth',
+    name: 'Non-Levered Positive Growth',
+    color: '#003C71',
+    trigger: 'Market healthy, uptrend, VIX 15&ndash;22, no recent rip or crash',
+    instruments: 'QQQ, SPY, IWM, DIA, sector ETFs, large-cap growth stocks',
+    cash: '10&ndash;30%',
+    posture: 'Normal bullish exposure. Ride the trend with 1x unleveraged index exposure. Keep dry powder.',
+    historical: '2019 (most of year), 2021 H1, mid-2023 through mid-2024'
+  },
+  {
+    key: 'neutral',
+    name: 'Neutral',
+    color: '#8B6914',
+    trigger: 'Low-growth environment, VIX elevated but not extreme, direction unclear',
+    instruments: 'GLD, SLV, non-correlated indexes (EEM, EFA), defensive sectors (XLU, XLP), bonds',
+    cash: '30%+',
+    posture: 'Brace for low growth. Diversify into real assets and defensives. Stay positioned but cautious.',
+    historical: '2015&ndash;2016 (commodity cycle), 2022 H2, late 2011'
+  },
+  {
+    key: 'drawdown',
+    name: 'Positioned for Drawdown',
+    color: '#8B2A2A',
+    trigger: 'SPY/QQQ up 30&ndash;50% in &lt;12mo, approaching Fib projection targets, VIX low/complacent',
+    instruments: 'Mostly cash, Treasuries (SHV, TLT), GLD as hedge, maybe inverse ETFs at extremes',
+    cash: '70%+',
+    posture: 'Wait on the sideline. Markets have run far &mdash; downdraft probability elevated. Preserve capital for next Leveraged entry.',
+    historical: 'Late 1999, late 2007, Jan 2022, possibly late 2024/early 2025'
+  }
+];
+
+// Classifier: given live signals, determine which state the market is in
+function psClassifyState(signals) {
+  // signals = { vix, spy12mFromLow, spyFromHigh, drawdown12m, spyTrailingReturn }
+  var scores = { leveraged: 0, growth: 0, neutral: 0, drawdown: 0 };
+  var reasons = { leveraged: [], growth: [], neutral: [], drawdown: [] };
+
+  // VIX signals
+  if (signals.vix != null) {
+    if (signals.vix >= 30) { scores.leveraged += 3; reasons.leveraged.push('VIX ' + signals.vix.toFixed(1) + ' ≥ 30 (extreme fear)'); }
+    else if (signals.vix >= 22) { scores.neutral += 2; reasons.neutral.push('VIX ' + signals.vix.toFixed(1) + ' elevated'); }
+    else if (signals.vix <= 14) { scores.drawdown += 2; reasons.drawdown.push('VIX ' + signals.vix.toFixed(1) + ' ≤ 14 (complacent)'); }
+    else { scores.growth += 2; reasons.growth.push('VIX ' + signals.vix.toFixed(1) + ' in calm range'); }
+  }
+
+  // SPY 12-month trailing return — big rips favor drawdown posture
+  if (signals.spyTrailingReturn != null) {
+    var ret = signals.spyTrailingReturn * 100;
+    if (ret >= 30) { scores.drawdown += 3; reasons.drawdown.push('SPY +' + ret.toFixed(1) + '% in 12mo (extended)'); }
+    else if (ret >= 15) { scores.growth += 2; reasons.growth.push('SPY +' + ret.toFixed(1) + '% 12mo trend'); }
+    else if (ret <= -15) { scores.leveraged += 3; reasons.leveraged.push('SPY ' + ret.toFixed(1) + '% in 12mo (deep decline)'); }
+    else if (ret <= 0) { scores.neutral += 2; reasons.neutral.push('SPY ' + ret.toFixed(1) + '% 12mo (flat/down)'); }
+    else { scores.neutral += 1; reasons.neutral.push('SPY ' + ret.toFixed(1) + '% modest gain'); }
+  }
+
+  // Drawdown from peak
+  if (signals.drawdownFromPeak != null) {
+    var dd = signals.drawdownFromPeak * 100;
+    if (dd <= -20) { scores.leveraged += 3; reasons.leveraged.push('Down ' + dd.toFixed(1) + '% from 12M high'); }
+    else if (dd <= -10) { scores.neutral += 1; reasons.neutral.push('Down ' + dd.toFixed(1) + '% from 12M high'); }
+    else if (dd >= -2) { scores.drawdown += 2; reasons.drawdown.push('At or near 12M high (' + dd.toFixed(1) + '%)'); }
+  }
+
+  // 12-month return from low — big rips favor drawdown
+  if (signals.spy12mFromLow != null) {
+    var fromLow = signals.spy12mFromLow * 100;
+    if (fromLow >= 50) { scores.drawdown += 3; reasons.drawdown.push('SPY +' + fromLow.toFixed(1) + '% off 12M low (massive rip)'); }
+    else if (fromLow >= 30) { scores.drawdown += 2; reasons.drawdown.push('SPY +' + fromLow.toFixed(1) + '% off 12M low'); }
+    else if (fromLow >= 15) { scores.growth += 1; reasons.growth.push('SPY +' + fromLow.toFixed(1) + '% off 12M low'); }
+  }
+
+  // Determine winner
+  var maxScore = 0, winner = 'neutral';
+  ['leveraged', 'growth', 'neutral', 'drawdown'].forEach(function(k){
+    if (scores[k] > maxScore) { maxScore = scores[k]; winner = k; }
+  });
+  var totalScore = scores.leveraged + scores.growth + scores.neutral + scores.drawdown;
+  var confidence = totalScore > 0 ? (maxScore / totalScore) * 100 : 25;
+
+  return { winner: winner, scores: scores, confidence: confidence, reasons: reasons[winner] };
+}
+
+async function psLoadDiagnostic() {
+  var el = document.getElementById('psDiagnostic');
+  if (!el) return;
+  el.innerHTML = '<div style="padding:20px;text-align:center;color:var(--text-sec);"><span class="spinner"></span> Analyzing current market state...</div>';
+  try {
+    var WORKER = "https://perry-finance-proxy.zachperrybusiness.workers.dev";
+    // Parallel fetch: SPY 1y daily, VIX quote
+    var results = await Promise.all([
+      fetch(WORKER + "/chart?symbol=SPY&range=1y&interval=1d").then(function(r){ return r.json(); }),
+      fetch(WORKER + "/quote?symbol=%5EVIX").then(function(r){ return r.json(); }),
+      fetch(WORKER + "/chart?symbol=QQQ&range=1y&interval=1d").then(function(r){ return r.json(); })
+    ]);
+    var spyData = results[0];
+    var vixQuote = results[1];
+    var qqqData = results[2];
+    var spyPts = (spyData.points || []).filter(function(p){ return p.close != null; });
+    var qqqPts = (qqqData.points || []).filter(function(p){ return p.close != null; });
+    if (!spyPts.length) throw new Error('No SPY data returned from Worker');
+
+    var spyClose = spyPts.map(function(p){ return p.close; });
+    var spy12mHigh = Math.max.apply(null, spyClose);
+    var spy12mLow = Math.min.apply(null, spyClose);
+    var spyCurrent = spyClose[spyClose.length - 1];
+    var spyStart = spyClose[0];
+    var spyTrailingReturn = (spyCurrent - spyStart) / spyStart;
+    var spyFromHigh = (spyCurrent - spy12mHigh) / spy12mHigh;
+    var spy12mFromLow = (spyCurrent - spy12mLow) / spy12mLow;
+
+    var vix = vixQuote.current || vixQuote.price || null;
+
+    var signals = {
+      vix: vix,
+      spyCurrent: spyCurrent,
+      spy12mHigh: spy12mHigh,
+      spy12mLow: spy12mLow,
+      spyTrailingReturn: spyTrailingReturn,
+      drawdownFromPeak: spyFromHigh,
+      spy12mFromLow: spy12mFromLow
+    };
+    var classification = psClassifyState(signals);
+    var state = PS_STATES.find(function(s){ return s.key === classification.winner; });
+
+    // Render diagnostic hero
+    var html = '<div class="ps-diagnostic-hero" style="background:'+state.color+';">';
+    html += '<div style="font-size:11px;opacity:0.85;text-transform:uppercase;letter-spacing:.6px;">Current Market Regime</div>';
+    html += '<div class="ps-diag-state-name">' + state.name + '</div>';
+    html += '<div class="ps-diag-confidence">Confidence: ' + classification.confidence.toFixed(0) + '% &middot; Signals: ' + classification.reasons.join(' &middot; ') + '</div>';
+    html += '<div class="ps-diag-signals">';
+    html += '<div class="ps-diag-signal"><div class="ps-diag-signal-label">VIX</div><div class="ps-diag-signal-value">' + (vix != null ? vix.toFixed(1) : '—') + '</div><div class="ps-diag-signal-detail">' + (vix == null ? '' : (vix >= 30 ? 'Extreme fear' : vix >= 22 ? 'Elevated' : vix >= 15 ? 'Normal' : 'Complacent')) + '</div></div>';
+    html += '<div class="ps-diag-signal"><div class="ps-diag-signal-label">SPY Current</div><div class="ps-diag-signal-value">$' + spyCurrent.toFixed(2) + '</div><div class="ps-diag-signal-detail">52W High: $' + spy12mHigh.toFixed(2) + '</div></div>';
+    html += '<div class="ps-diag-signal"><div class="ps-diag-signal-label">SPY 12M Return</div><div class="ps-diag-signal-value">' + (spyTrailingReturn >= 0 ? '+' : '') + (spyTrailingReturn*100).toFixed(1) + '%</div><div class="ps-diag-signal-detail">' + (spyTrailingReturn >= 0.3 ? 'Extended rally' : spyTrailingReturn >= 0.15 ? 'Healthy trend' : spyTrailingReturn >= 0 ? 'Modest gain' : spyTrailingReturn >= -0.15 ? 'Flat/down' : 'Deep decline') + '</div></div>';
+    html += '<div class="ps-diag-signal"><div class="ps-diag-signal-label">From 12M High</div><div class="ps-diag-signal-value">' + (spyFromHigh*100).toFixed(1) + '%</div><div class="ps-diag-signal-detail">' + (spyFromHigh >= -0.02 ? 'At/near peak' : spyFromHigh >= -0.1 ? 'Minor pullback' : spyFromHigh >= -0.2 ? 'Correction' : 'Bear market') + '</div></div>';
+    html += '<div class="ps-diag-signal"><div class="ps-diag-signal-label">From 12M Low</div><div class="ps-diag-signal-value">+' + (spy12mFromLow*100).toFixed(1) + '%</div><div class="ps-diag-signal-detail">' + (spy12mFromLow >= 0.5 ? 'Massive rip' : spy12mFromLow >= 0.3 ? 'Strong rally' : 'Recovery') + '</div></div>';
+    html += '</div>';
+    html += '<div class="ps-diag-posture"><strong>Recommended Posture:</strong> ' + state.posture + '<br><strong>Cash:</strong> ' + state.cash + ' &middot; <strong>Instruments:</strong> ' + state.instruments + '</div>';
+    html += '</div>';
+    el.innerHTML = html;
+
+    // Also update the framework grid to highlight the active state
+    psRenderFrameworkGrid(classification.winner);
+  } catch(e) {
+    console.error('[psLoadDiagnostic]', e);
+    el.innerHTML = '<div style="padding:20px;color:var(--danger);"><strong>Failed to load diagnostic:</strong> ' + e.message + '<br><button class="btn btn-sm" style="margin-top:8px;" onclick="psLoadDiagnostic()">Retry</button></div>';
+  }
+}
+
+function psRenderFrameworkGrid(activeKey) {
+  var grid = document.getElementById('psFrameworkGrid');
+  if (!grid) return;
+  var html = '';
+  PS_STATES.forEach(function(s){
+    var isActive = s.key === activeKey;
+    html += '<div class="ps-state-card' + (isActive ? ' active' : '') + '">';
+    html += '<div class="ps-state-header" style="background:'+s.color+';">';
+    html += s.name;
+    if (isActive) html += '<span class="ps-state-active-pill">CURRENT</span>';
+    html += '</div>';
+    html += '<div class="ps-state-body">';
+    html += '<div class="ps-state-row"><span class="ps-state-label">Trigger:</span><span class="ps-state-value">'+s.trigger+'</span></div>';
+    html += '<div class="ps-state-row"><span class="ps-state-label">Assets:</span><span class="ps-state-value">'+s.instruments+'</span></div>';
+    html += '<div class="ps-state-row"><span class="ps-state-label">Cash %:</span><span class="ps-state-value">'+s.cash+'</span></div>';
+    html += '<div class="ps-state-row"><span class="ps-state-label">Posture:</span><span class="ps-state-value">'+s.posture+'</span></div>';
+    html += '<div class="ps-state-row"><span class="ps-state-label">Examples:</span><span class="ps-state-value" style="color:var(--text-sec);font-style:italic;">'+s.historical+'</span></div>';
+    html += '</div>';
+    html += '</div>';
+  });
+  grid.innerHTML = html;
+}
+
+// ═══ FIBONACCI PROJECTION ═══
+async function psLoadFib() {
+  var emptyEl = document.getElementById('psFibEmpty');
+  var statsEl = document.getElementById('psFibStats');
+  var wrapEl = document.getElementById('psFibWrap');
+  if (!emptyEl) return;
+  emptyEl.style.display = 'block';
+  emptyEl.innerHTML = '<span class="spinner"></span> Loading QQQ data and computing swing extrema...';
+  statsEl.style.display = 'none';
+  wrapEl.style.display = 'none';
+  try {
+    var lookback = parseInt(document.getElementById('psFibLookback').value, 10);
+    var direction = document.getElementById('psFibDir').value;
+    // Decide range based on lookback
+    var range = lookback <= 126 ? '6mo' : lookback <= 252 ? '1y' : lookback <= 504 ? '2y' : '5y';
+    var WORKER = "https://perry-finance-proxy.zachperrybusiness.workers.dev";
+    var res = await fetch(WORKER + "/chart?symbol=QQQ&range=" + range + "&interval=1d");
+    var data = await res.json();
+    var pts = (data.points || []).filter(function(p){ return p.close != null; });
+    if (pts.length < 20) throw new Error('Insufficient QQQ data');
+
+    // Truncate to lookback window if we fetched more
+    if (pts.length > lookback) pts = pts.slice(-lookback);
+    var closes = pts.map(function(p){ return p.close; });
+    var dates = pts.map(function(p){ return p.date.slice(0,10); });
+
+    // Find swing high and swing low using local extrema (5-day window)
+    var swingHigh = { idx: 0, value: closes[0] };
+    var swingLow = { idx: 0, value: closes[0] };
+    for (var i=5; i<closes.length-5; i++) {
+      var isLocalHigh = true, isLocalLow = true;
+      for (var j=i-5; j<=i+5; j++) {
+        if (j === i) continue;
+        if (closes[j] >= closes[i]) isLocalHigh = false;
+        if (closes[j] <= closes[i]) isLocalLow = false;
+      }
+      if (isLocalHigh && closes[i] > swingHigh.value) swingHigh = { idx: i, value: closes[i] };
+      if (isLocalLow && closes[i] < swingLow.value) swingLow = { idx: i, value: closes[i] };
+    }
+    // Also consider global extremes
+    for (var k=0; k<closes.length; k++) {
+      if (closes[k] > swingHigh.value) swingHigh = { idx: k, value: closes[k] };
+      if (closes[k] < swingLow.value) swingLow = { idx: k, value: closes[k] };
+    }
+
+    // Determine direction
+    var bullish; // true if low came before high (up-trend move)
+    if (direction === 'bull') bullish = true;
+    else if (direction === 'bear') bullish = false;
+    else bullish = swingLow.idx < swingHigh.idx;
+
+    var start, end;
+    if (bullish) { start = swingLow; end = swingHigh; }
+    else { start = swingHigh; end = swingLow; }
+
+    // Fib levels. Retracements based on [start, end] range; projections extend beyond end.
+    var range_px = end.value - start.value; // positive if bullish
+    var fibLevels = [
+      { label: '0%', pct: 0, style: 'solid' },
+      { label: '23.6%', pct: 0.236, style: 'dashed' },
+      { label: '38.2%', pct: 0.382, style: 'dashed' },
+      { label: '50%', pct: 0.50, style: 'solid', weight: 'key' },
+      { label: '61.8% (golden)', pct: 0.618, style: 'solid', weight: 'key' },
+      { label: '78.6%', pct: 0.786, style: 'dashed' },
+      { label: '100%', pct: 1.0, style: 'solid' },
+      { label: '127.2% (proj)', pct: 1.272, style: 'dashed', projection: true },
+      { label: '161.8% (golden proj)', pct: 1.618, style: 'solid', weight: 'key', projection: true },
+      { label: '261.8% (ext proj)', pct: 2.618, style: 'dashed', projection: true }
+    ];
+    var fibPrices = fibLevels.map(function(fl){
+      var price = start.value + range_px * fl.pct;
+      return { label: fl.label, price: price, pct: fl.pct, style: fl.style, key: fl.weight === 'key', projection: !!fl.projection };
+    });
+
+    var current = closes[closes.length - 1];
+    // Determine which zone current price is in
+    var zone = null;
+    for (var z=0; z<fibPrices.length-1; z++) {
+      var lo = Math.min(fibPrices[z].price, fibPrices[z+1].price);
+      var hi = Math.max(fibPrices[z].price, fibPrices[z+1].price);
+      if (current >= lo && current <= hi) { zone = fibPrices[z].label + ' ↔ ' + fibPrices[z+1].label; break; }
+    }
+
+    // Build chart datasets
+    var datasets = [
+      { label: 'QQQ', data: closes, borderColor: C.navy, borderWidth: 2, pointRadius: 0, fill: false, tension: 0.05 }
+    ];
+    // Highlight swing points
+    datasets.push({
+      label: 'Swing Low',
+      data: dates.map(function(_,i){ return i === start.idx && bullish ? start.value : (i === end.idx && !bullish ? end.value : null); }),
+      borderColor: 'transparent', backgroundColor: C.success, pointRadius: 8, pointStyle: 'triangle', showLine: false, pointBorderColor: '#000', pointBorderWidth: 1.5
+    });
+    datasets.push({
+      label: 'Swing High',
+      data: dates.map(function(_,i){ return i === end.idx && bullish ? end.value : (i === start.idx && !bullish ? start.value : null); }),
+      borderColor: 'transparent', backgroundColor: C.danger, pointRadius: 8, pointStyle: 'rectRot', showLine: false, pointBorderColor: '#000', pointBorderWidth: 1.5
+    });
+    // Add each fib level as a horizontal line dataset
+    var levelColors = ['#8B2A2A','#8B6914','#5B9BD5','#003C71','#003C71','#5B9BD5','#8B6914','#2E7D52','#2E7D52','#2E7D52'];
+    fibPrices.forEach(function(fp, idx){
+      datasets.push({
+        label: fp.label + ' ($' + fp.price.toFixed(2) + ')',
+        data: dates.map(function(){ return fp.price; }),
+        borderColor: levelColors[idx] || C.textSec,
+        borderWidth: fp.key ? 1.5 : 1,
+        borderDash: fp.style === 'dashed' ? [4, 3] : [],
+        pointRadius: 0,
+        fill: false,
+        tension: 0
+      });
+    });
+
+    // Render
+    emptyEl.style.display = 'none';
+    statsEl.style.display = 'flex';
+    wrapEl.style.display = 'block';
+    var change = ((current - start.value) / start.value) * 100;
+    statsEl.innerHTML = ''
+      + '<div class="chart-stat-box"><div class="chart-stat-label">Swing Low</div><div class="chart-stat-value">$'+start.value.toFixed(2)+'</div><div class="chart-stat-sub">'+dates[start.idx]+'</div></div>'
+      + '<div class="chart-stat-box"><div class="chart-stat-label">Swing High</div><div class="chart-stat-value">$'+end.value.toFixed(2)+'</div><div class="chart-stat-sub">'+dates[end.idx]+'</div></div>'
+      + '<div class="chart-stat-box"><div class="chart-stat-label">Current</div><div class="chart-stat-value">$'+current.toFixed(2)+'</div><div class="chart-stat-sub">'+(change>=0?'+':'')+change.toFixed(1)+'% from swing'+(bullish?' low':' high')+'</div></div>'
+      + '<div class="chart-stat-box"><div class="chart-stat-label">Current Zone</div><div class="chart-stat-value" style="font-size:13px;">'+(zone||'Beyond levels')+'</div><div class="chart-stat-sub">Between Fib levels</div></div>'
+      + '<div class="chart-stat-box"><div class="chart-stat-label">Trend Direction</div><div class="chart-stat-value" style="color:'+(bullish?C.success:C.danger)+';">'+(bullish?'UP (low → high)':'DOWN (high → low)')+'</div></div>';
+
+    if (window._psFibChart) window._psFibChart.destroy();
+    window._psFibChart = new Chart(document.getElementById('psFibChart').getContext('2d'), {
+      type: 'line',
+      data: { labels: dates, datasets: datasets },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        interaction: { mode: 'nearest', intersect: false },
+        plugins: {
+          legend: { position: 'bottom', labels: { font: { size: 10 }, color: C.textSec, boxWidth: 10, filter: function(it){ return it.text.indexOf('%') >= 0 || it.text === 'QQQ' || it.text.indexOf('Swing') === 0; } } },
+          tooltip: chartTooltip
+        },
+        scales: {
+          x: { grid: chartGrid, ticks: Object.assign({}, chartTicks, { maxTicksLimit: 10, autoSkip: true }) },
+          y: { grid: chartGrid, ticks: Object.assign({}, chartTicks, { callback: function(v){ return '$'+v.toFixed(0); } }) }
+        }
+      }
+    });
+  } catch(e) {
+    console.error('[psLoadFib]', e);
+    emptyEl.style.display = 'block';
+    emptyEl.innerHTML = '<div style="color:var(--danger);">Failed: '+e.message+' <button class="btn btn-sm" onclick="psLoadFib()" style="margin-left:8px;">Retry</button></div>';
+  }
+}
 
 // ═══════════════════════════════════════════════════════
 // ═══════════════════ MARKETS PAGE ══════════════════════
