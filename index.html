@@ -1261,6 +1261,7 @@ body.view-mobile .logo-icon { width: 22px !important; height: 22px !important; f
       <div class="nav-dropdown">
         <div class="nav-child" data-page="holdings" onclick="navigateTo('holdings')">Manage Holdings</div>
         <div class="nav-child" data-page="research" onclick="navigateTo('research')">Stock Research</div>
+        <div class="nav-child" data-page="themes" onclick="navigateTo('themes')">Portfolio Themes</div>
       </div>
     </div>
     <div class="nav-group">
@@ -1888,8 +1889,56 @@ body.view-mobile .logo-icon { width: 22px !important; height: 22px !important; f
       </div>
       <div class="card-sources"><strong>Method:</strong> Historical 5-year daily returns segmented by regime proxies (VIX level &amp; SPY 12M trailing return) &bull; Perry 4-state classifier applied historically &bull; Returns via Yahoo Finance / Cloudflare Worker</div>
     </div>
+    <!-- OPTIONS IV ANALYSIS -->
+    <div class="card" id="ivCard" style="display:none;">
+      <div class="card-title">Options Implied Volatility &amp; IV Percentile</div>
+      <div class="card-body">
+        <p style="font-size:12px;color:var(--text-sec);margin-bottom:12px;">Live options market analysis for <strong id="ivTicker"></strong>. IV Percentile shows where current at-the-money implied volatility ranks vs. the past year's realized volatility distribution &mdash; a gauge of whether options are pricing in cheap or expensive expected moves.</p>
+        <div id="ivStats" style="text-align:center;color:var(--text-sec);padding:16px;font-size:13px;">
+          <span class="spinner"></span> Loading options chain from Cloudflare Worker...
+        </div>
+        <div class="chart-wrap" style="height:340px;display:none;margin-top:14px;" id="ivChartWrap"><canvas id="ivChart"></canvas></div>
+      </div>
+      <div class="card-sources">
+        <strong>Sources:</strong> Yahoo Finance options chain via Cloudflare Worker &bull; IV Percentile computed vs. 1-year 20-day realized volatility distribution &bull; Max Pain = strike price where total option writer losses are minimized at expiry &bull; Put/Call OI Ratio = contrarian sentiment indicator
+      </div>
+    </div>
     <!-- Hidden compat elements — data still available via window._lastSecData and DOM but not displayed -->
     <div id="researchRawCard" style="display:none;"><div id="researchOutput"></div></div>
+  </div>
+</div>
+
+<!-- ═══════════ PORTFOLIO THEMES ═══════════ -->
+<div class="page" id="page-themes">
+  <div class="content-wrap">
+    <div class="hero" style="padding:32px 40px;">
+      <h1>Portfolio Themes</h1>
+      <p>Pre-built macro-thematic baskets that align to your 4-state trading framework. Each theme shows regime fit, rebased performance vs. SPY, internal correlation, and individual constituent analytics. Click a theme to drill in.</p>
+    </div>
+    <div class="card">
+      <div class="card-title">Theme Directory</div>
+      <div class="card-body">
+        <p style="font-size:12px;color:var(--text-sec);margin-bottom:12px;">Each theme is a curated basket of 5&mdash;12 assets organized around a single macro thesis. The "Regime Fit" badge tells you which of the 4 portfolio states each theme is most appropriate for.</p>
+        <div id="themesGrid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:14px;"></div>
+      </div>
+      <div class="card-sources"><strong>Sources:</strong> Ticker selection curated from S&amp;P 500 / Russell 1000 sector classifications, CFA L3 thematic framework, and Perry 4-state regime mapping &bull; Prices via Yahoo Finance / Cloudflare Worker</div>
+    </div>
+    <!-- Theme Detail View -->
+    <div id="themeDetail" style="display:none;">
+      <div class="card">
+        <div class="card-title" id="themeDetailTitle">Theme Detail</div>
+        <div class="card-body">
+          <div class="form-row" style="margin-bottom:10px;">
+            <button class="btn" onclick="themesBackToGrid()">&larr; Back to All Themes</button>
+            <span style="font-size:12px;color:var(--text-sec);align-self:center;margin-left:8px;" id="themeDetailDesc"></span>
+          </div>
+          <div id="themeDetailStats" class="chart-stats" style="margin-bottom:14px;"></div>
+          <div class="chart-wrap" style="height:360px;"><canvas id="themePriceChart"></canvas></div>
+          <div id="themeDetailTable" style="margin-top:14px;"></div>
+        </div>
+        <div class="card-sources"><strong>Method:</strong> Rebased price performance (all constituents start at 100) &bull; Internal correlation via pairwise Pearson &bull; Per-ticker return columns from Yahoo Finance via Cloudflare Worker</div>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -1923,6 +1972,34 @@ body.view-mobile .logo-icon { width: 22px !important; height: 22px !important; f
         <div style="position:relative;height:420px;"><canvas id="businessCycleChart"></canvas></div>
       </div>
       <div class="card-sources"><strong>Sources:</strong><br>&#8226; FRED&reg; Macro Regime Scorecard &bull; CFA Business Cycle Framework</div>
+    </div>
+
+    <!-- FULL YIELD CURVE VISUALIZATION -->
+    <div class="card">
+      <div class="card-title">Full Treasury Yield Curve &mdash; Live + Historical Snapshots</div>
+      <div class="card-body">
+        <p style="font-size:12px;color:var(--text-sec);margin-bottom:10px;">All 11 constant-maturity Treasury points from 1M to 30Y. Overlay historical snapshots to see how the curve has re-shaped. <strong>Bull steepening</strong> (short rates falling fast, long rates stable) signals expected Fed cuts. <strong>Bear flattening</strong> (short rates rising to long rates) signals Fed hiking pressure. Inversion signals recession expectation.</p>
+        <div class="form-row" style="margin-bottom:10px;">
+          <div class="form-group"><label>Compare Periods</label>
+            <select id="ycOverlay" onchange="ycRender()">
+              <option value="current">Current Only</option>
+              <option value="1m">+ 1 Month Ago</option>
+              <option value="3m" selected>+ 3 Months Ago</option>
+              <option value="6m">+ 6 Months Ago</option>
+              <option value="1y">+ 1 Year Ago</option>
+              <option value="all">+ All Snapshots</option>
+            </select>
+          </div>
+          <button class="btn" onclick="ycLoad()">Refresh Curve</button>
+        </div>
+        <div id="ycStats" class="chart-stats" style="margin-bottom:12px;"></div>
+        <div class="chart-wrap" style="height:340px;"><canvas id="ycChart"></canvas></div>
+        <p style="font-size:12px;color:var(--text-sec);margin:14px 0 6px;font-weight:600;">Key Yield Spreads &mdash; Historical</p>
+        <div class="chart-wrap" style="height:220px;"><canvas id="ycSpreadsChart"></canvas></div>
+      </div>
+      <div class="card-sources">
+        <strong>Sources:</strong> FRED&reg; Federal Reserve Bank of St. Louis &mdash; series DGS1MO, DGS3MO, DGS6MO, DGS1, DGS2, DGS3, DGS5, DGS7, DGS10, DGS20, DGS30 (constant-maturity Treasury) &bull; Spreads: T10Y2Y, T10Y3M, DGS30-DGS2
+      </div>
     </div>
     <div id="macroResults"></div>
 
@@ -1977,6 +2054,49 @@ body.view-mobile .logo-icon { width: 22px !important; height: 22px !important; f
       </div>
     </div>
     <div id="quantResults"></div>
+
+    <!-- WALK-FORWARD BACKTESTING -->
+    <div class="card">
+      <div class="card-title">Walk-Forward Backtest (Out-of-Sample Validation)</div>
+      <div class="card-body">
+        <p style="font-size:12px;color:var(--text-sec);margin-bottom:12px;">Tests the MLR model's out-of-sample performance by training on an expanding window and testing on the next period, repeatedly. Standard backtests suffer from in-sample overfitting &mdash; a model that looks great when evaluated on the data it was trained on may perform poorly on new data. Walk-forward estimates realistic forward performance by <em>never</em> testing on data the model has seen.</p>
+        <div class="form-row" style="margin-bottom:10px;">
+          <div class="form-group" style="min-width:140px;">
+            <label>Ticker</label>
+            <input type="text" id="wfbTicker" placeholder="NVDA" style="text-transform:uppercase;" onkeydown="if(event.key==='Enter')wfbRun()">
+          </div>
+          <div class="form-group"><label>Initial Train</label>
+            <select id="wfbTrainFrac">
+              <option value="0.5">50% of history</option>
+              <option value="0.6" selected>60% of history</option>
+              <option value="0.7">70% of history</option>
+            </select>
+          </div>
+          <div class="form-group"><label>Test Window</label>
+            <select id="wfbTestFrac">
+              <option value="0.05">5% of history</option>
+              <option value="0.10" selected>10% of history</option>
+              <option value="0.20">20% of history</option>
+            </select>
+          </div>
+          <div class="form-group"><label>Signal Threshold</label>
+            <select id="wfbThreshold">
+              <option value="0">Predicted return &gt; 0</option>
+              <option value="0.01">Predicted return &gt; 1%</option>
+              <option value="0.02" selected>Predicted return &gt; 2%</option>
+              <option value="0.05">Predicted return &gt; 5%</option>
+            </select>
+          </div>
+          <button class="btn" onclick="wfbRun()">Run Walk-Forward Test</button>
+        </div>
+        <div id="wfbResults" style="text-align:center;color:var(--text-sec);padding:16px;font-size:13px;">Enter a ticker and click &quot;Run Walk-Forward Test&quot; to see out-of-sample predictive performance.</div>
+        <div class="chart-wrap" style="height:300px;display:none;margin-top:12px;" id="wfbEquityWrap"><canvas id="wfbEquityChart"></canvas></div>
+        <div class="chart-wrap" style="height:240px;display:none;margin-top:12px;" id="wfbPredWrap"><canvas id="wfbPredChart"></canvas></div>
+      </div>
+      <div class="card-sources">
+        <strong>Method:</strong> Expanding-window walk-forward validation (White 2000, Pesaran &amp; Timmermann 1995) &bull; Features: 21-day momentum, 63-day volatility, 10-day mean reversion, trailing return, VIX level, beta, RSI14 proxy &bull; OLS regression trained on history up to each fold boundary &bull; Strategy rule: enter long when model's predicted 21-day return exceeds threshold, hold for prediction horizon, exit &bull; Compared against buy-and-hold baseline &bull; No look-ahead bias &mdash; every prediction uses only data available at that point in time.
+      </div>
+    </div>
   </div>
 </div>
 
@@ -2031,6 +2151,23 @@ body.view-mobile .logo-icon { width: 22px !important; height: 22px !important; f
       </div>
       <div class="card-sources">
         <strong>Sources:</strong> QQQ price data via Cloudflare Worker / Yahoo Finance &middot; Fibonacci ratios from the golden ratio &phi; = 1.618 (Frost &amp; Prechter, <em>Elliott Wave Principle</em>) &middot; Swing detection via local-extremum algorithm.
+      </div>
+    </div>
+
+    <!-- BAYESIAN REGIME TRANSITION MATRIX -->
+    <div class="card">
+      <div class="card-title">Bayesian Regime Transition Probabilities</div>
+      <div class="card-body">
+        <p style="font-size:12px;color:var(--text-sec);margin-bottom:10px;">Given the current classified market state, this estimates the probability of transitioning to each of the four portfolio states over the next 30, 60, and 90 days. Transition matrix is fit from historical SPY regime sequences (5 years of daily data). Use this for position sizing: if P(Drawdown in 60 days) is high, hold more cash even if currently in Growth state.</p>
+        <div class="form-row" style="margin-bottom:10px;">
+          <button class="btn" onclick="brtRun()">Compute Transition Probabilities</button>
+          <span style="font-size:11px;color:var(--text-sec);align-self:center;margin-left:10px;">Uses 5-year historical SPY regime sequence + current classification.</span>
+        </div>
+        <div id="brtResults" style="text-align:center;color:var(--text-sec);padding:16px;font-size:13px;">Click &quot;Compute Transition Probabilities&quot; to estimate regime transitions from current state.</div>
+        <div class="chart-wrap" style="height:280px;display:none;margin-top:12px;" id="brtChartWrap"><canvas id="brtChart"></canvas></div>
+      </div>
+      <div class="card-sources">
+        <strong>Method:</strong> Empirical transition matrix P[i,j] = P(state_{t+k} = j | state_t = i) estimated via maximum likelihood from historical 5-year SPY regime sequence &bull; 30/60/90-day transition probabilities computed as P^k where k = horizon/segment length &bull; Bayesian updating: current-state prior combined with transition matrix to produce posterior distribution over future states &bull; Framework: Hamilton (1989) Markov regime-switching, adapted for macro regime classification.
       </div>
     </div>
 
@@ -3274,7 +3411,7 @@ Chart.register(priceBubblePlugin);
 let donutCharts = {};
 
 // ═══ NAVIGATION ═══
-const parentMap = { home: 'home', about: 'home', resources: 'home', portfolio: 'portfolio', holdings: 'portfolio', research: 'portfolio', macro: 'analysis', quant: 'analysis', markets: 'analysis' };
+const parentMap = { home: 'home', about: 'home', resources: 'home', portfolio: 'portfolio', holdings: 'portfolio', research: 'portfolio', themes: 'portfolio', macro: 'analysis', quant: 'analysis', markets: 'analysis' };
 function navigateTo(p) {
   document.activeElement.blur();
   document.querySelectorAll('.page').forEach(x => x.classList.remove('active'));
@@ -3288,7 +3425,12 @@ function navigateTo(p) {
   window.scrollTo(0, 0);
   if (p === 'portfolio') renderPortfolioOverview();
   if (p === 'home') { briefingLoad(); }
-  if (p === 'macro') loadMacroLiveTable();
+  if (p === 'themes' && typeof themesRenderGrid === 'function') {
+    document.getElementById('themeDetail').style.display = 'none';
+    document.getElementById('themesGrid').parentElement.parentElement.style.display = '';
+    themesRenderGrid();
+  }
+  if (p === 'macro') { loadMacroLiveTable(); if (typeof ycLoad === 'function' && !window._ycLoaded) { ycLoad(); window._ycLoaded = true; } }
   if (p === 'resources' && typeof resourcesInit === 'function') resourcesInit();
   if (p === 'markets' && typeof mktInit === 'function' && !window._mktInitialized) { mktInit(); window._mktInitialized = true; }
   if (p === 'markets' && typeof psLoadDiagnostic === 'function') {
@@ -5367,6 +5509,9 @@ window.runResearch = async function() {
   document.getElementById('researchChartCard').style.display = 'none';
   document.getElementById('researchHeaderResults').innerHTML = '<div style="padding:20px;text-align:center;"><span class="spinner"></span> Loading data for ' + ticker + '...</div>';
   document.getElementById('researchResults').innerHTML = '';
+  // Hide IV + RCR cards until new data loads
+  var ivC = document.getElementById('ivCard'); if (ivC) ivC.style.display = 'none';
+  var rcrC = document.getElementById('rcrCard'); if (rcrC) rcrC.style.display = 'none';
 
   try {
     if (isCrypto(ticker)) {
@@ -5401,6 +5546,8 @@ window.runResearch = async function() {
       document.getElementById('researchOutput').textContent = JSON.stringify(quote, null, 2);
       // Trigger regime-conditioned return distributions
       if (typeof rcrLoad === 'function') rcrLoad(ticker);
+      // Crypto typically has no options; ivLoad will gracefully handle that
+      if (typeof ivLoad === 'function') ivLoad(ticker);
 
     } else {
       // ═══ STOCK or ETF ═══
@@ -5446,6 +5593,8 @@ window.runResearch = async function() {
       document.getElementById('researchResults').innerHTML = html;
       // Trigger regime-conditioned return distributions (non-blocking)
       if (typeof rcrLoad === 'function') rcrLoad(ticker);
+      // Trigger options IV + IV percentile analysis (non-blocking)
+      if (typeof ivLoad === 'function') ivLoad(ticker);
     }
 
   } catch(e) {
@@ -9268,6 +9417,736 @@ function licRender(macroData) {
 
 // Hook: render LIC whenever macro data loads
 var _origLoadMacroLiveTable=window.loadMacroLiveTable;
+
+// ═══════════════════════════════════════════════════════════════════
+// ═══════════ 1. OPTIONS IV + IV PERCENTILE ENGINE ══════════════════
+// ═══════════════════════════════════════════════════════════════════
+async function ivLoad(ticker) {
+  var card = document.getElementById('ivCard');
+  var statsEl = document.getElementById('ivStats');
+  var wrapEl = document.getElementById('ivChartWrap');
+  var tickerEl = document.getElementById('ivTicker');
+  if (!card) return;
+  card.style.display = '';
+  tickerEl.textContent = ticker;
+  statsEl.innerHTML = '<div style="padding:10px;"><span class="spinner"></span> Loading options chain for '+ticker+'...</div>';
+  wrapEl.style.display = 'none';
+  try {
+    var WORKER = "https://perry-finance-proxy.zachperrybusiness.workers.dev";
+    var res = await fetch(WORKER + '/options?symbol=' + encodeURIComponent(ticker));
+    var d = await res.json();
+    if (d.error) { statsEl.innerHTML = '<div style="color:var(--warning);padding:10px;">'+d.error+' &mdash; options data not available for this ticker (possibly a crypto/ETF without options).</div>'; return; }
+    if (!d.nearestExpiry) { statsEl.innerHTML = '<div style="color:var(--warning);padding:10px;">No options chain found for '+ticker+'.</div>'; return; }
+    // Render stats row
+    var pct = d.ivPercentile;
+    var pctCol = pct == null ? C.textSec : pct >= 80 ? C.danger : pct >= 50 ? C.warning : pct >= 20 ? C.navy : C.success;
+    var pctLabel = pct == null ? 'N/A' : pct >= 80 ? 'Expensive' : pct >= 50 ? 'Elevated' : pct >= 20 ? 'Normal' : 'Cheap';
+    var pcRatio = d.putCallOIRatio;
+    var pcCol = pcRatio == null ? C.textSec : pcRatio > 1.2 ? C.success : pcRatio < 0.7 ? C.danger : C.textSec;
+    var pcLabel = pcRatio == null ? '—' : pcRatio > 1.2 ? 'Bearish sentiment (contrarian bull)' : pcRatio < 0.7 ? 'Bullish sentiment (contrarian bear)' : 'Neutral';
+    var mpDiff = d.maxPain && d.currentPrice ? ((d.maxPain - d.currentPrice) / d.currentPrice * 100) : null;
+
+    statsEl.innerHTML =
+      '<div class="chart-stat-box"><div class="chart-stat-label">ATM IV (Annualized)</div><div class="chart-stat-value">' + (d.atmImpliedVol != null ? (d.atmImpliedVol*100).toFixed(1)+'%' : '—') + '</div><div class="chart-stat-sub">Expiry: '+(d.nearestExpiry ? d.nearestExpiry.date+' ('+d.nearestExpiry.daysToExpiry+'d)' : '—')+'</div></div>' +
+      '<div class="chart-stat-box"><div class="chart-stat-label">IV Percentile (1Y)</div><div class="chart-stat-value" style="color:'+pctCol+';">' + (pct != null ? pct.toFixed(0)+'%' : '—') + '</div><div class="chart-stat-sub">'+pctLabel+'</div></div>' +
+      '<div class="chart-stat-box"><div class="chart-stat-label">20-Day Realized Vol</div><div class="chart-stat-value">' + (d.hv20Day != null ? (d.hv20Day*100).toFixed(1)+'%' : '—') + '</div><div class="chart-stat-sub">IV-HV spread: ' + (d.ivMinusHv != null ? (d.ivMinusHv >= 0 ? '+' : '')+(d.ivMinusHv*100).toFixed(1)+'%' : '—') + '</div></div>' +
+      '<div class="chart-stat-box"><div class="chart-stat-label">Put/Call OI Ratio</div><div class="chart-stat-value" style="color:'+pcCol+';">' + (pcRatio != null ? pcRatio.toFixed(2) : '—') + '</div><div class="chart-stat-sub">'+pcLabel+'</div></div>' +
+      '<div class="chart-stat-box"><div class="chart-stat-label">Max Pain</div><div class="chart-stat-value">' + (d.maxPain != null ? '$'+d.maxPain.toFixed(2) : '—') + '</div><div class="chart-stat-sub">'+(mpDiff != null ? (mpDiff >= 0 ? '+' : '')+mpDiff.toFixed(1)+'% from price' : '—')+'</div></div>';
+
+    // Render strike distribution chart (OI per strike, calls vs puts)
+    wrapEl.style.display = 'block';
+    var calls = d.callStrikes || [];
+    var puts = d.putStrikes || [];
+    var strikes = [...new Set([...calls.map(function(c){return c.strike;}), ...puts.map(function(p){return p.strike;})])].sort(function(a,b){return a-b;});
+    var callOI = strikes.map(function(s){ var c = calls.find(function(x){return x.strike===s;}); return c ? c.openInterest : 0; });
+    var putOI = strikes.map(function(s){ var p = puts.find(function(x){return x.strike===s;}); return p ? p.openInterest : 0; });
+    var callIV = strikes.map(function(s){ var c = calls.find(function(x){return x.strike===s;}); return c && c.impliedVolatility ? +(c.impliedVolatility*100).toFixed(1) : null; });
+    var putIV = strikes.map(function(s){ var p = puts.find(function(x){return x.strike===s;}); return p && p.impliedVolatility ? +(p.impliedVolatility*100).toFixed(1) : null; });
+    if (window._ivChart) window._ivChart.destroy();
+    window._ivChart = new Chart(document.getElementById('ivChart').getContext('2d'), {
+      data: {
+        labels: strikes.map(function(s){return '$'+s;}),
+        datasets: [
+          { type: 'bar', label: 'Call Open Interest', data: callOI, backgroundColor: 'rgba(0,60,113,0.55)', borderColor: C.navy, borderWidth: 1, yAxisID: 'yOI' },
+          { type: 'bar', label: 'Put Open Interest', data: putOI, backgroundColor: 'rgba(139,42,42,0.55)', borderColor: C.danger, borderWidth: 1, yAxisID: 'yOI' },
+          { type: 'line', label: 'Call IV %', data: callIV, borderColor: C.blue, backgroundColor: C.blue, borderWidth: 2, pointRadius: 3, fill: false, yAxisID: 'yIV', tension: 0.2 },
+          { type: 'line', label: 'Put IV %', data: putIV, borderColor: C.warning, backgroundColor: C.warning, borderWidth: 2, pointRadius: 3, fill: false, yAxisID: 'yIV', tension: 0.2 }
+        ]
+      },
+      options: { responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { position: 'bottom', labels: { font:{size:10}, color: C.textSec } }, tooltip: chartTooltip },
+        scales: {
+          x: { grid: chartGrid, ticks: chartTicks, title: { display: true, text: 'Strike Price', color: C.textSec, font:{size:11} } },
+          yOI: { type: 'linear', position: 'left', grid: chartGrid, ticks: chartTicks, title: { display: true, text: 'Open Interest', color: C.textSec, font:{size:11} } },
+          yIV: { type: 'linear', position: 'right', grid: { display: false }, ticks: Object.assign({}, chartTicks, { callback: function(v){return v+'%';} }), title: { display: true, text: 'IV (%)', color: C.textSec, font:{size:11} } }
+        }
+      }
+    });
+  } catch(e) { statsEl.innerHTML = '<div style="color:var(--danger);padding:10px;">Options load error: '+e.message+'</div>'; }
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// ═══════════ 2. FULL YIELD CURVE VISUALIZATION ═════════════════════
+// ═══════════════════════════════════════════════════════════════════
+var _ycData = null;
+var _ycChart = null;
+var _ycSpreadsChart = null;
+async function ycLoad() {
+  var statsEl = document.getElementById('ycStats');
+  if (!statsEl) return;
+  statsEl.innerHTML = '<div class="chart-stat-box" style="flex:1;text-align:center;"><span class="spinner"></span> Fetching full Treasury yield curve from FRED...</div>';
+  try {
+    var WORKER = "https://perry-finance-proxy.zachperrybusiness.workers.dev";
+    var res = await fetch(WORKER + '/yieldcurve');
+    var d = await res.json();
+    if (d.error) { statsEl.innerHTML = '<div style="color:var(--danger);padding:10px;">'+d.error+'</div>'; return; }
+    _ycData = d;
+    ycRender();
+  } catch(e) { statsEl.innerHTML = '<div style="color:var(--danger);padding:10px;">Error: '+e.message+'</div>'; }
+}
+
+function ycRender() {
+  if (!_ycData) return;
+  var d = _ycData;
+  var overlay = document.getElementById('ycOverlay').value;
+  var statsEl = document.getElementById('ycStats');
+
+  // Build stats from current snapshot
+  var cur = d.snapshots.current;
+  var r1m = cur.find(function(p){return p.maturity==='1M';});
+  var r2y = cur.find(function(p){return p.maturity==='2Y';});
+  var r10y = cur.find(function(p){return p.maturity==='10Y';});
+  var r30y = cur.find(function(p){return p.maturity==='30Y';});
+  var r3m = cur.find(function(p){return p.maturity==='3M';});
+  var spread2s10s = r2y && r10y ? (r10y.rate - r2y.rate) : null;
+  var spread3m10y = r3m && r10y ? (r10y.rate - r3m.rate) : null;
+  var spread2s30s = r2y && r30y ? (r30y.rate - r2y.rate) : null;
+
+  function fmt2(v){ return v != null ? v.toFixed(2)+'%' : '—'; }
+  function spreadCol(v){ return v == null ? C.textSec : v > 0 ? C.success : C.danger; }
+  function spreadLabel(v){ return v == null ? '—' : v > 0.5 ? 'Normal' : v > 0 ? 'Flat' : v > -0.5 ? 'Mild Inversion' : 'Deep Inversion'; }
+
+  statsEl.innerHTML =
+    '<div class="chart-stat-box"><div class="chart-stat-label">1M Treasury</div><div class="chart-stat-value">'+fmt2(r1m && r1m.rate)+'</div></div>' +
+    '<div class="chart-stat-box"><div class="chart-stat-label">2Y Treasury</div><div class="chart-stat-value">'+fmt2(r2y && r2y.rate)+'</div></div>' +
+    '<div class="chart-stat-box"><div class="chart-stat-label">10Y Treasury</div><div class="chart-stat-value">'+fmt2(r10y && r10y.rate)+'</div></div>' +
+    '<div class="chart-stat-box"><div class="chart-stat-label">30Y Treasury</div><div class="chart-stat-value">'+fmt2(r30y && r30y.rate)+'</div></div>' +
+    '<div class="chart-stat-box"><div class="chart-stat-label">2s10s Spread</div><div class="chart-stat-value" style="color:'+spreadCol(spread2s10s)+';">'+(spread2s10s!=null?(spread2s10s>=0?'+':'')+spread2s10s.toFixed(2)+'%':'—')+'</div><div class="chart-stat-sub">'+spreadLabel(spread2s10s)+'</div></div>' +
+    '<div class="chart-stat-box"><div class="chart-stat-label">3M/10Y Spread</div><div class="chart-stat-value" style="color:'+spreadCol(spread3m10y)+';">'+(spread3m10y!=null?(spread3m10y>=0?'+':'')+spread3m10y.toFixed(2)+'%':'—')+'</div><div class="chart-stat-sub">'+spreadLabel(spread3m10y)+'</div></div>';
+
+  // Build overlay datasets
+  var snaps = d.snapshots;
+  var labels = snaps.current.map(function(p){return p.maturity;});
+  var datasets = [];
+  if (overlay === '1m' || overlay === 'all') datasets.push({ label: '1M Ago', data: snaps.oneMonthAgo.map(function(p){return p.rate;}), borderColor: 'rgba(168,200,232,0.9)', backgroundColor: 'transparent', borderWidth: 1.5, borderDash: [4,3], pointRadius: 3, tension: 0.3 });
+  if (overlay === '3m' || overlay === 'all') datasets.push({ label: '3M Ago', data: snaps.threeMonthsAgo.map(function(p){return p.rate;}), borderColor: 'rgba(91,155,213,0.85)', backgroundColor: 'transparent', borderWidth: 1.5, borderDash: [4,3], pointRadius: 3, tension: 0.3 });
+  if (overlay === '6m' || overlay === 'all') datasets.push({ label: '6M Ago', data: snaps.sixMonthsAgo.map(function(p){return p.rate;}), borderColor: 'rgba(139,105,20,0.85)', backgroundColor: 'transparent', borderWidth: 1.5, borderDash: [4,3], pointRadius: 3, tension: 0.3 });
+  if (overlay === '1y' || overlay === 'all') datasets.push({ label: '1Y Ago', data: snaps.oneYearAgo.map(function(p){return p.rate;}), borderColor: 'rgba(200,208,216,0.85)', backgroundColor: 'transparent', borderWidth: 1.5, borderDash: [4,3], pointRadius: 3, tension: 0.3 });
+  // Always include current (drawn last, thickest)
+  datasets.push({ label: 'Current', data: snaps.current.map(function(p){return p.rate;}), borderColor: C.navy, backgroundColor: 'rgba(0,60,113,0.08)', borderWidth: 3, pointRadius: 5, pointBackgroundColor: C.navy, tension: 0.3, fill: false });
+
+  if (_ycChart) _ycChart.destroy();
+  _ycChart = new Chart(document.getElementById('ycChart').getContext('2d'), {
+    type: 'line',
+    data: { labels: labels, datasets: datasets },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      plugins: { legend: { position: 'bottom', labels: { font:{size:11}, color: C.textSec } }, tooltip: Object.assign({}, chartTooltip, { callbacks: { label: function(ctx){ return ctx.dataset.label+': '+ctx.parsed.y.toFixed(2)+'%'; } }}) },
+      scales: {
+        x: { grid: chartGrid, ticks: chartTicks, title: { display: true, text: 'Maturity', color: C.textSec, font:{size:11} } },
+        y: { grid: chartGrid, ticks: Object.assign({}, chartTicks, { callback: function(v){ return v.toFixed(1)+'%'; }}), title: { display: true, text: 'Yield (%)', color: C.textSec, font:{size:11} } }
+      }
+    }
+  });
+
+  // Spreads chart
+  var spreads = d.spreads;
+  if (spreads && spreads.dates && spreads.dates.length > 20) {
+    // Downsample for performance if >500 points
+    var step = Math.max(1, Math.ceil(spreads.dates.length / 500));
+    var sampledDates = [], s2s10s = [], s3m10y = [], s2s30s = [];
+    for (var i = 0; i < spreads.dates.length; i += step) {
+      sampledDates.push(spreads.dates[i]);
+      s2s10s.push(spreads['2s10s'][i]);
+      s3m10y.push(spreads['3m10y'][i]);
+      s2s30s.push(spreads['2s30s'][i]);
+    }
+    if (_ycSpreadsChart) _ycSpreadsChart.destroy();
+    _ycSpreadsChart = new Chart(document.getElementById('ycSpreadsChart').getContext('2d'), {
+      type: 'line',
+      data: {
+        labels: sampledDates,
+        datasets: [
+          { label: '2s10s Spread', data: s2s10s, borderColor: C.navy, backgroundColor: 'transparent', borderWidth: 1.5, pointRadius: 0, tension: 0.1 },
+          { label: '3M/10Y Spread', data: s3m10y, borderColor: C.blue, backgroundColor: 'transparent', borderWidth: 1.5, pointRadius: 0, tension: 0.1 },
+          { label: '2s30s Spread', data: s2s30s, borderColor: C.warning, backgroundColor: 'transparent', borderWidth: 1.5, pointRadius: 0, tension: 0.1 }
+        ]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { position: 'bottom', labels: {font:{size:10}, color: C.textSec} }, tooltip: chartTooltip,
+          annotation: { annotations: { zeroLine: { type: 'line', yMin: 0, yMax: 0, borderColor: C.textSec, borderDash:[2,2] }}}
+        },
+        scales: {
+          x: { grid: chartGrid, ticks: Object.assign({}, chartTicks, { maxTicksLimit: 10, autoSkip: true }) },
+          y: { grid: chartGrid, ticks: Object.assign({}, chartTicks, { callback: function(v){return v.toFixed(2)+'%';}}), title:{display:true, text:'Spread (%)', color:C.textSec, font:{size:11}} }
+        }
+      }
+    });
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// ═══════════ 3. PORTFOLIO THEMES ═══════════════════════════════════
+// ═══════════════════════════════════════════════════════════════════
+var PORTFOLIO_THEMES = [
+  {
+    key: 'ai_infra', name: 'AI Infrastructure',
+    description: 'Semiconductors, hyperscaler clouds, and AI-exposed large caps driving the build-out phase.',
+    regimeFit: 'leveraged,growth',
+    tickers: ['NVDA','AMD','MSFT','GOOGL','AMZN','META','SMCI','AVGO','ARM','PLTR']
+  },
+  {
+    key: 'energy_transition', name: 'Energy Transition',
+    description: 'Renewable generation, storage, utilities adapting to grid modernization, and battery material suppliers.',
+    regimeFit: 'growth,neutral',
+    tickers: ['FSLR','ENPH','NEE','RUN','SEDG','ICLN','LIT','TAN','PBW']
+  },
+  {
+    key: 'defensive_yield', name: 'Defensive Yield',
+    description: 'Utilities, staples, telecoms, REITs &mdash; low-beta dividend payers for late-cycle or defensive postures.',
+    regimeFit: 'neutral,drawdown',
+    tickers: ['XLU','XLP','VZ','JNJ','KO','PEP','O','MO','PFE','SO']
+  },
+  {
+    key: 'leveraged_basket', name: 'Leveraged Regime Basket',
+    description: '3x leveraged ETFs and high-beta names for high-conviction entries at market bottoms (VIX &gt; 30).',
+    regimeFit: 'leveraged',
+    tickers: ['TQQQ','SOXL','FNGU','UPRO','TECL','LABU','UDOW']
+  },
+  {
+    key: 'real_assets', name: 'Gold &amp; Real Asset Inflation Hedge',
+    description: 'Precious metals miners, commodities, real estate &mdash; hedges for inflation persistence and USD weakness.',
+    regimeFit: 'neutral,drawdown',
+    tickers: ['GLD','SLV','GDX','GDXJ','PDBC','USO','SCHH','VNQ']
+  },
+  {
+    key: 'usd_pairs', name: 'Dollar Strength / FX Pairs',
+    description: 'USD long vs. EM/developed ex-US for cycles when DXY strengthens. Add currency ETFs for tactical overlay.',
+    regimeFit: 'growth,drawdown',
+    tickers: ['UUP','EEM','EFA','FXE','FXY','FXB','DXJ']
+  },
+  {
+    key: 'credit_cycle', name: 'Credit Cycle Barbell',
+    description: 'High-yield and investment-grade credit plus long and short duration &mdash; track spread cycle and rate moves.',
+    regimeFit: 'growth,neutral',
+    tickers: ['HYG','JNK','LQD','TLT','SHV','BKLN','IEF']
+  }
+];
+
+function themesRenderGrid() {
+  var gridEl = document.getElementById('themesGrid');
+  if (!gridEl) return;
+  // Get current regime if available
+  var currentState = window._briefingState || null;
+  var stateName = {leveraged: 'Leveraged', growth: 'Non-Levered Growth', neutral: 'Neutral', drawdown: 'Positioned for Drawdown'};
+  var stateColor = {leveraged: '#2E7D52', growth: '#003C71', neutral: '#8B6914', drawdown: '#8B2A2A'};
+  gridEl.innerHTML = PORTFOLIO_THEMES.map(function(t){
+    var fits = t.regimeFit.split(',');
+    var currentFits = currentState && fits.indexOf(currentState) >= 0;
+    var badgeStyle = currentFits ? 'background:#2E7D52;color:#fff;' : 'background:#F4F6F9;color:#5A6A7A;border:1px solid #D0D7E0;';
+    var fitLabels = fits.map(function(f){ return stateName[f]; }).join(' / ');
+    return '<div class="ps-state-card" onclick="themesLoadDetail(\''+t.key+'\')" style="cursor:pointer;">'
+      +'<div class="ps-state-header" style="background:'+(currentFits?'#2E7D52':'#003C71')+';">'
+      +t.name
+      +(currentFits?'<span class="ps-state-active-pill">FITS CURRENT</span>':'')
+      +'</div>'
+      +'<div class="ps-state-body">'
+      +'<div style="font-size:11px;color:var(--text-sec);margin-bottom:8px;line-height:1.4;">'+t.description+'</div>'
+      +'<div style="font-size:11px;margin-bottom:5px;"><strong>Regime Fit:</strong> <span style="'+badgeStyle+'padding:2px 6px;border-radius:3px;font-size:10px;font-weight:700;">'+fitLabels+'</span></div>'
+      +'<div style="font-size:11px;"><strong>'+t.tickers.length+' assets:</strong> '+t.tickers.slice(0,5).join(', ')+(t.tickers.length>5?', +'+(t.tickers.length-5)+' more':'')+'</div>'
+      +'<div style="margin-top:10px;text-align:right;font-size:11px;color:var(--blue);font-weight:600;">View Details →</div>'
+      +'</div></div>';
+  }).join('');
+}
+
+async function themesLoadDetail(themeKey) {
+  var theme = PORTFOLIO_THEMES.find(function(t){return t.key===themeKey;});
+  if (!theme) return;
+  document.getElementById('themesGrid').parentElement.parentElement.style.display = 'none';
+  var detailCard = document.getElementById('themeDetail');
+  detailCard.style.display = '';
+  document.getElementById('themeDetailTitle').textContent = theme.name;
+  document.getElementById('themeDetailDesc').innerHTML = theme.description;
+  document.getElementById('themeDetailStats').innerHTML = '<div style="padding:16px;text-align:center;"><span class="spinner"></span> Loading 1-year price data for '+theme.tickers.length+' constituents...</div>';
+  document.getElementById('themeDetailTable').innerHTML = '';
+
+  var WORKER = "https://perry-finance-proxy.zachperrybusiness.workers.dev";
+  var dataByTicker = {};
+  await Promise.all(theme.tickers.map(async function(t){
+    try {
+      var r = await fetch(WORKER + '/chart?symbol='+encodeURIComponent(t)+'&range=1y&interval=1d');
+      var d = await r.json();
+      var pts = (d.points||[]).filter(function(p){return p.close!=null;});
+      if (pts.length > 20) {
+        dataByTicker[t] = { closes: pts.map(function(p){return p.close;}), dates: pts.map(function(p){return p.date.slice(0,10);}) };
+      }
+    } catch(e) {}
+  }));
+
+  // Also fetch SPY for benchmark
+  try {
+    var spyR = await fetch(WORKER + '/chart?symbol=SPY&range=1y&interval=1d');
+    var spyD = await spyR.json();
+    var spyPts = (spyD.points||[]).filter(function(p){return p.close!=null;});
+    if (spyPts.length > 20) dataByTicker['SPY'] = { closes: spyPts.map(function(p){return p.close;}), dates: spyPts.map(function(p){return p.date.slice(0,10);}) };
+  } catch(e) {}
+
+  var tickers = Object.keys(dataByTicker);
+  if (!tickers.length) { document.getElementById('themeDetailStats').innerHTML = '<div style="color:var(--danger);padding:10px;">No price data loaded.</div>'; return; }
+
+  // Build rebased performance (all start at 100)
+  var minLen = Math.min.apply(null, tickers.map(function(t){return dataByTicker[t].closes.length;}));
+  tickers.forEach(function(t){ dataByTicker[t].closes = dataByTicker[t].closes.slice(-minLen); dataByTicker[t].dates = dataByTicker[t].dates.slice(-minLen); });
+  var commonDates = dataByTicker[tickers[0]].dates;
+  tickers.forEach(function(t){
+    var first = dataByTicker[t].closes[0];
+    dataByTicker[t].rebased = dataByTicker[t].closes.map(function(c){return (c/first)*100;});
+    // Returns
+    var rets = []; for (var i = 1; i < dataByTicker[t].closes.length; i++) rets.push((dataByTicker[t].closes[i] - dataByTicker[t].closes[i-1]) / dataByTicker[t].closes[i-1]);
+    dataByTicker[t].returns = rets;
+    var first30 = dataByTicker[t].closes[Math.max(0, dataByTicker[t].closes.length-22)];
+    var first90 = dataByTicker[t].closes[Math.max(0, dataByTicker[t].closes.length-63)];
+    var first180 = dataByTicker[t].closes[Math.max(0, dataByTicker[t].closes.length-126)];
+    var cur = dataByTicker[t].closes[dataByTicker[t].closes.length-1];
+    dataByTicker[t].r1m = (cur-first30)/first30*100;
+    dataByTicker[t].r3m = (cur-first90)/first90*100;
+    dataByTicker[t].r6m = (cur-first180)/first180*100;
+    dataByTicker[t].r12m = (cur-first)/first*100;
+    var mean = rets.reduce(function(s,v){return s+v;},0)/rets.length;
+    var vari = rets.reduce(function(s,v){return s+(v-mean)*(v-mean);},0)/(rets.length-1);
+    dataByTicker[t].volAnn = Math.sqrt(vari)*Math.sqrt(252)*100;
+  });
+
+  // Compute internal correlation matrix (theme tickers only, not SPY)
+  var corrTickers = theme.tickers.filter(function(t){return dataByTicker[t];});
+  function pearson(x, y) {
+    var n = Math.min(x.length, y.length);
+    var mx = 0, my = 0;
+    for (var i = 0; i < n; i++) { mx += x[i]; my += y[i]; }
+    mx /= n; my /= n;
+    var num = 0, dx = 0, dy = 0;
+    for (var i = 0; i < n; i++) { var ax = x[i] - mx, ay = y[i] - my; num += ax*ay; dx += ax*ax; dy += ay*ay; }
+    return num / Math.sqrt(dx * dy);
+  }
+  var corrSum = 0, corrCount = 0;
+  for (var i = 0; i < corrTickers.length; i++) {
+    for (var j = i+1; j < corrTickers.length; j++) {
+      var r = pearson(dataByTicker[corrTickers[i]].returns, dataByTicker[corrTickers[j]].returns);
+      if (!isNaN(r)) { corrSum += r; corrCount++; }
+    }
+  }
+  var avgCorr = corrCount > 0 ? corrSum / corrCount : 0;
+
+  // Equal-weight theme performance (avg of rebased)
+  var themePerf = new Array(minLen).fill(0);
+  corrTickers.forEach(function(t){ dataByTicker[t].rebased.forEach(function(v, i){ themePerf[i] += v / corrTickers.length; }); });
+  var themeReturn = (themePerf[themePerf.length-1] - 100);
+  var spyReturn = dataByTicker['SPY'] ? (dataByTicker['SPY'].rebased[dataByTicker['SPY'].rebased.length-1] - 100) : null;
+
+  // Stats row
+  document.getElementById('themeDetailStats').innerHTML =
+    '<div class="chart-stat-box"><div class="chart-stat-label">Theme Performance (1Y)</div><div class="chart-stat-value" style="color:'+(themeReturn>=0?C.success:C.danger)+';">'+(themeReturn>=0?'+':'')+themeReturn.toFixed(1)+'%</div></div>' +
+    (spyReturn != null ? '<div class="chart-stat-box"><div class="chart-stat-label">vs. SPY Benchmark</div><div class="chart-stat-value" style="color:'+((themeReturn-spyReturn)>=0?C.success:C.danger)+';">'+((themeReturn-spyReturn)>=0?'+':'')+(themeReturn-spyReturn).toFixed(1)+'%</div><div class="chart-stat-sub">SPY: '+(spyReturn>=0?'+':'')+spyReturn.toFixed(1)+'%</div></div>' : '') +
+    '<div class="chart-stat-box"><div class="chart-stat-label">Avg Internal Correlation</div><div class="chart-stat-value">'+avgCorr.toFixed(2)+'</div><div class="chart-stat-sub">'+(avgCorr>0.7?'High (concentrated)':avgCorr>0.4?'Moderate':'Low (diversified)')+'</div></div>' +
+    '<div class="chart-stat-box"><div class="chart-stat-label">Constituents</div><div class="chart-stat-value">'+corrTickers.length+' / '+theme.tickers.length+'</div><div class="chart-stat-sub">tickers with data</div></div>';
+
+  // Rebased chart
+  var datasets = corrTickers.slice(0, 8).map(function(t, idx){
+    var colors = [C.navy, C.blue, '#A8C8E8', '#2E7D52', '#8B6914', '#8B2A2A', '#003C71', '#5B9BD5'];
+    return { label: t, data: dataByTicker[t].rebased, borderColor: colors[idx % colors.length], backgroundColor: 'transparent', borderWidth: 1.5, pointRadius: 0, tension: 0.1 };
+  });
+  // Theme avg
+  datasets.push({ label: theme.name+' (Equal-Weight)', data: themePerf, borderColor: C.navy, backgroundColor: 'rgba(0,60,113,0.08)', borderWidth: 3, pointRadius: 0, tension: 0.1, fill: false });
+  if (dataByTicker['SPY']) datasets.push({ label: 'SPY Benchmark', data: dataByTicker['SPY'].rebased, borderColor: C.textSec, backgroundColor: 'transparent', borderWidth: 1.5, borderDash:[4,3], pointRadius: 0, tension: 0.1 });
+
+  if (window._themeChart) window._themeChart.destroy();
+  window._themeChart = new Chart(document.getElementById('themePriceChart').getContext('2d'), {
+    type: 'line',
+    data: { labels: commonDates, datasets: datasets },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      interaction: { mode: 'nearest', intersect: false },
+      plugins: { legend: { position: 'bottom', labels: {font:{size:10}, color:C.textSec, boxWidth:10} }, tooltip: chartTooltip },
+      scales: {
+        x: { grid: chartGrid, ticks: Object.assign({}, chartTicks, { maxTicksLimit: 10, autoSkip: true }) },
+        y: { grid: chartGrid, ticks: chartTicks, title: { display: true, text: 'Rebased (Start = 100)', color: C.textSec, font:{size:11} } }
+      }
+    }
+  });
+
+  // Constituent table
+  var rows = corrTickers.map(function(t){
+    var d = dataByTicker[t];
+    function col(v){ return v>=0 ? C.success : C.danger; }
+    function pct(v){ return (v>=0?'+':'')+v.toFixed(1)+'%'; }
+    return '<tr>'
+      +'<td style="font-weight:700;color:var(--navy);">'+t+'</td>'
+      +'<td>$'+d.closes[d.closes.length-1].toFixed(2)+'</td>'
+      +'<td style="color:'+col(d.r1m)+';">'+pct(d.r1m)+'</td>'
+      +'<td style="color:'+col(d.r3m)+';">'+pct(d.r3m)+'</td>'
+      +'<td style="color:'+col(d.r6m)+';">'+pct(d.r6m)+'</td>'
+      +'<td style="color:'+col(d.r12m)+';font-weight:600;">'+pct(d.r12m)+'</td>'
+      +'<td>'+d.volAnn.toFixed(1)+'%</td>'
+      +'</tr>';
+  }).join('');
+  document.getElementById('themeDetailTable').innerHTML = '<table><thead><tr>'
+    +'<th>Ticker</th><th>Price</th><th>1M</th><th>3M</th><th>6M</th><th>12M</th><th>Ann. Vol</th>'
+    +'</tr></thead><tbody>'+rows+'</tbody></table>';
+}
+
+function themesBackToGrid() {
+  document.getElementById('themeDetail').style.display = 'none';
+  document.getElementById('themesGrid').parentElement.parentElement.style.display = '';
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// ═══════════ 4. BAYESIAN REGIME TRANSITION MATRIX ══════════════════
+// ═══════════════════════════════════════════════════════════════════
+async function brtRun() {
+  var el = document.getElementById('brtResults');
+  var wrapEl = document.getElementById('brtChartWrap');
+  el.innerHTML = '<div style="padding:14px;text-align:center;"><span class="spinner"></span> Building regime transition matrix from 5-year SPY history...</div>';
+  wrapEl.style.display = 'none';
+
+  try {
+    var WORKER = "https://perry-finance-proxy.zachperrybusiness.workers.dev";
+    var [spyR, vixR] = await Promise.all([
+      fetch(WORKER + '/chart?symbol=SPY&range=5y&interval=1d').then(function(r){return r.json();}),
+      fetch(WORKER + '/chart?symbol=%5EVIX&range=5y&interval=1d').then(function(r){return r.json();})
+    ]);
+    var spyPts = (spyR.points||[]).filter(function(p){return p.close!=null;});
+    var vixPts = (vixR.points||[]).filter(function(p){return p.close!=null;});
+    if (spyPts.length < 500) { el.innerHTML = '<div style="color:var(--warning);padding:10px;">Insufficient data for transition matrix.</div>'; return; }
+
+    // Align VIX to SPY dates
+    var vixMap = {};
+    vixPts.forEach(function(p){ vixMap[p.date.slice(0,10)] = p.close; });
+    var dates = spyPts.map(function(p){return p.date.slice(0,10);});
+    var closes = spyPts.map(function(p){return p.close;});
+
+    // Classify every day's regime
+    var lookback = 252;
+    var dailyStates = [];
+    for (var i = lookback; i < closes.length; i++) {
+      var cur = closes[i];
+      var past = closes[i-lookback];
+      var recentSlice = closes.slice(i-lookback, i+1);
+      var spyHigh = Math.max.apply(null, recentSlice);
+      var spyLow = Math.min.apply(null, recentSlice);
+      var vix = vixMap[dates[i]];
+      if (!vix) continue;
+      var signals = {
+        vix: vix,
+        spyTrailingReturn: (cur - past) / past,
+        drawdownFromPeak: (cur - spyHigh) / spyHigh,
+        spy12mFromLow: (cur - spyLow) / spyLow
+      };
+      var cl = psClassifyState(signals);
+      dailyStates.push({ date: dates[i], state: cl.winner });
+    }
+
+    if (dailyStates.length < 100) { el.innerHTML = '<div style="color:var(--warning);padding:10px;">Insufficient classified observations.</div>'; return; }
+
+    // Build transition counts at different horizons
+    var stateKeys = ['leveraged','growth','neutral','drawdown'];
+    function buildMatrix(horizonDays) {
+      var counts = {};
+      stateKeys.forEach(function(s){ counts[s] = {leveraged:0, growth:0, neutral:0, drawdown:0}; });
+      for (var i = 0; i < dailyStates.length - horizonDays; i++) {
+        var from = dailyStates[i].state;
+        var to = dailyStates[i + horizonDays].state;
+        counts[from][to]++;
+      }
+      // Convert counts to probabilities
+      var probs = {};
+      stateKeys.forEach(function(from){
+        var total = stateKeys.reduce(function(s, to){return s + counts[from][to];}, 0);
+        probs[from] = {};
+        stateKeys.forEach(function(to){ probs[from][to] = total > 0 ? counts[from][to] / total : 0; });
+      });
+      return probs;
+    }
+
+    var m30 = buildMatrix(21);  // ~30 calendar days = 21 trading days
+    var m60 = buildMatrix(42);
+    var m90 = buildMatrix(63);
+
+    // Current state
+    var currentState = window._briefingState || dailyStates[dailyStates.length-1].state;
+    var stateName = {leveraged: 'Leveraged', growth: 'Non-Levered Growth', neutral: 'Neutral', drawdown: 'Positioned for Drawdown'};
+    var stateColor = {leveraged: '#2E7D52', growth: '#003C71', neutral: '#8B6914', drawdown: '#8B2A2A'};
+    var curColor = stateColor[currentState];
+
+    // Build table
+    function renderRow(horizonLabel, matrix) {
+      var row = matrix[currentState];
+      var bars = stateKeys.map(function(to){
+        var pct = row[to] * 100;
+        var width = Math.max(2, pct * 2.5); // scale
+        return '<div style="display:flex;align-items:center;gap:8px;margin:4px 0;">'
+          +'<div style="width:140px;font-size:11px;color:'+(to===currentState?'var(--navy)':'var(--text-sec)')+';font-weight:'+(to===currentState?'700':'500')+';">'+stateName[to]+(to===currentState?' (stays)':'')+'</div>'
+          +'<div style="flex:1;height:18px;background:#F4F6F9;border-radius:3px;overflow:hidden;position:relative;">'
+          +'<div style="height:100%;width:'+pct+'%;background:'+stateColor[to]+';"></div>'
+          +'</div>'
+          +'<div style="width:60px;text-align:right;font-size:11px;font-weight:700;color:'+stateColor[to]+';">'+pct.toFixed(1)+'%</div>'
+          +'</div>';
+      }).join('');
+      return '<div style="margin-bottom:16px;"><div style="font-size:12px;font-weight:700;color:var(--navy);margin-bottom:4px;">'+horizonLabel+'</div>'+bars+'</div>';
+    }
+
+    el.innerHTML = '<div style="text-align:left;padding:4px;">'
+      +'<div style="background:'+curColor+';color:#fff;padding:10px 14px;border-radius:4px;margin-bottom:14px;">'
+      +'<div style="font-size:11px;opacity:.85;text-transform:uppercase;letter-spacing:.5px;">Current Classified State</div>'
+      +'<div style="font-size:18px;font-weight:800;margin-top:2px;">'+stateName[currentState]+'</div>'
+      +'<div style="font-size:11px;opacity:.85;margin-top:2px;">Based on '+dailyStates.length+' historical daily observations from past 5 years.</div>'
+      +'</div>'
+      +renderRow('30 Days Forward', m30)
+      +renderRow('60 Days Forward', m60)
+      +renderRow('90 Days Forward', m90)
+      +'</div>';
+
+    // Stacked bar chart: transition probs at 30/60/90
+    wrapEl.style.display = 'block';
+    var labels = ['30 Days', '60 Days', '90 Days'];
+    var datasets = stateKeys.map(function(to){
+      return {
+        label: stateName[to],
+        data: [m30[currentState][to]*100, m60[currentState][to]*100, m90[currentState][to]*100],
+        backgroundColor: stateColor[to],
+        borderWidth: 0
+      };
+    });
+    if (window._brtChart) window._brtChart.destroy();
+    window._brtChart = new Chart(document.getElementById('brtChart').getContext('2d'), {
+      type: 'bar',
+      data: { labels: labels, datasets: datasets },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { position: 'bottom', labels: {font:{size:10}, color:C.textSec} }, tooltip: Object.assign({}, chartTooltip, { callbacks: { label: function(ctx){ return ctx.dataset.label+': '+ctx.parsed.y.toFixed(1)+'%'; } } }) },
+        scales: {
+          x: { stacked: true, grid: chartGrid, ticks: chartTicks, title:{display:true,text:'Forward Horizon',color:C.textSec,font:{size:11}}},
+          y: { stacked: true, grid: chartGrid, ticks: Object.assign({}, chartTicks, { callback: function(v){return v+'%';}}), max: 100, title:{display:true,text:'Probability (%)',color:C.textSec,font:{size:11}}}
+        }
+      }
+    });
+  } catch(e) { el.innerHTML = '<div style="color:var(--danger);padding:10px;">Error: '+e.message+'</div>'; }
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// ═══════════ 5. WALK-FORWARD BACKTESTING ═══════════════════════════
+// ═══════════════════════════════════════════════════════════════════
+async function wfbRun() {
+  var ticker = (document.getElementById('wfbTicker').value || '').trim().toUpperCase();
+  if (!ticker) { alert('Enter a ticker first.'); return; }
+  var trainFrac = parseFloat(document.getElementById('wfbTrainFrac').value);
+  var testFrac = parseFloat(document.getElementById('wfbTestFrac').value);
+  var threshold = parseFloat(document.getElementById('wfbThreshold').value);
+  var el = document.getElementById('wfbResults');
+  var equityWrap = document.getElementById('wfbEquityWrap');
+  var predWrap = document.getElementById('wfbPredWrap');
+  el.innerHTML = '<div style="padding:14px;text-align:center;"><span class="spinner"></span> Running walk-forward validation for '+ticker+'...</div>';
+  equityWrap.style.display = 'none'; predWrap.style.display = 'none';
+
+  try {
+    var WORKER = "https://perry-finance-proxy.zachperrybusiness.workers.dev";
+    var [tickerR, vixR] = await Promise.all([
+      fetch(WORKER + '/chart?symbol='+encodeURIComponent(ticker)+'&range=10y&interval=1d').then(function(r){return r.json();}),
+      fetch(WORKER + '/chart?symbol=%5EVIX&range=10y&interval=1d').then(function(r){return r.json();})
+    ]);
+    var pts = (tickerR.points||[]).filter(function(p){return p.close!=null;});
+    if (pts.length < 500) { el.innerHTML = '<div style="color:var(--warning);padding:10px;">Insufficient historical data for '+ticker+'.</div>'; return; }
+    var vixPts = (vixR.points||[]).filter(function(p){return p.close!=null;});
+    var vixMap = {}; vixPts.forEach(function(p){vixMap[p.date.slice(0,10)] = p.close;});
+
+    var closes = pts.map(function(p){return p.close;});
+    var dates = pts.map(function(p){return p.date.slice(0,10);});
+    var N = closes.length;
+
+    // Build features for each day t (need lookback data)
+    var lookback = 63;  // need 63 days of history for features
+    var fwdHorizon = 21;  // predict 21-day forward return
+    var features = []; // feature vectors
+    var targets = [];  // forward returns
+    var featDates = [];
+    for (var t = lookback; t < N - fwdHorizon; t++) {
+      var window21 = closes.slice(t-21, t);
+      var window63 = closes.slice(t-63, t);
+      // Momentum (21d return)
+      var mom21 = (closes[t-1] - closes[t-21]) / closes[t-21];
+      // 63-day volatility
+      var rets63 = []; for (var k = 1; k < window63.length; k++) rets63.push((window63[k] - window63[k-1])/window63[k-1]);
+      var mean63 = rets63.reduce(function(s,v){return s+v;},0)/rets63.length;
+      var vari63 = rets63.reduce(function(s,v){return s+(v-mean63)*(v-mean63);},0)/(rets63.length-1);
+      var vol63 = Math.sqrt(vari63) * Math.sqrt(252);
+      // Mean reversion (10d return)
+      var mr10 = (closes[t-1] - closes[t-11]) / closes[t-11];
+      // 252-day trailing return
+      var tr252 = t >= 252 ? (closes[t-1] - closes[t-252]) / closes[t-252] : 0;
+      // VIX level
+      var vix = vixMap[dates[t]] || 20;
+      // RSI14 proxy
+      var gains = 0, losses = 0;
+      for (var k = 1; k < 15; k++) { var ch = closes[t-k] - closes[t-k-1]; if (ch > 0) gains += ch; else losses -= ch; }
+      var rsi = losses > 0 ? 100 - (100 / (1 + gains/losses)) : 50;
+      // Forward 21-day return (target)
+      var fwdRet = (closes[t + fwdHorizon] - closes[t]) / closes[t];
+      features.push([1, mom21, vol63, mr10, tr252, vix/100, rsi/100]); // with intercept
+      targets.push(fwdRet);
+      featDates.push(dates[t]);
+    }
+
+    var TT = features.length;
+    if (TT < 200) { el.innerHTML = '<div style="color:var(--warning);padding:10px;">Not enough observations after feature construction.</div>'; return; }
+
+    // Walk-forward setup
+    var initialTrainEnd = Math.floor(TT * trainFrac);
+    var testStep = Math.max(20, Math.floor(TT * testFrac));
+    var folds = [];
+    var trainEnd = initialTrainEnd;
+    while (trainEnd + testStep <= TT) {
+      folds.push({ trainStart: 0, trainEnd: trainEnd, testStart: trainEnd, testEnd: Math.min(trainEnd + testStep, TT) });
+      trainEnd += testStep;
+    }
+
+    // OLS solver (Gauss-Jordan)
+    function olsFit(X, y) {
+      var n = X.length, k = X[0].length;
+      var XtX = []; for (var i = 0; i < k; i++) XtX.push(new Array(k).fill(0));
+      var Xty = new Array(k).fill(0);
+      X.forEach(function(row, t){ for (var i = 0; i < k; i++) { Xty[i] += row[i]*y[t]; for (var j = 0; j < k; j++) XtX[i][j] += row[i]*row[j]; } });
+      var aug = XtX.map(function(r, i){ var id = new Array(k).fill(0); id[i] = 1; return r.concat(id); });
+      for (var col = 0; col < k; col++) {
+        var maxRow = col; for (var r2 = col+1; r2 < k; r2++) if (Math.abs(aug[r2][col]) > Math.abs(aug[maxRow][col])) maxRow = r2;
+        var tmp = aug[col]; aug[col] = aug[maxRow]; aug[maxRow] = tmp;
+        if (Math.abs(aug[col][col]) < 1e-12) continue;
+        var div = aug[col][col]; for (var j = 0; j < 2*k; j++) aug[col][j] /= div;
+        for (var r2 = 0; r2 < k; r2++) { if (r2 === col) continue; var f = aug[r2][col]; for (var j = 0; j < 2*k; j++) aug[r2][j] -= f*aug[col][j]; }
+      }
+      var inv = aug.map(function(r){return r.slice(k);});
+      var betas = new Array(k).fill(0); for (var i = 0; i < k; i++) for (var j = 0; j < k; j++) betas[i] += inv[i][j]*Xty[j];
+      return betas;
+    }
+
+    // Run walk-forward
+    var predictions = []; // {date, actual, predicted, signal, insample: false}
+    folds.forEach(function(fold){
+      var Xtrain = features.slice(fold.trainStart, fold.trainEnd);
+      var ytrain = targets.slice(fold.trainStart, fold.trainEnd);
+      var Xtest = features.slice(fold.testStart, fold.testEnd);
+      var ytest = targets.slice(fold.testStart, fold.testEnd);
+      var datesTest = featDates.slice(fold.testStart, fold.testEnd);
+      var betas = olsFit(Xtrain, ytrain);
+      Xtest.forEach(function(row, i){
+        var pred = 0; row.forEach(function(v, k){ pred += v*betas[k]; });
+        predictions.push({ date: datesTest[i], actual: ytest[i], predicted: pred, signal: pred >= threshold });
+      });
+    });
+
+    // Compute OOS performance metrics
+    var nPreds = predictions.length;
+    var correctDir = predictions.filter(function(p){ return (p.predicted >= 0 && p.actual >= 0) || (p.predicted < 0 && p.actual < 0); }).length;
+    var dirAccuracy = correctDir / nPreds * 100;
+    var signalPreds = predictions.filter(function(p){return p.signal;});
+    var signalHit = signalPreds.filter(function(p){return p.actual > 0;}).length;
+    var signalHitRate = signalPreds.length > 0 ? signalHit / signalPreds.length * 100 : 0;
+    var signalAvgRet = signalPreds.length > 0 ? signalPreds.reduce(function(s,p){return s+p.actual;},0)/signalPreds.length*100 : 0;
+    // IS/OOS R² sanity
+    var meanY = targets.slice(initialTrainEnd).reduce(function(s,v){return s+v;},0)/(targets.length-initialTrainEnd);
+    var ssRes = predictions.reduce(function(s,p){return s + (p.actual-p.predicted)*(p.actual-p.predicted);}, 0);
+    var ssTot = predictions.reduce(function(s,p){return s + (p.actual-meanY)*(p.actual-meanY);}, 0);
+    var oosR2 = ssTot > 0 ? 1 - ssRes/ssTot : 0;
+
+    // Build strategy equity curve (signal-based, hold 21d)
+    var equity = [10000];
+    var equityDates = [];
+    var bhEquity = [10000];
+    var signalDays = {}; // track which days are "in position"
+    // Process each prediction day
+    predictions.forEach(function(p, idx){
+      equityDates.push(p.date);
+      // Strategy: hold if signal, scale returns by 1/21 per day held (spreading the 21d move)
+      var dailyRet = p.signal ? p.actual / fwdHorizon : 0;
+      equity.push(equity[equity.length-1] * (1 + dailyRet));
+      // Buy-and-hold: scale similarly
+      bhEquity.push(bhEquity[bhEquity.length-1] * (1 + p.actual / fwdHorizon));
+    });
+    var finalStrat = equity[equity.length-1];
+    var finalBH = bhEquity[bhEquity.length-1];
+    var stratRet = (finalStrat / 10000 - 1) * 100;
+    var bhRet = (finalBH / 10000 - 1) * 100;
+
+    // Render stats
+    el.innerHTML = '<div style="text-align:left;padding:0 4px;">'
+      +'<div class="chart-stats" style="margin-bottom:14px;">'
+      +'<div class="chart-stat-box"><div class="chart-stat-label">OOS Observations</div><div class="chart-stat-value">'+nPreds+'</div><div class="chart-stat-sub">across '+folds.length+' folds</div></div>'
+      +'<div class="chart-stat-box"><div class="chart-stat-label">Direction Accuracy</div><div class="chart-stat-value" style="color:'+(dirAccuracy>=50?C.success:C.danger)+';">'+dirAccuracy.toFixed(1)+'%</div><div class="chart-stat-sub">vs. 50% random</div></div>'
+      +'<div class="chart-stat-box"><div class="chart-stat-label">OOS R²</div><div class="chart-stat-value" style="color:'+(oosR2>0?C.success:C.danger)+';">'+(oosR2*100).toFixed(2)+'%</div><div class="chart-stat-sub">'+(oosR2>0?'Predictive':'No predictive power')+'</div></div>'
+      +'<div class="chart-stat-box"><div class="chart-stat-label">Signal Hit Rate</div><div class="chart-stat-value" style="color:'+(signalHitRate>=50?C.success:C.danger)+';">'+signalHitRate.toFixed(1)+'%</div><div class="chart-stat-sub">'+signalPreds.length+' signals fired</div></div>'
+      +'<div class="chart-stat-box"><div class="chart-stat-label">Avg Signal Return</div><div class="chart-stat-value" style="color:'+(signalAvgRet>=0?C.success:C.danger)+';">'+(signalAvgRet>=0?'+':'')+signalAvgRet.toFixed(2)+'%</div><div class="chart-stat-sub">per 21d signal</div></div>'
+      +'<div class="chart-stat-box"><div class="chart-stat-label">Strategy vs Buy&Hold</div><div class="chart-stat-value" style="color:'+((stratRet-bhRet)>=0?C.success:C.danger)+';">'+(stratRet-bhRet>=0?'+':'')+(stratRet-bhRet).toFixed(1)+'%</div><div class="chart-stat-sub">Strat: '+(stratRet>=0?'+':'')+stratRet.toFixed(1)+'% | BH: '+(bhRet>=0?'+':'')+bhRet.toFixed(1)+'%</div></div>'
+      +'</div>'
+      +'<div style="font-size:12px;color:var(--text-sec);margin-top:6px;">'
+      +'<strong>Interpretation:</strong> '+(oosR2>0.02?'Model has measurable out-of-sample predictive power. ':oosR2>0?'Weak predictive power — likely overfit. ':'No predictive power — model should not be used as-is. ')
+      +(stratRet>bhRet?'Signal-based strategy outperformed buy-and-hold':'Signal-based strategy did not outperform buy-and-hold')+' over the backtest window.'
+      +'</div></div>';
+
+    // Equity curve chart
+    equityWrap.style.display = 'block';
+    if (window._wfbEquity) window._wfbEquity.destroy();
+    window._wfbEquity = new Chart(document.getElementById('wfbEquityChart').getContext('2d'), {
+      type: 'line',
+      data: {
+        labels: equityDates,
+        datasets: [
+          { label: 'Walk-Forward Strategy', data: equity.slice(1), borderColor: C.navy, backgroundColor: 'rgba(0,60,113,0.06)', borderWidth: 2, pointRadius: 0, fill: false, tension: 0.05 },
+          { label: 'Buy & Hold Baseline', data: bhEquity.slice(1), borderColor: C.textSec, backgroundColor: 'transparent', borderWidth: 1.5, borderDash: [4,3], pointRadius: 0, fill: false, tension: 0.05 }
+        ]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { position: 'bottom', labels: {font:{size:10}, color:C.textSec} }, tooltip: Object.assign({}, chartTooltip, { callbacks: { label: function(ctx){return ctx.dataset.label+': $'+ctx.parsed.y.toFixed(0);}}})},
+        scales: {
+          x: { grid: chartGrid, ticks: Object.assign({}, chartTicks, { maxTicksLimit: 10, autoSkip: true }) },
+          y: { grid: chartGrid, ticks: Object.assign({}, chartTicks, { callback: function(v){return '$'+Math.round(v/1000)+'K';}}), title:{display:true, text:'Equity ($10K start)', color:C.textSec, font:{size:11}} }
+        }
+      }
+    });
+
+    // Predicted vs Actual scatter
+    predWrap.style.display = 'block';
+    if (window._wfbPred) window._wfbPred.destroy();
+    window._wfbPred = new Chart(document.getElementById('wfbPredChart').getContext('2d'), {
+      type: 'scatter',
+      data: {
+        datasets: [{
+          label: 'OOS Predictions',
+          data: predictions.map(function(p){return {x: p.predicted*100, y: p.actual*100};}),
+          backgroundColor: 'rgba(0,60,113,0.35)',
+          pointRadius: 3
+        }]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { display: false }, tooltip: Object.assign({}, chartTooltip, { callbacks: { label: function(ctx){ return 'Predicted: '+ctx.parsed.x.toFixed(2)+'% | Actual: '+ctx.parsed.y.toFixed(2)+'%'; }}})},
+        scales: {
+          x: { grid: chartGrid, ticks: Object.assign({}, chartTicks, { callback: function(v){return v.toFixed(1)+'%';}}), title:{display:true, text:'Predicted 21d Return (%)', color:C.textSec, font:{size:11}} },
+          y: { grid: chartGrid, ticks: Object.assign({}, chartTicks, { callback: function(v){return v.toFixed(1)+'%';}}), title:{display:true, text:'Actual 21d Return (%)', color:C.textSec, font:{size:11}} }
+        }
+      }
+    });
+  } catch(e) { el.innerHTML = '<div style="color:var(--danger);padding:10px;">Error: '+e.message+'</div>'; }
+}
 
 </script>
 </body>
