@@ -1040,6 +1040,13 @@ body.view-mobile .logo-icon { width: 22px !important; height: 22px !important; f
 .regime-fit-good { background: #e8f4ec; color: #2E7D52; }
 .regime-fit-warn { background: #f9f2e3; color: #8B6914; }
 .regime-fit-bad  { background: #f5eaea; color: #8B2A2A; }
+/* Help-icon tooltip — shown next to labels with explanatory hover text */
+.help-icon { display: inline-block; width: 14px; height: 14px; line-height: 14px; text-align: center; background: #5B9BD5; color: #fff; border-radius: 50%; font-size: 10px; font-weight: 700; margin-left: 4px; cursor: help; vertical-align: middle; user-select: none; }
+.help-icon:hover { background: #003C71; }
+/* Fully-styled tooltip for any element with [data-tip] */
+[data-tip] { position: relative; cursor: help; border-bottom: 1px dotted var(--text-sec); }
+[data-tip]:hover::after { content: attr(data-tip); position: absolute; bottom: 130%; left: 0; background: var(--navy); color: #fff; padding: 8px 12px; border-radius: 4px; font-size: 11px; line-height: 1.4; font-weight: 400; min-width: 220px; max-width: 360px; z-index: 1000; box-shadow: 0 4px 12px rgba(0,0,0,0.25); white-space: normal; text-transform: none; }
+[data-tip]:hover::before { content: ""; position: absolute; bottom: 124%; left: 16px; border: 6px solid transparent; border-top-color: var(--navy); z-index: 1001; }
 
 /* ═══ LEADING INDICATOR COMPOSITE ═══ */
 .lic-tier-header { background: var(--navy); color: #fff; padding: 7px 12px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .5px; border-radius: 4px 4px 0 0; margin-top: 14px; }
@@ -1319,14 +1326,14 @@ body.view-mobile .logo-icon { width: 22px !important; height: 22px !important; f
     <!-- Macro Snapshot + Next Release -->
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:16px;">
       <div class="card">
-        <div class="card-title">Macro Regime Scorecard (Latest)</div>
+        <div class="card-title">Macro Regime Scorecard (Latest) <span class="help-icon" title="A snapshot of the live macro regime classification. Pulls from the FRED dashboard on the Macro page. Use this to decide your top-line posture before drilling into individual positions.">?</span></div>
         <div class="card-body" style="padding:10px 14px;" id="briefingMacroSnap">
           <span class="spinner"></span> Loading...
         </div>
         <div class="card-sources"><strong>Source:</strong> FRED® Federal Reserve Bank of St. Louis</div>
       </div>
       <div class="card">
-        <div class="card-title">Next High-Impact Economic Releases</div>
+        <div class="card-title">Next High-Impact Economic Releases <span class="help-icon" title="Upcoming releases that historically move markets the most: NFP (jobs report, first Friday), CPI (inflation, ~10th), FOMC (rate decision, 8x/year), GDP, Core PCE. Plan around these — they create the biggest directional moves.">?</span></div>
         <div class="card-body" style="padding:10px 14px;" id="briefingCalendar"></div>
         <div class="card-sources"><strong>Source:</strong> Perry Economic Calendar (typical release dates)</div>
       </div>
@@ -1502,7 +1509,7 @@ body.view-mobile .logo-icon { width: 22px !important; height: 22px !important; f
       <div class="bench-row" id="benchmarkRow"></div>
       <!-- Chart card -->
       <div class="card">
-        <div class="card-title">Portfolio Value Over Time</div>
+        <div class="card-title">Portfolio Value Over Time <span class="help-icon" title="Reconstructs your portfolio's daily market value from when each position was purchased. Cash is held flat at face value. Pre-purchase periods are excluded so the chart shows only what you actually owned.">?</span></div>
         <div class="card-body">
           <div class="form-row" style="margin-bottom:8px;">
             <div class="form-group">
@@ -1545,7 +1552,7 @@ body.view-mobile .logo-icon { width: 22px !important; height: 22px !important; f
       </div>
       <!-- Holdings table -->
       <div class="card">
-        <div class="card-title">Portfolio Holdings</div>
+        <div class="card-title">Portfolio Holdings <span class="help-icon" title="All your positions across every account (taxable, IRA, 401k, etc.). The Regime Fit column shows whether each holding is appropriate for the current market state. Hover the G/L column for the calculation formula.">?</span></div>
         <div class="card-body">
           <div class="table-wrap" id="portfolioTableWrap"></div>
         </div>
@@ -1555,19 +1562,9 @@ body.view-mobile .logo-icon { width: 22px !important; height: 22px !important; f
         </div>
       </div>
 
-      <!-- REGIME-AWARE ALLOCATION AUDIT -->
-      <div class="card">
-        <div class="card-title">Regime-Aware Allocation Audit</div>
-        <div class="card-body">
-          <p style="font-size:12px;color:var(--text-sec);margin-bottom:10px;">Each holding is scored against the current classified portfolio state. <strong style="color:var(--success);">✓ Aligned</strong> means appropriate for current regime. <strong style="color:var(--warning);">⚠ Neutral</strong> means acceptable but not optimal. <strong style="color:var(--danger);">✗ Misaligned</strong> means contradicts current state posture — consider rotation.</p>
-          <div id="regimeAuditWrap" style="text-align:center;color:var(--text-sec);padding:16px;"><span class="spinner"></span> Awaiting regime classification...</div>
-        </div>
-        <div class="card-sources"><strong>Sources:</strong> Perry 4-state regime classifier &bull; VIX &amp; SPY via Cloudflare Worker / Yahoo Finance &bull; Holding classifications from Firebase Firestore</div>
-      </div>
-
       <!-- FAMA-FRENCH FACTOR EXPOSURE -->
       <div class="card">
-        <div class="card-title">Factor Exposure Analysis (Fama-French 5-Factor + Momentum)</div>
+        <div class="card-title">Factor Exposure Analysis (Fama-French 5-Factor + Momentum) <span class="help-icon" title="Decomposes your portfolio's returns into known systematic risk factors. Beta = sensitivity to the broader market. SMB = small-cap tilt. HML = value tilt. MOM = momentum tilt. Alpha (Jensen's α) = the portion that's NOT explained by these factors — true outperformance vs. random.">?</span></div>
         <div class="card-body">
           <p style="font-size:12px;color:var(--text-sec);margin-bottom:10px;">Decomposes your portfolio's return into systematic risk factors using 3-year daily return regression. Beta &gt; 1 = higher exposure than market. Positive SMB = small-cap tilt. Positive HML = value tilt. Positive MOM = momentum tilt. R² shows how much of your return is explained by known factors vs. true alpha (residual).</p>
           <div class="form-row" style="margin-bottom:10px;">
@@ -1581,7 +1578,7 @@ body.view-mobile .logo-icon { width: 22px !important; height: 22px !important; f
 
       <!-- PORTFOLIO-STATE MONTE CARLO -->
       <div class="card">
-        <div class="card-title">Portfolio-State Monte Carlo &mdash; 12-Month Forward Simulation</div>
+        <div class="card-title">Portfolio-State Monte Carlo &mdash; 12-Month Forward Simulation <span class="help-icon" title="Simulates 1,000 possible 12-month paths for your portfolio under each of the 4 regimes. Each regime uses different drift (expected return) and volatility assumptions. Shows the fan of likely outcomes — useful for stress-testing 'what if a Drawdown regime arrives'.">?</span></div>
         <div class="card-body">
           <p style="font-size:12px;color:var(--text-sec);margin-bottom:10px;">Runs 1,000 GBM paths over 252 trading days calibrated to your portfolio's historical returns. Each portfolio state uses state-conditioned volatility and drift parameters based on SPY regime history. Shows P10/P50/P90 outcomes and terminal distribution per state.</p>
           <div class="form-row" style="margin-bottom:10px;">
@@ -1598,7 +1595,7 @@ body.view-mobile .logo-icon { width: 22px !important; height: 22px !important; f
 
       <!-- HISTORICAL STRESS TEST -->
       <div class="card">
-        <div class="card-title">Historical Crisis Stress Test</div>
+        <div class="card-title">Historical Crisis Stress Test <span class="help-icon" title="Replays your current portfolio through past market crises (2008 GFC, COVID, 2022 rate shock, etc.). Shows how it would have performed if you'd held those exact positions through each event — uses sector proxies for tickers that didn't yet exist during the event.">?</span></div>
         <div class="card-body">
           <p style="font-size:12px;color:var(--text-sec);margin-bottom:14px;">Apply historical crisis returns to your <strong>current</strong> portfolio positions. This answers: "If this crisis repeated today with my exact holdings, how would my portfolio perform?" Uses real per-ticker returns from each crisis window; if a ticker didn't exist in that window, its sector-proxy ETF return is used.</p>
           <div class="btn-group" id="stressScenarioBtns">
@@ -1676,7 +1673,7 @@ body.view-mobile .logo-icon { width: 22px !important; height: 22px !important; f
       </div>
       <!-- Add holding card -->
       <div class="card">
-        <div class="card-title">Add New Holding</div>
+        <div class="card-title">Add New Holding <span class="help-icon" title="Add a new position. Tip: enter just Ticker + Date Purchased + Shares — the Cost / Share auto-fills from Yahoo Finance using the actual closing price on that date. You can override it if you have a more precise basis.">?</span></div>
         <div class="card-body">
           <div id="addStatus" class="status-bar"></div>
           <div style="margin-bottom:10px;">
@@ -1689,27 +1686,40 @@ body.view-mobile .logo-icon { width: 22px !important; height: 22px !important; f
           </div>
           <div class="form-row" id="securityFields">
             <div class="form-group" style="min-width:110px;">
-              <label>Ticker</label>
-              <input type="text" id="inputTicker" placeholder="AAPL, SPAXX, FDRXX" style="text-transform:uppercase;">
+              <label title="Stock or ETF symbol (e.g., AAPL, NVDA, SPY)">Ticker
+                <span class="help-icon" title="Enter the ticker symbol of the stock, ETF, or fund. We'll auto-fetch its sector, industry, and current price.">?</span>
+              </label>
+              <input type="text" id="inputTicker" placeholder="AAPL, NVDA, SPY" style="text-transform:uppercase;" oninput="autofillCostBasis()" onblur="autofillCostBasis()">
             </div>
             <div class="form-group">
-              <label>Date Purchased</label>
-              <input type="date" id="inputDate">
+              <label>Date Purchased
+                <span class="help-icon" title="When you bought the position. Defaults to today. If you enter a past date AND leave Cost/Share blank, we'll auto-fill the closing price on that date from Yahoo Finance.">?</span>
+              </label>
+              <input type="date" id="inputDate" onchange="autofillCostBasis()">
             </div>
             <div class="form-group" style="min-width:90px;">
-              <label>Shares</label>
+              <label>Shares
+                <span class="help-icon" title="Number of shares you own. Fractional shares supported (e.g., 0.5).">?</span>
+              </label>
               <input type="number" id="inputQty" placeholder="50" min="0.0001" step="any">
             </div>
-            <div class="form-group" style="min-width:100px;">
-              <label>Cost/Share</label>
-              <input type="number" id="inputCost" placeholder="150.00" min="0" step="0.01">
+            <div class="form-group" style="min-width:130px;">
+              <label>Cost / Share
+                <span class="help-icon" title="What you paid per share. If you leave this blank and provide a Date Purchased, we'll auto-fill the closing price from that date via Yahoo Finance.">?</span>
+              </label>
+              <input type="number" id="inputCost" placeholder="auto-fill" min="0" step="0.01">
+              <div id="inputCostHint" style="font-size:10px;color:var(--text-sec);margin-top:2px;height:12px;"></div>
             </div>
             <div class="form-group" style="min-width:80px;">
-              <label>Yield %</label>
+              <label>Yield %
+                <span class="help-icon" title="Annual dividend or distribution yield (optional). E.g., 4.25 for 4.25% yield.">?</span>
+              </label>
               <input type="number" id="inputYield" placeholder="4.25" min="0" step="0.01">
             </div>
             <div class="form-group" style="min-width:160px;">
-              <label>Account Type</label>
+              <label>Account Type
+                <span class="help-icon" title="Tax treatment of the account holding this position (e.g., Taxable Brokerage, Roth IRA, 401(k)). Used to compute aggregate weight per account.">?</span>
+              </label>
               <select id="inputAccountType">
                 <option value="Individual">Individual Brokerage</option>
                 <option value="Roth IRA">Roth IRA</option>
@@ -1823,7 +1833,7 @@ body.view-mobile .logo-icon { width: 22px !important; height: 22px !important; f
       <p>Enter any stock ticker, ETF, or crypto to view a full interactive price chart and comprehensive financial analysis powered by SEC EDGAR filings and real-time market data.</p>
     </div>
     <div class="card">
-      <div class="card-title">Ticker Lookup</div>
+      <div class="card-title">Ticker Lookup <span class="help-icon" title="Enter any US-listed stock, ETF, ADR, or crypto ticker. We'll fetch live price, fundamentals (SEC EDGAR for stocks, fund holdings for ETFs), 5-year regime-conditioned returns, and the live options chain.">?</span></div>
       <div class="card-body">
         <div class="form-row">
           <div class="form-group" style="min-width:140px;">
@@ -1881,7 +1891,7 @@ body.view-mobile .logo-icon { width: 22px !important; height: 22px !important; f
     <div id="researchResults"></div>
     <!-- Regime-Conditioned Return Distributions -->
     <div class="card" id="rcrCard" style="display:none;">
-      <div class="card-title">Regime-Conditioned Return Distributions</div>
+      <div class="card-title">Regime-Conditioned Return Distributions <span class="help-icon" title="Splits the past 5 years of daily returns into the 4 portfolio regimes and shows the median, 10th–90th percentile band, and hit rate for each. Lets you see whether this stock has historically performed well or badly in conditions like today.">?</span></div>
       <div class="card-body">
         <p style="font-size:12px;color:var(--text-sec);margin-bottom:12px;">How has <strong id="rcrTicker"></strong> historically performed in each of the four Perry portfolio states? States are proxied using trailing 12-month SPY return and VIX level from historical data. Results show median, P10–P90 range, and hit rate (% of periods with positive return) in each regime.</p>
         <div id="rcrContent"></div>
@@ -1891,7 +1901,7 @@ body.view-mobile .logo-icon { width: 22px !important; height: 22px !important; f
     </div>
     <!-- OPTIONS IV ANALYSIS -->
     <div class="card" id="ivCard" style="display:none;">
-      <div class="card-title">Options Implied Volatility &amp; IV Percentile</div>
+      <div class="card-title">Options Implied Volatility &amp; IV Percentile <span class="help-icon" title="Implied Volatility (IV) is the market's expectation of how much this stock will move, baked into option prices. IV Percentile compares today's IV to the past year's distribution — a high reading means options are expensive (good for sellers), a low reading means cheap (good for buyers).">?</span></div>
       <div class="card-body">
         <p style="font-size:12px;color:var(--text-sec);margin-bottom:12px;">Live options market analysis for <strong id="ivTicker"></strong>. IV Percentile shows where current at-the-money implied volatility ranks vs. the past year's realized volatility distribution &mdash; a gauge of whether options are pricing in cheap or expensive expected moves.</p>
         <div id="ivStats" style="text-align:center;color:var(--text-sec);padding:16px;font-size:13px;">
@@ -1913,31 +1923,27 @@ body.view-mobile .logo-icon { width: 22px !important; height: 22px !important; f
   <div class="content-wrap">
     <div class="hero" style="padding:32px 40px;">
       <h1>Portfolio Themes</h1>
-      <p>Pre-built macro-thematic baskets that align to your 4-state trading framework. Each theme shows regime fit, rebased performance vs. SPY, internal correlation, and individual constituent analytics. Click a theme to drill in.</p>
+      <p>Pre-built macro-thematic baskets aligned to the 4-state portfolio framework. Pick a theme from the menu to see its constituents, rebased 1-year performance vs. SPY, internal correlation, and per-ticker return analytics.</p>
     </div>
     <div class="card">
-      <div class="card-title">Theme Directory</div>
+      <div class="card-title">Theme Selector</div>
       <div class="card-body">
-        <p style="font-size:12px;color:var(--text-sec);margin-bottom:12px;">Each theme is a curated basket of 5&mdash;12 assets organized around a single macro thesis. The "Regime Fit" badge tells you which of the 4 portfolio states each theme is most appropriate for.</p>
-        <div id="themesGrid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:14px;"></div>
-      </div>
-      <div class="card-sources"><strong>Sources:</strong> Ticker selection curated from S&amp;P 500 / Russell 1000 sector classifications, CFA L3 thematic framework, and Perry 4-state regime mapping &bull; Prices via Yahoo Finance / Cloudflare Worker</div>
-    </div>
-    <!-- Theme Detail View -->
-    <div id="themeDetail" style="display:none;">
-      <div class="card">
-        <div class="card-title" id="themeDetailTitle">Theme Detail</div>
-        <div class="card-body">
-          <div class="form-row" style="margin-bottom:10px;">
-            <button class="btn" onclick="themesBackToGrid()">&larr; Back to All Themes</button>
-            <span style="font-size:12px;color:var(--text-sec);align-self:center;margin-left:8px;" id="themeDetailDesc"></span>
+        <div class="form-row" style="margin-bottom:14px;">
+          <div class="form-group" style="flex:1;min-width:340px;">
+            <label>Choose Theme
+              <span class="help-icon" title="Select one of the 7 pre-built thematic baskets. Each basket is curated around a single macro thesis (e.g., AI build-out, energy transition, defensive yield).">?</span>
+            </label>
+            <select id="themeSelect" onchange="themesLoadDetail(this.value)">
+              <option value="">— Select a theme —</option>
+            </select>
           </div>
-          <div id="themeDetailStats" class="chart-stats" style="margin-bottom:14px;"></div>
-          <div class="chart-wrap" style="height:360px;"><canvas id="themePriceChart"></canvas></div>
-          <div id="themeDetailTable" style="margin-top:14px;"></div>
         </div>
-        <div class="card-sources"><strong>Method:</strong> Rebased price performance (all constituents start at 100) &bull; Internal correlation via pairwise Pearson &bull; Per-ticker return columns from Yahoo Finance via Cloudflare Worker</div>
+        <div id="themeMeta" style="display:none;font-size:12px;color:var(--text-sec);background:var(--panel);border:1px solid var(--border);border-radius:4px;padding:10px 14px;margin-bottom:12px;line-height:1.5;"></div>
+        <div id="themeDetailStats" class="chart-stats" style="margin-bottom:14px;"></div>
+        <div class="chart-wrap" style="height:360px;display:none;" id="themeChartWrap"><canvas id="themePriceChart"></canvas></div>
+        <div id="themeDetailTable" style="margin-top:14px;"></div>
       </div>
+      <div class="card-sources"><strong>Method:</strong> Rebased price performance (all constituents start at 100) &bull; Internal correlation via pairwise Pearson &bull; Per-ticker return columns from Yahoo Finance via Cloudflare Worker &bull; Tickers curated from S&amp;P 500 / Russell 1000 sector classifications + CFA L3 thematic framework + Perry 4-state regime mapping.</div>
     </div>
   </div>
 </div>
@@ -1953,7 +1959,7 @@ body.view-mobile .logo-icon { width: 22px !important; height: 22px !important; f
     <div id="macroRegimeVerdict" style="display:none;"></div>
     <!-- Single Unified Macro Table — all pillars, all indicators -->
     <div class="card" id="macroLiveTableCard">
-      <div class="card-title">Macro Indicator Dashboard — Live FRED Data</div>
+      <div class="card-title">Macro Indicator Dashboard — Live FRED Data <span class="help-icon" title="Real-time economic indicators from the St. Louis Fed (FRED). 24 indicators across 6 pillars (Growth, Labor, Inflation, Monetary Policy, Fiscal Policy, Global Liquidity) with traffic-light scoring vs. historical thresholds.">?</span></div>
       <div class="card-body" style="padding:0;" id="macroLiveTableBody">
         <div style="padding:40px;text-align:center;">
           <span class="spinner"></span><br><br>
@@ -1967,7 +1973,7 @@ body.view-mobile .logo-icon { width: 22px !important; height: 22px !important; f
     <div id="macroCycleGuide" style="display:none;"></div>
     <!-- Business Cycle Curve Chart -->
     <div class="card" id="businessCycleCard">
-      <div class="card-title">Business Cycle Curve</div>
+      <div class="card-title">Business Cycle Curve <span class="help-icon" title="The 4-phase business cycle from CFA economics curriculum: Early Expansion → Mid Expansion → Late Expansion / Peak → Contraction. Each phase favors different sectors and asset classes; the dot shows the model's current placement.">?</span></div>
       <div class="card-body">
         <div style="position:relative;height:420px;"><canvas id="businessCycleChart"></canvas></div>
       </div>
@@ -1976,7 +1982,7 @@ body.view-mobile .logo-icon { width: 22px !important; height: 22px !important; f
 
     <!-- FULL YIELD CURVE VISUALIZATION -->
     <div class="card">
-      <div class="card-title">Full Treasury Yield Curve &mdash; Live + Historical Snapshots</div>
+      <div class="card-title">Full Treasury Yield Curve &mdash; Live + Historical Snapshots <span class="help-icon" title="The yield on US Treasuries at every maturity from 1 month to 30 years. Normally upward-sloping (longer = higher yield). When inverted (short rates above long rates), it has historically preceded every US recession in the past 50 years.">?</span></div>
       <div class="card-body">
         <p style="font-size:12px;color:var(--text-sec);margin-bottom:10px;">All 11 constant-maturity Treasury points from 1M to 30Y. Overlay historical snapshots to see how the curve has re-shaped. <strong>Bull steepening</strong> (short rates falling fast, long rates stable) signals expected Fed cuts. <strong>Bear flattening</strong> (short rates rising to long rates) signals Fed hiking pressure. Inversion signals recession expectation.</p>
         <div class="form-row" style="margin-bottom:10px;">
@@ -2005,7 +2011,7 @@ body.view-mobile .logo-icon { width: 22px !important; height: 22px !important; f
 
     <!-- PROPRIETARY LEADING INDICATOR COMPOSITE -->
     <div class="card">
-      <div class="card-title">Proprietary Leading Indicator Composite (Tiered Framework)</div>
+      <div class="card-title">Proprietary Leading Indicator Composite (Tiered Framework) <span class="help-icon" title="Indicators ranked by how far in advance they signal economic turns. Tier 1 (6–12 month lead): yield curve, building permits, JOLTS openings. Tier 2 (4–6 month lead): claims, consumer expectations. Tier 3 (2–3 month lead): ISM, retail sales, IP. Divergence between tiers is where macro alpha is generated.">?</span></div>
       <div class="card-body">
         <p style="font-size:12px;color:var(--text-sec);margin-bottom:12px;">Based on your framework's Section 5.2 tiered structure. <strong>Alpha insight:</strong> When Tier 1 (6-12 month lead) deteriorates while Tier 3 still looks solid → early de-risk. When Tier 1 recovers while Tier 3 still looks weak → early re-risk. This lag structure is where macro alpha is generated.</p>
         <div id="licContent" style="text-align:center;color:var(--text-sec);padding:16px;"><span class="spinner"></span> Loading FRED data for composite...</div>
@@ -2024,7 +2030,7 @@ body.view-mobile .logo-icon { width: 22px !important; height: 22px !important; f
       <p>Stock decision analysis using Multiple Linear Regression with bootstrapping, macro regime backtesting, peer comparison, and Monte Carlo simulation.</p>
     </div>
     <div class="card">
-      <div class="card-title">Stock Decision Tree</div>
+      <div class="card-title">Stock Decision Tree <span class="help-icon" title="A quantitative buy/hold/avoid framework. Combines a multiple regression of forward returns on macro features, a regime-conditioned backtest, Monte Carlo simulation, and finally a verdict. Designed for one ticker at a time.">?</span></div>
       <div class="card-body">
         <p style="font-size:13px;margin-bottom:14px;">Enter a ticker for a full quantitative analysis: 10-year macro regime backtest, MLR with bootstrapped confidence intervals, indicator importance ranking, and a regime-grounded 12-month verdict.</p>
         <div class="form-row">
@@ -2057,7 +2063,7 @@ body.view-mobile .logo-icon { width: 22px !important; height: 22px !important; f
 
     <!-- WALK-FORWARD BACKTESTING -->
     <div class="card">
-      <div class="card-title">Walk-Forward Backtest (Out-of-Sample Validation)</div>
+      <div class="card-title">Walk-Forward Backtest (Out-of-Sample Validation) <span class="help-icon" title="The most rigorous way to test if a model actually predicts. Trains on a window of past data, tests on a never-seen-before chunk, then expands the window. Repeats. The strategy curve here was generated by a model that NEVER saw the test data — so unlike a normal backtest, it can't be overfit by accident.">?</span></div>
       <div class="card-body">
         <p style="font-size:12px;color:var(--text-sec);margin-bottom:12px;">Tests the MLR model's out-of-sample performance by training on an expanding window and testing on the next period, repeatedly. Standard backtests suffer from in-sample overfitting &mdash; a model that looks great when evaluated on the data it was trained on may perform poorly on new data. Walk-forward estimates realistic forward performance by <em>never</em> testing on data the model has seen.</p>
         <div class="form-row" style="margin-bottom:10px;">
@@ -2126,7 +2132,7 @@ body.view-mobile .logo-icon { width: 22px !important; height: 22px !important; f
 
     <!-- 4-State Framework Reference -->
     <div class="card">
-      <div class="card-title">The Four Portfolio States &mdash; Framework Reference</div>
+      <div class="card-title">The Four Portfolio States &mdash; Framework Reference <span class="help-icon" title="The 4 distinct market regimes Perry Asset Management trades around: Leveraged (high-conviction at bottoms with VIX &gt; 30), Non-Levered Positive Growth (steady expansion), Neutral (defensive, more cash), Positioned for Drawdown (mostly cash, no leverage). Highlighted card = current classified state.">?</span></div>
       <div class="card-body">
         <div class="ps-framework-grid" id="psFrameworkGrid"></div>
       </div>
@@ -2137,7 +2143,7 @@ body.view-mobile .logo-icon { width: 22px !important; height: 22px !important; f
 
     <!-- QQQ Fibonacci Projection -->
     <div class="card">
-      <div class="card-title">QQQ Daily Chart with Fibonacci Projections</div>
+      <div class="card-title">QQQ Daily Chart with Fibonacci Projections <span class="help-icon" title="Fibonacci retracement / projection levels (23.6%, 38.2%, 50%, 61.8%, 78.6%, 100%, 127.2%, 161.8%, 261.8%) — derived from the golden ratio φ = 1.618. Used by technical traders to identify potential support/resistance and price targets following major swings.">?</span></div>
       <div class="card-body">
         <p style="font-size:12px;color:var(--text-sec);margin-bottom:12px;">Auto-detects the most recent significant swing low and swing high on QQQ, then plots Fibonacci retracement levels (23.6%, 38.2%, 50%, 61.8%, 78.6%) and projection levels (127.2%, 161.8%, 261.8%). Use these as price pivots &mdash; QQQ approaching a key level during a rip is a signal that "Positioned for Drawdown" posture may be appropriate.</p>
         <div class="form-row" style="margin-bottom:10px;">
@@ -2156,7 +2162,7 @@ body.view-mobile .logo-icon { width: 22px !important; height: 22px !important; f
 
     <!-- BAYESIAN REGIME TRANSITION MATRIX -->
     <div class="card">
-      <div class="card-title">Bayesian Regime Transition Probabilities</div>
+      <div class="card-title">Bayesian Regime Transition Probabilities <span class="help-icon" title="Given today's classified market regime, this estimates the probability of being in each state 30, 60, and 90 days from now. Built from 5 years of historical regime sequences using a Markov transition matrix (Hamilton, 1989). Use it for sizing: high probability of Drawdown ahead → keep more cash now.">?</span></div>
       <div class="card-body">
         <p style="font-size:12px;color:var(--text-sec);margin-bottom:10px;">Given the current classified market state, this estimates the probability of transitioning to each of the four portfolio states over the next 30, 60, and 90 days. Transition matrix is fit from historical SPY regime sequences (5 years of daily data). Use this for position sizing: if P(Drawdown in 60 days) is high, hold more cash even if currently in Growth state.</p>
         <div class="form-row" style="margin-bottom:10px;">
@@ -2173,7 +2179,7 @@ body.view-mobile .logo-icon { width: 22px !important; height: 22px !important; f
 
     <!-- UNIVERSE SELECTOR -->
     <div class="card">
-      <div class="card-title">Universe Selection & Date Range</div>
+      <div class="card-title">Universe Selection &amp; Date Range <span class="help-icon" title="Pick the assets you want included in every Cross-Asset module (correlation, frontier, vol surface, etc.). Selection is shared across all 8 modules — change here, all modules refetch.">?</span></div>
       <div class="card-body">
         <p style="font-size:12px;color:var(--text-sec);margin-bottom:14px;">Select assets to include across all Markets modules. All fetched data is shared, so changing selection triggers a refetch for every module.</p>
         <div class="form-row" style="margin-bottom:14px;">
@@ -2207,7 +2213,7 @@ body.view-mobile .logo-icon { width: 22px !important; height: 22px !important; f
 
     <!-- MODULE 1: REBASED RETURNS -->
     <div class="card">
-      <div class="card-title">1 &middot; Rebased Return Chart (Start = 100)</div>
+      <div class="card-title">1 &middot; Rebased Return Chart <span class="help-icon" title="Shows how each selected asset would have grown if you invested $100 at the start. All series start at 100, so visual comparisons are apples-to-apples regardless of starting price.">?</span></div>
       <div class="card-body">
         <p style="font-size:12px;color:var(--text-sec);margin-bottom:14px;">All selected series rebased to 100 at the start date. Formula: <code style="background:var(--navy);color:var(--text-on-dark);padding:1px 6px;border-radius:3px;font-family:Arial;">Rebased(t) = P(t) / P(t&#8320;) &times; 100</code></p>
         <div id="mktRebasedEmpty" style="text-align:center;padding:32px;color:var(--text-sec);font-size:13px;">Select assets and press <strong>Load / Refresh All Modules</strong> above.</div>
@@ -2221,7 +2227,7 @@ body.view-mobile .logo-icon { width: 22px !important; height: 22px !important; f
 
     <!-- MODULE 2: CORRELATION HEATMAP -->
     <div class="card">
-      <div class="card-title">2 &middot; Pairwise Correlation Heatmap (Pearson &rho;)</div>
+      <div class="card-title">2 &middot; Pairwise Correlation Heatmap <span class="help-icon" title="Pearson correlation (ρ) measures how two assets move together. +1.0 = perfectly in sync, 0 = unrelated, −1.0 = mirror opposites. Diversification benefit comes from holding assets with low or negative correlation.">?</span></div>
       <div class="card-body">
         <p style="font-size:12px;color:var(--text-sec);margin-bottom:10px;">Computed from daily log returns: <code style="background:var(--navy);color:var(--text-on-dark);padding:1px 6px;border-radius:3px;font-family:Arial;">r(t) = ln(P(t)/P(t-1))</code>. Scale: dark red &rho;=&minus;1, white &rho;=0, navy &rho;=+1.</p>
         <div class="btn-group" style="margin-bottom:12px;">
@@ -2243,7 +2249,7 @@ body.view-mobile .logo-icon { width: 22px !important; height: 22px !important; f
 
     <!-- MODULE 3: 3D VOL SURFACE -->
     <div class="card">
-      <div class="card-title">3 &middot; 3D Volatility Surface (Rolling &sigma; Term Structure)</div>
+      <div class="card-title">3 &middot; 3D Volatility Surface <span class="help-icon" title="Shows how volatility (price-swing magnitude) changes across time and rolling-window length. Higher peaks = bigger swings. Useful for spotting regime shifts and persistence of volatility.">?</span></div>
       <div class="card-body">
         <p style="font-size:12px;color:var(--text-sec);margin-bottom:10px;">X = asset, Y = rolling window (10/21/42/63/126/252 days), Z = annualized &sigma;. Click &amp; drag to rotate &middot; scroll to zoom.</p>
         <div id="mktVolEmpty" style="text-align:center;padding:32px;color:var(--text-sec);font-size:13px;">Awaiting data.</div>
@@ -2266,7 +2272,7 @@ body.view-mobile .logo-icon { width: 22px !important; height: 22px !important; f
 
     <!-- MODULE 4: COX PROCESS -->
     <div class="card">
-      <div class="card-title">4 &middot; Doubly Stochastic Poisson (Cox) Jump Model</div>
+      <div class="card-title">4 &middot; Jump Detection Model <span class="help-icon" title="Identifies sudden discontinuous price moves that aren't explained by normal volatility — earnings shocks, news jumps, flash crashes. Uses a Cox doubly-stochastic Poisson process where jump intensity itself varies through time.">?</span></div>
       <div class="card-body">
         <p style="font-size:12px;color:var(--text-sec);margin-bottom:14px;">Simulates extreme return events with a stochastic jump intensity &lambda;(t) following a CIR-style diffusion: <code style="background:var(--navy);color:var(--text-on-dark);padding:1px 6px;border-radius:3px;font-family:Arial;">d&lambda; = &kappa;(&theta; &minus; &lambda;)dt + &sigma;<sub>&lambda;</sub>&radic;&lambda; dW</code></p>
         <div class="form-row">
@@ -2309,7 +2315,7 @@ body.view-mobile .logo-icon { width: 22px !important; height: 22px !important; f
 
     <!-- MODULE 5: EFFICIENT FRONTIER -->
     <div class="card">
-      <div class="card-title">5 &middot; Efficient Frontier (Mean-Variance Optimization)</div>
+      <div class="card-title">5 &middot; Efficient Frontier <span class="help-icon" title="The set of portfolios that give you the best possible expected return for a given level of risk (Markowitz, 1952). Anything below the curve is suboptimal — you could get more return for the same risk by changing your mix.">?</span></div>
       <div class="card-body">
         <p style="font-size:12px;color:var(--text-sec);margin-bottom:14px;">5,000 Dirichlet-random long-only portfolios. <code style="background:var(--navy);color:var(--text-on-dark);padding:1px 6px;border-radius:3px;font-family:Arial;">&mu;<sub>p</sub> = w'&mu;</code> &middot; <code style="background:var(--navy);color:var(--text-on-dark);padding:1px 6px;border-radius:3px;font-family:Arial;">&sigma;&sup2;<sub>p</sub> = w'&Sigma;w</code> &middot; <code style="background:var(--navy);color:var(--text-on-dark);padding:1px 6px;border-radius:3px;font-family:Arial;">SR = (&mu;<sub>p</sub> &minus; r<sub>f</sub>)/&sigma;<sub>p</sub></code> &middot; r<sub>f</sub> = 5.3%</p>
         <div id="mktEffEmpty" style="text-align:center;padding:24px;color:var(--text-sec);font-size:13px;">Awaiting data (need 2+ assets).</div>
@@ -2346,7 +2352,7 @@ body.view-mobile .logo-icon { width: 22px !important; height: 22px !important; f
 
     <!-- MODULE 6: ROLLING RISK -->
     <div class="card">
-      <div class="card-title">6 &middot; Rolling Risk Metrics (Primary Asset)</div>
+      <div class="card-title">6 &middot; Rolling Risk Metrics <span class="help-icon" title="Risk measures computed over a moving window of trading days. Sharpe = excess return per unit of total volatility. Sortino = excess return per unit of downside-only volatility (rewards strategies that are volatile to the upside).">?</span></div>
       <div class="card-body">
         <p style="font-size:12px;color:var(--text-sec);margin-bottom:14px;">63-day rolling windows on primary asset. Beta computed against SPY (auto-fetched as benchmark).</p>
         <div id="mktRollEmpty" style="text-align:center;padding:24px;color:var(--text-sec);font-size:13px;">Awaiting data.</div>
@@ -2369,7 +2375,7 @@ body.view-mobile .logo-icon { width: 22px !important; height: 22px !important; f
 
     <!-- MODULE 7: VAR -->
     <div class="card">
-      <div class="card-title">7 &middot; Value at Risk (Three Methods)</div>
+      <div class="card-title">7 &middot; Value at Risk (VaR) <span class="help-icon" title="VaR estimates the worst expected loss over a given period at a given confidence level. 95% 1-day VaR of $1,000 means there's a 95% chance you won't lose more than $1,000 tomorrow. We compute three ways — Historical, Parametric (normal), and Monte Carlo — because each makes different assumptions.">?</span></div>
       <div class="card-body">
         <p style="font-size:12px;color:var(--text-sec);margin-bottom:14px;">1-day and 10-day VaR at 95% / 99% confidence for the Primary Asset. Parametric, Historical, and Cornish-Fisher (fat-tail adjusted) methods.</p>
         <div id="mktVarEmpty" style="text-align:center;padding:24px;color:var(--text-sec);font-size:13px;">Awaiting data.</div>
@@ -2395,7 +2401,7 @@ body.view-mobile .logo-icon { width: 22px !important; height: 22px !important; f
 
     <!-- MODULE 8: CROSS-ASSET REGIME -->
     <div class="card">
-      <div class="card-title">8 &middot; Cross-Asset Regime Signals</div>
+      <div class="card-title">8 &middot; Cross-Asset Regime Signals <span class="help-icon" title="Tracks key cross-market relationships that historically signal regime shifts. Copper/Gold ratio rising = growth dominant. Yield curve inversion = recession signal. HY credit spreads widening = risk-off.">?</span></div>
       <div class="card-body">
         <p style="font-size:12px;color:var(--text-sec);margin-bottom:14px;">Six intermarket ratios with 20D SMA overlay. Green shading = ratio above SMA (risk-on); red shading = below (risk-off). Grounded in CFA Business Cycle framework and classical intermarket analysis.</p>
         <div id="mktRegimeEmpty" style="text-align:center;padding:24px;color:var(--text-sec);font-size:13px;">Loads independently of universe selection. <button class="btn btn-sm" onclick="mktLoadRegime()" style="margin-left:10px;">Load Regime Signals</button></div>
@@ -2473,6 +2479,7 @@ body.view-mobile .logo-icon { width: 22px !important; height: 22px !important; f
   const app = initializeApp(firebaseConfig);
   const auth = getAuth(app);
   const db = getFirestore(app);
+  const WORKER_URL = "https://perry-finance-proxy.zachperrybusiness.workers.dev";
   const provider = new GoogleAuthProvider();
 
   // Status indicator
@@ -2520,15 +2527,29 @@ body.view-mobile .logo-icon { width: 22px !important; height: 22px !important; f
     if (!user) { alert("Sign in first."); return; }
 
     const ticker = document.getElementById('inputTicker').value.trim().toUpperCase();
-    const date = document.getElementById('inputDate').value;
+    var date = document.getElementById('inputDate').value;
+    // Default date to today if user didn't specify one
+    if (!date) date = new Date().toISOString().slice(0,10);
     const qty = parseFloat(document.getElementById('inputQty').value);
-    const cost = parseFloat(document.getElementById('inputCost').value);
+    var costInput = document.getElementById('inputCost').value;
+    var cost = parseFloat(costInput);
     const acctType = document.getElementById('inputAccountType').value;
 
     if (!ticker) { showStatus('addStatus', 'Enter a ticker.', 'error'); return; }
-    if (!date) { showStatus('addStatus', 'Select date.', 'error'); return; }
     if (!qty || qty <= 0) { showStatus('addStatus', 'Enter valid quantity.', 'error'); return; }
-    if (isNaN(cost) || cost < 0) { showStatus('addStatus', 'Enter cost/share.', 'error'); return; }
+    // If user left cost blank, try to auto-fetch historical close
+    if (!costInput || isNaN(cost)) {
+      try {
+        showStatus('addStatus', '<span class="spinner"></span> Looking up closing price for ' + ticker + ' on ' + date + '...', 'info');
+        const histRes = await fetch(WORKER_URL + '/historical-close?symbol=' + encodeURIComponent(ticker) + '&date=' + encodeURIComponent(date));
+        const histD = await histRes.json();
+        if (histD.error) { showStatus('addStatus', 'Auto-lookup failed: ' + histD.error + '. Please enter Cost/Share manually.', 'error'); return; }
+        cost = histD.close;
+        document.getElementById('inputCost').value = cost.toFixed(2);
+        showStatus('addStatus', '&#10003; Auto-filled cost basis: $' + cost.toFixed(2) + ' (close on ' + histD.actualDate + ')', 'success');
+      } catch (e) { showStatus('addStatus', 'Auto-lookup error: ' + e.message + '. Please enter Cost/Share manually.', 'error'); return; }
+    }
+    if (isNaN(cost) || cost < 0) { showStatus('addStatus', 'Cost/Share must be a non-negative number.', 'error'); return; }
 
     // Check for duplicate: same ticker + same account type
     const existing = (window._holdings || []).find(
@@ -3348,6 +3369,39 @@ window.toggleHoldingType = function() {
   document.getElementById('cashFields').style.display = val === 'cash' ? '' : 'none';
 };
 
+// Default the Date Purchased field to today on first paint
+window.addEventListener('DOMContentLoaded', function(){
+  var d = document.getElementById('inputDate');
+  if (d && !d.value) d.value = new Date().toISOString().slice(0,10);
+});
+
+// Autofill Cost/Share from historical close when ticker + date are present and Cost is empty.
+// Debounced; only fires when both fields are populated and Cost is blank.
+var _autofillTimer = null;
+window.autofillCostBasis = function() {
+  if (_autofillTimer) clearTimeout(_autofillTimer);
+  _autofillTimer = setTimeout(async function(){
+    var ticker = (document.getElementById('inputTicker').value || '').trim().toUpperCase();
+    var date = document.getElementById('inputDate').value;
+    var costEl = document.getElementById('inputCost');
+    var hint = document.getElementById('inputCostHint');
+    if (!ticker || !date) { if (hint) hint.textContent = ''; return; }
+    // Don't overwrite a manually entered cost
+    if (costEl.value && parseFloat(costEl.value) > 0) { if (hint) hint.textContent = ''; return; }
+    if (hint) hint.textContent = 'Looking up close for ' + date + '...';
+    try {
+      var res = await fetch(WORKER_URL + '/historical-close?symbol=' + encodeURIComponent(ticker) + '&date=' + encodeURIComponent(date));
+      var d = await res.json();
+      if (d.error) { if (hint) { hint.textContent = ''; } return; }
+      // Only fill if user still hasn't typed a cost
+      if (!costEl.value) {
+        costEl.value = d.close.toFixed(2);
+        if (hint) hint.innerHTML = '<span style="color:var(--success);">&#10003; Auto-filled from Yahoo (close on ' + d.actualDate + ')</span>';
+      }
+    } catch(e) { if (hint) hint.textContent = ''; }
+  }, 600);
+};
+
 const fmt = v => "$" + Number(v).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 const fmtInt = v => "$" + Number(v).toLocaleString("en-US", { maximumFractionDigits: 0 });
 const fmtPct = v => (v >= 0 ? "+" : "") + v.toFixed(2) + "%";
@@ -3425,10 +3479,8 @@ function navigateTo(p) {
   window.scrollTo(0, 0);
   if (p === 'portfolio') renderPortfolioOverview();
   if (p === 'home') { briefingLoad(); }
-  if (p === 'themes' && typeof themesRenderGrid === 'function') {
-    document.getElementById('themeDetail').style.display = 'none';
-    document.getElementById('themesGrid').parentElement.parentElement.style.display = '';
-    themesRenderGrid();
+  if (p === 'themes' && typeof themesPopulateDropdown === 'function') {
+    themesPopulateDropdown();
   }
   if (p === 'macro') { loadMacroLiveTable(); if (typeof ycLoad === 'function' && !window._ycLoaded) { ycLoad(); window._ycLoaded = true; } }
   if (p === 'resources' && typeof resourcesInit === 'function') resourcesInit();
@@ -3752,16 +3804,19 @@ async function renderPortfolioOverview() {
   document.getElementById('btnStress').classList.toggle('active', _showStress);
   document.getElementById('btnVixRange').classList.toggle('active', _showVixRange);
   renderPortfolioChart();
-  // Trigger regime audit using cached state if available
-  if (typeof renderRegimeAudit === 'function') {
-    var stateKey = window._briefingState || 'growth';
-    renderRegimeAudit(stateKey);
-    // If state not yet classified, fetch it now
-    if (!window._briefingState && typeof psLoadDiagnostic === 'function') {
-      psLoadDiagnostic().then(function(){
-        if (window._briefingState) renderRegimeAudit(window._briefingState);
-      }).catch(function(){});
-    }
+  // Ensure Regime Fit column reflects current state. If state is not yet classified, fire psLoadDiagnostic
+  // and re-render the holdings table once state arrives.
+  if (!window._briefingState && typeof psLoadDiagnostic === 'function') {
+    psLoadDiagnostic().then(function(){
+      if (window._briefingState && window._holdings && window._holdings.length) {
+        // Recalculate total and re-render table
+        var total = window._holdings.reduce(function(s, h){
+          var isCashH = h.assetClass === 'Cash' || h.assetClass === 'Money Market' || h.assetClass === 'CD' || h.assetClass === 'Bond Position';
+          return s + (isCashH ? h.costBasis * h.quantity : (h.currentPrice || 0) * h.quantity);
+        }, 0);
+        renderPortfolioTable(window._holdings, total);
+      }
+    }).catch(function(){});
   }
 }
 
@@ -3799,12 +3854,15 @@ async function fetchBenchmarkCards(tickers, labels) {
   }
 }
 
-// ═══ PORTFOLIO TABLE (with Account, Sort, Total) ═══
+// ═══ PORTFOLIO TABLE (with Account, Sort, Total, Regime Fit) ═══
 function renderPortfolioTable(holdings, tv) {
   const sorted = getSortedHoldings(holdings, _portfolioSort);
   const tc = sorted.reduce((s, h) => s + h.costBasis * h.quantity, 0);
   const tgl = tv - tc;
   const tglp = tc > 0 ? (tgl / tc) * 100 : 0;
+  const stateKey = window._briefingState || 'growth';
+  const stateNames = {leveraged: 'Leveraged', growth: 'Non-Levered Growth', neutral: 'Neutral', drawdown: 'Positioned for Drawdown'};
+  const currentStateName = stateNames[stateKey] || stateKey;
 
   // Pre-compute per-account totals for "% of Account" column
   var acctTotals = {};
@@ -3819,10 +3877,12 @@ function renderPortfolioTable(holdings, tv) {
     {key:'ticker',label:'Ticker'}, {key:'companyName',label:'Company'}, {key:'quantity',label:'Shares'},
     {key:'currentPrice',label:'Price'}, {key:'marketValue',label:'Mkt Value'},
     {key:'weight',label:'% Portfolio'}, {key:'pctOfAccount',label:'% Account'},
-    {key:'glPct',label:'G/L'}, {key:'accountType',label:'Account'}, {key:'sector',label:'Sector'},
-    {key:'industry',label:'Industry'}, {key:'assetClass',label:'Asset'}
+    {key:'glPct',label:'Gain / Loss %'},
+    {key:'regimeFit',label:'Regime Fit'},
+    {key:'accountType',label:'Account'}, {key:'sector',label:'Sector'}, {key:'assetClass',label:'Asset Class'}
   ];
-  let html = '<table><thead><tr>' + sortableHeader(cols, _portfolioSort, null, 'portfolio') + '</tr></thead><tbody>';
+  let html = '<div style="font-size:11px;color:var(--text-sec);margin-bottom:6px;">Regime Fit is scored against current state: <strong style="color:var(--navy);">' + currentStateName + '</strong>. <span style="color:var(--success);">&#10003; Aligned</span> = appropriate &middot; <span style="color:var(--warning);">&#9888; Neutral</span> = acceptable &middot; <span style="color:var(--danger);">&#10007; Misaligned</span> = consider rotating.</div>';
+  html += '<table><thead><tr>' + sortableHeader(cols, _portfolioSort, null, 'portfolio') + '</tr></thead><tbody>';
   sorted.forEach(h => {
     const isCash = h.assetClass === 'Cash' || h.assetClass === 'Money Market' || h.assetClass === 'CD' || h.assetClass === 'Bond Position';
     const mv = isCash ? h.costBasis * h.quantity : (h.currentPrice || 0) * h.quantity;
@@ -3834,6 +3894,17 @@ function renderPortfolioTable(holdings, tv) {
     const pctAcct = acctTotals[acct] > 0 ? (mv / acctTotals[acct]) * 100 : 0;
     const gc = gl >= 0 ? C.success : C.danger;
     const ad = h.leverage ? h.assetClass + ' <span style="color:' + C.warning + ';font-size:10px;">(' + h.leverage + ')</span>' : (h.assetClass || 'Equity');
+
+    // Regime fit lookup
+    var fit = (typeof rfGetFit === 'function') ? rfGetFit(h, stateKey) : null;
+    var fitHtml = '<span style="color:var(--text-sec);font-size:11px;">—</span>';
+    if (fit === 'good')      fitHtml = '<span class="regime-fit regime-fit-good" title="Aligned with ' + currentStateName + ' regime — appropriate to hold.">&#10003; Aligned</span>';
+    else if (fit === 'warn') fitHtml = '<span class="regime-fit regime-fit-warn" title="Acceptable but not optimal for ' + currentStateName + ' regime.">&#9888; Neutral</span>';
+    else if (fit === 'bad')  fitHtml = '<span class="regime-fit regime-fit-bad" title="Contradicts ' + currentStateName + ' regime posture — consider rotating.">&#10007; Misaligned</span>';
+
+    // Hover tooltip on G/L showing the formula
+    var glTooltip = isCash ? '' : ' title="Gain/Loss % = (Current Price − Cost Basis) ÷ Cost Basis. Current $' + (h.currentPrice||0).toFixed(2) + ' vs. Cost $' + (h.costBasis||0).toFixed(2) + '."';
+
     html += '<tr>' +
       '<td style="font-weight:700;color:' + C.navy + ';">' + h.ticker + '</td>' +
       '<td>' + h.companyName + '</td>' +
@@ -3842,13 +3913,13 @@ function renderPortfolioTable(holdings, tv) {
       '<td style="font-weight:600;">' + fmt(mv) + '</td>' +
       '<td>' + pp.toFixed(1) + '%</td>' +
       '<td style="font-weight:600;color:' + C.navy + ';">' + pctAcct.toFixed(1) + '%</td>' +
-      '<td style="color:' + (isCash ? C.textSec : gc) + ';font-weight:600;">' + (isCash ? '—' : fmtPct(glp)) + '</td>' +
+      '<td' + glTooltip + ' style="color:' + (isCash ? C.textSec : gc) + ';font-weight:600;cursor:' + (isCash ? 'default' : 'help') + ';">' + (isCash ? '—' : fmtPct(glp)) + '</td>' +
+      '<td>' + fitHtml + '</td>' +
       '<td>' + acct + '</td>' +
       '<td>' + (h.sector || '—') + '</td>' +
-      '<td>' + (h.industry || '—') + '</td>' +
       '<td>' + ad + '</td></tr>';
   });
-  // Total row
+  // Total row — note column count now 12
   html += '<tr style="font-weight:700;background:var(--panel);">' +
     '<td style="color:' + C.navy + ';">TOTAL</td><td>' + sorted.length + ' positions</td>' +
     '<td></td><td></td>' +
@@ -5698,7 +5769,7 @@ function loadMacroLiveTable(force) {
     // ── CFA Business Cycle Guide ──
     var guideEl = document.getElementById('macroCycleGuide');
     if (guideEl) {
-      var gh = '<div class="card"><div class="card-title">CFA Business Cycle Phase Guide</div><div class="card-body">';
+      var gh = '<div class="card"><div class="card-title">CFA Business Cycle Phase Guide <span class="help-icon" title="The 4 standard phases of the business cycle (per CFA L1 Economics) and what historically works in each: Early Expansion, Mid Expansion, Late Expansion / Peak, Contraction.">?</span></div><div class="card-body">';
       gh += '<div style="overflow-x:auto;"><table style="font-size:12px;"><thead><tr><th>Score</th><th>Phase</th><th>Positioning</th><th>Top Equities</th><th>Fixed Income</th><th>Commodities</th></tr></thead><tbody>';
       var phases = [
         { range: "\u2265 70%", phase: "Confirmed Expansion", pos: "OW risk assets, UW duration", eq: "Financials, Discretionary, Small Cap", fi: "Short duration; HY credit", cm: "Industrial metals, Energy", color: C.success },
@@ -6226,7 +6297,7 @@ function quantRenderResults(ticker, horizon, res) {
   html += '</div></div>';
 
   // ── Model fit summary ──
-  html += '<div class="card"><div class="card-title">Model Fit Summary — Multiple Linear Regression</div>';
+  html += '<div class="card"><div class="card-title">Model Fit Summary — Multiple Linear Regression <span class="help-icon" title="A regression that predicts forward returns from multiple input features simultaneously. R&sup2; tells you what % of return variance the model explains. Adjusted R&sup2; penalizes adding features that don&rsquo;t actually help. Higher = better fit, but watch for overfitting (use the walk-forward backtest below to validate).">?</span></div>';
   html += '<div class="card-body"><div class="chart-stats">';
   html += '<div class="chart-stat-box"><div class="chart-stat-label">R&sup2;</div><div class="chart-stat-value">'+res.r2.toFixed(3)+'</div><div class="chart-stat-sub">Variance explained</div></div>';
   html += '<div class="chart-stat-box"><div class="chart-stat-label">Adj. R&sup2;</div><div class="chart-stat-value">'+res.adjR2.toFixed(3)+'</div><div class="chart-stat-sub">Degrees-of-freedom adj.</div></div>';
@@ -6239,7 +6310,7 @@ function quantRenderResults(ticker, horizon, res) {
   html += '<div class="card-sources"><strong>Sources:</strong> Efron, B. (1979) "Bootstrap Methods," <em>Annals of Statistics</em> &middot; Greene, W.H. (2018) <em>Econometric Analysis</em>, 8th ed. &middot; CFA Institute L2 Quantitative Methods.</div></div>';
 
   // ── Feature Importance ──
-  html += '<div class="card"><div class="card-title">Feature Importance &amp; Coefficients</div>';
+  html += '<div class="card"><div class="card-title">Feature Importance &amp; Coefficients <span class="help-icon" title="Ranks each input variable by how much it influences the model&rsquo;s prediction. Coefficient sign tells you direction (positive = feature increase predicts higher returns). Sign Stability shows how often that direction held across 500 bootstrap resamples — &gt; 90% means the relationship is robust, &lt; 75% means weak/unreliable.">?</span></div>';
   html += '<div class="card-body">';
   html += '<p style="font-size:12px;color:var(--text-sec);margin-bottom:12px;">Features ranked by absolute standardized coefficient. Positive coefficient (green) means higher feature &#8594; higher expected forward return. 95% CI shown from bootstrap. Sign stability &gt; 90% indicates a robust estimate.</p>';
   html += '<div class="table-wrap"><table><thead><tr>'
@@ -6270,7 +6341,7 @@ function quantRenderResults(ticker, horizon, res) {
   html += '<div class="card-sources"><strong>Sources:</strong> Efron &amp; Tibshirani (1993) <em>An Introduction to the Bootstrap</em> &middot; Hastie, Tibshirani &amp; Friedman (2009) <em>The Elements of Statistical Learning</em>, 2nd ed.</div></div>';
 
   // ── Regime Backtest ──
-  html += '<div class="card"><div class="card-title">Macro Regime Backtest &mdash; '+horizonLabel+' Forward Returns by VIX Regime</div>';
+  html += '<div class="card"><div class="card-title">Macro Regime Backtest &mdash; '+horizonLabel+' Forward Returns by VIX Regime <span class="help-icon" title="Splits historical entries by the VIX level at the time of entry (Low, Moderate, Elevated, High) and shows what happened next. Use this to answer: &lsquo;If I bought this stock when VIX was 30+, did it tend to rally or fall?&rsquo;">?</span></div>';
   html += '<div class="card-body">';
   html += '<p style="font-size:12px;color:var(--text-sec);margin-bottom:12px;">Historical forward returns conditional on VIX level at entry. Each row is an independent regime with its own return distribution. Win rate = fraction of entries with positive forward return.</p>';
   html += '<div class="table-wrap"><table><thead><tr>'
@@ -6311,7 +6382,7 @@ function quantRenderResults(ticker, horizon, res) {
   var mcP90 = mcSorted[Math.floor(mcSorted.length*0.90)];
   var mcPosFrac = res.mcTerm.filter(function(v){return v>res.S0;}).length / res.mcTerm.length;
 
-  html += '<div class="card"><div class="card-title">Monte Carlo Simulation &mdash; '+horizonLabel+' Price Path (1,000 paths, GBM)</div>';
+  html += '<div class="card"><div class="card-title">Monte Carlo Simulation &mdash; '+horizonLabel+' Price Path (1,000 paths, GBM) <span class="help-icon" title="Generates 1,000 hypothetical price paths assuming the stock follows Geometric Brownian Motion (drift + random walk) calibrated to its actual historical volatility. The fan shows the range of plausible outcomes; the center line is the median.">?</span></div>';
   html += '<div class="card-body">';
   html += '<div class="chart-stats">';
   html += '<div class="chart-stat-box"><div class="chart-stat-label">Current</div><div class="chart-stat-value">$'+res.S0.toFixed(2)+'</div></div>';
@@ -6332,7 +6403,7 @@ function quantRenderResults(ticker, horizon, res) {
   html += '<div class="card-sources"><strong>Sources:</strong> Hull, J.C. (2022) <em>Options, Futures &amp; Other Derivatives</em>, 10th ed., Ch. 15 &middot; Glasserman, P. (2004) <em>Monte Carlo Methods in Financial Engineering</em>.</div></div>';
 
   // ── Residual diagnostics ──
-  html += '<div class="card"><div class="card-title">Residual Diagnostics</div>';
+  html += '<div class="card"><div class="card-title">Residual Diagnostics <span class="help-icon" title="Residuals are the gap between the model&rsquo;s prediction and what actually happened. If they&rsquo;re scattered randomly around zero with no pattern, the model is well-specified. If they show a pattern (curve, fan-shape), the model is missing something — its predictions can&rsquo;t be trusted at face value.">?</span></div>';
   html += '<div class="card-body">';
   html += '<p style="font-size:12px;color:var(--text-sec);margin-bottom:12px;">Residuals = actual forward returns &minus; model predictions. Well-behaved residuals should be centered on zero, approximately normally distributed, and not show structure over time. Heavy structure indicates missing features or regime non-stationarity.</p>';
   html += '<div class="grid-2">';
@@ -8823,7 +8894,14 @@ async function briefingLoad() {
         + '<div>VIX: '+(signals.vix!=null?signals.vix.toFixed(1):'—')+'</div>'
         + '</div></div></div>';
       // trigger regime audit now that state is known
-      if(typeof renderRegimeAudit==='function' && window._holdings && window._holdings.length) renderRegimeAudit(cl.winner);
+      if(window._holdings && window._holdings.length && typeof renderPortfolioTable === 'function'){
+        // Re-render holdings table now that regime state is known so Regime Fit column shows
+        var portfolioTotal = window._holdings.reduce(function(s, h){
+          var isCashH = h.assetClass === 'Cash' || h.assetClass === 'Money Market' || h.assetClass === 'CD' || h.assetClass === 'Bond Position';
+          return s + (isCashH ? h.costBasis * h.quantity : (h.currentPrice || 0) * h.quantity);
+        }, 0);
+        renderPortfolioTable(window._holdings, portfolioTotal);
+      }
     }
   } catch(e){ regimeEl.innerHTML='<div style="padding:14px;color:var(--danger);">Failed to load regime data: '+e.message+'</div>'; }
 
@@ -9447,11 +9525,11 @@ async function ivLoad(ticker) {
     var mpDiff = d.maxPain && d.currentPrice ? ((d.maxPain - d.currentPrice) / d.currentPrice * 100) : null;
 
     statsEl.innerHTML =
-      '<div class="chart-stat-box"><div class="chart-stat-label">ATM IV (Annualized)</div><div class="chart-stat-value">' + (d.atmImpliedVol != null ? (d.atmImpliedVol*100).toFixed(1)+'%' : '—') + '</div><div class="chart-stat-sub">Expiry: '+(d.nearestExpiry ? d.nearestExpiry.date+' ('+d.nearestExpiry.daysToExpiry+'d)' : '—')+'</div></div>' +
-      '<div class="chart-stat-box"><div class="chart-stat-label">IV Percentile (1Y)</div><div class="chart-stat-value" style="color:'+pctCol+';">' + (pct != null ? pct.toFixed(0)+'%' : '—') + '</div><div class="chart-stat-sub">'+pctLabel+'</div></div>' +
-      '<div class="chart-stat-box"><div class="chart-stat-label">20-Day Realized Vol</div><div class="chart-stat-value">' + (d.hv20Day != null ? (d.hv20Day*100).toFixed(1)+'%' : '—') + '</div><div class="chart-stat-sub">IV-HV spread: ' + (d.ivMinusHv != null ? (d.ivMinusHv >= 0 ? '+' : '')+(d.ivMinusHv*100).toFixed(1)+'%' : '—') + '</div></div>' +
-      '<div class="chart-stat-box"><div class="chart-stat-label">Put/Call OI Ratio</div><div class="chart-stat-value" style="color:'+pcCol+';">' + (pcRatio != null ? pcRatio.toFixed(2) : '—') + '</div><div class="chart-stat-sub">'+pcLabel+'</div></div>' +
-      '<div class="chart-stat-box"><div class="chart-stat-label">Max Pain</div><div class="chart-stat-value">' + (d.maxPain != null ? '$'+d.maxPain.toFixed(2) : '—') + '</div><div class="chart-stat-sub">'+(mpDiff != null ? (mpDiff >= 0 ? '+' : '')+mpDiff.toFixed(1)+'% from price' : '—')+'</div></div>';
+      '<div class="chart-stat-box" title="ATM IV = Implied Volatility on the at-the-money option (strike closest to current price), annualized. Reflects the market\'s expectation of how much this stock will move."><div class="chart-stat-label">ATM IV (Annualized) <span class="help-icon" title="ATM IV = Implied Volatility on the at-the-money option (strike closest to current price), annualized. Reflects the market\'s expectation of how much this stock will move.">?</span></div><div class="chart-stat-value">' + (d.atmImpliedVol != null ? (d.atmImpliedVol*100).toFixed(1)+'%' : '—') + '</div><div class="chart-stat-sub">Expiry: '+(d.nearestExpiry ? d.nearestExpiry.date+' ('+d.nearestExpiry.daysToExpiry+'d)' : '—')+'</div></div>' +
+      '<div class="chart-stat-box"><div class="chart-stat-label">IV Percentile (1Y) <span class="help-icon" title="Where today\'s ATM IV sits in the past year\'s distribution. 80%+ = expensive options. 20%- = cheap options. Useful for vol selling/buying strategies.">?</span></div><div class="chart-stat-value" style="color:'+pctCol+';">' + (pct != null ? pct.toFixed(0)+'%' : '—') + '</div><div class="chart-stat-sub">'+pctLabel+'</div></div>' +
+      '<div class="chart-stat-box"><div class="chart-stat-label">20-Day Realized Vol <span class="help-icon" title="Actual price volatility over the last 20 trading days, annualized. Compare to ATM IV: when IV &gt; HV by a lot, market is pricing in more future volatility than recently observed.">?</span></div><div class="chart-stat-value">' + (d.hv20Day != null ? (d.hv20Day*100).toFixed(1)+'%' : '—') + '</div><div class="chart-stat-sub">IV-HV spread: ' + (d.ivMinusHv != null ? (d.ivMinusHv >= 0 ? '+' : '')+(d.ivMinusHv*100).toFixed(1)+'%' : '—') + '</div></div>' +
+      '<div class="chart-stat-box"><div class="chart-stat-label">Put/Call OI Ratio <span class="help-icon" title="Ratio of put open interest to call open interest. &gt; 1.2 = bearish positioning (often a contrarian buy signal). &lt; 0.7 = bullish positioning (contrarian bear signal). Around 1 = neutral.">?</span></div><div class="chart-stat-value" style="color:'+pcCol+';">' + (pcRatio != null ? pcRatio.toFixed(2) : '—') + '</div><div class="chart-stat-sub">'+pcLabel+'</div></div>' +
+      '<div class="chart-stat-box"><div class="chart-stat-label">Max Pain <span class="help-icon" title="The strike price where the total dollar value of in-the-money options is minimized at expiration. The level where option writers (typically dealers) lose the least. Markets sometimes gravitate toward this level into expiry.">?</span></div><div class="chart-stat-value">' + (d.maxPain != null ? '$'+d.maxPain.toFixed(2) : '—') + '</div><div class="chart-stat-sub">'+(mpDiff != null ? (mpDiff >= 0 ? '+' : '')+mpDiff.toFixed(1)+'% from price' : '—')+'</div></div>';
 
     // Render strike distribution chart (OI per strike, calls vs puts)
     wrapEl.style.display = 'block';
@@ -9531,8 +9609,8 @@ function ycRender() {
     '<div class="chart-stat-box"><div class="chart-stat-label">2Y Treasury</div><div class="chart-stat-value">'+fmt2(r2y && r2y.rate)+'</div></div>' +
     '<div class="chart-stat-box"><div class="chart-stat-label">10Y Treasury</div><div class="chart-stat-value">'+fmt2(r10y && r10y.rate)+'</div></div>' +
     '<div class="chart-stat-box"><div class="chart-stat-label">30Y Treasury</div><div class="chart-stat-value">'+fmt2(r30y && r30y.rate)+'</div></div>' +
-    '<div class="chart-stat-box"><div class="chart-stat-label">2s10s Spread</div><div class="chart-stat-value" style="color:'+spreadCol(spread2s10s)+';">'+(spread2s10s!=null?(spread2s10s>=0?'+':'')+spread2s10s.toFixed(2)+'%':'—')+'</div><div class="chart-stat-sub">'+spreadLabel(spread2s10s)+'</div></div>' +
-    '<div class="chart-stat-box"><div class="chart-stat-label">3M/10Y Spread</div><div class="chart-stat-value" style="color:'+spreadCol(spread3m10y)+';">'+(spread3m10y!=null?(spread3m10y>=0?'+':'')+spread3m10y.toFixed(2)+'%':'—')+'</div><div class="chart-stat-sub">'+spreadLabel(spread3m10y)+'</div></div>';
+    '<div class="chart-stat-box"><div class="chart-stat-label">2s10s Spread <span class="help-icon" title="The 10-year Treasury yield minus the 2-year. Positive = normal upward-sloping curve. Negative (inverted) = recession warning — has preceded every US recession since 1955.">?</span></div><div class="chart-stat-value" style="color:'+spreadCol(spread2s10s)+';">'+(spread2s10s!=null?(spread2s10s>=0?'+':'')+spread2s10s.toFixed(2)+'%':'—')+'</div><div class="chart-stat-sub">'+spreadLabel(spread2s10s)+'</div></div>' +
+    '<div class="chart-stat-box"><div class="chart-stat-label">3M/10Y Spread <span class="help-icon" title="The 10-year Treasury yield minus the 3-month T-bill. The Fed&apos;s preferred recession indicator (per NY Fed research). Inversion has preceded every US recession in the past 50 years with no false positives.">?</span></div><div class="chart-stat-value" style="color:'+spreadCol(spread3m10y)+';">'+(spread3m10y!=null?(spread3m10y>=0?'+':'')+spread3m10y.toFixed(2)+'%':'—')+'</div><div class="chart-stat-sub">'+spreadLabel(spread3m10y)+'</div></div>';
 
   // Build overlay datasets
   var snaps = d.snapshots;
@@ -9644,41 +9722,49 @@ var PORTFOLIO_THEMES = [
   }
 ];
 
-function themesRenderGrid() {
-  var gridEl = document.getElementById('themesGrid');
-  if (!gridEl) return;
-  // Get current regime if available
-  var currentState = window._briefingState || null;
-  var stateName = {leveraged: 'Leveraged', growth: 'Non-Levered Growth', neutral: 'Neutral', drawdown: 'Positioned for Drawdown'};
-  var stateColor = {leveraged: '#2E7D52', growth: '#003C71', neutral: '#8B6914', drawdown: '#8B2A2A'};
-  gridEl.innerHTML = PORTFOLIO_THEMES.map(function(t){
-    var fits = t.regimeFit.split(',');
-    var currentFits = currentState && fits.indexOf(currentState) >= 0;
-    var badgeStyle = currentFits ? 'background:#2E7D52;color:#fff;' : 'background:#F4F6F9;color:#5A6A7A;border:1px solid #D0D7E0;';
-    var fitLabels = fits.map(function(f){ return stateName[f]; }).join(' / ');
-    return '<div class="ps-state-card" onclick="themesLoadDetail(\''+t.key+'\')" style="cursor:pointer;">'
-      +'<div class="ps-state-header" style="background:'+(currentFits?'#2E7D52':'#003C71')+';">'
-      +t.name
-      +(currentFits?'<span class="ps-state-active-pill">FITS CURRENT</span>':'')
-      +'</div>'
-      +'<div class="ps-state-body">'
-      +'<div style="font-size:11px;color:var(--text-sec);margin-bottom:8px;line-height:1.4;">'+t.description+'</div>'
-      +'<div style="font-size:11px;margin-bottom:5px;"><strong>Regime Fit:</strong> <span style="'+badgeStyle+'padding:2px 6px;border-radius:3px;font-size:10px;font-weight:700;">'+fitLabels+'</span></div>'
-      +'<div style="font-size:11px;"><strong>'+t.tickers.length+' assets:</strong> '+t.tickers.slice(0,5).join(', ')+(t.tickers.length>5?', +'+(t.tickers.length-5)+' more':'')+'</div>'
-      +'<div style="margin-top:10px;text-align:right;font-size:11px;color:var(--blue);font-weight:600;">View Details →</div>'
-      +'</div></div>';
-  }).join('');
+function themesPopulateDropdown() {
+  var sel = document.getElementById('themeSelect');
+  if (!sel) return;
+  // Already populated
+  if (sel.options.length > 1) return;
+  PORTFOLIO_THEMES.forEach(function(t){
+    var opt = document.createElement('option');
+    opt.value = t.key;
+    // Strip HTML entities for option text — they don't render in <option>
+    var nameClean = t.name.replace(/&amp;/g, '&').replace(/&mdash;/g, '—');
+    opt.textContent = nameClean + ' (' + t.tickers.length + ' tickers)';
+    sel.appendChild(opt);
+  });
 }
 
 async function themesLoadDetail(themeKey) {
+  // Empty selection
+  if (!themeKey) {
+    document.getElementById('themeMeta').style.display = 'none';
+    document.getElementById('themeDetailStats').innerHTML = '';
+    document.getElementById('themeChartWrap').style.display = 'none';
+    document.getElementById('themeDetailTable').innerHTML = '';
+    return;
+  }
   var theme = PORTFOLIO_THEMES.find(function(t){return t.key===themeKey;});
   if (!theme) return;
-  document.getElementById('themesGrid').parentElement.parentElement.style.display = 'none';
-  var detailCard = document.getElementById('themeDetail');
-  detailCard.style.display = '';
-  document.getElementById('themeDetailTitle').textContent = theme.name;
-  document.getElementById('themeDetailDesc').innerHTML = theme.description;
-  document.getElementById('themeDetailStats').innerHTML = '<div style="padding:16px;text-align:center;"><span class="spinner"></span> Loading 1-year price data for '+theme.tickers.length+' constituents...</div>';
+  // Render the description meta band
+  var currentState = window._briefingState || null;
+  var stateNames = {leveraged: 'Leveraged', growth: 'Non-Levered Growth', neutral: 'Neutral', drawdown: 'Positioned for Drawdown'};
+  var fits = theme.regimeFit.split(',');
+  var fitLabels = fits.map(function(f){ return stateNames[f]; }).join(' / ');
+  var fitsCurrent = currentState && fits.indexOf(currentState) >= 0;
+  var fitBadge = fitsCurrent
+    ? '<span style="background:#2E7D52;color:#fff;padding:2px 7px;border-radius:3px;font-size:10px;font-weight:700;margin-left:6px;">FITS CURRENT REGIME</span>'
+    : '';
+  var metaEl = document.getElementById('themeMeta');
+  metaEl.innerHTML =
+    '<div style="font-weight:700;color:var(--navy);font-size:14px;margin-bottom:4px;">' + theme.name + fitBadge + '</div>' +
+    '<div style="margin-bottom:4px;">' + theme.description + '</div>' +
+    '<div><strong>Best for regime:</strong> ' + fitLabels + ' &middot; <strong>' + theme.tickers.length + ' tickers:</strong> ' + theme.tickers.join(', ') + '</div>';
+  metaEl.style.display = '';
+  document.getElementById('themeDetailStats').innerHTML = '<div class="chart-stat-box" style="flex:1;text-align:center;"><span class="spinner"></span> Loading 1-year price data for '+theme.tickers.length+' constituents...</div>';
+  document.getElementById('themeChartWrap').style.display = 'none';
   document.getElementById('themeDetailTable').innerHTML = '';
 
   var WORKER = "https://perry-finance-proxy.zachperrybusiness.workers.dev";
@@ -9771,6 +9857,7 @@ async function themesLoadDetail(themeKey) {
   if (dataByTicker['SPY']) datasets.push({ label: 'SPY Benchmark', data: dataByTicker['SPY'].rebased, borderColor: C.textSec, backgroundColor: 'transparent', borderWidth: 1.5, borderDash:[4,3], pointRadius: 0, tension: 0.1 });
 
   if (window._themeChart) window._themeChart.destroy();
+  document.getElementById('themeChartWrap').style.display = 'block';
   window._themeChart = new Chart(document.getElementById('themePriceChart').getContext('2d'), {
     type: 'line',
     data: { labels: commonDates, datasets: datasets },
@@ -9806,8 +9893,10 @@ async function themesLoadDetail(themeKey) {
 }
 
 function themesBackToGrid() {
-  document.getElementById('themeDetail').style.display = 'none';
-  document.getElementById('themesGrid').parentElement.parentElement.style.display = '';
+  // Inline UX: clear the dropdown selection and the detail panel.
+  var sel = document.getElementById('themeSelect');
+  if (sel) sel.value = '';
+  themesLoadDetail('');
 }
 
 // ═══════════════════════════════════════════════════════════════════
@@ -10089,12 +10178,12 @@ async function wfbRun() {
     // Render stats
     el.innerHTML = '<div style="text-align:left;padding:0 4px;">'
       +'<div class="chart-stats" style="margin-bottom:14px;">'
-      +'<div class="chart-stat-box"><div class="chart-stat-label">OOS Observations</div><div class="chart-stat-value">'+nPreds+'</div><div class="chart-stat-sub">across '+folds.length+' folds</div></div>'
-      +'<div class="chart-stat-box"><div class="chart-stat-label">Direction Accuracy</div><div class="chart-stat-value" style="color:'+(dirAccuracy>=50?C.success:C.danger)+';">'+dirAccuracy.toFixed(1)+'%</div><div class="chart-stat-sub">vs. 50% random</div></div>'
-      +'<div class="chart-stat-box"><div class="chart-stat-label">OOS R²</div><div class="chart-stat-value" style="color:'+(oosR2>0?C.success:C.danger)+';">'+(oosR2*100).toFixed(2)+'%</div><div class="chart-stat-sub">'+(oosR2>0?'Predictive':'No predictive power')+'</div></div>'
-      +'<div class="chart-stat-box"><div class="chart-stat-label">Signal Hit Rate</div><div class="chart-stat-value" style="color:'+(signalHitRate>=50?C.success:C.danger)+';">'+signalHitRate.toFixed(1)+'%</div><div class="chart-stat-sub">'+signalPreds.length+' signals fired</div></div>'
-      +'<div class="chart-stat-box"><div class="chart-stat-label">Avg Signal Return</div><div class="chart-stat-value" style="color:'+(signalAvgRet>=0?C.success:C.danger)+';">'+(signalAvgRet>=0?'+':'')+signalAvgRet.toFixed(2)+'%</div><div class="chart-stat-sub">per 21d signal</div></div>'
-      +'<div class="chart-stat-box"><div class="chart-stat-label">Strategy vs Buy&Hold</div><div class="chart-stat-value" style="color:'+((stratRet-bhRet)>=0?C.success:C.danger)+';">'+(stratRet-bhRet>=0?'+':'')+(stratRet-bhRet).toFixed(1)+'%</div><div class="chart-stat-sub">Strat: '+(stratRet>=0?'+':'')+stratRet.toFixed(1)+'% | BH: '+(bhRet>=0?'+':'')+bhRet.toFixed(1)+'%</div></div>'
+      +'<div class="chart-stat-box"><div class="chart-stat-label">OOS Observations <span class="help-icon" title="Total number of out-of-sample test predictions made across all walk-forward folds. More observations = more statistical confidence in the metrics.">?</span></div><div class="chart-stat-value">'+nPreds+'</div><div class="chart-stat-sub">across '+folds.length+' folds</div></div>'
+      +'<div class="chart-stat-box"><div class="chart-stat-label">Direction Accuracy <span class="help-icon" title="% of times the model predicted the correct sign (up vs down) for forward returns. 50% = random; &gt; 55% on a large sample is a meaningful edge.">?</span></div><div class="chart-stat-value" style="color:'+(dirAccuracy>=50?C.success:C.danger)+';">'+dirAccuracy.toFixed(1)+'%</div><div class="chart-stat-sub">vs. 50% random</div></div>'
+      +'<div class="chart-stat-box"><div class="chart-stat-label">OOS R² <span class="help-icon" title="Out-of-Sample R-squared. The fraction of return variance the model explains on data it has never seen. &gt; 2% is genuinely good for monthly stock-return prediction. Negative = model is worse than predicting the mean.">?</span></div><div class="chart-stat-value" style="color:'+(oosR2>0?C.success:C.danger)+';">'+(oosR2*100).toFixed(2)+'%</div><div class="chart-stat-sub">'+(oosR2>0?'Predictive':'No predictive power')+'</div></div>'
+      +'<div class="chart-stat-box"><div class="chart-stat-label">Signal Hit Rate <span class="help-icon" title="When the model fired a buy signal (predicted return above your threshold), what % of the time did the actual return turn out positive?">?</span></div><div class="chart-stat-value" style="color:'+(signalHitRate>=50?C.success:C.danger)+';">'+signalHitRate.toFixed(1)+'%</div><div class="chart-stat-sub">'+signalPreds.length+' signals fired</div></div>'
+      +'<div class="chart-stat-box"><div class="chart-stat-label">Avg Signal Return <span class="help-icon" title="Average actual 21-day forward return when the model fired a buy signal. Should be meaningfully greater than the unconditional average return.">?</span></div><div class="chart-stat-value" style="color:'+(signalAvgRet>=0?C.success:C.danger)+';">'+(signalAvgRet>=0?'+':'')+signalAvgRet.toFixed(2)+'%</div><div class="chart-stat-sub">per 21d signal</div></div>'
+      +'<div class="chart-stat-box"><div class="chart-stat-label">Strategy vs Buy &amp; Hold <span class="help-icon" title="The signal-based strategy&apos;s total return minus the buy-and-hold baseline. Positive = the model added value beyond simply holding the stock. Negative = you would have done better just holding through the whole period.">?</span></div><div class="chart-stat-value" style="color:'+((stratRet-bhRet)>=0?C.success:C.danger)+';">'+(stratRet-bhRet>=0?'+':'')+(stratRet-bhRet).toFixed(1)+'%</div><div class="chart-stat-sub">Strat: '+(stratRet>=0?'+':'')+stratRet.toFixed(1)+'% | BH: '+(bhRet>=0?'+':'')+bhRet.toFixed(1)+'%</div></div>'
       +'</div>'
       +'<div style="font-size:12px;color:var(--text-sec);margin-top:6px;">'
       +'<strong>Interpretation:</strong> '+(oosR2>0.02?'Model has measurable out-of-sample predictive power. ':oosR2>0?'Weak predictive power — likely overfit. ':'No predictive power — model should not be used as-is. ')
