@@ -9784,10 +9784,12 @@ async function rcrLoad(ticker) {
       fetch(WORKER+'/chart?symbol=SPY&range=5y&interval=1d').then(function(r){return r.json();}),
       fetch(WORKER+'/chart?symbol=%5EVIX&range=5y&interval=1d').then(function(r){return r.json();})
     ]);
+    if(tickerData.error){ content.innerHTML='<div style="color:var(--danger);padding:10px;"><strong>Worker error fetching '+ticker+':</strong> '+tickerData.error+'</div>'; return; }
+    if(spyData.error || vixData.error){ content.innerHTML='<div style="color:var(--danger);padding:10px;"><strong>Worker error fetching SPY/VIX:</strong> '+(spyData.error||vixData.error)+'. Retry in a moment &mdash; Yahoo may be rate-limiting.</div>'; return; }
     var tPts=(tickerData.points||[]).filter(function(p){return p.close!=null;});
     var sPts=(spyData.points||[]).filter(function(p){return p.close!=null;});
     var vPts=(vixData.points||[]).filter(function(p){return p.close!=null;});
-    if(tPts.length<63||sPts.length<252){ content.innerHTML='<div style="color:var(--warning);padding:10px;">Insufficient data for '+ticker+' (need 5 years).</div>'; return; }
+    if(tPts.length<63||sPts.length<252){ content.innerHTML='<div style="color:var(--warning);padding:10px;">Got '+tPts.length+' points for '+ticker+' and '+sPts.length+' for SPY &mdash; need 252+ SPY points and 63+ ticker points. Worker may be rate-limited; retry in a moment.</div>'; return; }
     // Build date → value maps
     var spyMap={},vixMap={};
     sPts.forEach(function(p){spyMap[p.date.slice(0,10)]=p.close;});
@@ -10819,7 +10821,8 @@ async function brtRun() {
     ]);
     var spyPts = (spyR.points||[]).filter(function(p){return p.close!=null;});
     var vixPts = (vixR.points||[]).filter(function(p){return p.close!=null;});
-    if (spyPts.length < 500) { el.innerHTML = '<div style="color:var(--warning);padding:10px;">Insufficient data for transition matrix.</div>'; return; }
+    if (spyR.error || vixR.error) { el.innerHTML = '<div style="color:var(--danger);padding:10px;"><strong>Worker error:</strong> '+(spyR.error||vixR.error)+'. Yahoo may be rate-limiting; try again in a few minutes.</div>'; return; }
+    if (spyPts.length < 300) { el.innerHTML = '<div style="color:var(--warning);padding:10px;">Got only '+spyPts.length+' SPY points &mdash; need 300+ for transition matrix. Worker may be rate-limited.</div>'; return; }
 
     // Align VIX to SPY dates
     var vixMap = {};
@@ -10957,7 +10960,8 @@ async function wfbRun() {
       fetch(WORKER + '/chart?symbol=%5EVIX&range=10y&interval=1d').then(function(r){return r.json();})
     ]);
     var pts = (tickerR.points||[]).filter(function(p){return p.close!=null;});
-    if (pts.length < 500) { el.innerHTML = '<div style="color:var(--warning);padding:10px;">Insufficient historical data for '+ticker+'.</div>'; return; }
+    if (tickerR.error) { el.innerHTML = '<div style="color:var(--danger);padding:10px;"><strong>Worker error:</strong> '+tickerR.error+'</div>'; return; }
+    if (pts.length < 300) { el.innerHTML = '<div style="color:var(--warning);padding:10px;">Got only '+pts.length+' price points for '+ticker+' &mdash; need at least 300 for walk-forward (about 14 months of daily data). The Worker may be rate-limited; retry in a few minutes.</div>'; return; }
     var vixPts = (vixR.points||[]).filter(function(p){return p.close!=null;});
     var vixMap = {}; vixPts.forEach(function(p){vixMap[p.date.slice(0,10)] = p.close;});
 
