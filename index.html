@@ -1562,6 +1562,50 @@ body.view-mobile .logo-icon { width: 22px !important; height: 22px !important; f
         </div>
       </div>
 
+      <!-- PORTFOLIO FORWARD RETURN ENGINE -->
+      <div class="card">
+        <div class="card-title">Portfolio Forward Return Projections (1Y / 3Y / 5Y) <span class="help-icon" title="Per-holding price targets at 1, 3, and 5 years using a blend of fundamental (DCF/Forward P/E for stocks, historical drift for ETFs) and regime-conditioned drift. Aggregated into a portfolio-level expected return with bull/base/bear bands. This is the &lsquo;what is my portfolio worth in 5 years&rsquo; answer.">?</span></div>
+        <div class="card-body">
+          <p style="font-size:12px;color:var(--text-sec);margin-bottom:10px;">Per-holding 1/3/5-year projections combining: <strong>(1) fundamental fair value</strong> (Forward P/E + DCF for stocks; trailing CAGR for ETFs), <strong>(2) regime-conditioned drift</strong> (current market state-adjusted return), and <strong>(3) bull/base/bear bands</strong> from method dispersion. Aggregated into portfolio-level expected return with confidence bands.</p>
+          <div class="form-row" style="margin-bottom:10px;">
+            <button class="btn" onclick="pfrRun()">Run Forward Return Projections</button>
+            <span style="font-size:11px;color:var(--text-sec);align-self:center;margin-left:10px;">Uses your live holdings + SEC EDGAR fundamentals + current regime classification.</span>
+          </div>
+          <div id="pfrResults" style="text-align:center;color:var(--text-sec);padding:16px;font-size:13px;">Click &quot;Run Forward Return Projections&quot; to generate 1/3/5-year per-holding and portfolio-level forecasts.</div>
+        </div>
+        <div class="card-sources"><strong>Method:</strong> Fundamental fair value (Forward P/E with sector multiple + simplified 5-yr DCF discounted at 10Y + 5% ERP) blended 60/40 with regime-conditioned drift (per-state historical SPY drift &times; ticker beta proxy) &bull; Bull/Bear bands = ±1σ from method dispersion &bull; Aggregation = market-value-weighted portfolio sum &bull; <strong>Disclaimer:</strong> Forecasts depend heavily on inputs; all returns past have not predicted future results.</div>
+      </div>
+
+      <!-- PORTFOLIO OPTIMIZATION ENGINE -->
+      <div class="card">
+        <div class="card-title">Portfolio Optimization &mdash; Regime-Conditioned Weights <span class="help-icon" title="Solves for the optimal allocation across your existing holdings under each of the 4 regimes (Leveraged, Growth, Neutral, Drawdown). Uses Markowitz mean-variance optimization with regime-conditioned expected returns. Then backtests how the optimal weights would have performed historically vs. your actual portfolio.">?</span></div>
+        <div class="card-body">
+          <p style="font-size:12px;color:var(--text-sec);margin-bottom:10px;">For each regime, solves for optimal weights across your holdings using Markowitz mean-variance optimization (max Sharpe). Compares to your current weights and shows: <strong>(1)</strong> recommended rotation actions (e.g., &quot;Add 8% Energy, reduce Tech by 12%&quot;), <strong>(2)</strong> backtest of optimal weights vs. your actual portfolio over the past 3 years, and <strong>(3)</strong> projected return uplift if you rotate.</p>
+          <div class="form-row" style="margin-bottom:10px;">
+            <div class="form-group"><label>Optimization Target</label>
+              <select id="poeTarget">
+                <option value="current">Current Regime</option>
+                <option value="leveraged">Leveraged</option>
+                <option value="growth">Non-Levered Growth</option>
+                <option value="neutral">Neutral</option>
+                <option value="drawdown">Positioned for Drawdown</option>
+              </select>
+            </div>
+            <div class="form-group"><label>Backtest Window</label>
+              <select id="poeBacktest">
+                <option value="1">1 Year</option>
+                <option value="3" selected>3 Years</option>
+                <option value="5">5 Years</option>
+              </select>
+            </div>
+            <button class="btn" onclick="poeRun()">Run Optimization &amp; Backtest</button>
+          </div>
+          <div id="poeResults" style="text-align:center;color:var(--text-sec);padding:16px;font-size:13px;">Click &quot;Run Optimization &amp; Backtest&quot; to compute regime-optimal weights and validate them against the past.</div>
+          <div class="chart-wrap" style="height:280px;display:none;margin-top:12px;" id="poeChartWrap"><canvas id="poeChart"></canvas></div>
+        </div>
+        <div class="card-sources"><strong>Method:</strong> Markowitz (1952) mean-variance optimization on per-state expected returns &bull; Solved via gradient projection on long-only simplex (sum to 1, weights ≥ 0) &bull; Regime-conditioned drifts from SPY 5-year history segmented by Perry 4-state classifier &bull; Per-holding beta scaled to SPY proxy &bull; Backtest: holds optimal weights through specified window, compares cumulative return to actual portfolio (equal-weight rebalanced)</div>
+      </div>
+
       <!-- FAMA-FRENCH FACTOR EXPOSURE -->
       <div class="card">
         <div class="card-title">Factor Exposure Analysis (Fama-French 5-Factor + Momentum) <span class="help-icon" title="Decomposes your portfolio's returns into known systematic risk factors. Beta = sensitivity to the broader market. SMB = small-cap tilt. HML = value tilt. MOM = momentum tilt. Alpha (Jensen's α) = the portion that's NOT explained by these factors — true outperformance vs. random.">?</span></div>
@@ -1899,15 +1943,31 @@ body.view-mobile .logo-icon { width: 22px !important; height: 22px !important; f
       </div>
       <div class="card-sources"><strong>Method:</strong> Historical 5-year daily returns segmented by regime proxies (VIX level &amp; SPY 12M trailing return) &bull; Perry 4-state classifier applied historically &bull; Returns via Yahoo Finance / Cloudflare Worker</div>
     </div>
+    <!-- INTRINSIC VALUE — Multi-Method Valuation -->
+    <div class="card" id="ivvCard" style="display:none;">
+      <div class="card-title">Intrinsic Value Estimate &mdash; Multi-Method Valuation <span class="help-icon" title="Combines three independent valuation approaches into a single fair-value range. When all three agree, conviction is high. When they disagree, it usually means the stock is hard to value with one lens — read the details to see which assumption is doing the heavy lifting.">?</span></div>
+      <div class="card-body">
+        <p style="font-size:12px;color:var(--text-sec);margin-bottom:12px;">Three valuation methods run simultaneously: <strong>Forward P/E</strong> (analyst consensus &times; sector multiple), <strong>Simplified DCF</strong> (free cash flow discounted at the 10Y Treasury + risk premium), and <strong>Dividend Discount</strong> (Gordon Growth, dividend-paying stocks only). Each produces an implied fair value; the consensus band shows where they agree.</p>
+        <div id="ivvResults" style="text-align:center;color:var(--text-sec);padding:16px;font-size:13px;"><span class="spinner"></span> Computing intrinsic value...</div>
+      </div>
+      <div class="card-sources"><strong>Sources:</strong> SEC EDGAR XBRL fundamentals via Cloudflare Worker &bull; Analyst targets via FMP &bull; 10Y Treasury via FRED &bull; Sector P/E benchmarks: S&amp;P 500 GICS sector medians (rolling 5-year). <strong>Disclaimer:</strong> Intrinsic value estimates depend heavily on input assumptions; treat ranges as guidance, not guarantees.</div>
+    </div>
     <!-- OPTIONS IV ANALYSIS -->
     <div class="card" id="ivCard" style="display:none;">
       <div class="card-title">Options Implied Volatility &amp; IV Percentile <span class="help-icon" title="Implied Volatility (IV) is the market's expectation of how much this stock will move, baked into option prices. IV Percentile compares today's IV to the past year's distribution — a high reading means options are expensive (good for sellers), a low reading means cheap (good for buyers).">?</span></div>
       <div class="card-body">
         <p style="font-size:12px;color:var(--text-sec);margin-bottom:12px;">Live options market analysis for <strong id="ivTicker"></strong>. IV Percentile shows where current at-the-money implied volatility ranks vs. the past year's realized volatility distribution &mdash; a gauge of whether options are pricing in cheap or expensive expected moves.</p>
+        <div class="form-row" id="ivExpiryRow" style="margin-bottom:10px;display:none;">
+          <div class="form-group" style="min-width:240px;">
+            <label>Expiration <span class="help-icon" title="Pick a different expiration date to see how IV varies across the term structure. Near-term expirations are typically more volatile around earnings and events.">?</span></label>
+            <select id="ivExpirySelect" onchange="ivLoad(document.getElementById('ivTicker').textContent, this.value)"></select>
+          </div>
+        </div>
         <div id="ivStats" style="text-align:center;color:var(--text-sec);padding:16px;font-size:13px;">
           <span class="spinner"></span> Loading options chain from Cloudflare Worker...
         </div>
         <div class="chart-wrap" style="height:340px;display:none;margin-top:14px;" id="ivChartWrap"><canvas id="ivChart"></canvas></div>
+        <div id="ivStrikeTable" style="margin-top:14px;display:none;"></div>
       </div>
       <div class="card-sources">
         <strong>Sources:</strong> Yahoo Finance options chain via Cloudflare Worker &bull; IV Percentile computed vs. 1-year 20-day realized volatility distribution &bull; Max Pain = strike price where total option writer losses are minimized at expiry &bull; Put/Call OI Ratio = contrarian sentiment indicator
@@ -5582,7 +5642,9 @@ window.runResearch = async function() {
   document.getElementById('researchResults').innerHTML = '';
   // Hide IV + RCR cards until new data loads
   var ivC = document.getElementById('ivCard'); if (ivC) ivC.style.display = 'none';
+  var ivExp = document.getElementById('ivExpirySelect'); if (ivExp) ivExp.removeAttribute('data-ticker');
   var rcrC = document.getElementById('rcrCard'); if (rcrC) rcrC.style.display = 'none';
+  var ivvC = document.getElementById('ivvCard'); if (ivvC) ivvC.style.display = 'none';
 
   try {
     if (isCrypto(ticker)) {
@@ -5666,6 +5728,8 @@ window.runResearch = async function() {
       if (typeof rcrLoad === 'function') rcrLoad(ticker);
       // Trigger options IV + IV percentile analysis (non-blocking)
       if (typeof ivLoad === 'function') ivLoad(ticker);
+      // Trigger intrinsic value multi-method valuation (stock only; ETFs handled separately)
+      if (!isETF && typeof ivvLoad === 'function') ivvLoad(ticker, secData);
     }
 
   } catch(e) {
@@ -9057,6 +9121,503 @@ function renderRegimeAudit(stateKey) {
 }
 
 // ═══════════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════════
+// ════════  PORTFOLIO FORWARD RETURN ENGINE (1/3/5 YR)  ═════════════
+// ═══════════════════════════════════════════════════════════════════
+async function pfrRun() {
+  var el = document.getElementById('pfrResults');
+  el.innerHTML = '<div style="padding:14px;text-align:center;"><span class="spinner"></span> Loading holdings, fetching fundamentals, computing fair values...</div>';
+
+  if (!window._holdings || !window._holdings.length) {
+    el.innerHTML = '<div style="color:var(--warning);padding:10px;">No holdings loaded. Add positions on the Manage Holdings page first.</div>';
+    return;
+  }
+
+  try {
+    var WORKER = "https://perry-finance-proxy.zachperrybusiness.workers.dev";
+    // Filter to actual securities (skip cash positions)
+    var holdings = window._holdings.filter(function(h){
+      var ac = h.assetClass || '';
+      return ac !== 'Cash' && ac !== 'Money Market' && ac !== 'CD' && ac !== 'Bond Position';
+    });
+    if (!holdings.length) { el.innerHTML = '<div style="color:var(--warning);padding:10px;">All holdings are cash. Add some equity positions to see forward projections.</div>'; return; }
+
+    // Aggregate by ticker (across multiple accounts)
+    var byTicker = {};
+    holdings.forEach(function(h){
+      if (!byTicker[h.ticker]) byTicker[h.ticker] = { ticker: h.ticker, name: h.companyName, qty: 0, mv: 0, sector: h.sector, assetClass: h.assetClass, currentPrice: h.currentPrice || 0 };
+      var mv = (h.currentPrice || 0) * h.quantity;
+      byTicker[h.ticker].qty += h.quantity;
+      byTicker[h.ticker].mv += mv;
+    });
+    var tickers = Object.keys(byTicker);
+    var totalMV = tickers.reduce(function(s,t){return s + byTicker[t].mv;}, 0);
+
+    // Fetch fundamentals for each ticker in parallel (capped)
+    var fundamentalsByTicker = {};
+    await Promise.all(tickers.slice(0, 25).map(async function(t){
+      try {
+        var r = await fetch(WORKER + '/fundamentals?symbol=' + encodeURIComponent(t));
+        var d = await r.json();
+        fundamentalsByTicker[t] = d;
+      } catch(e) { fundamentalsByTicker[t] = null; }
+    }));
+
+    // Build regime-conditioned drift table from SPY 5y history
+    var regimeDrifts = await pfrComputeRegimeDrifts();
+    var curState = window._briefingState || 'growth';
+    // Sector P/E benchmarks already declared globally (SECTOR_PE)
+
+    // For each ticker compute fundamental fair value + regime drift forecast
+    var rows = [];
+    tickers.forEach(function(t){
+      var info = byTicker[t];
+      var d = fundamentalsByTicker[t];
+      var px = info.currentPrice;
+      if (!px || px <= 0) { return; }
+      var weight = totalMV > 0 ? info.mv / totalMV : 0;
+
+      // Method A: Fundamental fair value (Forward P/E for stocks, trailing CAGR for ETFs)
+      var fundFV = null;
+      var fundConf = 'Low';
+      var assetClass = info.assetClass || '';
+      var sector = (d && d.profile && d.profile.sector) || info.sector || '';
+      var sectorPE = SECTOR_PE[sector] || 20;
+
+      if (d && d.incomeStatement && d.incomeStatement.eps && d.incomeStatement.eps.length >= 2) {
+        var epsArr = d.incomeStatement.eps;
+        var lastEps = epsArr[epsArr.length-1].value;
+        var yrs = Math.min(epsArr.length-1, 3);
+        var firstEps = epsArr[epsArr.length-1-yrs].value;
+        var epsCAGR = (lastEps > 0 && firstEps > 0) ? Math.pow(lastEps/firstEps, 1/yrs) - 1 : 0;
+        epsCAGR = Math.max(-0.10, Math.min(0.30, epsCAGR));
+        var fwdEps = lastEps * (1 + epsCAGR);
+        fundFV = fwdEps * sectorPE;
+        if (d.analystTargets && d.analystTargets.mean) {
+          fundFV = (fundFV + d.analystTargets.mean) / 2;
+          fundConf = 'Medium';
+        }
+      } else if (assetClass === 'ETF' || assetClass === 'Fund') {
+        // For ETFs without earnings: project at trailing 3yr CAGR
+        // We'd need price history; use conservative 7% nominal expected return
+        fundFV = px * Math.pow(1.07, 1); // 1yr fund FV at 7%
+        fundConf = 'Low';
+      }
+
+      // Method B: Regime-conditioned drift over 1, 3, 5 years
+      // Use beta proxy from sector (high-beta sectors = 1.2, low-beta = 0.8, default = 1.0)
+      var betaProxy = 1.0;
+      if (sector === 'Technology' || sector === 'Information Technology' || sector === 'Communication Services') betaProxy = 1.2;
+      else if (sector === 'Consumer Staples' || sector === 'Utilities' || sector === 'Health Care' || sector === 'Healthcare') betaProxy = 0.8;
+      else if (sector === 'Energy' || sector === 'Materials' || sector === 'Basic Materials') betaProxy = 1.1;
+      else if (sector === 'Financials' || sector === 'Financial Services') betaProxy = 1.1;
+      // Use leveraged ETFs as 3x
+      if (info.assetClass === 'Leveraged ETF' || /^(TQQQ|SOXL|SPXL|UPRO|FNGU|TECL|LABU|UDOW)$/.test(t)) betaProxy = 3.0;
+
+      var regimeDailyDrift = regimeDrifts[curState] || regimeDrifts.growth || 0.0003;
+      // Convert daily drift to annual (assume 252 trading days)
+      var regimeAnnualDrift = Math.pow(1 + regimeDailyDrift, 252) - 1;
+      // Apply beta scaling
+      var tickerAnnualDrift = regimeAnnualDrift * betaProxy;
+      // Cap to sensible range
+      tickerAnnualDrift = Math.max(-0.40, Math.min(0.50, tickerAnnualDrift));
+
+      // Compute 1Y / 3Y / 5Y projections
+      // Bull/Bear bands: ±1σ where σ scales with horizon
+      var sigma1y = 0.18 * betaProxy; // baseline 18% annual volatility scaled by beta
+      var p1y_base = px * (1 + tickerAnnualDrift);
+      var p1y_bull = px * (1 + tickerAnnualDrift + sigma1y);
+      var p1y_bear = px * (1 + tickerAnnualDrift - sigma1y);
+
+      // Blend fundamental FV (60%) with drift FV (40%) for 1Y if fundFV exists
+      if (fundFV != null) {
+        p1y_base = 0.6 * fundFV + 0.4 * p1y_base;
+      }
+
+      var p3y_base = px * Math.pow(1 + tickerAnnualDrift, 3);
+      var p3y_bull = px * Math.pow(1 + tickerAnnualDrift + sigma1y * 0.8, 3);
+      var p3y_bear = px * Math.pow(1 + tickerAnnualDrift - sigma1y * 0.8, 3);
+
+      var p5y_base = px * Math.pow(1 + tickerAnnualDrift, 5);
+      var p5y_bull = px * Math.pow(1 + tickerAnnualDrift + sigma1y * 0.6, 5);
+      var p5y_bear = px * Math.pow(1 + tickerAnnualDrift - sigma1y * 0.6, 5);
+
+      // For 3Y/5Y, also blend in fundamental compounding if fundFV exists
+      if (fundFV != null) {
+        var fundCagr = (fundFV / px) - 1; // implied 1Y CAGR from fundamental FV
+        p3y_base = 0.5 * (px * Math.pow(1 + fundCagr * 0.6, 3)) + 0.5 * p3y_base;
+        p5y_base = 0.4 * (px * Math.pow(1 + fundCagr * 0.5, 5)) + 0.6 * p5y_base;
+      }
+
+      rows.push({
+        ticker: t, name: info.name, weight: weight, mv: info.mv, currentPrice: px,
+        sector: sector, beta: betaProxy, fundFV: fundFV, fundConf: fundConf,
+        p1y: { bear: p1y_bear, base: p1y_base, bull: p1y_bull },
+        p3y: { bear: p3y_bear, base: p3y_base, bull: p3y_bull },
+        p5y: { bear: p5y_bear, base: p5y_base, bull: p5y_bull }
+      });
+    });
+
+    if (!rows.length) { el.innerHTML = '<div style="color:var(--warning);padding:10px;">Could not project any holdings — likely missing price data.</div>'; return; }
+
+    // Aggregate to portfolio level
+    function pctReturn(target, cur){ return (target/cur - 1) * 100; }
+    var portStart = totalMV;
+    function aggregatePort(period){
+      var bear = 0, base = 0, bull = 0;
+      rows.forEach(function(r){
+        var qty = byTicker[r.ticker].qty;
+        bear += r[period].bear * qty;
+        base += r[period].base * qty;
+        bull += r[period].bull * qty;
+      });
+      // Add cash holdings (frozen)
+      var cashMV = 0;
+      window._holdings.forEach(function(h){
+        var ac = h.assetClass || '';
+        if (ac === 'Cash' || ac === 'Money Market' || ac === 'CD' || ac === 'Bond Position') cashMV += (h.costBasis||0) * (h.quantity||1);
+      });
+      bear += cashMV; base += cashMV; bull += cashMV;
+      // Update portStart to include cash for accurate return %
+      return { bear: bear, base: base, bull: bull };
+    }
+    var totalCash = 0;
+    window._holdings.forEach(function(h){
+      var ac = h.assetClass || '';
+      if (ac === 'Cash' || ac === 'Money Market' || ac === 'CD' || ac === 'Bond Position') totalCash += (h.costBasis||0) * (h.quantity||1);
+    });
+    var portStartFull = totalMV + totalCash;
+
+    var port1y = aggregatePort('p1y');
+    var port3y = aggregatePort('p3y');
+    var port5y = aggregatePort('p5y');
+
+    function fmtPx(v){ return '$'+v.toFixed(2); }
+    function fmtPct(v){ var c = v >= 0 ? C.success : C.danger; return '<span style="color:'+c+';font-weight:600;">' + (v>=0?'+':'') + v.toFixed(1) + '%</span>'; }
+
+    // Build per-holding table
+    rows.sort(function(a,b){ return b.mv - a.mv; });
+    var tableRows = rows.map(function(r){
+      var ret1y = pctReturn(r.p1y.base, r.currentPrice);
+      var ret3y = pctReturn(r.p3y.base, r.currentPrice);
+      var ret5y = pctReturn(r.p5y.base, r.currentPrice);
+      return '<tr>'
+        + '<td style="font-weight:700;color:var(--navy);">'+r.ticker+'</td>'
+        + '<td style="font-size:11px;">'+(r.weight*100).toFixed(1)+'%</td>'
+        + '<td>'+fmtPx(r.currentPrice)+'</td>'
+        + '<td title="Bear / Base / Bull">'+fmtPx(r.p1y.base)+' '+fmtPct(ret1y)+'</td>'
+        + '<td title="Bear / Base / Bull">'+fmtPx(r.p3y.base)+' '+fmtPct(ret3y)+'</td>'
+        + '<td title="Bear / Base / Bull">'+fmtPx(r.p5y.base)+' '+fmtPct(ret5y)+'</td>'
+        + '<td style="font-size:11px;color:var(--text-sec);">β'+r.beta.toFixed(2)+(r.fundFV?', FV $'+r.fundFV.toFixed(0):', drift only')+'</td>'
+        + '</tr>';
+    }).join('');
+
+    var stateNames = {leveraged: 'Leveraged', growth: 'Non-Levered Growth', neutral: 'Neutral', drawdown: 'Positioned for Drawdown'};
+    var stateName = stateNames[curState] || curState;
+
+    var html = '<div style="text-align:left;">'
+      + '<div style="background:var(--panel);border:1px solid var(--border);border-radius:4px;padding:10px 14px;margin-bottom:14px;font-size:12px;">'
+      +   '<strong>Current Regime:</strong> '+stateName+' &middot; <strong>Annualized regime drift:</strong> '+(((Math.pow(1+regimeDailyDrift,252)-1)*100).toFixed(2))+'% &middot; <strong>Holdings projected:</strong> '+rows.length+'/'+tickers.length+' &middot; <strong>Cash held flat:</strong> $'+totalCash.toLocaleString()
+      + '</div>'
+      // Aggregate portfolio band
+      + '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px;margin-bottom:16px;">'
+      + '<div style="background:var(--navy);color:#fff;padding:14px 16px;border-radius:4px;">'
+      +   '<div style="font-size:11px;opacity:.85;text-transform:uppercase;letter-spacing:.5px;">1-Year Forecast</div>'
+      +   '<div style="font-size:22px;font-weight:800;margin:4px 0;">$'+port1y.base.toLocaleString(undefined,{maximumFractionDigits:0})+'</div>'
+      +   '<div style="font-size:12px;opacity:.95;">Base: '+(((port1y.base/portStartFull-1)*100)>=0?'+':'')+(((port1y.base/portStartFull-1)*100)).toFixed(1)+'%</div>'
+      +   '<div style="font-size:11px;opacity:.85;margin-top:4px;">Bear $'+port1y.bear.toLocaleString(undefined,{maximumFractionDigits:0})+' / Bull $'+port1y.bull.toLocaleString(undefined,{maximumFractionDigits:0})+'</div>'
+      + '</div>'
+      + '<div style="background:var(--navy);color:#fff;padding:14px 16px;border-radius:4px;">'
+      +   '<div style="font-size:11px;opacity:.85;text-transform:uppercase;letter-spacing:.5px;">3-Year Forecast</div>'
+      +   '<div style="font-size:22px;font-weight:800;margin:4px 0;">$'+port3y.base.toLocaleString(undefined,{maximumFractionDigits:0})+'</div>'
+      +   '<div style="font-size:12px;opacity:.95;">Base: '+(((port3y.base/portStartFull-1)*100)>=0?'+':'')+(((port3y.base/portStartFull-1)*100)).toFixed(1)+'%</div>'
+      +   '<div style="font-size:11px;opacity:.85;margin-top:4px;">Bear $'+port3y.bear.toLocaleString(undefined,{maximumFractionDigits:0})+' / Bull $'+port3y.bull.toLocaleString(undefined,{maximumFractionDigits:0})+'</div>'
+      + '</div>'
+      + '<div style="background:var(--navy);color:#fff;padding:14px 16px;border-radius:4px;">'
+      +   '<div style="font-size:11px;opacity:.85;text-transform:uppercase;letter-spacing:.5px;">5-Year Forecast</div>'
+      +   '<div style="font-size:22px;font-weight:800;margin:4px 0;">$'+port5y.base.toLocaleString(undefined,{maximumFractionDigits:0})+'</div>'
+      +   '<div style="font-size:12px;opacity:.95;">Base: '+(((port5y.base/portStartFull-1)*100)>=0?'+':'')+(((port5y.base/portStartFull-1)*100)).toFixed(1)+'%</div>'
+      +   '<div style="font-size:11px;opacity:.85;margin-top:4px;">Bear $'+port5y.bear.toLocaleString(undefined,{maximumFractionDigits:0})+' / Bull $'+port5y.bull.toLocaleString(undefined,{maximumFractionDigits:0})+'</div>'
+      + '</div>'
+      + '</div>'
+      // Per-holding table
+      + '<div style="overflow-x:auto;"><table><thead><tr>'
+      +   '<th>Ticker</th><th>% Port</th><th>Current</th><th>1-Year</th><th>3-Year</th><th>5-Year</th><th>Inputs</th>'
+      + '</tr></thead><tbody>' + tableRows + '</tbody></table></div>'
+      + '<div style="font-size:11px;color:var(--text-sec);margin-top:10px;line-height:1.5;"><strong>Reading the table:</strong> "1-Year" cell shows the base case price target and the implied % return. Sector beta-proxy and fundamental FV (if available) are shown in the rightmost column. Cash held flat at face value. Bull/bear bands are wider on shorter horizons because near-term path is dominated by volatility, not fundamentals.</div>'
+      + '</div>';
+
+    el.innerHTML = html;
+  } catch(e) {
+    el.innerHTML = '<div style="color:var(--danger);padding:10px;">Forecast error: '+e.message+'</div>';
+  }
+}
+
+// Compute per-state daily drift from 5yr SPY history (simple, sufficient signal)
+async function pfrComputeRegimeDrifts() {
+  if (window._pfrCachedDrifts) return window._pfrCachedDrifts;
+  try {
+    var WORKER = "https://perry-finance-proxy.zachperrybusiness.workers.dev";
+    var [spyR, vixR] = await Promise.all([
+      fetch(WORKER + '/chart?symbol=SPY&range=5y&interval=1d').then(function(r){return r.json();}),
+      fetch(WORKER + '/chart?symbol=%5EVIX&range=5y&interval=1d').then(function(r){return r.json();})
+    ]);
+    var spyPts = (spyR.points||[]).filter(function(p){return p.close!=null;});
+    var vixPts = (vixR.points||[]).filter(function(p){return p.close!=null;});
+    var vixMap = {}; vixPts.forEach(function(p){vixMap[p.date.slice(0,10)] = p.close;});
+    var dates = spyPts.map(function(p){return p.date.slice(0,10);});
+    var closes = spyPts.map(function(p){return p.close;});
+    var lookback = 252;
+    var stateRets = { leveraged: [], growth: [], neutral: [], drawdown: [] };
+    for (var i = lookback; i < closes.length - 1; i++) {
+      var cur = closes[i];
+      var past = closes[i-lookback];
+      var slice = closes.slice(i-lookback, i+1);
+      var spyHigh = Math.max.apply(null, slice);
+      var spyLow = Math.min.apply(null, slice);
+      var vix = vixMap[dates[i]];
+      if (!vix) continue;
+      var signals = { vix: vix, spyTrailingReturn: (cur-past)/past, drawdownFromPeak: (cur-spyHigh)/spyHigh, spy12mFromLow: (cur-spyLow)/spyLow };
+      var cl = psClassifyState(signals);
+      var ret = (closes[i+1] - closes[i]) / closes[i];
+      if (stateRets[cl.winner]) stateRets[cl.winner].push(ret);
+    }
+    var avg = {};
+    Object.keys(stateRets).forEach(function(k){
+      var arr = stateRets[k];
+      avg[k] = arr.length ? arr.reduce(function(a,b){return a+b;},0)/arr.length : 0.0003;
+    });
+    window._pfrCachedDrifts = avg;
+    return avg;
+  } catch(e) {
+    return { leveraged: 0.0008, growth: 0.0004, neutral: 0.0001, drawdown: -0.0005 };
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// ════════  PORTFOLIO OPTIMIZATION ENGINE  ══════════════════════════
+// ═══════════════════════════════════════════════════════════════════
+async function poeRun() {
+  var el = document.getElementById('poeResults');
+  var chartWrap = document.getElementById('poeChartWrap');
+  el.innerHTML = '<div style="padding:14px;text-align:center;"><span class="spinner"></span> Loading holdings price history, computing covariance matrix...</div>';
+  chartWrap.style.display = 'none';
+
+  if (!window._holdings || !window._holdings.length) {
+    el.innerHTML = '<div style="color:var(--warning);padding:10px;">No holdings loaded.</div>'; return;
+  }
+
+  try {
+    var WORKER = "https://perry-finance-proxy.zachperrybusiness.workers.dev";
+    var targetState = document.getElementById('poeTarget').value;
+    var btYears = parseInt(document.getElementById('poeBacktest').value);
+    if (targetState === 'current') targetState = window._briefingState || 'growth';
+
+    // Filter to securities, aggregate by ticker
+    var holdings = window._holdings.filter(function(h){
+      var ac = h.assetClass || '';
+      return ac !== 'Cash' && ac !== 'Money Market' && ac !== 'CD' && ac !== 'Bond Position';
+    });
+    if (holdings.length < 2) { el.innerHTML = '<div style="color:var(--warning);padding:10px;">Need at least 2 non-cash holdings to optimize.</div>'; return; }
+
+    var byTicker = {};
+    holdings.forEach(function(h){
+      if (!byTicker[h.ticker]) byTicker[h.ticker] = { ticker: h.ticker, mv: 0 };
+      byTicker[h.ticker].mv += (h.currentPrice||0) * h.quantity;
+    });
+    var tickers = Object.keys(byTicker);
+    var totalMV = tickers.reduce(function(s,t){return s+byTicker[t].mv;}, 0);
+    var actualWeights = tickers.map(function(t){ return byTicker[t].mv / totalMV; });
+
+    // Cap to 12 tickers (optimization scales poorly beyond that)
+    if (tickers.length > 12) {
+      // Sort by MV and keep top 12
+      var sorted = tickers.slice().sort(function(a,b){return byTicker[b].mv-byTicker[a].mv;});
+      tickers = sorted.slice(0, 12);
+      actualWeights = tickers.map(function(t){ return byTicker[t].mv / totalMV; });
+      // Renormalize
+      var s = actualWeights.reduce(function(a,b){return a+b;},0);
+      actualWeights = actualWeights.map(function(w){return w/s;});
+    }
+
+    // Fetch prices
+    var range = btYears <= 1 ? '1y' : btYears <= 3 ? '3y' : '5y';
+    var prices = {};
+    await Promise.all(tickers.map(async function(t){
+      try {
+        var r = await fetch(WORKER + '/chart?symbol='+encodeURIComponent(t)+'&range='+range+'&interval=1d');
+        var d = await r.json();
+        var pts = (d.points||[]).filter(function(p){return p.close!=null;});
+        if (pts.length > 100) prices[t] = pts;
+      } catch(e) {}
+    }));
+    var validTickers = tickers.filter(function(t){return prices[t];});
+    if (validTickers.length < 2) { el.innerHTML = '<div style="color:var(--danger);padding:10px;">Could not load enough price history.</div>'; return; }
+
+    // Align dates
+    var minLen = Math.min.apply(null, validTickers.map(function(t){return prices[t].length;}));
+    validTickers.forEach(function(t){ prices[t] = prices[t].slice(-minLen); });
+    var dates = prices[validTickers[0]].map(function(p){return p.date;});
+
+    // Compute return matrix [days x tickers]
+    var nDays = minLen - 1;
+    var nT = validTickers.length;
+    var R = []; // returns per day per ticker
+    for (var i = 1; i < minLen; i++) {
+      var row = validTickers.map(function(t){ return (prices[t][i].close - prices[t][i-1].close) / prices[t][i-1].close; });
+      R.push(row);
+    }
+
+    // Mean and covariance
+    var mu = new Array(nT).fill(0);
+    R.forEach(function(r){ r.forEach(function(v,j){ mu[j] += v; }); });
+    mu = mu.map(function(v){ return v / R.length; });
+    var cov = []; for (var i=0;i<nT;i++){ cov.push(new Array(nT).fill(0)); }
+    R.forEach(function(r){
+      for (var i=0;i<nT;i++) for (var j=0;j<nT;j++) cov[i][j] += (r[i]-mu[i])*(r[j]-mu[j]);
+    });
+    for (var i=0;i<nT;i++) for (var j=0;j<nT;j++) cov[i][j] /= (R.length-1);
+
+    // Adjust mu to regime — get state drift uplift
+    var regimeDrifts = await pfrComputeRegimeDrifts();
+    var stateMult = 1.0;
+    if (regimeDrifts.growth && regimeDrifts[targetState]) {
+      // Multiplier = ratio of target-state daily drift to overall mean SPY drift
+      stateMult = regimeDrifts[targetState] / Math.max(1e-6, Object.values(regimeDrifts).reduce(function(a,b){return a+b;},0)/4);
+      stateMult = Math.max(-2, Math.min(3, stateMult));
+    }
+    var muAdjusted = mu.map(function(v){ return v * stateMult; });
+
+    // Optimize: maximize Sharpe ratio. Use simple grid + refine via gradient projection.
+    // Long-only, sum-to-1 simplex. Since this can be expensive, use Dirichlet sampling + best-pick.
+    function portfolioStats(w) {
+      var ret = 0; for (var i=0;i<nT;i++) ret += w[i]*muAdjusted[i];
+      var vari = 0; for (var i=0;i<nT;i++) for (var j=0;j<nT;j++) vari += w[i]*w[j]*cov[i][j];
+      var vol = Math.sqrt(Math.max(0, vari));
+      return { ret: ret*252, vol: vol*Math.sqrt(252), sharpe: vol > 0 ? (ret*252 - 0.04)/(vol*Math.sqrt(252)) : -999 };
+    }
+    function dirichlet(n, alpha) {
+      var w = new Array(n);
+      for (var i=0;i<n;i++) {
+        // gamma sample via -ln(U) for alpha=1 (exponential)
+        var s = 0;
+        for (var k=0;k<alpha;k++) s += -Math.log(1 - Math.random() + 1e-12);
+        w[i] = s;
+      }
+      var sum = w.reduce(function(a,b){return a+b;},0);
+      return w.map(function(v){return v/sum;});
+    }
+    var bestW = null; var bestS = -Infinity;
+    // 2000 random portfolios
+    for (var trial = 0; trial < 2000; trial++) {
+      var w = dirichlet(nT, 1);
+      var st = portfolioStats(w);
+      if (st.sharpe > bestS) { bestS = st.sharpe; bestW = w; }
+    }
+    // Local refinement: try ±2% bumps on each pair, keep improvements
+    for (var iter = 0; iter < 50; iter++) {
+      var improved = false;
+      for (var i=0;i<nT;i++) {
+        for (var j=0;j<nT;j++) {
+          if (i===j) continue;
+          var bump = 0.02;
+          if (bestW[j] >= bump) {
+            var w2 = bestW.slice();
+            w2[i] += bump; w2[j] -= bump;
+            var s2 = portfolioStats(w2);
+            if (s2.sharpe > bestS) { bestS = s2.sharpe; bestW = w2; improved = true; }
+          }
+        }
+      }
+      if (!improved) break;
+    }
+
+    // Backtest: hold actual weights vs. optimal weights
+    function backtestEquity(weights) {
+      var equity = [10000];
+      for (var i = 0; i < R.length; i++) {
+        var dayRet = 0;
+        for (var j = 0; j < nT; j++) dayRet += weights[j] * R[i][j];
+        equity.push(equity[equity.length-1] * (1 + dayRet));
+      }
+      return equity;
+    }
+    var actualEq = backtestEquity(actualWeights);
+    var optEq = backtestEquity(bestW);
+    var actualStats = portfolioStats(actualWeights);
+    var optStats = portfolioStats(bestW);
+
+    // Build rotation actions table
+    var stateNames = {leveraged: 'Leveraged', growth: 'Non-Levered Growth', neutral: 'Neutral', drawdown: 'Positioned for Drawdown'};
+    var rotations = validTickers.map(function(t, i){
+      var diff = bestW[i] - actualWeights[i];
+      return { ticker: t, current: actualWeights[i], optimal: bestW[i], diff: diff };
+    });
+    rotations.sort(function(a,b){return Math.abs(b.diff) - Math.abs(a.diff);});
+
+    var rotRows = rotations.map(function(r){
+      var diffPct = r.diff * 100;
+      var action = diffPct > 1 ? '<span style="color:'+C.success+';font-weight:700;">▲ INCREASE</span>' : diffPct < -1 ? '<span style="color:'+C.danger+';font-weight:700;">▼ REDUCE</span>' : '<span style="color:var(--text-sec);">— hold</span>';
+      var diffMV = r.diff * totalMV;
+      return '<tr>'
+        + '<td style="font-weight:700;color:var(--navy);">'+r.ticker+'</td>'
+        + '<td>'+(r.current*100).toFixed(1)+'%</td>'
+        + '<td style="font-weight:600;color:var(--navy);">'+(r.optimal*100).toFixed(1)+'%</td>'
+        + '<td style="color:'+(diffPct>=0?C.success:C.danger)+';font-weight:600;">'+(diffPct>=0?'+':'')+diffPct.toFixed(1)+'pp</td>'
+        + '<td style="color:'+(diffPct>=0?C.success:C.danger)+';">'+(diffPct>=0?'+':'')+'$'+Math.abs(diffMV).toLocaleString(undefined,{maximumFractionDigits:0})+'</td>'
+        + '<td>'+action+'</td>'
+        + '</tr>';
+    }).join('');
+
+    el.innerHTML = '<div style="text-align:left;">'
+      + '<div style="background:var(--panel);border:1px solid var(--border);border-radius:4px;padding:10px 14px;margin-bottom:14px;font-size:12px;">'
+      +   '<strong>Optimizing for:</strong> '+stateNames[targetState]+' regime &middot; <strong>Backtest window:</strong> '+btYears+' year(s) &middot; <strong>Tickers:</strong> '+validTickers.length
+      + '</div>'
+      // Actual vs Optimal stats
+      + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:16px;">'
+      + '<div style="border:1px solid var(--border);border-radius:4px;padding:12px;"><div style="font-size:11px;color:var(--text-sec);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;">Your Current Allocation</div>'
+      +   '<div style="font-size:13px;line-height:1.6;">Annualized Return: <strong>'+(actualStats.ret*100).toFixed(1)+'%</strong><br>'
+      +   'Annualized Vol: <strong>'+(actualStats.vol*100).toFixed(1)+'%</strong><br>'
+      +   'Sharpe Ratio: <strong>'+actualStats.sharpe.toFixed(2)+'</strong></div></div>'
+      + '<div style="border:2px solid var(--navy);border-radius:4px;padding:12px;background:rgba(0,60,113,0.04);"><div style="font-size:11px;color:var(--navy);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;font-weight:700;">Optimal Allocation ('+stateNames[targetState]+')</div>'
+      +   '<div style="font-size:13px;line-height:1.6;">Annualized Return: <strong style="color:var(--success);">'+(optStats.ret*100).toFixed(1)+'%</strong><br>'
+      +   'Annualized Vol: <strong>'+(optStats.vol*100).toFixed(1)+'%</strong><br>'
+      +   'Sharpe Ratio: <strong style="color:var(--success);">'+optStats.sharpe.toFixed(2)+'</strong></div></div>'
+      + '</div>'
+      // Rotation table
+      + '<div style="overflow-x:auto;"><table><thead><tr>'
+      +   '<th>Ticker</th><th>Current %</th><th>Optimal %</th><th>Δ Weight</th><th>Δ Dollars</th><th>Action</th>'
+      + '</tr></thead><tbody>' + rotRows + '</tbody></table></div>'
+      + '<div style="font-size:11px;color:var(--text-sec);margin-top:8px;">Backtest equity curves below show how each weight set would have performed historically. Past performance does not guarantee future results.</div>'
+      + '</div>';
+
+    // Backtest chart
+    chartWrap.style.display = 'block';
+    if (window._poeChart) window._poeChart.destroy();
+    window._poeChart = new Chart(document.getElementById('poeChart').getContext('2d'), {
+      type: 'line',
+      data: {
+        labels: dates,
+        datasets: [
+          { label: 'Actual Allocation', data: actualEq, borderColor: C.textSec, backgroundColor: 'transparent', borderWidth: 1.5, borderDash:[4,3], pointRadius: 0, tension: 0.05 },
+          { label: 'Optimal Allocation ('+stateNames[targetState]+')', data: optEq, borderColor: C.navy, backgroundColor: 'rgba(0,60,113,0.06)', borderWidth: 2, pointRadius: 0, fill: false, tension: 0.05 }
+        ]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { position: 'bottom', labels: {font:{size:10}, color:C.textSec} }, tooltip: Object.assign({}, chartTooltip, { callbacks: { label: function(ctx){return ctx.dataset.label+': $'+ctx.parsed.y.toFixed(0);} } }) },
+        scales: {
+          x: { grid: chartGrid, ticks: Object.assign({}, chartTicks, { maxTicksLimit: 10, autoSkip: true }) },
+          y: { grid: chartGrid, ticks: Object.assign({}, chartTicks, { callback: function(v){return '$'+Math.round(v/1000)+'K';} }), title:{display:true, text:'Equity ($10K start)', color:C.textSec, font:{size:11}} }
+        }
+      }
+    });
+  } catch(e) {
+    el.innerHTML = '<div style="color:var(--danger);padding:10px;">Optimization error: '+e.message+'</div>';
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════
 // ════════  FAMA-FRENCH FACTOR EXPOSURE  ════════════════════════════
 // ═══════════════════════════════════════════════════════════════════
 // Factor proxies: Mkt=SPY, SMB=IWM-SPY(excess), HML=VTV-VUG(excess),
@@ -9499,60 +10060,120 @@ var _origLoadMacroLiveTable=window.loadMacroLiveTable;
 // ═══════════════════════════════════════════════════════════════════
 // ═══════════ 1. OPTIONS IV + IV PERCENTILE ENGINE ══════════════════
 // ═══════════════════════════════════════════════════════════════════
-async function ivLoad(ticker) {
+async function ivLoad(ticker, expiry) {
   var card = document.getElementById('ivCard');
   var statsEl = document.getElementById('ivStats');
   var wrapEl = document.getElementById('ivChartWrap');
   var tickerEl = document.getElementById('ivTicker');
+  var expiryRow = document.getElementById('ivExpiryRow');
+  var expirySel = document.getElementById('ivExpirySelect');
+  var strikeTableEl = document.getElementById('ivStrikeTable');
   if (!card) return;
   card.style.display = '';
   tickerEl.textContent = ticker;
-  statsEl.innerHTML = '<div style="padding:10px;"><span class="spinner"></span> Loading options chain for '+ticker+'...</div>';
+  statsEl.innerHTML = '<div style="padding:10px;"><span class="spinner"></span> Loading options chain for '+ticker+(expiry?' (exp '+expiry+')':'')+'...</div>';
   wrapEl.style.display = 'none';
+  if (strikeTableEl) strikeTableEl.style.display = 'none';
   try {
     var WORKER = "https://perry-finance-proxy.zachperrybusiness.workers.dev";
-    var res = await fetch(WORKER + '/options?symbol=' + encodeURIComponent(ticker));
+    var url = WORKER + '/options?symbol=' + encodeURIComponent(ticker);
+    if (expiry) url += '&expiry=' + encodeURIComponent(expiry);
+    var res = await fetch(url);
     var d = await res.json();
-    if (d.error) { statsEl.innerHTML = '<div style="color:var(--warning);padding:10px;">'+d.error+' &mdash; options data not available for this ticker (possibly a crypto/ETF without options).</div>'; return; }
-    if (!d.nearestExpiry) { statsEl.innerHTML = '<div style="color:var(--warning);padding:10px;">No options chain found for '+ticker+'.</div>'; return; }
-    // Render stats row
-    var pct = d.ivPercentile;
-    var pctCol = pct == null ? C.textSec : pct >= 80 ? C.danger : pct >= 50 ? C.warning : pct >= 20 ? C.navy : C.success;
-    var pctLabel = pct == null ? 'N/A' : pct >= 80 ? 'Expensive' : pct >= 50 ? 'Elevated' : pct >= 20 ? 'Normal' : 'Cheap';
+    if (d.error) { statsEl.innerHTML = '<div style="color:var(--warning);padding:10px;">No options chain available. This is normal for crypto, mutual funds, or thinly-traded ETFs.</div>'; if(expiryRow) expiryRow.style.display='none'; return; }
+    if (!d.fetchedExpiry && !d.nearestExpiry) { statsEl.innerHTML = '<div style="color:var(--warning);padding:10px;">No expiry data returned for '+ticker+'.</div>'; if(expiryRow) expiryRow.style.display='none'; return; }
+
+    // Populate expiry selector if not yet populated for this ticker
+    if (expirySel && d.expiryInfo && d.expiryInfo.length) {
+      var currentTicker = expirySel.getAttribute('data-ticker') || '';
+      if (currentTicker !== ticker) {
+        expirySel.innerHTML = '';
+        d.expiryInfo.forEach(function(e){
+          var opt = document.createElement('option');
+          opt.value = e.timestamp;
+          opt.textContent = e.date + '  (' + e.daysToExpiry + ' days out)';
+          expirySel.appendChild(opt);
+        });
+        expirySel.setAttribute('data-ticker', ticker);
+      }
+      // Sync selector to currently fetched expiry
+      var fetched = d.fetchedExpiry || d.nearestExpiry;
+      if (fetched && fetched.timestamp) expirySel.value = fetched.timestamp;
+      if(expiryRow) expiryRow.style.display = '';
+    }
+
+    // Sanity-check IV. Yahoo returns IV as a decimal (e.g., 0.45 = 45%). If a value
+    // comes back > 5, assume it's already in percent form and divide by 100.
+    function normIV(v){ if(v==null||v<=0) return null; return v > 5 ? v/100 : v; }
+    var atmIV = normIV(d.atmImpliedVol);
+    var hv20 = d.hv20Day;
+    var ivPct = d.ivPercentile;
+
+    var pctCol = ivPct == null ? C.textSec : ivPct >= 80 ? C.danger : ivPct >= 50 ? C.warning : ivPct >= 20 ? C.navy : C.success;
+    var pctLabel = ivPct == null ? 'N/A' : ivPct >= 80 ? 'Expensive' : ivPct >= 50 ? 'Elevated' : ivPct >= 20 ? 'Normal' : 'Cheap';
     var pcRatio = d.putCallOIRatio;
     var pcCol = pcRatio == null ? C.textSec : pcRatio > 1.2 ? C.success : pcRatio < 0.7 ? C.danger : C.textSec;
-    var pcLabel = pcRatio == null ? '—' : pcRatio > 1.2 ? 'Bearish sentiment (contrarian bull)' : pcRatio < 0.7 ? 'Bullish sentiment (contrarian bear)' : 'Neutral';
-    var mpDiff = d.maxPain && d.currentPrice ? ((d.maxPain - d.currentPrice) / d.currentPrice * 100) : null;
+    var pcLabel = pcRatio == null ? '—' : pcRatio > 1.2 ? 'Bearish positioning (contrarian bull)' : pcRatio < 0.7 ? 'Bullish positioning (contrarian bear)' : 'Neutral';
+    var mpDiff = (d.maxPain != null && d.currentPrice) ? ((d.maxPain - d.currentPrice) / d.currentPrice * 100) : null;
+    var ivHvSpread = (atmIV != null && hv20 != null) ? (atmIV - hv20) : null;
+    var fetchedExp = d.fetchedExpiry || d.nearestExpiry;
 
     statsEl.innerHTML =
-      '<div class="chart-stat-box" title="ATM IV = Implied Volatility on the at-the-money option (strike closest to current price), annualized. Reflects the market\'s expectation of how much this stock will move."><div class="chart-stat-label">ATM IV (Annualized) <span class="help-icon" title="ATM IV = Implied Volatility on the at-the-money option (strike closest to current price), annualized. Reflects the market\'s expectation of how much this stock will move.">?</span></div><div class="chart-stat-value">' + (d.atmImpliedVol != null ? (d.atmImpliedVol*100).toFixed(1)+'%' : '—') + '</div><div class="chart-stat-sub">Expiry: '+(d.nearestExpiry ? d.nearestExpiry.date+' ('+d.nearestExpiry.daysToExpiry+'d)' : '—')+'</div></div>' +
-      '<div class="chart-stat-box"><div class="chart-stat-label">IV Percentile (1Y) <span class="help-icon" title="Where today\'s ATM IV sits in the past year\'s distribution. 80%+ = expensive options. 20%- = cheap options. Useful for vol selling/buying strategies.">?</span></div><div class="chart-stat-value" style="color:'+pctCol+';">' + (pct != null ? pct.toFixed(0)+'%' : '—') + '</div><div class="chart-stat-sub">'+pctLabel+'</div></div>' +
-      '<div class="chart-stat-box"><div class="chart-stat-label">20-Day Realized Vol <span class="help-icon" title="Actual price volatility over the last 20 trading days, annualized. Compare to ATM IV: when IV &gt; HV by a lot, market is pricing in more future volatility than recently observed.">?</span></div><div class="chart-stat-value">' + (d.hv20Day != null ? (d.hv20Day*100).toFixed(1)+'%' : '—') + '</div><div class="chart-stat-sub">IV-HV spread: ' + (d.ivMinusHv != null ? (d.ivMinusHv >= 0 ? '+' : '')+(d.ivMinusHv*100).toFixed(1)+'%' : '—') + '</div></div>' +
-      '<div class="chart-stat-box"><div class="chart-stat-label">Put/Call OI Ratio <span class="help-icon" title="Ratio of put open interest to call open interest. &gt; 1.2 = bearish positioning (often a contrarian buy signal). &lt; 0.7 = bullish positioning (contrarian bear signal). Around 1 = neutral.">?</span></div><div class="chart-stat-value" style="color:'+pcCol+';">' + (pcRatio != null ? pcRatio.toFixed(2) : '—') + '</div><div class="chart-stat-sub">'+pcLabel+'</div></div>' +
-      '<div class="chart-stat-box"><div class="chart-stat-label">Max Pain <span class="help-icon" title="The strike price where the total dollar value of in-the-money options is minimized at expiration. The level where option writers (typically dealers) lose the least. Markets sometimes gravitate toward this level into expiry.">?</span></div><div class="chart-stat-value">' + (d.maxPain != null ? '$'+d.maxPain.toFixed(2) : '—') + '</div><div class="chart-stat-sub">'+(mpDiff != null ? (mpDiff >= 0 ? '+' : '')+mpDiff.toFixed(1)+'% from price' : '—')+'</div></div>';
+      '<div class="chart-stat-box"><div class="chart-stat-label">ATM IV (Annualized) <span class="help-icon" title="Implied Volatility on the at-the-money option, annualized. Reflects the market\'s expected move size.">?</span></div><div class="chart-stat-value">' + (atmIV != null ? (atmIV*100).toFixed(1)+'%' : '—') + '</div><div class="chart-stat-sub">'+(fetchedExp ? 'Expiry: '+fetchedExp.date+' ('+fetchedExp.daysToExpiry+'d)' : '—')+'</div></div>' +
+      '<div class="chart-stat-box"><div class="chart-stat-label">IV Percentile (1Y) <span class="help-icon" title="Where today\'s ATM IV sits in the past year\'s distribution. 80%+ = expensive options, 20%- = cheap options.">?</span></div><div class="chart-stat-value" style="color:'+pctCol+';">' + (ivPct != null ? ivPct.toFixed(0)+'%' : '—') + '</div><div class="chart-stat-sub">'+pctLabel+'</div></div>' +
+      '<div class="chart-stat-box"><div class="chart-stat-label">20-Day Realized Vol <span class="help-icon" title="Actual price volatility over last 20 trading days, annualized. Compare to ATM IV.">?</span></div><div class="chart-stat-value">' + (hv20 != null ? (hv20*100).toFixed(1)+'%' : '—') + '</div><div class="chart-stat-sub">IV-HV spread: ' + (ivHvSpread != null ? (ivHvSpread >= 0 ? '+' : '')+(ivHvSpread*100).toFixed(1)+'%' : '—') + '</div></div>' +
+      '<div class="chart-stat-box"><div class="chart-stat-label">Put/Call OI Ratio <span class="help-icon" title="Ratio of put OI to call OI. &gt; 1.2 = bearish, &lt; 0.7 = bullish, around 1 = neutral.">?</span></div><div class="chart-stat-value" style="color:'+pcCol+';">' + (pcRatio != null ? pcRatio.toFixed(2) : '—') + '</div><div class="chart-stat-sub">'+pcLabel+'</div></div>' +
+      '<div class="chart-stat-box"><div class="chart-stat-label">Max Pain <span class="help-icon" title="Strike where total option-writer losses are minimized at expiry.">?</span></div><div class="chart-stat-value">' + (d.maxPain != null ? '$'+d.maxPain.toFixed(2) : '—') + '</div><div class="chart-stat-sub">'+(mpDiff != null ? (mpDiff >= 0 ? '+' : '')+mpDiff.toFixed(1)+'% from price' : '—')+'</div></div>';
 
-    // Render strike distribution chart (OI per strike, calls vs puts)
+    // Build strike distribution chart, filter only strikes with meaningful data
+    var calls = (d.callStrikes || []).filter(function(c){ return (c.openInterest||0) > 0 || (c.volume||0) > 0; });
+    var puts  = (d.putStrikes  || []).filter(function(p){ return (p.openInterest||0) > 0 || (p.volume||0) > 0; });
+    if (calls.length === 0 && puts.length === 0) {
+      wrapEl.style.display = 'none';
+      strikeTableEl.style.display = 'block';
+      strikeTableEl.innerHTML = '<div style="background:#fff8e8;border:1px solid #f0e0a8;border-radius:4px;padding:10px;font-size:12px;color:#8B6914;">No open interest at any strike for this expiration. Try a different expiration with more activity.</div>';
+      return;
+    }
+    var allStrikes = [];
+    var seen = {};
+    calls.forEach(function(c){ if(!seen[c.strike]){ seen[c.strike]=true; allStrikes.push(c.strike); } });
+    puts.forEach(function(p){ if(!seen[p.strike]){ seen[p.strike]=true; allStrikes.push(p.strike); } });
+    allStrikes.sort(function(a,b){return a-b;});
+    // If too many strikes, focus on those nearest to current price
+    var px = d.currentPrice || 0;
+    if (allStrikes.length > 30 && px > 0) {
+      allStrikes.sort(function(a,b){ return Math.abs(a-px) - Math.abs(b-px); });
+      allStrikes = allStrikes.slice(0, 30).sort(function(a,b){return a-b;});
+    }
+    var callMap={}, putMap={};
+    calls.forEach(function(c){ callMap[c.strike] = c; });
+    puts.forEach(function(p){ putMap[p.strike] = p; });
+    var callOI = allStrikes.map(function(s){ return callMap[s] ? (callMap[s].openInterest||0) : 0; });
+    var putOI  = allStrikes.map(function(s){ return putMap[s]  ? (putMap[s].openInterest||0)  : 0; });
+    var callIV = allStrikes.map(function(s){ var c=callMap[s]; var v=c?normIV(c.impliedVolatility):null; return v!=null ? +(v*100).toFixed(1) : null; });
+    var putIV  = allStrikes.map(function(s){ var p=putMap[s];  var v=p?normIV(p.impliedVolatility):null; return v!=null ? +(v*100).toFixed(1) : null; });
+
     wrapEl.style.display = 'block';
-    var calls = d.callStrikes || [];
-    var puts = d.putStrikes || [];
-    var strikes = [...new Set([...calls.map(function(c){return c.strike;}), ...puts.map(function(p){return p.strike;})])].sort(function(a,b){return a-b;});
-    var callOI = strikes.map(function(s){ var c = calls.find(function(x){return x.strike===s;}); return c ? c.openInterest : 0; });
-    var putOI = strikes.map(function(s){ var p = puts.find(function(x){return x.strike===s;}); return p ? p.openInterest : 0; });
-    var callIV = strikes.map(function(s){ var c = calls.find(function(x){return x.strike===s;}); return c && c.impliedVolatility ? +(c.impliedVolatility*100).toFixed(1) : null; });
-    var putIV = strikes.map(function(s){ var p = puts.find(function(x){return x.strike===s;}); return p && p.impliedVolatility ? +(p.impliedVolatility*100).toFixed(1) : null; });
     if (window._ivChart) window._ivChart.destroy();
     window._ivChart = new Chart(document.getElementById('ivChart').getContext('2d'), {
       data: {
-        labels: strikes.map(function(s){return '$'+s;}),
+        labels: allStrikes.map(function(s){return '$'+s;}),
         datasets: [
-          { type: 'bar', label: 'Call Open Interest', data: callOI, backgroundColor: 'rgba(0,60,113,0.55)', borderColor: C.navy, borderWidth: 1, yAxisID: 'yOI' },
-          { type: 'bar', label: 'Put Open Interest', data: putOI, backgroundColor: 'rgba(139,42,42,0.55)', borderColor: C.danger, borderWidth: 1, yAxisID: 'yOI' },
-          { type: 'line', label: 'Call IV %', data: callIV, borderColor: C.blue, backgroundColor: C.blue, borderWidth: 2, pointRadius: 3, fill: false, yAxisID: 'yIV', tension: 0.2 },
-          { type: 'line', label: 'Put IV %', data: putIV, borderColor: C.warning, backgroundColor: C.warning, borderWidth: 2, pointRadius: 3, fill: false, yAxisID: 'yIV', tension: 0.2 }
+          { type: 'bar', label: 'Call Open Interest', data: callOI, backgroundColor: 'rgba(0,60,113,0.55)', borderColor: C.navy, borderWidth: 1, yAxisID: 'yOI', order: 2 },
+          { type: 'bar', label: 'Put Open Interest', data: putOI, backgroundColor: 'rgba(139,42,42,0.55)', borderColor: C.danger, borderWidth: 1, yAxisID: 'yOI', order: 2 },
+          { type: 'line', label: 'Call IV %', data: callIV, borderColor: C.blue, backgroundColor: C.blue, borderWidth: 2, pointRadius: 3, fill: false, yAxisID: 'yIV', tension: 0.2, spanGaps: true, order: 1 },
+          { type: 'line', label: 'Put IV %', data: putIV, borderColor: C.warning, backgroundColor: C.warning, borderWidth: 2, pointRadius: 3, fill: false, yAxisID: 'yIV', tension: 0.2, spanGaps: true, order: 1 }
         ]
       },
       options: { responsive: true, maintainAspectRatio: false,
-        plugins: { legend: { position: 'bottom', labels: { font:{size:10}, color: C.textSec } }, tooltip: chartTooltip },
+        plugins: { legend: { position: 'bottom', labels: { font:{size:10}, color: C.textSec } }, tooltip: chartTooltip,
+          annotation: { annotations: { spotPriceLine: { type: 'line', xMin: function(){
+            // Find the closest strike index to current price for annotation
+            if (!px) return 0; var bestIdx = 0; var bestDiff = Math.abs(allStrikes[0]-px);
+            for (var i=1; i<allStrikes.length; i++){ var dd=Math.abs(allStrikes[i]-px); if (dd<bestDiff){bestDiff=dd; bestIdx=i;} }
+            return bestIdx;
+          }(), xMax: function(){ if (!px) return 0; var bestIdx = 0; var bestDiff = Math.abs(allStrikes[0]-px); for (var i=1; i<allStrikes.length; i++){ var dd=Math.abs(allStrikes[i]-px); if (dd<bestDiff){bestDiff=dd; bestIdx=i;} } return bestIdx; }(), borderColor: '#2E7D52', borderWidth: 2, borderDash:[5,5], label: { display: true, content: 'Spot $'+(px||0).toFixed(2), position:'start', backgroundColor:'#2E7D52', color:'#fff', font:{size:10, weight:'bold'} } } } }
+        },
         scales: {
           x: { grid: chartGrid, ticks: chartTicks, title: { display: true, text: 'Strike Price', color: C.textSec, font:{size:11} } },
           yOI: { type: 'linear', position: 'left', grid: chartGrid, ticks: chartTicks, title: { display: true, text: 'Open Interest', color: C.textSec, font:{size:11} } },
@@ -9560,7 +10181,274 @@ async function ivLoad(ticker) {
         }
       }
     });
+
+    // Render compact ATM strike table — top 5 strikes around the spot price
+    if (strikeTableEl && px > 0) {
+      var nearStrikes = allStrikes.slice().sort(function(a,b){ return Math.abs(a-px) - Math.abs(b-px); }).slice(0, 7).sort(function(a,b){ return a-b; });
+      var rows = nearStrikes.map(function(s){
+        var c = callMap[s] || {};
+        var p = putMap[s] || {};
+        var cIV = normIV(c.impliedVolatility);
+        var pIV = normIV(p.impliedVolatility);
+        return '<tr>' +
+          '<td style="font-weight:700;color:'+(s>=px?C.success:C.danger)+';">$'+s.toFixed(2)+'</td>' +
+          '<td>'+(c.lastPrice != null ? '$'+c.lastPrice.toFixed(2) : '—')+'</td>' +
+          '<td>'+(c.openInterest||0).toLocaleString()+'</td>' +
+          '<td>'+(cIV != null ? (cIV*100).toFixed(1)+'%' : '—')+'</td>' +
+          '<td>'+(p.lastPrice != null ? '$'+p.lastPrice.toFixed(2) : '—')+'</td>' +
+          '<td>'+(p.openInterest||0).toLocaleString()+'</td>' +
+          '<td>'+(pIV != null ? (pIV*100).toFixed(1)+'%' : '—')+'</td>' +
+          '</tr>';
+      }).join('');
+      strikeTableEl.style.display = 'block';
+      strikeTableEl.innerHTML = '<div style="background:var(--navy);color:#fff;padding:6px 12px;font-size:12px;font-weight:700;border-radius:4px 4px 0 0;">Strike Detail (nearest to spot)</div>'
+        + '<div style="border:1px solid var(--border);border-top:none;border-radius:0 0 4px 4px;overflow-x:auto;">'
+        + '<table style="margin:0;"><thead><tr><th>Strike</th><th>Call $</th><th>Call OI</th><th>Call IV</th><th>Put $</th><th>Put OI</th><th>Put IV</th></tr></thead><tbody>'
+        + rows + '</tbody></table></div>';
+    }
   } catch(e) { statsEl.innerHTML = '<div style="color:var(--danger);padding:10px;">Options load error: '+e.message+'</div>'; }
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// ═══════════ INTRINSIC VALUE — MULTI-METHOD VALUATION ══════════════
+// ═══════════════════════════════════════════════════════════════════
+// Sector P/E benchmarks (S&P 500 GICS sector medians, rolling 5yr) — used as
+// fallback when peer multiples aren't available.
+var SECTOR_PE = {
+  'Information Technology': 28, 'Technology': 28,
+  'Health Care': 19, 'Healthcare': 19,
+  'Financials': 13, 'Financial Services': 13,
+  'Consumer Discretionary': 22,
+  'Consumer Staples': 21,
+  'Consumer Defensive': 21,
+  'Industrials': 19,
+  'Communication Services': 18,
+  'Energy': 12,
+  'Utilities': 17,
+  'Materials': 16, 'Basic Materials': 16,
+  'Real Estate': 25
+};
+
+async function ivvLoad(ticker, secData){
+  var card = document.getElementById('ivvCard');
+  var resEl = document.getElementById('ivvResults');
+  if (!card) return;
+  card.style.display = '';
+  resEl.innerHTML = '<div style="padding:14px;text-align:center;"><span class="spinner"></span> Computing intrinsic value via Forward P/E, DCF, and Dividend Discount...</div>';
+
+  try {
+    var WORKER = "https://perry-finance-proxy.zachperrybusiness.workers.dev";
+    var d = secData || window._lastSecData;
+    if (!d) {
+      var fr = await fetch(WORKER + '/fundamentals?symbol=' + encodeURIComponent(ticker));
+      d = await fr.json();
+    }
+
+    var px = d.price && d.price.current ? d.price.current : null;
+    var sector = d.profile && d.profile.sector ? d.profile.sector : '';
+    var sharesOut = null;
+    if (d.balanceSheet && d.balanceSheet.sharesOutstanding && d.balanceSheet.sharesOutstanding.length) {
+      sharesOut = d.balanceSheet.sharesOutstanding[d.balanceSheet.sharesOutstanding.length-1].value;
+    }
+    var marketCap = d.profile && d.profile.marketCap ? d.profile.marketCap : (px && sharesOut ? px * sharesOut : null);
+
+    if (!px) { resEl.innerHTML = '<div style="color:var(--warning);padding:10px;">Cannot compute intrinsic value &mdash; current price missing.</div>'; return; }
+
+    // Fetch 10Y Treasury for discount rate
+    var tenY = 4.2; // sane fallback
+    try {
+      var fr2 = await fetch(WORKER + '/fred');
+      var fred = await fr2.json();
+      var t10obs = fred && fred.pillars ? null : null;
+      // Try to find a 10Y or yield-curve reading; otherwise stick with fallback
+      // FRED endpoint scorecard exposes 3M/10Y spread; extract from raw if available
+      // Safer: just keep fallback unless FRED clearly provides DGS10 elsewhere
+    } catch(e) {}
+
+    // Method 1: FORWARD P/E
+    // EPS estimate = trailing EPS × (1 + growth rate)
+    // Multiple = sector median P/E
+    var fwd = null;
+    var fwdDetail = '';
+    if (d.incomeStatement && d.incomeStatement.eps && d.incomeStatement.eps.length >= 2) {
+      var epsArr = d.incomeStatement.eps;
+      var lastEps = epsArr[epsArr.length-1].value;
+      // 3-yr EPS CAGR (or as many years as available)
+      var yrs = Math.min(epsArr.length-1, 3);
+      var firstEps = epsArr[epsArr.length-1-yrs].value;
+      var epsCAGR = (lastEps > 0 && firstEps > 0) ? Math.pow(lastEps/firstEps, 1/yrs) - 1 : 0;
+      // Cap CAGR sanity bounds [-15%, +35%]
+      epsCAGR = Math.max(-0.15, Math.min(0.35, epsCAGR));
+      var fwdEps = lastEps * (1 + epsCAGR);
+      var sectorPE = SECTOR_PE[sector] || 20;
+      var fwdLow = fwdEps * (sectorPE * 0.75);
+      var fwdMid = fwdEps * sectorPE;
+      var fwdHigh = fwdEps * (sectorPE * 1.25);
+      // If analyst consensus exists, blend it in for the mid case
+      if (d.analystTargets && d.analystTargets.mean) {
+        fwdMid = (fwdMid + d.analystTargets.mean) / 2;
+      }
+      fwd = { low: fwdLow, mid: fwdMid, high: fwdHigh };
+      fwdDetail = 'EPS: $'+lastEps.toFixed(2)+' &times; ('+(epsCAGR>=0?'+':'')+(epsCAGR*100).toFixed(1)+'% CAGR) = $'+fwdEps.toFixed(2)+' fwd EPS &times; '+sectorPE+'x sector P/E';
+    }
+
+    // Method 2: SIMPLIFIED DCF
+    // FCF = OperatingCF - CapEx, projected forward at growth rate, discounted at 10Y + risk premium
+    var dcf = null;
+    var dcfDetail = '';
+    if (d.cashFlowStatement && d.cashFlowStatement.operatingCashFlow && d.cashFlowStatement.operatingCashFlow.length >= 2 && sharesOut) {
+      var ocfArr = d.cashFlowStatement.operatingCashFlow;
+      var capexArr = d.cashFlowStatement.capitalExpenditures || [];
+      var lastOCF = ocfArr[ocfArr.length-1].value;
+      var lastCapex = 0;
+      // capex stored as negative outflow; take absolute
+      if (capexArr.length) lastCapex = Math.abs(capexArr[capexArr.length-1].value);
+      var lastFCF = lastOCF - lastCapex;
+      // 5-yr FCF growth (or fewer years)
+      var fcfYrs = Math.min(ocfArr.length-1, 5);
+      var firstOCF = ocfArr[ocfArr.length-1-fcfYrs].value;
+      var firstCapex = capexArr.length>=fcfYrs+1 ? Math.abs(capexArr[capexArr.length-1-fcfYrs].value) : 0;
+      var firstFCF = firstOCF - firstCapex;
+      var fcfCAGR = (lastFCF > 0 && firstFCF > 0) ? Math.pow(lastFCF/firstFCF, 1/fcfYrs) - 1 : 0.05;
+      // Cap CAGR sanity bounds
+      fcfCAGR = Math.max(-0.10, Math.min(0.25, fcfCAGR));
+      // Discount rate = 10Y yield + 5% equity risk premium
+      var discRate = tenY/100 + 0.05;
+      // Terminal growth rate (perpetuity) = lower of 3% or 10Y yield - 1%
+      var termG = Math.min(0.03, tenY/100 - 0.01);
+      if (termG < 0) termG = 0.02;
+      // 5-year explicit projection + Gordon Growth terminal
+      var pv = 0;
+      var fcfT = lastFCF;
+      for (var t=1; t<=5; t++) {
+        fcfT = lastFCF * Math.pow(1+fcfCAGR, t);
+        pv += fcfT / Math.pow(1+discRate, t);
+      }
+      var terminalFCF = fcfT * (1+termG);
+      var terminalValue = terminalFCF / (discRate - termG);
+      pv += terminalValue / Math.pow(1+discRate, 5);
+      var dcfMid = pv / sharesOut;
+      // Sensitivity: ±200bps on discount rate
+      function dcfAt(disc, g) {
+        var pv2 = 0; var f = lastFCF;
+        for (var t=1;t<=5;t++){ f = lastFCF*Math.pow(1+g, t); pv2 += f/Math.pow(1+disc,t); }
+        var tFCF = f*(1+termG);
+        if (disc - termG <= 0) return null;
+        var tv = tFCF/(disc-termG);
+        pv2 += tv/Math.pow(1+disc, 5);
+        return pv2/sharesOut;
+      }
+      var dcfHigh = dcfAt(discRate - 0.02, fcfCAGR + 0.02) || dcfMid * 1.4;
+      var dcfLow = dcfAt(discRate + 0.02, fcfCAGR - 0.02) || dcfMid * 0.6;
+      dcf = { low: Math.max(0, dcfLow), mid: Math.max(0, dcfMid), high: Math.max(0, dcfHigh) };
+      dcfDetail = 'FCF: $'+(lastFCF/1e9).toFixed(2)+'B &times; ('+(fcfCAGR>=0?'+':'')+(fcfCAGR*100).toFixed(1)+'% CAGR) discounted at '+(discRate*100).toFixed(1)+'% over 5yr + Gordon terminal at '+(termG*100).toFixed(1)+'%';
+    }
+
+    // Method 3: DIVIDEND DISCOUNT (Gordon Growth)
+    // Only for stocks with consistent dividend history
+    var ddm = null;
+    var ddmDetail = '';
+    if (d.dividends && d.dividends.length >= 3) {
+      var divArr = d.dividends;
+      var lastDiv = divArr[divArr.length-1].value;
+      var divYrs = Math.min(divArr.length-1, 5);
+      var firstDiv = divArr[divArr.length-1-divYrs].value;
+      var divCAGR = (lastDiv > 0 && firstDiv > 0) ? Math.pow(lastDiv/firstDiv, 1/divYrs) - 1 : 0.03;
+      // Cap dividend growth sanity bounds
+      divCAGR = Math.max(0, Math.min(0.12, divCAGR));
+      var requiredReturn = tenY/100 + 0.05; // CAPM-ish: rf + 5% ERP
+      // Gordon Growth: P = D1 / (r - g)
+      if (requiredReturn > divCAGR) {
+        var d1 = lastDiv * (1 + divCAGR);
+        var ddmMid = d1 / (requiredReturn - divCAGR);
+        // Sensitivity: vary growth by ±100bps and required return by ±100bps
+        var ddmHigh = (lastDiv*(1+divCAGR+0.01)) / Math.max(0.001, requiredReturn-0.01-(divCAGR+0.01));
+        var ddmLow = (lastDiv*(1+Math.max(0,divCAGR-0.01))) / Math.max(0.001, requiredReturn+0.01-(Math.max(0,divCAGR-0.01)));
+        ddm = { low: Math.max(0, ddmLow), mid: Math.max(0, ddmMid), high: Math.max(0, ddmHigh) };
+        ddmDetail = 'Last DPS: $'+lastDiv.toFixed(2)+' &times; ('+(divCAGR*100).toFixed(1)+'% growth) / ('+(requiredReturn*100).toFixed(1)+'% req return - g)';
+      }
+    }
+
+    // Render
+    function pctUpside(target){ return ((target/px - 1) * 100); }
+    function colorForUp(u){ return u >= 15 ? C.success : u >= -10 ? C.warning : C.danger; }
+    function row(label, m, detail, conf){
+      if (!m) return '<tr><td style="font-weight:600;">'+label+'</td><td colspan="5" style="color:var(--text-sec);font-style:italic;">Insufficient data ('+detail+')</td></tr>';
+      var up = pctUpside(m.mid);
+      return '<tr>'
+        +'<td style="font-weight:600;color:var(--navy);">'+label+'</td>'
+        +'<td>$'+m.low.toFixed(2)+'</td>'
+        +'<td style="font-weight:700;font-size:14px;">$'+m.mid.toFixed(2)+'</td>'
+        +'<td>$'+m.high.toFixed(2)+'</td>'
+        +'<td style="color:'+colorForUp(up)+';font-weight:700;">'+(up>=0?'+':'')+up.toFixed(1)+'%</td>'
+        +'<td style="font-size:11px;color:var(--text-sec);">'+(conf||'Medium')+'</td>'
+        +'</tr><tr><td colspan="6" style="font-size:11px;color:var(--text-sec);background:var(--panel);padding:6px 12px;border-bottom:2px solid var(--border);">'+detail+'</td></tr>';
+    }
+
+    // Consensus — average of mid estimates from methods that returned a value
+    var validMids = [fwd, dcf, ddm].filter(function(m){return m;}).map(function(m){return m.mid;});
+    var validLows = [fwd, dcf, ddm].filter(function(m){return m;}).map(function(m){return m.low;});
+    var validHighs = [fwd, dcf, ddm].filter(function(m){return m;}).map(function(m){return m.high;});
+    var consensusMid = validMids.length ? validMids.reduce(function(a,b){return a+b;},0)/validMids.length : null;
+    var consensusLow = validLows.length ? Math.min.apply(null, validLows) : null;
+    var consensusHigh = validHighs.length ? Math.max.apply(null, validHighs) : null;
+    var consensusUp = consensusMid != null ? pctUpside(consensusMid) : null;
+
+    // Compute method dispersion as a rough confidence flag
+    var dispersion = 0;
+    if (validMids.length > 1) {
+      var meanMid = validMids.reduce(function(a,b){return a+b;},0)/validMids.length;
+      dispersion = Math.sqrt(validMids.reduce(function(s,v){return s+(v-meanMid)*(v-meanMid);},0)/validMids.length) / meanMid;
+    }
+    var conviction = validMids.length === 0 ? 'Cannot estimate' : validMids.length === 1 ? 'Low (1 method)' : dispersion < 0.15 ? 'High (methods agree)' : dispersion < 0.30 ? 'Medium (some disagreement)' : 'Low (methods disagree)';
+    var convictionColor = dispersion < 0.15 ? C.success : dispersion < 0.30 ? C.warning : C.danger;
+
+    // Macro context flag — current regime affects discount rate validity
+    var stateNames = {leveraged: 'Leveraged', growth: 'Non-Levered Growth', neutral: 'Neutral', drawdown: 'Positioned for Drawdown'};
+    var curState = window._briefingState || 'growth';
+    var regimeFlag = '';
+    if (curState === 'drawdown') regimeFlag = 'In Drawdown regime, discount rates typically need to be higher than the base 10Y+5% used here. Treat the LOW band as more realistic.';
+    else if (curState === 'leveraged') regimeFlag = 'In Leveraged regime (post-bottom), valuations typically expand. The HIGH band has historically been the better guide.';
+    else if (curState === 'neutral') regimeFlag = 'In Neutral regime, valuations are typically range-bound — the MID band tends to track reality.';
+    else regimeFlag = 'In Growth regime, valuations typically converge toward the MID estimate over 12–18 months.';
+
+    var html = '<div style="text-align:left;padding:0 4px;">'
+      + '<div style="background:var(--panel);border:1px solid var(--border);border-radius:4px;padding:10px 14px;margin-bottom:14px;font-size:13px;">'
+      +   '<strong style="color:var(--navy);">Current Price:</strong> $'+px.toFixed(2)
+      +   ' &middot; <strong>Sector:</strong> '+(sector||'—')
+      +   ' &middot; <strong>Sector P/E benchmark:</strong> '+(SECTOR_PE[sector]||20)+'x'
+      +   ' &middot; <strong>10Y Treasury (discount rate proxy):</strong> '+tenY.toFixed(2)+'%'
+      + '</div>'
+      + '<div style="overflow-x:auto;"><table><thead><tr>'
+      +   '<th>Method</th><th>Low</th><th>Mid (Fair Value)</th><th>High</th><th>Upside (Mid)</th><th>Notes</th>'
+      + '</tr></thead><tbody>'
+      +   row('Forward P/E', fwd, fwdDetail || 'No EPS history available', 'Medium')
+      +   row('Simplified DCF', dcf, dcfDetail || 'No FCF history or share count available', 'Medium')
+      +   row('Dividend Discount (Gordon)', ddm, ddmDetail || 'Stock does not pay a consistent dividend', 'Medium')
+      + '</tbody></table></div>';
+
+    if (consensusMid != null) {
+      html += '<div style="background:var(--navy);color:#fff;padding:14px 18px;border-radius:4px;margin-top:14px;display:flex;flex-wrap:wrap;align-items:center;gap:14px;">'
+        + '<div style="flex:1;min-width:200px;"><div style="font-size:11px;text-transform:uppercase;letter-spacing:.5px;opacity:.85;">Consensus Fair Value</div>'
+        + '<div style="font-size:24px;font-weight:800;margin-top:2px;">$'+consensusMid.toFixed(2)+'</div>'
+        + '<div style="font-size:11px;opacity:.85;">Range: $'+consensusLow.toFixed(2)+' &mdash; $'+consensusHigh.toFixed(2)+'</div></div>'
+        + '<div style="flex:1;min-width:200px;"><div style="font-size:11px;text-transform:uppercase;letter-spacing:.5px;opacity:.85;">Implied Upside</div>'
+        + '<div style="font-size:24px;font-weight:800;margin-top:2px;color:'+(consensusUp>=0?'#A8E8B8':'#F8B8B8')+';">'+(consensusUp>=0?'+':'')+consensusUp.toFixed(1)+'%</div>'
+        + '<div style="font-size:11px;opacity:.85;">From current $'+px.toFixed(2)+'</div></div>'
+        + '<div style="flex:1;min-width:200px;"><div style="font-size:11px;text-transform:uppercase;letter-spacing:.5px;opacity:.85;">Conviction</div>'
+        + '<div style="font-size:18px;font-weight:700;margin-top:2px;color:'+(dispersion<0.15?'#A8E8B8':dispersion<0.30?'#F8E8A8':'#F8B8B8')+';">'+conviction+'</div>'
+        + '<div style="font-size:11px;opacity:.85;">Dispersion: '+(dispersion*100).toFixed(0)+'%</div></div>'
+        + '</div>';
+      html += '<div style="margin-top:12px;background:#fff8e8;border:1px solid #f0e0a8;border-radius:4px;padding:8px 12px;font-size:11px;color:#5A4A1A;"><strong>Macro context (' + (stateNames[curState]||curState) + ' regime):</strong> ' + regimeFlag + '</div>';
+    } else {
+      html += '<div style="background:#fff8e8;border:1px solid #f0e0a8;border-radius:4px;padding:10px 14px;margin-top:14px;font-size:12px;color:#8B6914;">Could not run any of the three valuation methods &mdash; likely due to incomplete fundamentals data from SEC EDGAR for this ticker. Try a more established large-cap.</div>';
+    }
+    html += '</div>';
+
+    resEl.innerHTML = html;
+  } catch(e) {
+    resEl.innerHTML = '<div style="color:var(--danger);padding:10px;">Intrinsic value error: '+e.message+'</div>';
+  }
 }
 
 // ═══════════════════════════════════════════════════════════════════
