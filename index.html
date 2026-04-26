@@ -1563,6 +1563,12 @@ body.view-mobile .logo-icon { width: 22px !important; height: 22px !important; f
             <canvas id="portfolioLineChart"></canvas>
           </div>
           <div class="zoom-hint">Click and drag to zoom in. Double-click or pinch to reset zoom.</div>
+          <div style="font-size:11px;color:var(--text-sec);margin-top:8px;padding:8px 12px;background:var(--panel);border:1px solid var(--border);border-radius:4px;line-height:1.5;">
+            <strong style="color:var(--navy);">Two performance lines:</strong>
+            <span style="color:var(--navy);font-weight:600;">&mdash; Total Value</span> shows your actual dollar holdings over time, including deposits.
+            <span style="color:#2E7D52;font-weight:600;">&middot;&middot;&middot; TWR (Time-Weighted Return)</span> strips out deposits so you can fairly compare to benchmarks &mdash; this is what the Alpha and Growth-of-$10K stats above use.
+            Detected deposits are flagged with &#128181; in tooltips.
+          </div>
           <div class="btn-group" id="pfTimeframeBtns" style="margin-top:12px;margin-bottom:0;justify-content:center;">
             <button class="btn-outline" data-range="1mo">1M</button>
             <button class="btn-outline" data-range="3mo">3M</button>
@@ -4377,12 +4383,82 @@ window.renderPortfolioChart = async function() {
 
   const pfS_first = cv[pfFirstNonNullIdx], pfS = pfS_first;
   const pfE = cv[pfLastNonNullIdx];
+
+  // ─────────────────────────────────────────────────────────────────────
+  // TIME-WEIGHTED RETURN (TWR) — strips out deposits/withdrawals so the
+  // user can see real performance vs benchmarks without confounded "alpha"
+  // from money being added. This is the GIPS / industry-standard method.
+  //
+  // Detection of cash flows (deposits/withdrawals) — uses BOTH:
+  //   1. Holding purchase dates: when a new holding first becomes valued, that's
+  //      treated as a deposit equal to its first-day market value.
+  //   2. Auto-detect: any single-day jump > 5% of prior value AND > $1,000 is
+  //      flagged as a likely deposit (catches manual cash moves, dividends
+  //      reinvested, etc.). Tunable via _twrJumpThreshold.
+  // ─────────────────────────────────────────────────────────────────────
+  // Build a per-date set of "expected deposit dates" from holding purchase dates
+  var depositDates = new Set();
+  Object.values(hs).forEach(function(s){
+    if (!s.datePurchased) return;
+    // Find the first chart date >= datePurchased
+    var firstIdx = cd.findIndex(function(d){ return d >= s.datePurchased; });
+    if (firstIdx >= 0) depositDates.add(cd[firstIdx]);
+  });
+  // Also flag the very first non-null point as a "deposit" (initial funding)
+  depositDates.add(cd[pfFirstNonNullIdx]);
+
+  // Build TWR series — rebased so it starts at the same dollar value as the
+  // portfolio at its first non-null point. That way both lines start in the
+  // same place visually and the TWR shows what the portfolio would have grown to
+  // if the user had simply held what they had at start (no deposits).
+  var twrSeries = new Array(cv.length).fill(null);
+  var rebaseStart = cv[pfFirstNonNullIdx];
+  twrSeries[pfFirstNonNullIdx] = rebaseStart;
+  var compoundFactor = 1.0;
+  var _twrJumpThreshold = 0.05;  // 5% single-day move
+  var _twrDollarThreshold = 1000; // $1K minimum to flag
+  var detectedDeposits = []; // for tooltip
+  for (var i = pfFirstNonNullIdx + 1; i <= pfLastNonNullIdx; i++) {
+    var prev = cv[i - 1];
+    var curr = cv[i];
+    if (prev == null || curr == null || prev <= 0) {
+      // Carry forward TWR through gaps
+      twrSeries[i] = twrSeries[i - 1];
+      continue;
+    }
+    var rawReturn = (curr - prev) / prev;
+    var dollarChange = curr - prev;
+    // Detect: known purchase date, OR auto-detected jump
+    var isDeposit = depositDates.has(cd[i]) ||
+      (Math.abs(rawReturn) > _twrJumpThreshold && Math.abs(dollarChange) > _twrDollarThreshold);
+    if (isDeposit) {
+      // Skip this period — assume the change is entirely from external cash flow,
+      // not market performance. TWR carries forward unchanged.
+      twrSeries[i] = twrSeries[i - 1];
+      detectedDeposits.push({ date: cd[i], dollarChange: dollarChange, rawReturn: rawReturn });
+    } else {
+      compoundFactor *= (1 + rawReturn);
+      twrSeries[i] = rebaseStart * compoundFactor;
+    }
+  }
+
   const ds = [{
-    label: 'Portfolio', data: cv, borderColor: C.navy, backgroundColor: 'rgba(0,60,113,.06)',
+    label: 'Portfolio (Total Value, with deposits)',
+    data: cv, borderColor: C.navy, backgroundColor: 'rgba(0,60,113,.06)',
     borderWidth: 2.5, pointRadius: 1, pointHoverRadius: 6,
     pointBackgroundColor: C.navy, pointHoverBackgroundColor: C.navy,
     fill: true, tension: .3, yAxisID: 'y', spanGaps: false
+  }, {
+    label: 'Portfolio (TWR, deposits stripped)',
+    data: twrSeries, borderColor: '#2E7D52', backgroundColor: 'transparent',
+    borderWidth: 2, borderDash: [4, 3], pointRadius: 0, pointHoverRadius: 5,
+    pointBackgroundColor: '#2E7D52', pointHoverBackgroundColor: '#2E7D52',
+    fill: false, tension: .3, yAxisID: 'y', spanGaps: false
   }];
+
+  // Stash for tooltip
+  window._twrDeposits = detectedDeposits;
+  window._twrSeries = twrSeries;
 
   // Benchmarks
   _chartBenchmarkSeries = {};
@@ -4421,20 +4497,28 @@ window.renderPortfolioChart = async function() {
     });
   }
 
-  const hb = ds.length > 1;
-  const pfRet = pfS > 0 ? ((pfE - pfS) / pfS * 100) : 0;
+  // Compute portfolio return: use TWR (deposit-stripped) so alpha vs benchmarks is honest.
+  // Total-Value return is also kept for the secondary "what my dollars did" view.
+  const pfRetTWR = (twrSeries[pfLastNonNullIdx] != null && rebaseStart > 0)
+    ? ((twrSeries[pfLastNonNullIdx] - rebaseStart) / rebaseStart * 100) : 0;
+  const pfRetDollar = pfS > 0 ? ((pfE - pfS) / pfS * 100) : 0;
+  // Use TWR for the "Portfolio Return" stat and alpha calc (the apples-to-apples vs benchmark)
+  const pfRet = pfRetTWR;
   let bmRet = null, bmSym = ci[0] || '';
   if (bmSym && _chartBenchmarkSeries[bmSym]) {
-    // Use the same date window as the portfolio (cd[0] and cd[last]) — with forward-fill for missing points
     var bmMap = _chartBenchmarkSeries[bmSym];
     var bf = null, bl = null;
-    for (var i2 = 0; i2 < cd.length; i2++) { if (bmMap[cd[i2]] != null) { bf = bmMap[cd[i2]]; break; } }
-    for (var j2 = cd.length - 1; j2 >= 0; j2--) { if (bmMap[cd[j2]] != null) { bl = bmMap[cd[j2]]; break; } }
+    // Use the SAME window as the portfolio (first → last non-null index) so the
+    // benchmark's return is computed over the same period the user actually held.
+    for (var i2 = pfFirstNonNullIdx; i2 < cd.length; i2++) { if (bmMap[cd[i2]] != null) { bf = bmMap[cd[i2]]; break; } }
+    for (var j2 = pfLastNonNullIdx; j2 >= 0; j2--) { if (bmMap[cd[j2]] != null) { bl = bmMap[cd[j2]]; break; } }
     if (bf != null && bl != null && bf > 0) bmRet = ((bl - bf) / bf) * 100;
   }
   const alpha = bmRet != null ? (pfRet - bmRet) : null;
-  const gPf = pfS > 0 ? (10000 * (pfE / pfS)) : 10000;
+  const gPf = rebaseStart > 0 ? (10000 * (twrSeries[pfLastNonNullIdx] / rebaseStart)) : 10000;
   const gBm = bmRet != null ? (10000 * (1 + bmRet / 100)) : null;
+  // hb = whether to show the secondary benchmark price axis (only if there's a real benchmark)
+  const hb = ci.length > 0 && ds.length > 2;
 
   // Risk
   const dr = [];
@@ -4443,15 +4527,21 @@ window.renderPortfolioChart = async function() {
   const vr = dr.length ? dr.reduce((a, r) => a + (r - mr) ** 2, 0) / dr.length : 0;
   const sd = Math.sqrt(vr) * Math.sqrt(252) * 100;
 
-  // Stat boxes
+  // Stat boxes — show BOTH TWR (true performance) and Total Value (with deposits)
   let sh = '';
   if (alpha != null) {
-    sh += '<div class="chart-stat-box"><div class="chart-stat-label">Alpha vs ' + bmSym + '</div>' +
+    sh += '<div class="chart-stat-box" title="Alpha = (Portfolio TWR) - (Benchmark Return). Uses time-weighted return so deposits don\'t falsely inflate alpha."><div class="chart-stat-label">Alpha vs ' + bmSym + ' <span class="help-icon" title="Alpha = portfolio time-weighted return minus benchmark return over the same window. TWR strips out deposits/withdrawals so this is an apples-to-apples performance comparison.">?</span></div>' +
       '<div class="chart-stat-value" style="color:' + pctColor(alpha) + ';">' + fmtPct(alpha) + '</div>' +
-      '<div class="chart-stat-sub">Portfolio ' + fmtPct(pfRet) + ' vs ' + bmSym + ' ' + fmtPct(bmRet) + '</div></div>';
+      '<div class="chart-stat-sub">Portfolio TWR ' + fmtPct(pfRetTWR) + ' vs ' + bmSym + ' ' + fmtPct(bmRet) + '</div></div>';
   }
-  sh += '<div class="chart-stat-box"><div class="chart-stat-label">Growth of $10,000</div>' +
-    '<div class="chart-stat-value">Portfolio: ' + fmtInt(gPf) + '</div>' +
+  sh += '<div class="chart-stat-box"><div class="chart-stat-label">Time-Weighted Return <span class="help-icon" title="Time-Weighted Return (TWR) is the GIPS-standard performance metric. It strips out the effect of deposits and withdrawals so you see real investment performance, not just dollar growth from adding money.">?</span></div>' +
+    '<div class="chart-stat-value" style="color:' + pctColor(pfRetTWR) + ';">' + fmtPct(pfRetTWR) + '</div>' +
+    '<div class="chart-stat-sub">Apples-to-apples vs benchmark</div></div>';
+  sh += '<div class="chart-stat-box"><div class="chart-stat-label">Total Dollar Return <span class="help-icon" title="Total Value Return = (Final $) / (Initial $) - 1. Includes deposits/withdrawals — shows what your dollars did, NOT how your picks performed.">?</span></div>' +
+    '<div class="chart-stat-value" style="color:' + pctColor(pfRetDollar) + ';">' + fmtPct(pfRetDollar) + '</div>' +
+    '<div class="chart-stat-sub">Includes ' + (window._twrDeposits ? window._twrDeposits.length : 0) + ' detected deposit(s)</div></div>';
+  sh += '<div class="chart-stat-box"><div class="chart-stat-label">Growth of $10,000 (TWR)</div>' +
+    '<div class="chart-stat-value">' + fmtInt(gPf) + '</div>' +
     '<div class="chart-stat-sub">' + (gBm != null ? bmSym + ': ' + fmtInt(gBm) : 'Add benchmark') + '</div></div>';
   sh += '<div class="chart-stat-box"><div class="chart-stat-label">Risk (Annualized)</div>' +
     '<div class="chart-stat-value">&#963; ' + sd.toFixed(1) + '%</div></div>';
@@ -4494,6 +4584,15 @@ window.renderPortfolioChart = async function() {
               if (idx == null) return [];
               const d = cd[idx];
               const lines = [''];
+              // Deposit flag info — surface so user understands the gap between Total and TWR
+              if (window._twrDeposits) {
+                var dep = window._twrDeposits.find(function(x){ return x.date === d; });
+                if (dep) {
+                  lines.push('💵 Deposit detected: ' + (dep.dollarChange >= 0 ? '+' : '') + '$' + Math.round(dep.dollarChange).toLocaleString());
+                  lines.push('  (excluded from TWR)');
+                  lines.push('');
+                }
+              }
               // Regime overlay info
               if (_showRegimeOverlay) {
                 const r = _regimeByDate[d];
