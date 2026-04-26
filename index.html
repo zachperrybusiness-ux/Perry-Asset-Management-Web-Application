@@ -4240,100 +4240,8 @@ window.renderPortfolioChart = async function() {
     }
   }));
 
-  // Build union of all dates, bounded by effectiveStart
-  const ad = new Set();
-  Object.values(hs).forEach(function(s){
-    if (s.isCash) return; // cash contributes nothing to date grid
-    Object.keys(s.map).forEach(function(d){
-      if (!effectiveStartStr || d >= effectiveStartStr) ad.add(d);
-    });
-  });
-  // If every holding is cash, need to synthesize a minimal date grid
-  if (!ad.size && Object.keys(hs).length) {
-    // Create monthly dates from effectiveStart (or earliest cash purchase date) to today
-    var earliestCashDate = effectiveStartStr;
-    Object.values(hs).forEach(function(s){
-      if (s.isCash && s.datePurchased && (!earliestCashDate || s.datePurchased > earliestCashDate)) {
-        // Use the later of effectiveStart or cash purchase
-      }
-    });
-    if (!earliestCashDate) earliestCashDate = new Date(today.getFullYear()-1, today.getMonth(), today.getDate()).toISOString().slice(0,10);
-    var cur = new Date(earliestCashDate);
-    while (cur <= today) {
-      ad.add(cur.toISOString().slice(0,10));
-      cur.setDate(cur.getDate() + 7); // weekly
-    }
-  }
-  const dates = Array.from(ad).sort();
-  if (!dates.length) { loadEl.style.display = 'none'; return; }
-
-  // Determine the earliest date where the user actually owned ANY of their current holdings
-  // (prevents the chart from showing a bunch of $0 or near-$0 history before the first purchase)
-  var earliestOwnedDate = null;
-  Object.values(hs).forEach(function(s){
-    if (!s.datePurchased) return;
-    if (!earliestOwnedDate || s.datePurchased < earliestOwnedDate) earliestOwnedDate = s.datePurchased;
-  });
-  // If any holding has no purchase date, assume it was owned from the beginning
-  var hasUndatedHolding = Object.values(hs).some(function(s){ return !s.datePurchased; });
-  if (hasUndatedHolding) earliestOwnedDate = null;
-
-  // Forward-fill missing prices so gaps don't create artificial drops
-  // (e.g., if SPAXX has no daily data on a Saturday but AAPL does)
-  // We build a per-holding forward-filled price lookup
-  Object.values(hs).forEach(function(s){
-    if (s.isCash) return;
-    s._forwardFilled = {};
-    var lastSeen = null;
-    for (var i=0;i<dates.length;i++) {
-      var d = dates[i];
-      if (s.map[d] != null) lastSeen = s.map[d];
-      s._forwardFilled[d] = lastSeen; // null before first observation
-    }
-  });
-
-  // Portfolio value per date — forward-fill, skip pre-purchase dates
-  const pv = dates.map(function(d){
-    var t = 0;
-    Object.values(hs).forEach(function(s){
-      // Skip if we require this holding to have been purchased by date d
-      if (s.datePurchased && d < s.datePurchased) return;
-      if (s.isCash) {
-        t += s.cashValue;
-      } else {
-        var px = s._forwardFilled[d];
-        if (px != null) t += px * s.quantity;
-      }
-    });
-    return t;
-  });
-
-  // Keep only dates that (a) are within effective window and (b) have a real portfolio value
-  // (c) are on/after earliestOwnedDate when that's defined
-  const valid = [];
-  dates.forEach(function(d, i){
-    if (pv[i] <= 0) return;
-    if (earliestOwnedDate && d < earliestOwnedDate) return;
-    if (effectiveStartStr && d < effectiveStartStr) return;
-    valid.push({ date: d, value: pv[i] });
-  });
-  if (!valid.length) { loadEl.style.display = 'none'; return; }
-
-  // Downsample for very long windows to keep the chart snappy
-  // (10Y = ~2,500 points, 20Y = ~5,000 points — Chart.js handles this but rendering lags)
-  var targetMax = 800;
-  var reduced = valid;
-  if (valid.length > targetMax) {
-    var stride = Math.ceil(valid.length / targetMax);
-    reduced = valid.filter(function(_, i){ return i % stride === 0 || i === valid.length - 1; });
-  }
-
-  const cd = reduced.map(function(d){ return d.date; });
-  const cv = reduced.map(function(d){ return d.value; });
-  _chartDatesGlobal = cd;
-  _chartPortfolioSeries = cv;
-
-  // Fetch VIX (for overlays) — may fail gracefully on long windows
+  // Fetch VIX and SPY upfront — SPY drives the x-axis trading-day calendar
+  // so the chart spans the full selected window even if the user's portfolio is shorter.
   try {
     const vD = await fetchChart("^VIX", currentRange, "1d");
     const vP = (vD.points || []).filter(p => p.close !== null);
@@ -4341,49 +4249,139 @@ window.renderPortfolioChart = async function() {
     vP.forEach(p => { _vixDateMap[p.date.slice(0, 10)] = p.close; });
   } catch(e) { _vixDateMap = {}; }
 
-  // Fetch SPY for regime overlay (need 1y of SPY history *prior* to chart start
-  // for the trailing-return computation, so always fetch at least 5y if range >= 1y)
   try {
-    var spyRange = (['1mo','3mo','6mo','ytd','1y'].indexOf(currentRange) >= 0) ? '2y' : currentRange;
+    // Always fetch enough SPY history to span the selected window AND have 252 prior
+    // trading days for the regime classifier
+    var spyRange = currentRange;
+    if (['1mo','3mo','6mo','ytd','1y'].indexOf(currentRange) >= 0) spyRange = '2y';
     const sD = await fetchChart("SPY", spyRange, "1d");
     const sP = (sD.points || []).filter(p => p.close !== null);
     _spyDateMap = {};
     sP.forEach(p => { _spyDateMap[p.date.slice(0, 10)] = p.close; });
-    // Build sorted SPY date array for trailing-window math
     var spyDatesArr = sP.map(function(p){return p.date.slice(0,10);}).sort();
     var spyClosesArr = spyDatesArr.map(function(d){return _spyDateMap[d];});
     _regimeByDate = {};
-    // Compute regime for each chart date (need 252 trailing SPY days, drawdown from peak, distance from 1y low)
     for (var i = 0; i < spyDatesArr.length; i++) {
-      var d = spyDatesArr[i];
+      var d2 = spyDatesArr[i];
       var px2 = spyClosesArr[i];
-      // Need at least 252 prior SPY observations
       if (i < 252) continue;
       var lookbackSlice = spyClosesArr.slice(i - 252, i + 1);
-      var spyHigh = Math.max.apply(null, lookbackSlice);
-      var spyLow = Math.min.apply(null, lookbackSlice);
+      var spyHigh2 = Math.max.apply(null, lookbackSlice);
+      var spyLow2 = Math.min.apply(null, lookbackSlice);
       var spy12mAgo = spyClosesArr[i - 252];
-      var vix2 = _vixDateMap[d];
+      var vix2 = _vixDateMap[d2];
       if (vix2 == null) continue;
-      var sig = {
+      var sig2 = {
         vix: vix2,
         spyTrailingReturn: (px2 - spy12mAgo) / spy12mAgo,
-        drawdownFromPeak: (px2 - spyHigh) / spyHigh,
-        spy12mFromLow: (px2 - spyLow) / spyLow
+        drawdownFromPeak: (px2 - spyHigh2) / spyHigh2,
+        spy12mFromLow: (px2 - spyLow2) / spyLow2
       };
       if (typeof psClassifyState === 'function') {
-        var cl = psClassifyState(sig);
-        _regimeByDate[d] = cl.winner;
+        var cl2 = psClassifyState(sig2);
+        _regimeByDate[d2] = cl2.winner;
       }
     }
   } catch(e) { _regimeByDate = {}; _spyDateMap = {}; }
 
-  const pfS = cv[0], pfE = cv[cv.length - 1];
+  // Build union of all dates HOLDINGS observe (used for forward-fill source data only;
+  // does NOT determine the chart x-axis — that is set by the selected window using SPY's
+  // trading-day calendar so benchmarks and overlays span the full window even when the
+  // user's portfolio is much shorter).
+  const ad = new Set();
+  Object.values(hs).forEach(function(s){
+    if (s.isCash) return;
+    Object.keys(s.map).forEach(function(d){ ad.add(d); });
+  });
+  const holdingDates = Array.from(ad).sort();
+
+  // Determine the earliest date where the user actually owned ANY of their current holdings
+  // (used to mask the portfolio line — values before this are null so the chart shows a gap)
+  var earliestOwnedDate = null;
+  Object.values(hs).forEach(function(s){
+    if (!s.datePurchased) return;
+    if (!earliestOwnedDate || s.datePurchased < earliestOwnedDate) earliestOwnedDate = s.datePurchased;
+  });
+  var hasUndatedHolding = Object.values(hs).some(function(s){ return !s.datePurchased; });
+  if (hasUndatedHolding) earliestOwnedDate = null;
+
+  // Forward-fill missing prices so weekend gaps don't create artificial drops
+  Object.values(hs).forEach(function(s){
+    if (s.isCash) return;
+    s._forwardFilled = {};
+    var lastSeen = null;
+    for (var i=0;i<holdingDates.length;i++) {
+      var d = holdingDates[i];
+      if (s.map[d] != null) lastSeen = s.map[d];
+      s._forwardFilled[d] = lastSeen;
+    }
+  });
+
+  // Helper: portfolio value at date d (uses forward-filled prices, returns null pre-purchase)
+  function portfolioValueAt(d) {
+    if (earliestOwnedDate && d < earliestOwnedDate) return null;
+    var t = 0;
+    var anyPriced = false;
+    Object.values(hs).forEach(function(s){
+      if (s.datePurchased && d < s.datePurchased) return;
+      if (s.isCash) { t += s.cashValue; anyPriced = true; }
+      else {
+        var px = s._forwardFilled[d];
+        if (px != null) { t += px * s.quantity; anyPriced = true; }
+      }
+    });
+    if (!anyPriced) return null;
+    return t > 0 ? t : null;
+  }
+
+  // ── Build the chart x-axis ──
+  // Goal: x-axis = the FULL selected window (e.g., 20Y). Use SPY trading-day calendar so
+  // we get clean weekday-only dates. Benchmarks and overlays span the whole window;
+  // the portfolio line shows nulls before first purchase, real values after.
+  var xAxisDates = [];
+  if (_spyDateMap && Object.keys(_spyDateMap).length) {
+    // _spyDateMap was populated by the regime overlay fetch above. Filter to selected window.
+    xAxisDates = Object.keys(_spyDateMap).sort().filter(function(d){
+      return !effectiveStartStr || d >= effectiveStartStr;
+    });
+  }
+  // Fallback: if SPY didn't load, fall back to the holding date union (legacy behavior)
+  if (!xAxisDates.length) {
+    xAxisDates = holdingDates.filter(function(d){ return !effectiveStartStr || d >= effectiveStartStr; });
+  }
+  if (!xAxisDates.length) { loadEl.style.display = 'none'; return; }
+
+  // Build portfolio value series across the full x-axis (nulls before first purchase)
+  var pvFull = xAxisDates.map(function(d){ return portfolioValueAt(d); });
+
+  // Downsample for performance on very long windows (5Y+ = a lot of points)
+  var targetMax = 800;
+  var reducedDates = xAxisDates;
+  var reducedPV = pvFull;
+  if (xAxisDates.length > targetMax) {
+    var stride = Math.ceil(xAxisDates.length / targetMax);
+    reducedDates = xAxisDates.filter(function(_, i){ return i % stride === 0 || i === xAxisDates.length - 1; });
+    reducedPV = reducedDates.map(function(d){ return portfolioValueAt(d); });
+  }
+
+  const cd = reducedDates;
+  const cv = reducedPV;
+  _chartDatesGlobal = cd;
+  _chartPortfolioSeries = cv;
+
+  // Compute portfolio start/end (first and last non-null values) for stats row
+  var pfFirstNonNullIdx = cv.findIndex(function(v){ return v != null; });
+  var pfLastNonNullIdx = -1;
+  for (var i = cv.length - 1; i >= 0; i--) { if (cv[i] != null) { pfLastNonNullIdx = i; break; } }
+  if (pfFirstNonNullIdx === -1) { loadEl.style.display = 'none'; return; }
+
+  const pfS_first = cv[pfFirstNonNullIdx], pfS = pfS_first;
+  const pfE = cv[pfLastNonNullIdx];
   const ds = [{
     label: 'Portfolio', data: cv, borderColor: C.navy, backgroundColor: 'rgba(0,60,113,.06)',
-    borderWidth: 2.5, pointRadius: 1.5, pointHoverRadius: 6,
+    borderWidth: 2.5, pointRadius: 1, pointHoverRadius: 6,
     pointBackgroundColor: C.navy, pointHoverBackgroundColor: C.navy,
-    fill: true, tension: .3, yAxisID: 'y'
+    fill: true, tension: .3, yAxisID: 'y', spanGaps: false
   }];
 
   // Benchmarks
@@ -4440,7 +4438,7 @@ window.renderPortfolioChart = async function() {
 
   // Risk
   const dr = [];
-  for (let j = 1; j < cv.length; j++) { if (cv[j - 1] > 0) dr.push((cv[j] - cv[j - 1]) / cv[j - 1]); }
+  for (let j = 1; j < cv.length; j++) { if (cv[j - 1] != null && cv[j] != null && cv[j - 1] > 0) dr.push((cv[j] - cv[j - 1]) / cv[j - 1]); }
   const mr = dr.length ? dr.reduce((a, b) => a + b, 0) / dr.length : 0;
   const vr = dr.length ? dr.reduce((a, r) => a + (r - mr) ** 2, 0) / dr.length : 0;
   const sd = Math.sqrt(vr) * Math.sqrt(252) * 100;
@@ -4512,8 +4510,10 @@ window.renderPortfolioChart = async function() {
                   lines.push('⚠ ' + ev.name + ' (' + ev.type + ')');
                   const es = cd.findIndex(dd => dd >= ev.start);
                   const ee = cd.findIndex(dd => dd > ev.end);
-                  const ep = Math.max(...cv.slice(Math.max(0, es - 5), ee > 0 ? ee : cv.length));
-                  const et = Math.min(...cv.slice(es, ee > 0 ? ee : cv.length));
+                  const evSlice = cv.slice(Math.max(0, es - 5), ee > 0 ? ee : cv.length).filter(function(v){return v!=null;});
+                  const evSlice2 = cv.slice(es, ee > 0 ? ee : cv.length).filter(function(v){return v!=null;});
+                  const ep = evSlice.length ? Math.max.apply(null, evSlice) : 0;
+                  const et = evSlice2.length ? Math.min.apply(null, evSlice2) : 0;
                   if (ep > 0) lines.push('  Drawdown: ' + fmtPct(((et - ep) / ep) * 100));
                   lines.push('');
                 }
