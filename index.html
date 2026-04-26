@@ -1507,6 +1507,36 @@ body.view-mobile .logo-icon { width: 22px !important; height: 22px !important; f
       <div class="metrics-row" id="metricsRow"></div>
       <!-- Benchmark cards -->
       <div class="bench-row" id="benchmarkRow"></div>
+
+      <!-- ANALYTICS ROW: Fama-French + Forward Return side-by-side above the Value chart -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px;">
+        <div class="card" style="margin:0;">
+          <div class="card-title">Factor Exposure Analysis (Fama-French 5-Factor + Momentum) <span class="help-icon" title="Decomposes your portfolio's returns into known systematic risk factors. Beta = sensitivity to the broader market. SMB = small-cap tilt. HML = value tilt. MOM = momentum tilt. Alpha (Jensen's α) = the portion that's NOT explained by these factors — true outperformance vs. random.">?</span></div>
+          <div class="card-body">
+            <p style="font-size:12px;color:var(--text-sec);margin-bottom:10px;">Decomposes your portfolio's return into systematic risk factors using 3-year daily return regression. Beta &gt; 1 = higher exposure than market. Positive SMB = small-cap tilt. Positive HML = value tilt. Positive MOM = momentum tilt. R&sup2; shows how much of your return is explained by known factors vs. true alpha (residual).</p>
+            <div class="form-row" style="margin-bottom:10px;">
+              <button class="btn" onclick="ffRunAnalysis()">Run Factor Analysis</button>
+              <span style="font-size:11px;color:var(--text-sec);align-self:center;margin-left:10px;">Uses 3-year daily portfolio returns vs. Fama-French factor proxies.</span>
+            </div>
+            <div id="ffResults" style="text-align:center;color:var(--text-sec);padding:16px;font-size:13px;">Click "Run Factor Analysis" to decompose your portfolio into Fama-French risk factors.</div>
+          </div>
+          <div class="card-sources"><strong>Sources:</strong> Kenneth R. French Data Library (factor definitions) &bull; Portfolio returns computed from Yahoo Finance price history via Cloudflare Worker &bull; Regression via OLS (Gauss-Jordan)</div>
+        </div>
+
+        <div class="card" style="margin:0;">
+          <div class="card-title">Portfolio Forward Return Projections (1Y / 3Y / 5Y) <span class="help-icon" title="Per-holding price targets at 1, 3, and 5 years using a blend of fundamental (DCF/Forward P/E for stocks, historical drift for ETFs) and regime-conditioned drift. Aggregated into a portfolio-level expected return with bull/base/bear bands.">?</span></div>
+          <div class="card-body">
+            <p style="font-size:12px;color:var(--text-sec);margin-bottom:10px;">Per-holding 1/3/5-year projections combining: <strong>(1) fundamental fair value</strong>, <strong>(2) regime-conditioned drift</strong>, and <strong>(3) bull/base/bear bands</strong>.</p>
+            <div class="form-row" style="margin-bottom:10px;">
+              <button class="btn" onclick="pfrRun()">Run Forward Return Projections</button>
+              <button class="btn-outline btn-sm" id="pfrToggleDetail" onclick="pfrToggleDetail()" style="margin-left:auto;display:none;">Show Per-Ticker Detail</button>
+            </div>
+            <div id="pfrResults" style="text-align:center;color:var(--text-sec);padding:16px;font-size:13px;">Click &quot;Run Forward Return Projections&quot; to generate 1/3/5-year per-holding and portfolio-level forecasts.</div>
+          </div>
+          <div class="card-sources"><strong>Method:</strong> Fundamental fair value blended 60/40 with regime-conditioned drift &bull; Bull/Bear bands = &plusmn;1&sigma; from method dispersion &bull; <strong>Disclaimer:</strong> Forecasts depend heavily on inputs.</div>
+        </div>
+      </div>
+
       <!-- Chart card -->
       <div class="card">
         <div class="card-title">Portfolio Value Over Time <span class="help-icon" title="Reconstructs your portfolio's daily market value from when each position was purchased. Cash is held flat at face value. Pre-purchase periods are excluded so the chart shows only what you actually owned.">?</span></div>
@@ -1523,6 +1553,7 @@ body.view-mobile .logo-icon { width: 22px !important; height: 22px !important; f
             <button class="btn btn-sm" onclick="renderPortfolioChart()">Update Chart</button>
             <button class="btn-outline btn-sm" id="btnStress" onclick="toggleStress()" style="margin-left:8px;">Stressed Scenarios</button>
             <button class="btn-outline btn-sm" id="btnVixRange" onclick="toggleVixRange()" style="margin-left:4px;">VIX Range</button>
+            <button class="btn-outline btn-sm" id="btnRegimeOverlay" onclick="toggleRegimeOverlay()" style="margin-left:4px;">Market Regime</button>
           </div>
           <div class="chart-stats" id="chartStats"></div>
           <div id="chartLoading" style="text-align:center;padding:40px;color:var(--text-sec);display:none;">
@@ -1562,20 +1593,6 @@ body.view-mobile .logo-icon { width: 22px !important; height: 22px !important; f
         </div>
       </div>
 
-      <!-- PORTFOLIO FORWARD RETURN ENGINE -->
-      <div class="card">
-        <div class="card-title">Portfolio Forward Return Projections (1Y / 3Y / 5Y) <span class="help-icon" title="Per-holding price targets at 1, 3, and 5 years using a blend of fundamental (DCF/Forward P/E for stocks, historical drift for ETFs) and regime-conditioned drift. Aggregated into a portfolio-level expected return with bull/base/bear bands. This is the &lsquo;what is my portfolio worth in 5 years&rsquo; answer.">?</span></div>
-        <div class="card-body">
-          <p style="font-size:12px;color:var(--text-sec);margin-bottom:10px;">Per-holding 1/3/5-year projections combining: <strong>(1) fundamental fair value</strong> (Forward P/E + DCF for stocks; trailing CAGR for ETFs), <strong>(2) regime-conditioned drift</strong> (current market state-adjusted return), and <strong>(3) bull/base/bear bands</strong> from method dispersion. Aggregated into portfolio-level expected return with confidence bands.</p>
-          <div class="form-row" style="margin-bottom:10px;">
-            <button class="btn" onclick="pfrRun()">Run Forward Return Projections</button>
-            <span style="font-size:11px;color:var(--text-sec);align-self:center;margin-left:10px;">Uses your live holdings + SEC EDGAR fundamentals + current regime classification.</span>
-          </div>
-          <div id="pfrResults" style="text-align:center;color:var(--text-sec);padding:16px;font-size:13px;">Click &quot;Run Forward Return Projections&quot; to generate 1/3/5-year per-holding and portfolio-level forecasts.</div>
-        </div>
-        <div class="card-sources"><strong>Method:</strong> Fundamental fair value (Forward P/E with sector multiple + simplified 5-yr DCF discounted at 10Y + 5% ERP) blended 60/40 with regime-conditioned drift (per-state historical SPY drift &times; ticker beta proxy) &bull; Bull/Bear bands = ±1σ from method dispersion &bull; Aggregation = market-value-weighted portfolio sum &bull; <strong>Disclaimer:</strong> Forecasts depend heavily on inputs; all returns past have not predicted future results.</div>
-      </div>
-
       <!-- PORTFOLIO OPTIMIZATION ENGINE -->
       <div class="card">
         <div class="card-title">Portfolio Optimization &mdash; Regime-Conditioned Weights <span class="help-icon" title="Solves for the optimal allocation across your existing holdings under each of the 4 regimes (Leveraged, Growth, Neutral, Drawdown). Uses Markowitz mean-variance optimization with regime-conditioned expected returns. Then backtests how the optimal weights would have performed historically vs. your actual portfolio.">?</span></div>
@@ -1606,20 +1623,7 @@ body.view-mobile .logo-icon { width: 22px !important; height: 22px !important; f
         <div class="card-sources"><strong>Method:</strong> Markowitz (1952) mean-variance optimization on per-state expected returns &bull; Solved via gradient projection on long-only simplex (sum to 1, weights ≥ 0) &bull; Regime-conditioned drifts from SPY 5-year history segmented by Perry 4-state classifier &bull; Per-holding beta scaled to SPY proxy &bull; Backtest: holds optimal weights through specified window, compares cumulative return to actual portfolio (equal-weight rebalanced)</div>
       </div>
 
-      <!-- FAMA-FRENCH FACTOR EXPOSURE -->
-      <div class="card">
-        <div class="card-title">Factor Exposure Analysis (Fama-French 5-Factor + Momentum) <span class="help-icon" title="Decomposes your portfolio's returns into known systematic risk factors. Beta = sensitivity to the broader market. SMB = small-cap tilt. HML = value tilt. MOM = momentum tilt. Alpha (Jensen's α) = the portion that's NOT explained by these factors — true outperformance vs. random.">?</span></div>
-        <div class="card-body">
-          <p style="font-size:12px;color:var(--text-sec);margin-bottom:10px;">Decomposes your portfolio's return into systematic risk factors using 3-year daily return regression. Beta &gt; 1 = higher exposure than market. Positive SMB = small-cap tilt. Positive HML = value tilt. Positive MOM = momentum tilt. R² shows how much of your return is explained by known factors vs. true alpha (residual).</p>
-          <div class="form-row" style="margin-bottom:10px;">
-            <button class="btn" onclick="ffRunAnalysis()">Run Factor Analysis</button>
-            <span style="font-size:11px;color:var(--text-sec);align-self:center;margin-left:10px;">Uses 3-year daily portfolio returns vs. Fama-French factor proxies.</span>
-          </div>
-          <div id="ffResults" style="text-align:center;color:var(--text-sec);padding:16px;font-size:13px;">Click "Run Factor Analysis" to decompose your portfolio into Fama-French risk factors.</div>
-        </div>
-        <div class="card-sources"><strong>Sources:</strong> Kenneth R. French Data Library (factor definitions) &bull; Portfolio returns computed from Yahoo Finance price history via Cloudflare Worker &bull; Regression via OLS (Gauss-Jordan)</div>
-      </div>
-
+      <!-- FAMA-FRENCH FACTOR EXPOSURE moved to top of page -->
       <!-- PORTFOLIO-STATE MONTE CARLO -->
       <div class="card">
         <div class="card-title">Portfolio-State Monte Carlo &mdash; 12-Month Forward Simulation <span class="help-icon" title="Simulates 1,000 possible 12-month paths for your portfolio under each of the 4 regimes. Each regime uses different drift (expected return) and volatility assumptions. Shows the fan of likely outcomes — useful for stress-testing 'what if a Drawdown regime arrives'.">?</span></div>
@@ -3991,22 +3995,35 @@ function renderPortfolioTable(holdings, tv) {
   document.getElementById('portfolioTableWrap').innerHTML = html;
 }
 
-// ═══ STRESSED SCENARIOS & VIX OVERLAY ═══
+// ═══ STRESSED SCENARIOS, VIX, & REGIME OVERLAYS ═══
 let _showStress = false;
 let _showVixRange = false;
+let _showRegimeOverlay = false;
 let _vixDateMap = {};
+let _regimeByDate = {};   // populated when chart renders
+let _spyDateMap = {};
 let _chartDatesGlobal = [];
 
 window.toggleStress = function() {
   _showStress = !_showStress;
-  if (_showStress) _showVixRange = false;
+  if (_showStress) { _showVixRange = false; _showRegimeOverlay = false; }
   document.getElementById('btnStress').classList.toggle('active', _showStress);
   document.getElementById('btnVixRange').classList.toggle('active', _showVixRange);
+  document.getElementById('btnRegimeOverlay').classList.toggle('active', _showRegimeOverlay);
   if (portfolioLineChart) portfolioLineChart.update();
 };
 window.toggleVixRange = function() {
   _showVixRange = !_showVixRange;
-  if (_showVixRange) _showStress = false;
+  if (_showVixRange) { _showStress = false; _showRegimeOverlay = false; }
+  document.getElementById('btnVixRange').classList.toggle('active', _showVixRange);
+  document.getElementById('btnStress').classList.toggle('active', _showStress);
+  document.getElementById('btnRegimeOverlay').classList.toggle('active', _showRegimeOverlay);
+  if (portfolioLineChart) portfolioLineChart.update();
+};
+window.toggleRegimeOverlay = function() {
+  _showRegimeOverlay = !_showRegimeOverlay;
+  if (_showRegimeOverlay) { _showStress = false; _showVixRange = false; }
+  document.getElementById('btnRegimeOverlay').classList.toggle('active', _showRegimeOverlay);
   document.getElementById('btnVixRange').classList.toggle('active', _showVixRange);
   document.getElementById('btnStress').classList.toggle('active', _showStress);
   if (portfolioLineChart) portfolioLineChart.update();
@@ -4066,11 +4083,33 @@ function drawVixRegion(ctx, xScale, si, ei, top, bottom, zone, name) {
   }
 }
 
+function drawRegimeRegion(ctx, xScale, si, ei, top, bottom, regime) {
+  const colors = {
+    leveraged: { bg: 'rgba(46,125,82,0.12)',  text: 'rgba(46,125,82,0.8)',  label: 'Leveraged' },
+    growth:    { bg: 'rgba(0,60,113,0.10)',   text: 'rgba(0,60,113,0.85)',  label: 'Growth' },
+    neutral:   { bg: 'rgba(139,105,20,0.12)', text: 'rgba(139,105,20,0.85)',label: 'Neutral' },
+    drawdown:  { bg: 'rgba(139,42,42,0.14)',  text: 'rgba(139,42,42,0.85)', label: 'Drawdown' }
+  };
+  const c = colors[regime] || colors.growth;
+  const x1 = xScale.getPixelForValue(si);
+  const x2 = xScale.getPixelForValue(ei);
+  const w = x2 - x1;
+  ctx.fillStyle = c.bg;
+  ctx.fillRect(x1, top, w, bottom - top);
+  if (w > 30) {
+    ctx.fillStyle = c.text;
+    ctx.font = (w > 80 ? '600 10px' : '600 8px') + ' Arial';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'top';
+    ctx.fillText(w > 80 ? c.label : c.label.slice(0, 4), x1 + w / 2, top + 4, w - 4);
+  }
+}
+
 // Custom Chart.js plugin for overlays
 const overlayPlugin = {
   id: 'stressVixOverlay',
   afterDatasetsDraw(chart) {
-    if (!_showStress && !_showVixRange) return;
+    if (!_showStress && !_showVixRange && !_showRegimeOverlay) return;
     const area = chart.chartArea;
     if (!area || !area.left) return;
     const x = chart.scales.x;
@@ -4081,6 +4120,20 @@ const overlayPlugin = {
     const ctx = chart.ctx;
     ctx.save();
     try {
+      if (_showRegimeOverlay) {
+        let cr = null, rs = null;
+        for (let i = 0; i < dates.length; i++) {
+          const r = _regimeByDate[dates[i]];
+          if (r && r !== cr) {
+            if (cr && rs !== null) drawRegimeRegion(ctx, x, rs, i - 1, top, bottom, cr);
+            cr = r; rs = i;
+          } else if (!r && cr) {
+            drawRegimeRegion(ctx, x, rs, i - 1, top, bottom, cr);
+            cr = null; rs = null;
+          }
+        }
+        if (cr && rs !== null) drawRegimeRegion(ctx, x, rs, dates.length - 1, top, bottom, cr);
+      }
       if (_showStress) {
         let ce = null, rs = null;
         for (let i = 0; i < dates.length; i++) {
@@ -4182,7 +4235,9 @@ window.renderPortfolioChart = async function() {
         ticker: h.ticker,
         isCash: false
       };
-    } catch(e) {}
+    } catch(e) {
+      console.warn('[portfolio chart] fetchChart failed for ' + h.ticker + ' (range='+currentRange+'):', e.message);
+    }
   }));
 
   // Build union of all dates, bounded by effectiveStart
@@ -4285,6 +4340,43 @@ window.renderPortfolioChart = async function() {
     _vixDateMap = {};
     vP.forEach(p => { _vixDateMap[p.date.slice(0, 10)] = p.close; });
   } catch(e) { _vixDateMap = {}; }
+
+  // Fetch SPY for regime overlay (need 1y of SPY history *prior* to chart start
+  // for the trailing-return computation, so always fetch at least 5y if range >= 1y)
+  try {
+    var spyRange = (['1mo','3mo','6mo','ytd','1y'].indexOf(currentRange) >= 0) ? '2y' : currentRange;
+    const sD = await fetchChart("SPY", spyRange, "1d");
+    const sP = (sD.points || []).filter(p => p.close !== null);
+    _spyDateMap = {};
+    sP.forEach(p => { _spyDateMap[p.date.slice(0, 10)] = p.close; });
+    // Build sorted SPY date array for trailing-window math
+    var spyDatesArr = sP.map(function(p){return p.date.slice(0,10);}).sort();
+    var spyClosesArr = spyDatesArr.map(function(d){return _spyDateMap[d];});
+    _regimeByDate = {};
+    // Compute regime for each chart date (need 252 trailing SPY days, drawdown from peak, distance from 1y low)
+    for (var i = 0; i < spyDatesArr.length; i++) {
+      var d = spyDatesArr[i];
+      var px2 = spyClosesArr[i];
+      // Need at least 252 prior SPY observations
+      if (i < 252) continue;
+      var lookbackSlice = spyClosesArr.slice(i - 252, i + 1);
+      var spyHigh = Math.max.apply(null, lookbackSlice);
+      var spyLow = Math.min.apply(null, lookbackSlice);
+      var spy12mAgo = spyClosesArr[i - 252];
+      var vix2 = _vixDateMap[d];
+      if (vix2 == null) continue;
+      var sig = {
+        vix: vix2,
+        spyTrailingReturn: (px2 - spy12mAgo) / spy12mAgo,
+        drawdownFromPeak: (px2 - spyHigh) / spyHigh,
+        spy12mFromLow: (px2 - spyLow) / spyLow
+      };
+      if (typeof psClassifyState === 'function') {
+        var cl = psClassifyState(sig);
+        _regimeByDate[d] = cl.winner;
+      }
+    }
+  } catch(e) { _regimeByDate = {}; _spyDateMap = {}; }
 
   const pfS = cv[0], pfE = cv[cv.length - 1];
   const ds = [{
@@ -4404,6 +4496,15 @@ window.renderPortfolioChart = async function() {
               if (idx == null) return [];
               const d = cd[idx];
               const lines = [''];
+              // Regime overlay info
+              if (_showRegimeOverlay) {
+                const r = _regimeByDate[d];
+                if (r) {
+                  const stateNames = {leveraged: 'Leveraged', growth: 'Non-Levered Growth', neutral: 'Neutral', drawdown: 'Positioned for Drawdown'};
+                  lines.push('Regime: ' + (stateNames[r] || r));
+                  lines.push('');
+                }
+              }
               // Stress event info
               if (_showStress) {
                 const ev = getStressEventForDate(d);
@@ -9339,18 +9440,37 @@ async function pfrRun() {
       +   '<div style="font-size:11px;opacity:.85;margin-top:4px;">Bear $'+port5y.bear.toLocaleString(undefined,{maximumFractionDigits:0})+' / Bull $'+port5y.bull.toLocaleString(undefined,{maximumFractionDigits:0})+'</div>'
       + '</div>'
       + '</div>'
-      // Per-holding table
+      // Per-holding table — wrapped in collapsible region. Default collapsed (header summary only).
+      + '<div id="pfrDetailWrap" style="display:none;">'
       + '<div style="overflow-x:auto;"><table><thead><tr>'
       +   '<th>Ticker</th><th>% Port</th><th>Current</th><th>1-Year</th><th>3-Year</th><th>5-Year</th><th>Inputs</th>'
       + '</tr></thead><tbody>' + tableRows + '</tbody></table></div>'
       + '<div style="font-size:11px;color:var(--text-sec);margin-top:10px;line-height:1.5;"><strong>Reading the table:</strong> "1-Year" cell shows the base case price target and the implied % return. Sector beta-proxy and fundamental FV (if available) are shown in the rightmost column. Cash held flat at face value. Bull/bear bands are wider on shorter horizons because near-term path is dominated by volatility, not fundamentals.</div>'
+      + '</div>'
       + '</div>';
 
     el.innerHTML = html;
+    // Reveal the toggle button now that data is loaded
+    var toggleBtn = document.getElementById('pfrToggleDetail');
+    if (toggleBtn) { toggleBtn.style.display = ''; toggleBtn.textContent = 'Show Per-Ticker Detail'; }
   } catch(e) {
     el.innerHTML = '<div style="color:var(--danger);padding:10px;">Forecast error: '+e.message+'</div>';
   }
 }
+
+// Toggle the per-holding detail table on/off (default hidden)
+window.pfrToggleDetail = function() {
+  var wrap = document.getElementById('pfrDetailWrap');
+  var btn = document.getElementById('pfrToggleDetail');
+  if (!wrap || !btn) return;
+  if (wrap.style.display === 'none') {
+    wrap.style.display = '';
+    btn.textContent = 'Hide Per-Ticker Detail';
+  } else {
+    wrap.style.display = 'none';
+    btn.textContent = 'Show Per-Ticker Detail';
+  }
+};
 
 // Compute per-state daily drift from 5yr SPY history (simple, sufficient signal)
 async function pfrComputeRegimeDrifts() {
