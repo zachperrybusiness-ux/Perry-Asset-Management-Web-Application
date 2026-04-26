@@ -1508,34 +1508,26 @@ body.view-mobile .logo-icon { width: 22px !important; height: 22px !important; f
       <!-- Benchmark cards -->
       <div class="bench-row" id="benchmarkRow"></div>
 
-      <!-- ANALYTICS ROW: Fama-French + Forward Return side-by-side above the Value chart -->
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px;">
-        <div class="card" style="margin:0;">
-          <div class="card-title">Factor Exposure Analysis (Fama-French 5-Factor + Momentum) <span class="help-icon" title="Decomposes your portfolio's returns into known systematic risk factors. Beta = sensitivity to the broader market. SMB = small-cap tilt. HML = value tilt. MOM = momentum tilt. Alpha (Jensen's α) = the portion that's NOT explained by these factors — true outperformance vs. random.">?</span></div>
-          <div class="card-body">
-            <p style="font-size:12px;color:var(--text-sec);margin-bottom:10px;">Decomposes your portfolio's return into systematic risk factors using 3-year daily return regression. Beta &gt; 1 = higher exposure than market. Positive SMB = small-cap tilt. Positive HML = value tilt. Positive MOM = momentum tilt. R&sup2; shows how much of your return is explained by known factors vs. true alpha (residual).</p>
-            <div class="form-row" style="margin-bottom:10px;">
-              <button class="btn" onclick="ffRunAnalysis()">Run Factor Analysis</button>
-              <span style="font-size:11px;color:var(--text-sec);align-self:center;margin-left:10px;">Uses 3-year daily portfolio returns vs. Fama-French factor proxies.</span>
-            </div>
-            <div id="ffResults" style="text-align:center;color:var(--text-sec);padding:16px;font-size:13px;">Click "Run Factor Analysis" to decompose your portfolio into Fama-French risk factors.</div>
-          </div>
-          <div class="card-sources"><strong>Sources:</strong> Kenneth R. French Data Library (factor definitions) &bull; Portfolio returns computed from Yahoo Finance price history via Cloudflare Worker &bull; Regression via OLS (Gauss-Jordan)</div>
+      <!-- FACTOR EXPOSURE — always-on metric strip -->
+      <div style="display:flex;justify-content:space-between;align-items:center;margin:6px 0 8px;">
+        <div style="font-size:12px;font-weight:700;color:var(--navy);text-transform:uppercase;letter-spacing:.5px;">Factor Exposure (Fama-French 5-Factor + Momentum)
+          <span class="help-icon" title="Decomposes your portfolio's returns into known systematic risk factors. Beta = sensitivity to broader market. SMB = small-cap tilt. HML = value tilt. MOM = momentum tilt. Alpha (Jensen's α) = the portion NOT explained by these factors — true outperformance.">?</span>
         </div>
+        <button class="btn btn-sm" onclick="ffRunAnalysis()">Update</button>
+      </div>
+      <div class="metrics-row" id="ffResults"><div class="metric-card" style="grid-column:1/-1;text-align:center;color:var(--text-sec);font-style:italic;">Click <strong>Update</strong> to compute factor exposure analysis.</div></div>
 
-        <div class="card" style="margin:0;">
-          <div class="card-title">Portfolio Forward Return Projections (1Y / 3Y / 5Y) <span class="help-icon" title="Per-holding price targets at 1, 3, and 5 years using a blend of fundamental (DCF/Forward P/E for stocks, historical drift for ETFs) and regime-conditioned drift. Aggregated into a portfolio-level expected return with bull/base/bear bands.">?</span></div>
-          <div class="card-body">
-            <p style="font-size:12px;color:var(--text-sec);margin-bottom:10px;">Per-holding 1/3/5-year projections combining: <strong>(1) fundamental fair value</strong>, <strong>(2) regime-conditioned drift</strong>, and <strong>(3) bull/base/bear bands</strong>.</p>
-            <div class="form-row" style="margin-bottom:10px;">
-              <button class="btn" onclick="pfrRun()">Run Forward Return Projections</button>
-              <button class="btn-outline btn-sm" id="pfrToggleDetail" onclick="pfrToggleDetail()" style="margin-left:auto;display:none;">Show Per-Ticker Detail</button>
-            </div>
-            <div id="pfrResults" style="text-align:center;color:var(--text-sec);padding:16px;font-size:13px;">Click &quot;Run Forward Return Projections&quot; to generate 1/3/5-year per-holding and portfolio-level forecasts.</div>
-          </div>
-          <div class="card-sources"><strong>Method:</strong> Fundamental fair value blended 60/40 with regime-conditioned drift &bull; Bull/Bear bands = &plusmn;1&sigma; from method dispersion &bull; <strong>Disclaimer:</strong> Forecasts depend heavily on inputs.</div>
+      <!-- PORTFOLIO FORWARD RETURNS — always-on metric strip -->
+      <div style="display:flex;justify-content:space-between;align-items:center;margin:14px 0 8px;">
+        <div style="font-size:12px;font-weight:700;color:var(--navy);text-transform:uppercase;letter-spacing:.5px;">Portfolio Forward Return Projections (1Y / 3Y / 5Y)
+          <span class="help-icon" title="Per-holding price targets at 1, 3, 5 years blending fundamental fair value (DCF/Forward P/E) with regime-conditioned drift. Bull/base/bear bands.">?</span>
+        </div>
+        <div>
+          <button class="btn-outline btn-sm" id="pfrToggleDetail" onclick="pfrToggleDetail()" style="display:none;margin-right:6px;">Show Per-Ticker Detail</button>
+          <button class="btn btn-sm" onclick="pfrRun()">Update</button>
         </div>
       </div>
+      <div class="metrics-row" id="pfrResults"><div class="metric-card" style="grid-column:1/-1;text-align:center;color:var(--text-sec);font-style:italic;">Click <strong>Update</strong> to compute 1/3/5-year forward return projections.</div></div>
 
       <!-- Chart card -->
       <div class="card">
@@ -9326,10 +9318,10 @@ function renderRegimeAudit(stateKey) {
 // ═══════════════════════════════════════════════════════════════════
 async function pfrRun() {
   var el = document.getElementById('pfrResults');
-  el.innerHTML = '<div style="padding:14px;text-align:center;"><span class="spinner"></span> Loading holdings, fetching fundamentals, computing fair values...</div>';
+  el.innerHTML = '<div class="metric-card" style="grid-column:1/-1;text-align:center;color:var(--text-sec);"><span class="spinner"></span> Loading holdings, fetching fundamentals, computing fair values...</div>';
 
   if (!window._holdings || !window._holdings.length) {
-    el.innerHTML = '<div style="color:var(--warning);padding:10px;">No holdings loaded. Add positions on the Manage Holdings page first.</div>';
+    el.innerHTML = '<div class="metric-card" style="grid-column:1/-1;color:var(--warning);">No holdings loaded. Add positions on the Manage Holdings page first.</div>';
     return;
   }
 
@@ -9513,39 +9505,48 @@ async function pfrRun() {
 
     var stateNames = {leveraged: 'Leveraged', growth: 'Non-Levered Growth', neutral: 'Neutral', drawdown: 'Positioned for Drawdown'};
     var stateName = stateNames[curState] || curState;
+    var ret1y = ((port1y.base/portStartFull-1)*100);
+    var ret3y = ((port3y.base/portStartFull-1)*100);
+    var ret5y = ((port5y.base/portStartFull-1)*100);
+    function fcastCol(v){ return v >= 0 ? C.success : C.danger; }
 
-    var html = '<div style="text-align:left;">'
-      + '<div style="background:var(--panel);border:1px solid var(--border);border-radius:4px;padding:10px 14px;margin-bottom:14px;font-size:12px;">'
-      +   '<strong>Current Regime:</strong> '+stateName+' &middot; <strong>Annualized regime drift:</strong> '+(((Math.pow(1+regimeDailyDrift,252)-1)*100).toFixed(2))+'% &middot; <strong>Holdings projected:</strong> '+rows.length+'/'+tickers.length+' &middot; <strong>Cash held flat:</strong> $'+totalCash.toLocaleString()
-      + '</div>'
-      // Aggregate portfolio band
-      + '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px;margin-bottom:16px;">'
-      + '<div style="background:var(--navy);color:#fff;padding:14px 16px;border-radius:4px;">'
-      +   '<div style="font-size:11px;opacity:.85;text-transform:uppercase;letter-spacing:.5px;">1-Year Forecast</div>'
-      +   '<div style="font-size:22px;font-weight:800;margin:4px 0;">$'+port1y.base.toLocaleString(undefined,{maximumFractionDigits:0})+'</div>'
-      +   '<div style="font-size:12px;opacity:.95;">Base: '+(((port1y.base/portStartFull-1)*100)>=0?'+':'')+(((port1y.base/portStartFull-1)*100)).toFixed(1)+'%</div>'
-      +   '<div style="font-size:11px;opacity:.85;margin-top:4px;">Bear $'+port1y.bear.toLocaleString(undefined,{maximumFractionDigits:0})+' / Bull $'+port1y.bull.toLocaleString(undefined,{maximumFractionDigits:0})+'</div>'
-      + '</div>'
-      + '<div style="background:var(--navy);color:#fff;padding:14px 16px;border-radius:4px;">'
-      +   '<div style="font-size:11px;opacity:.85;text-transform:uppercase;letter-spacing:.5px;">3-Year Forecast</div>'
-      +   '<div style="font-size:22px;font-weight:800;margin:4px 0;">$'+port3y.base.toLocaleString(undefined,{maximumFractionDigits:0})+'</div>'
-      +   '<div style="font-size:12px;opacity:.95;">Base: '+(((port3y.base/portStartFull-1)*100)>=0?'+':'')+(((port3y.base/portStartFull-1)*100)).toFixed(1)+'%</div>'
-      +   '<div style="font-size:11px;opacity:.85;margin-top:4px;">Bear $'+port3y.bear.toLocaleString(undefined,{maximumFractionDigits:0})+' / Bull $'+port3y.bull.toLocaleString(undefined,{maximumFractionDigits:0})+'</div>'
-      + '</div>'
-      + '<div style="background:var(--navy);color:#fff;padding:14px 16px;border-radius:4px;">'
-      +   '<div style="font-size:11px;opacity:.85;text-transform:uppercase;letter-spacing:.5px;">5-Year Forecast</div>'
-      +   '<div style="font-size:22px;font-weight:800;margin:4px 0;">$'+port5y.base.toLocaleString(undefined,{maximumFractionDigits:0})+'</div>'
-      +   '<div style="font-size:12px;opacity:.95;">Base: '+(((port5y.base/portStartFull-1)*100)>=0?'+':'')+(((port5y.base/portStartFull-1)*100)).toFixed(1)+'%</div>'
-      +   '<div style="font-size:11px;opacity:.85;margin-top:4px;">Bear $'+port5y.bear.toLocaleString(undefined,{maximumFractionDigits:0})+' / Bull $'+port5y.bull.toLocaleString(undefined,{maximumFractionDigits:0})+'</div>'
-      + '</div>'
-      + '</div>'
-      // Per-holding table — wrapped in collapsible region. Default collapsed (header summary only).
-      + '<div id="pfrDetailWrap" style="display:none;">'
+    var html = '';
+    // Regime context card
+    html += '<div class="metric-card" title="Current macro regime classification driving the forecast drift assumption.">'
+      + '<div class="metric-label">Current Regime</div>'
+      + '<div class="metric-value" style="font-size:15px;">'+stateName+'</div>'
+      + '<div class="metric-sub" style="color:var(--text-sec);font-weight:400;">Drift: '+(((Math.pow(1+regimeDailyDrift,252)-1)*100).toFixed(1))+'% annualized</div>'
+      + '</div>';
+    // Forecast cards
+    html += '<div class="metric-card" title="1-year base case portfolio value combining fundamental fair value and regime-conditioned drift.">'
+      + '<div class="metric-label">1-Year Forecast</div>'
+      + '<div class="metric-value">$'+port1y.base.toLocaleString(undefined,{maximumFractionDigits:0})+'</div>'
+      + '<div class="metric-sub" style="color:'+fcastCol(ret1y)+';">'+(ret1y>=0?'+':'')+ret1y.toFixed(1)+'%</div>'
+      + '<div class="metric-sub" style="color:var(--text-sec);font-weight:400;">Bear $'+(port1y.bear/1000).toFixed(0)+'K / Bull $'+(port1y.bull/1000).toFixed(0)+'K</div>'
+      + '</div>';
+    html += '<div class="metric-card" title="3-year base case portfolio value.">'
+      + '<div class="metric-label">3-Year Forecast</div>'
+      + '<div class="metric-value">$'+port3y.base.toLocaleString(undefined,{maximumFractionDigits:0})+'</div>'
+      + '<div class="metric-sub" style="color:'+fcastCol(ret3y)+';">'+(ret3y>=0?'+':'')+ret3y.toFixed(1)+'%</div>'
+      + '<div class="metric-sub" style="color:var(--text-sec);font-weight:400;">Bear $'+(port3y.bear/1000).toFixed(0)+'K / Bull $'+(port3y.bull/1000).toFixed(0)+'K</div>'
+      + '</div>';
+    html += '<div class="metric-card" title="5-year base case portfolio value.">'
+      + '<div class="metric-label">5-Year Forecast</div>'
+      + '<div class="metric-value">$'+port5y.base.toLocaleString(undefined,{maximumFractionDigits:0})+'</div>'
+      + '<div class="metric-sub" style="color:'+fcastCol(ret5y)+';">'+(ret5y>=0?'+':'')+ret5y.toFixed(1)+'%</div>'
+      + '<div class="metric-sub" style="color:var(--text-sec);font-weight:400;">Bear $'+(port5y.bear/1000).toFixed(0)+'K / Bull $'+(port5y.bull/1000).toFixed(0)+'K</div>'
+      + '</div>';
+    html += '<div class="metric-card" title="Number of holdings successfully projected; cash held flat at face value.">'
+      + '<div class="metric-label">Holdings Projected</div>'
+      + '<div class="metric-value">'+rows.length+' / '+tickers.length+'</div>'
+      + '<div class="metric-sub" style="color:var(--text-sec);font-weight:400;">Cash flat: $'+(totalCash/1000).toFixed(1)+'K</div>'
+      + '</div>';
+    // Per-holding detail — full-width row at bottom, hidden by default
+    html += '<div id="pfrDetailWrap" style="grid-column:1/-1;display:none;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);padding:16px;">'
       + '<div style="overflow-x:auto;"><table><thead><tr>'
       +   '<th>Ticker</th><th>% Port</th><th>Current</th><th>1-Year</th><th>3-Year</th><th>5-Year</th><th>Inputs</th>'
       + '</tr></thead><tbody>' + tableRows + '</tbody></table></div>'
-      + '<div style="font-size:11px;color:var(--text-sec);margin-top:10px;line-height:1.5;"><strong>Reading the table:</strong> "1-Year" cell shows the base case price target and the implied % return. Sector beta-proxy and fundamental FV (if available) are shown in the rightmost column. Cash held flat at face value. Bull/bear bands are wider on shorter horizons because near-term path is dominated by volatility, not fundamentals.</div>'
-      + '</div>'
+      + '<div style="font-size:11px;color:var(--text-sec);margin-top:10px;line-height:1.5;"><strong>Reading the table:</strong> "1-Year" cell shows the base case price target and implied % return. Sector beta-proxy and fundamental FV (if available) are shown in the rightmost column. Cash held flat at face value. Bull/bear bands are wider on shorter horizons.</div>'
       + '</div>';
 
     el.innerHTML = html;
@@ -9553,7 +9554,7 @@ async function pfrRun() {
     var toggleBtn = document.getElementById('pfrToggleDetail');
     if (toggleBtn) { toggleBtn.style.display = ''; toggleBtn.textContent = 'Show Per-Ticker Detail'; }
   } catch(e) {
-    el.innerHTML = '<div style="color:var(--danger);padding:10px;">Forecast error: '+e.message+'</div>';
+    el.innerHTML = '<div class="metric-card" style="grid-column:1/-1;color:var(--danger);">Forecast error: '+e.message+'</div>';
   }
 }
 
@@ -9842,7 +9843,7 @@ async function poeRun() {
 //                 MOM=MTUM, RMW=quality proxy, CMA=conservative-aggressive via IJJ
 async function ffRunAnalysis() {
   var el = document.getElementById('ffResults');
-  el.innerHTML='<div style="text-align:center;padding:16px;"><span class="spinner"></span> Fetching 3-year price history for portfolio and factor proxies...</div>';
+  el.innerHTML='<div class="metric-card" style="grid-column:1/-1;text-align:center;color:var(--text-sec);"><span class="spinner"></span> Fetching 3-year price history for portfolio and factor proxies...</div>';
   var holdings = window._holdings||[];
   if(!holdings.length){ el.innerHTML='<div style="color:var(--danger);padding:10px;">No holdings to analyze.</div>'; return; }
   var WORKER='https://perry-finance-proxy.zachperrybusiness.workers.dev';
@@ -9943,44 +9944,31 @@ async function ffRunAnalysis() {
     var ols=olsRegress(excessPort,Xs);
     var alphaAnn=ols.alpha_annual*100;
     var r2=ols.r2;
-    // Render factor cards
-    var factorColors=[C.navy,C.blue,C.success,C.warning];
-    var factorDescs={
-      'Market (Mkt-RF)':'Excess market sensitivity. >1 = more volatile than SPY.',
-      'Size (SMB)':'Small-cap tilt. >0 = small-cap exposure, <0 = large-cap.',
-      'Value (HML)':'Value tilt. >0 = value stocks, <0 = growth stocks.',
-      'Momentum (MOM)':'Momentum exposure. >0 = riding winners, <0 = contrarian.',
-    };
-    var cardHtml='<div class="ff-factor-grid">';
+    // Render as metric-card grid (compatible with .metrics-row container)
+    var cardHtml='';
     factorKeys.forEach(function(k2,i){
-      var beta=ols.betas[i+1]; // +1 for intercept
+      var beta=ols.betas[i+1];
       var col=beta>0?C.navy:C.danger;
       if(Math.abs(beta)<0.1) col=C.textSec;
-      cardHtml+='<div class="ff-factor-card">'
-        +'<div class="ff-factor-name">'+k2+'</div>'
-        +'<div class="ff-factor-beta" style="color:'+col+';">'+(beta>=0?'+':'')+beta.toFixed(3)+'</div>'
-        +'<div class="ff-factor-desc">'+factorDescs[k2]+'</div>'
+      cardHtml+='<div class="metric-card" title="'+factorDescs[k2]+'">'
+        +'<div class="metric-label">'+k2+'</div>'
+        +'<div class="metric-value" style="color:'+col+';">'+(beta>=0?'+':'')+beta.toFixed(3)+'</div>'
+        +'<div class="metric-sub" style="color:var(--text-sec);font-weight:400;">'+factorDescs[k2]+'</div>'
         +'</div>';
     });
-    // Alpha and R² cards
     var alphaCol=alphaAnn>0?C.success:C.danger;
-    cardHtml+='<div class="ff-factor-card">'
-      +'<div class="ff-factor-name">Jensen&apos;s Alpha (ann.)</div>'
-      +'<div class="ff-factor-beta" style="color:'+alphaCol+';">'+(alphaAnn>=0?'+':'')+alphaAnn.toFixed(2)+'%</div>'
-      +'<div class="ff-factor-desc">Return unexplained by factors. Positive = true alpha.</div>'
+    cardHtml+='<div class="metric-card" title="Annualized Jensen\'s alpha — return that is NOT explained by the systematic factors above. Positive = true outperformance.">'
+      +'<div class="metric-label">Jensen&apos;s Alpha (ann.)</div>'
+      +'<div class="metric-value" style="color:'+alphaCol+';">'+(alphaAnn>=0?'+':'')+alphaAnn.toFixed(2)+'%</div>'
+      +'<div class="metric-sub" style="color:var(--text-sec);font-weight:400;">Unexplained return. Positive = true alpha.</div>'
       +'</div>';
-    cardHtml+='<div class="ff-factor-card">'
-      +'<div class="ff-factor-name">R² (Factor Explained)</div>'
-      +'<div class="ff-factor-beta" style="color:'+C.navy+';">'+(r2*100).toFixed(1)+'%</div>'
-      +'<div class="ff-factor-desc">How much of portfolio return is explained by systematic factors.</div>'
+    cardHtml+='<div class="metric-card" title="How much of your portfolio return is explained by these systematic factors. Higher = more factor-driven.">'
+      +'<div class="metric-label">R&sup2; (Factor Explained)</div>'
+      +'<div class="metric-value" style="color:'+C.navy+';">'+(r2*100).toFixed(1)+'%</div>'
+      +'<div class="metric-sub" style="color:var(--text-sec);font-weight:400;">'+n+' day window</div>'
       +'</div>';
-    cardHtml+='</div>';
-    var interp='';
-    if(r2>0.9) interp='Your return is <strong>highly factor-driven</strong> ('+((r2)*100).toFixed(0)+'% explained). Alpha is '+alphaAnn.toFixed(2)+'%.';
-    else if(r2>0.7) interp='Significant factor exposure ('+((r2)*100).toFixed(0)+'%). Some idiosyncratic return present.';
-    else interp='Relatively low factor exposure ('+((r2)*100).toFixed(0)+'%). Portfolio has substantial idiosyncratic exposure or unique factor mix.';
-    el.innerHTML='<p style="font-size:12px;color:var(--text-sec);margin-bottom:12px;">'+interp+' Based on '+n+' trading days of 3-year history.</p>'+cardHtml;
-  } catch(e){ el.innerHTML='<div style="color:var(--danger);padding:10px;">Error: '+e.message+'</div>'; }
+    el.innerHTML=cardHtml;
+  } catch(e){ el.innerHTML='<div class="metric-card" style="grid-column:1/-1;color:var(--danger);">Error: '+e.message+'</div>'; }
 }
 
 // ═══════════════════════════════════════════════════════════════════
