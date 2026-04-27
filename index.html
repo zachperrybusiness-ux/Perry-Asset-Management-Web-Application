@@ -4508,15 +4508,27 @@ window.renderPortfolioChart = async function() {
   // ─────────────────────────────────────────────────────────────────────
   var mcRegimeSel = document.getElementById('mcRegimeSelect');
   var mcRegime = mcRegimeSel ? mcRegimeSel.value : '';
+  console.log('[MC forecast] dropdown value =', mcRegime);
   if (mcRegime && typeof pfrComputeRegimeDrifts === 'function') {
     try {
+      console.log('[MC forecast] starting projection for regime:', mcRegime);
       var regimeDrifts = await pfrComputeRegimeDrifts();
+      console.log('[MC forecast] regime drifts:', regimeDrifts);
       var mcDailyDrift = regimeDrifts[mcRegime] || regimeDrifts.growth || 0.0003;
       var mcDailyVolByState = { leveraged: 0.022, growth: 0.011, neutral: 0.014, drawdown: 0.025 };
       var mcDailyVol = mcDailyVolByState[mcRegime] || 0.014;
 
-      // Approximate portfolio beta via realized vol vs. SPY baseline (~1.2% daily)
-      var portSigma = sd / 100 / Math.sqrt(252);
+      // Approximate portfolio beta via realized vol vs. SPY baseline (~1.2% daily).
+      // Compute portfolio daily sigma inline (sd is declared later in the function).
+      var _mcDR = [];
+      for (var _mci = 1; _mci < cv.length; _mci++) {
+        if (cv[_mci-1] != null && cv[_mci] != null && cv[_mci-1] > 0) {
+          _mcDR.push((cv[_mci] - cv[_mci-1]) / cv[_mci-1]);
+        }
+      }
+      var _mcMean = _mcDR.length ? _mcDR.reduce(function(a,b){return a+b;},0)/_mcDR.length : 0;
+      var _mcVar = _mcDR.length ? _mcDR.reduce(function(a,r){return a+(r-_mcMean)*(r-_mcMean);},0)/_mcDR.length : 0;
+      var portSigma = Math.sqrt(_mcVar);
       if (!isFinite(portSigma) || portSigma <= 0) portSigma = mcDailyVol;
       var portBeta = portSigma / 0.012;
       portBeta = Math.max(0.3, Math.min(3.5, portBeta));
@@ -4642,11 +4654,13 @@ window.renderPortfolioChart = async function() {
         annDrift: (Math.pow(1+portDrift, 252)-1)*100,
         annVol: portVol*Math.sqrt(252)*100
       };
+      console.log('[MC forecast] success — extended chart by', nForecast, 'trading days. P50 end:', p50Path[p50Path.length-1].toFixed(0));
     } catch(mcErr) {
-      console.warn('[MC forecast] skipped:', mcErr.message);
+      console.error('[MC forecast] FAILED:', mcErr);
       window._mcForecast = null;
     }
   } else {
+    if (mcRegime) console.warn('[MC forecast] skipped — pfrComputeRegimeDrifts not defined');
     window._mcForecast = null;
   }
 
