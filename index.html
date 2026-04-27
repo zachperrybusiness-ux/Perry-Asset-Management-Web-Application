@@ -2803,9 +2803,12 @@ body.view-mobile .logo-icon { width: 22px !important; height: 22px !important; f
       // Re-render with fresh prices
       window._holdings = h;
       renderHoldingsTable(h);
-      // If Portfolio page is currently active, re-render it too
+      // If Portfolio page is currently active, re-render it and auto-trigger analytics
       if (typeof renderPortfolioOverview === 'function' && document.getElementById('page-portfolio') && document.getElementById('page-portfolio').classList.contains('active')) {
         renderPortfolioOverview();
+        // Auto-fire analytics now that prices are fresh
+        if (typeof ffRunAnalysis === 'function' && !window._ffAutoRan) { window._ffAutoRan = true; ffRunAnalysis(); }
+        if (typeof pfrRun === 'function' && !window._pfrAutoRan) { window._pfrAutoRan = true; pfrRun(); }
       }
 
       var freshCount = Object.keys(quotes).length;
@@ -3539,7 +3542,20 @@ function navigateTo(p) {
   const ce = document.querySelector('.nav-child[data-page="' + p + '"]');
   if (ce) ce.classList.add('active');
   window.scrollTo(0, 0);
-  if (p === 'portfolio') renderPortfolioOverview();
+  if (p === 'portfolio') {
+    renderPortfolioOverview();
+    // Auto-fire factor exposure and forward-return engines on first portfolio visit per session
+    setTimeout(function(){
+      if (typeof ffRunAnalysis === 'function' && !window._ffAutoRan && window._holdings && window._holdings.length) {
+        window._ffAutoRan = true;
+        ffRunAnalysis();
+      }
+      if (typeof pfrRun === 'function' && !window._pfrAutoRan && window._holdings && window._holdings.length) {
+        window._pfrAutoRan = true;
+        pfrRun();
+      }
+    }, 1500);
+  }
   if (p === 'home') { briefingLoad(); }
   if (p === 'themes' && typeof themesPopulateDropdown === 'function') {
     themesPopulateDropdown();
