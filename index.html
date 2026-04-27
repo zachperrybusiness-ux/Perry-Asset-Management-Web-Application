@@ -9945,6 +9945,12 @@ async function ffRunAnalysis() {
     var alphaAnn=ols.alpha_annual*100;
     var r2=ols.r2;
     // Render as metric-card grid (compatible with .metrics-row container)
+    var factorDescs={
+      'Market (Mkt-RF)':'Excess market sensitivity. >1 = more volatile than SPY.',
+      'Size (SMB)':'Small-cap tilt. >0 = small-cap exposure, <0 = large-cap.',
+      'Value (HML)':'Value tilt. >0 = value stocks, <0 = growth stocks.',
+      'Momentum (MOM)':'Momentum exposure. >0 = riding winners, <0 = contrarian.'
+    };
     var cardHtml='';
     factorKeys.forEach(function(k2,i){
       var beta=ols.betas[i+1];
