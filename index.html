@@ -1893,7 +1893,7 @@ body.view-mobile .logo-icon { width: 22px !important; height: 22px !important; f
       </div>
       <div class="nav-dropdown">
         <div class="nav-child" data-page="macro" onclick="navigateTo('macro')">Macro Regime Analysis</div>
-        <div class="nav-child" data-page="quant" onclick="navigateTo('quant')">Project Stock Values</div>
+        <div class="nav-child" data-page="research" onclick="navigateTo('research')">Stock Research &amp; Quant Models</div>
         <div class="nav-child" data-page="markets" onclick="navigateTo('markets')">Cross-Asset Analysis</div>
       </div>
     </div>
@@ -2132,6 +2132,8 @@ body.view-mobile .logo-icon { width: 22px !important; height: 22px !important; f
         <button class="pf-tab" data-pftab="risk" onclick="pfShowTab('risk')">Risk</button>
         <button class="pf-tab" data-pftab="characteristics" onclick="pfShowTab('characteristics')">Characteristics</button>
         <button class="pf-tab" data-pftab="scenarios" onclick="pfShowTab('scenarios')">Scenarios</button>
+        <button class="pf-tab" data-pftab="themes" onclick="pfShowTab('themes')">Themes</button>
+        <button class="pf-tab" data-pftab="whatif" onclick="pfShowTab('whatif')">What-If</button>
       </div>
 
       <!-- AI Commentary panel -->
@@ -2189,12 +2191,14 @@ body.view-mobile .logo-icon { width: 22px !important; height: 22px !important; f
               <input type="text" id="compare2" placeholder="QQQ" value="QQQ" style="width:80px;text-transform:uppercase;">
             </div>
             <button class="btn btn-sm" onclick="renderPortfolioChart()">Update Chart</button>
+            <button class="btn-outline btn-sm" onclick="pfAddTickerToChart()" style="margin-left:8px;">+ Add Ticker</button>
             <button class="btn-outline btn-sm" id="btnStress" onclick="toggleStress()" style="margin-left:8px;">Stressed Scenarios</button>
             <button class="btn-outline btn-sm" id="btnVixRange" onclick="toggleVixRange()" style="margin-left:4px;">VIX Range</button>
             <button class="btn-outline btn-sm" id="btnRegimeOverlay" onclick="toggleRegimeOverlay()" style="margin-left:4px;">Market Regime</button>
+            <button class="btn-outline btn-sm" id="btnRecState" onclick="toggleRecState()" style="margin-left:4px;">Recommended State</button>
             <div class="form-group" style="margin-left:12px;display:flex;align-items:center;gap:6px;">
               <label style="font-size:11px;color:var(--text-sec);font-weight:600;margin:0;">Forecast Regime:
-                <span class="help-icon" title="Project a 12-month Monte Carlo forecast onto the chart under the chosen regime assumption. The fan band shows P10–P90 outcomes; benchmark is also forward-projected for comparison.">?</span>
+                <span class="help-icon" title="Project a 12-month Monte Carlo forecast onto the chart under the chosen regime assumption. Also overlays a backtest of how that regime would have performed historically (dashed) over the same window. The fan band shows P10–P90 outcomes.">?</span>
               </label>
               <select id="mcRegimeSelect" onchange="renderPortfolioChart()" style="padding:4px 8px;font-size:12px;">
                 <option value="">— Off —</option>
@@ -2203,6 +2207,9 @@ body.view-mobile .logo-icon { width: 22px !important; height: 22px !important; f
                 <option value="neutral">Neutral</option>
                 <option value="drawdown">Drawdown</option>
               </select>
+              <label style="font-size:11px;color:var(--text-sec);font-weight:600;margin-left:8px;display:flex;align-items:center;gap:4px;">
+                <input type="checkbox" id="mcHistOverlay" onchange="renderPortfolioChart()" style="margin:0;"> Historical
+              </label>
             </div>
           </div>
           <div class="chart-stats" id="chartStats"></div>
@@ -2237,19 +2244,22 @@ body.view-mobile .logo-icon { width: 22px !important; height: 22px !important; f
           &#8226; Yahoo Finance via Cloudflare Worker &#8226; Firebase Firestore
         </div>
       </div>
-      <!-- Holdings table -->
-      <div class="card">
-        <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;">
-          <span>Portfolio Holdings <span class="help-icon" title="All your positions across every account (taxable, IRA, 401k, etc.). The Regime Fit column shows whether each holding is appropriate for the current market state. Hover the G/L column for the calculation formula.">?</span></span>
-          <div style="display:flex;gap:8px;align-items:center;">
+      <!-- Holdings table — collapsible -->
+      <div class="card" id="pfHoldingsCard">
+        <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;cursor:pointer;" onclick="pfHoldingsToggle()">
+          <span>
+            <span id="pfHoldingsCaret" style="display:inline-block;width:14px;text-align:center;font-family:'Courier New',monospace;color:#fff;font-weight:700;transition:transform 0.18s ease;">▼</span>
+            Portfolio Holdings <span class="help-icon" title="All your positions across every account (taxable, IRA, 401k, etc.). The Regime Fit column shows whether each holding is appropriate for the current market state. Hover the G/L column for the calculation formula. Click the title bar to collapse/expand.">?</span>
+          </span>
+          <div style="display:flex;gap:8px;align-items:center;" onclick="event.stopPropagation();">
             <span id="holdingsCountInline" style="font-size:11px;color:var(--text-sec);font-weight:500;text-transform:none;letter-spacing:0;"></span>
-            <button class="btn-outline btn-sm" onclick="navigateTo('holdings')">Manage Holdings</button>
+            <button class="btn-outline btn-sm" onclick="event.stopPropagation();navigateTo('holdings')">Manage Holdings</button>
           </div>
         </div>
-        <div class="card-body">
+        <div class="card-body" id="pfHoldingsBody">
           <div class="table-wrap" id="portfolioTableWrap"></div>
         </div>
-        <div class="card-sources">
+        <div class="card-sources" id="pfHoldingsSources">
           <strong>Sources:</strong><br>
           &#8226; Yahoo Finance via Cloudflare Worker &#8226; Firebase Firestore
         </div>
@@ -2429,6 +2439,130 @@ body.view-mobile .logo-icon { width: 22px !important; height: 22px !important; f
       </div>
 
       </div><!-- /pftab-scenarios -->
+
+      <!-- ═══════════ TAB: THEMES — compare your portfolio to thematic baskets ═══════════ -->
+      <div class="pf-tab-content" id="pftab-themes">
+        <div class="card">
+          <div class="card-title">Compare Portfolio vs. Theme Baskets
+            <span class="help-icon" title="Compares your live portfolio against pre-built thematic baskets (AI Infrastructure, Defensive Yield, etc.). The chart rebases all to 100 at the start so you can see relative performance head-to-head.">?</span>
+          </div>
+          <div class="card-body">
+            <p style="font-size:12px;color:var(--text-sec);margin-bottom:12px;">Side-by-side cumulative return: your <strong>actual portfolio</strong> vs. each theme basket's equal-weight return over the same window. All series rebased to 100 at start. Ideal for asking: "Would I have done better with the AI Infra basket than my own picks?"</p>
+            <div class="form-row" style="margin-bottom:10px;">
+              <div class="form-group"><label>Window</label>
+                <select id="themeCmpRange" onchange="themeCompareRun()">
+                  <option value="3mo">3 Months</option>
+                  <option value="6mo">6 Months</option>
+                  <option value="ytd">YTD</option>
+                  <option value="1y" selected>1 Year</option>
+                  <option value="3y">3 Years</option>
+                  <option value="5y">5 Years</option>
+                </select>
+              </div>
+              <div class="form-group" style="flex:1;min-width:280px;"><label>Themes to Compare (multi-select)</label>
+                <div id="themeCmpPicker" style="display:flex;gap:6px;flex-wrap:wrap;border:1px solid var(--border);padding:6px;border-radius:4px;background:var(--panel);"></div>
+              </div>
+              <button class="btn btn-sm" onclick="themeCompareRun()">Run Comparison</button>
+            </div>
+            <div id="themeCmpStats" class="chart-stats"></div>
+            <div class="chart-wrap" style="height:380px;"><canvas id="themeCmpChart"></canvas></div>
+            <div id="themeCmpTable" style="margin-top:14px;"></div>
+          </div>
+          <div class="card-sources"><strong>Method:</strong> Portfolio dollar-value series reconstructed from holdings; theme basket = equal-weight rebalanced daily over the window; both rebased to 100. Theme constituents from the Portfolio Themes module. &middot; Yahoo Finance via Cloudflare Worker.</div>
+        </div>
+
+        <!-- Custom themed portfolio builder -->
+        <div class="card">
+          <div class="card-title">Create Custom Themed Portfolio
+            <span class="help-icon" title="Build your own thematic basket — give it a name, list tickers and weights — and save it to your account. Saved themes appear in the comparison list above and persist across sessions.">?</span>
+          </div>
+          <div class="card-body">
+            <p style="font-size:12px;color:var(--text-sec);margin-bottom:12px;">Build a custom basket. Equal-weight by default; override individual weights below. Saved baskets persist to your account and become available in <strong>Compare Portfolio vs. Theme Baskets</strong> above.</p>
+            <div id="customThemeAuthGate" class="auth-gate" style="display:none;padding:18px;">
+              <p style="margin:0;">Sign in to save custom themes to your account.</p>
+            </div>
+            <div id="customThemeBuilder">
+              <div class="form-row" style="margin-bottom:10px;">
+                <div class="form-group" style="flex:1;min-width:240px;"><label>Theme Name</label>
+                  <input type="text" id="ctName" placeholder="My Defensive Mix">
+                </div>
+                <div class="form-group"><label>Regime Fit</label>
+                  <select id="ctRegime">
+                    <option value="leveraged">Leveraged</option>
+                    <option value="growth" selected>Non-Levered Growth</option>
+                    <option value="neutral">Neutral</option>
+                    <option value="drawdown">Positioned for Drawdown</option>
+                  </select>
+                </div>
+              </div>
+              <div class="form-row" style="margin-bottom:10px;">
+                <div class="form-group" style="flex:1;"><label>Description</label>
+                  <input type="text" id="ctDesc" placeholder="What's the macro thesis?">
+                </div>
+              </div>
+              <div class="form-row" style="align-items:flex-end;">
+                <div class="form-group" style="min-width:120px;"><label>Add Ticker</label>
+                  <input type="text" id="ctAddTicker" placeholder="NVDA" style="text-transform:uppercase;" onkeydown="if(event.key==='Enter')customThemeAddTicker()">
+                </div>
+                <div class="form-group" style="min-width:80px;"><label>Weight %</label>
+                  <input type="number" id="ctAddWeight" placeholder="auto" min="0" step="0.01">
+                </div>
+                <button class="btn btn-sm" onclick="customThemeAddTicker()">Add</button>
+                <button class="btn-outline btn-sm" onclick="customThemeNormalize()">Equal-Weight All</button>
+              </div>
+              <div id="ctTickersList" style="margin-top:12px;"></div>
+              <div style="display:flex;gap:8px;margin-top:14px;flex-wrap:wrap;">
+                <button class="btn" onclick="customThemeSave()">Save Custom Theme</button>
+                <button class="btn-outline" onclick="customThemeReset()">Reset Builder</button>
+                <span id="ctStatus" style="font-size:11px;color:var(--text-sec);align-self:center;"></span>
+              </div>
+              <div id="ctSavedList" style="margin-top:14px;"></div>
+            </div>
+          </div>
+          <div class="card-sources"><strong>Storage:</strong> Custom themes saved to Firestore under <code>customThemes/{uid}/themes</code>. Available across all your devices when signed in.</div>
+        </div>
+      </div><!-- /pftab-themes -->
+
+      <!-- ═══════════ TAB: WHAT-IF — Add ticker simulator ═══════════ -->
+      <div class="pf-tab-content" id="pftab-whatif">
+        <div class="card">
+          <div class="card-title">What-If: Add Ticker to Portfolio
+            <span class="help-icon" title="Simulate adding (or replacing) a ticker at a chosen weight. The chart shows your actual portfolio vs. the hypothetical portfolio with the new ticker, both starting at the same dollar value.">?</span>
+          </div>
+          <div class="card-body">
+            <p style="font-size:12px;color:var(--text-sec);margin-bottom:12px;">Test how your historical performance would have changed if you'd added a ticker at <em>X%</em> weight (funded pro-rata from existing positions). Useful for evaluating new ideas vs. your live book.</p>
+            <div class="form-row" style="margin-bottom:10px;">
+              <div class="form-group" style="min-width:140px;"><label>Add Ticker</label>
+                <input type="text" id="whatifTicker" placeholder="NVDA" style="text-transform:uppercase;" onkeydown="if(event.key==='Enter')whatIfRun()">
+              </div>
+              <div class="form-group" style="min-width:120px;"><label>Weight (% of portfolio)</label>
+                <input type="number" id="whatifWeight" value="5" min="0.5" max="100" step="0.5">
+              </div>
+              <div class="form-group"><label>Window</label>
+                <select id="whatifRange">
+                  <option value="3mo">3 Months</option>
+                  <option value="6mo">6 Months</option>
+                  <option value="ytd">YTD</option>
+                  <option value="1y" selected>1 Year</option>
+                  <option value="3y">3 Years</option>
+                  <option value="5y">5 Years</option>
+                </select>
+              </div>
+              <div class="form-group"><label>Method</label>
+                <select id="whatifMethod">
+                  <option value="dilute" selected>Dilute existing pro-rata</option>
+                  <option value="add">Add on top (lever up)</option>
+                </select>
+              </div>
+              <button class="btn btn-sm" onclick="whatIfRun()">Run Simulation</button>
+            </div>
+            <div id="whatifStats" class="chart-stats"></div>
+            <div class="chart-wrap" style="height:360px;"><canvas id="whatifChart"></canvas></div>
+            <p style="font-size:11px;color:var(--text-sec);margin-top:8px;line-height:1.5;"><strong>Method.</strong> "Dilute pro-rata" funds the new position by reducing every existing holding by the same proportional fraction (your portfolio stays at its starting dollar value). "Add on top" treats it as additional capital deployed (portfolio scales above 1x).</p>
+          </div>
+          <div class="card-sources"><strong>Sources:</strong> Yahoo Finance via Cloudflare Worker. Chart rebases both series to 100 at window start.</div>
+        </div>
+      </div><!-- /pftab-whatif -->
 
     </div>
   </div>
@@ -2688,25 +2822,37 @@ body.view-mobile .logo-icon { width: 22px !important; height: 22px !important; f
   </div>
 </div>
 
-<!-- ═══════════ RESEARCH ═══════════ -->
+<!-- ═══════════ RESEARCH (merged with Quant Models) ═══════════ -->
 <div class="page" id="page-research">
   <div class="content-wrap">
     <div class="hero" style="padding:32px 40px;">
-      <h1>Stock Research</h1>
-      <p>Enter any stock ticker, ETF, or crypto to view a full interactive price chart and comprehensive financial analysis powered by SEC EDGAR filings and real-time market data.</p>
+      <h1>Stock Research &amp; Quantitative Models</h1>
+      <p>Single-ticker workspace: live financials and chart on the <strong>Research</strong> tab; multivariate regression, regime backtest, walk-forward validation, and Monte Carlo on the <strong>Quant Models</strong> tab. Enter a ticker once and use both lenses head-to-head.</p>
     </div>
+
+    <!-- Shared ticker bar — drives both tabs -->
     <div class="card">
-      <div class="card-title">Ticker Lookup <span class="help-icon" title="Enter any US-listed stock, ETF, ADR, or crypto ticker. We'll fetch live price, fundamentals (SEC EDGAR for stocks, fund holdings for ETFs), 5-year regime-conditioned returns, and the live options chain.">?</span></div>
+      <div class="card-title">Ticker Lookup <span class="help-icon" title="Enter any US-listed stock, ETF, ADR, or crypto ticker. The Research tab fetches live price + SEC fundamentals; the Quant Models tab runs MLR, regime backtests, and Monte Carlo.">?</span></div>
       <div class="card-body">
         <div class="form-row">
           <div class="form-group" style="min-width:140px;">
             <label>Ticker</label>
             <input type="text" id="researchTicker" placeholder="AAPL, SPY, BTC-USD" style="text-transform:uppercase;" onkeydown="if(event.key==='Enter')runResearch()">
           </div>
-          <button class="btn" onclick="runResearch()">Analyze</button>
+          <button class="btn" onclick="runResearch()">Analyze (Research)</button>
+          <button class="btn-outline btn-sm" onclick="rqSyncQuantTickerAndRun()" style="margin-left:6px;">Run Quant Models</button>
         </div>
       </div>
     </div>
+
+    <!-- PORT-style sub-tabs: Research / Quant Models -->
+    <div class="pf-tabs" role="tablist" aria-label="Research workspace">
+      <button class="pf-tab active" data-rqtab="research" onclick="rqShowTab('research')">Research</button>
+      <button class="pf-tab" data-rqtab="quant" onclick="rqShowTab('quant')">Quant Models</button>
+    </div>
+
+    <!-- TAB: RESEARCH -->
+    <div class="pf-tab-content active" id="rqtab-research">
     <!-- Company Header + Metrics (shown above chart) -->
     <div id="researchHeaderResults"></div>
     <!-- Interactive Chart -->
@@ -2794,6 +2940,15 @@ body.view-mobile .logo-icon { width: 22px !important; height: 22px !important; f
     </div>
     <!-- Hidden compat elements — data still available via window._lastSecData and DOM but not displayed -->
     <div id="researchRawCard" style="display:none;"><div id="researchOutput"></div></div>
+    </div><!-- /rqtab-research -->
+
+    <!-- TAB: QUANT MODELS — content lifted at boot from #page-quant -->
+    <div class="pf-tab-content" id="rqtab-quant">
+      <div id="rqQuantContainer">
+        <p style="text-align:center;color:var(--text-sec);padding:18px;font-size:13px;">Quant Models will load here…</p>
+      </div>
+    </div>
+
   </div>
 </div>
 
@@ -3165,6 +3320,38 @@ body.view-mobile .logo-icon { width: 22px !important; height: 22px !important; f
         </div>
       </div>
       <div class="card-sources"><strong>Sources:</strong> Pearson, K. (1895) "Notes on regression and inheritance in the case of two parents," Proc. Royal Society. Price data via Cloudflare Worker / Yahoo Finance.</div>
+    </div>
+
+    <!-- MODULE 2B: REGIME-CONDITIONAL CORRELATION + DOWNSIDE CORRELATION -->
+    <div class="card">
+      <div class="card-title">2B &middot; Regime-Conditional &amp; Downside Correlation
+        <span class="help-icon" title="Correlations rise during downturns — a known phenomenon (Longin &amp; Solnik 2001). This module shows pairwise correlations conditional on (a) Perry market regime and (b) downside-only days (R_SPY ≤ 0). Comparing 'normal' vs 'stress' correlations exposes diversification illusions.">?</span>
+      </div>
+      <div class="card-body">
+        <p style="font-size:12px;color:var(--text-sec);margin-bottom:12px;">Correlations <strong>are not constant</strong> — they rise sharply during drawdowns. This module computes pairwise correlations conditioned on (1) the Perry market regime that day, and (2) downside-only days (where SPY return ≤ 0). The <strong>"correlation gap"</strong> (downside − full sample) is the diversification illusion: a portfolio that looks diversified in calm markets becomes concentrated in a stress event.</p>
+        <div class="form-row" style="margin-bottom:10px;">
+          <div class="form-group"><label>View Mode</label>
+            <select id="rccMode" onchange="rccRender()">
+              <option value="regime" selected>By Perry Regime</option>
+              <option value="downside">Downside vs. Full Sample</option>
+              <option value="rolling">Rolling 60D Avg Correlation</option>
+            </select>
+          </div>
+          <div class="form-group"><label>Regime Filter</label>
+            <select id="rccRegime" onchange="rccRender()">
+              <option value="all" selected>All 4 Regimes</option>
+              <option value="leveraged">Leveraged</option>
+              <option value="growth">Growth</option>
+              <option value="neutral">Neutral</option>
+              <option value="drawdown">Drawdown</option>
+            </select>
+          </div>
+          <button class="btn btn-sm" onclick="rccRun()">Compute</button>
+        </div>
+        <div id="rccStatus" style="font-size:11px;color:var(--text-sec);margin-bottom:8px;"></div>
+        <div id="rccResults" style="text-align:center;padding:18px;color:var(--text-sec);font-size:13px;">Click <strong>Compute</strong> to run regime-conditional correlation across the selected universe.</div>
+      </div>
+      <div class="card-sources"><strong>Method:</strong> For each pair (i,j), compute Pearson ρ over (a) days classified into each Perry regime and (b) days where SPY daily log return ≤ 0. The "correlation asymmetry" Δρ = ρ<sub>downside</sub> − ρ<sub>full</sub> quantifies the diversification illusion. &middot; Longin, F., &amp; Solnik, B. (2001). <em>Extreme Correlation of International Equity Markets.</em> Journal of Finance, 56(2). &middot; Ang, A., &amp; Chen, J. (2002). <em>Asymmetric Correlations of Equity Portfolios.</em> Journal of Financial Economics.</div>
     </div>
 
     <!-- MODULE 3: 3D VOL SURFACE -->
@@ -8441,6 +8628,168 @@ function psClassifyState(signals) {
   return { winner: winner, scores: scores, confidence: confidence, reasons: reasons[winner] };
 }
 
+// ═══════════════════════════════════════════════════════════════════
+// QUARTERLY MARKET REGIME ENGINE
+// Regime can shift at most ONCE per calendar quarter to give the user
+// a 3-6 month positioning thesis. Daily classifications still computed,
+// but regime locks per-quarter to the dominant classification with
+// hysteresis (requires 2/3 of last 3 months agreeing to flip).
+// ═══════════════════════════════════════════════════════════════════
+function quarterKey(date) {
+  var d = (typeof date === 'string') ? new Date(date) : date;
+  var y = d.getUTCFullYear();
+  var q = Math.floor(d.getUTCMonth() / 3) + 1;
+  return y + '-Q' + q;
+}
+function quarterStartDate(qkey) {
+  // qkey like "2026-Q2"
+  var parts = qkey.split('-Q');
+  var y = parseInt(parts[0]); var q = parseInt(parts[1]);
+  var m = (q - 1) * 3; // 0,3,6,9
+  return new Date(Date.UTC(y, m, 1));
+}
+function quarterEndDate(qkey) {
+  var parts = qkey.split('-Q');
+  var y = parseInt(parts[0]); var q = parseInt(parts[1]);
+  var m = (q - 1) * 3 + 3; // last day = day before next quarter starts
+  var d = new Date(Date.UTC(y, m, 1));
+  d.setUTCDate(d.getUTCDate() - 1);
+  return d;
+}
+function nextQuarterStart(qkey) {
+  var end = quarterEndDate(qkey);
+  end.setUTCDate(end.getUTCDate() + 1);
+  return end;
+}
+// Classify a series of daily snapshots and aggregate to quarterly regimes.
+// dailyStates: array of { date: 'YYYY-MM-DD', classification: { winner, ...} }
+// Returns: array of { quarter, startDate, endDate, regime, confidence, dominantPct, prevRegime }
+function aggregateQuarterlyRegime(dailyStates) {
+  if (!dailyStates || !dailyStates.length) return [];
+  // Bucket by quarter
+  var buckets = {};
+  dailyStates.forEach(function(s){
+    var qk = quarterKey(s.date);
+    if (!buckets[qk]) buckets[qk] = [];
+    buckets[qk].push(s);
+  });
+  var qkeys = Object.keys(buckets).sort();
+  var quarterly = [];
+  var lastLockedRegime = null;
+  qkeys.forEach(function(qk, idx){
+    var arr = buckets[qk];
+    // Vote
+    var votes = { leveraged: 0, growth: 0, neutral: 0, drawdown: 0 };
+    arr.forEach(function(s){ if (s.classification && votes[s.classification.winner] != null) votes[s.classification.winner]++; });
+    var winner = 'neutral', mx = 0, total = 0;
+    Object.keys(votes).forEach(function(k){ total += votes[k]; if (votes[k] > mx) { mx = votes[k]; winner = k; } });
+    var dominantPct = total > 0 ? (mx / total) * 100 : 0;
+    // Hysteresis: stay with previous regime unless new dominantPct >= 60%
+    var lockedRegime = winner;
+    if (lastLockedRegime && winner !== lastLockedRegime && dominantPct < 60) {
+      // Not strong enough to flip — stay
+      lockedRegime = lastLockedRegime;
+    }
+    // Confidence: avg confidence across days that voted for this regime
+    var matchingConfidences = arr.filter(function(s){ return s.classification && s.classification.winner === lockedRegime; })
+                                  .map(function(s){ return s.classification.confidence; });
+    var avgConf = matchingConfidences.length ? matchingConfidences.reduce(function(a,b){return a+b;},0) / matchingConfidences.length : dominantPct;
+    quarterly.push({
+      quarter: qk,
+      startDate: quarterStartDate(qk),
+      endDate: quarterEndDate(qk),
+      regime: lockedRegime,
+      regimeRaw: winner,         // unsmoothed daily winner (for diagnostics)
+      confidence: avgConf,
+      dominantPct: dominantPct,
+      prevRegime: lastLockedRegime,
+      flipped: lastLockedRegime != null && lastLockedRegime !== lockedRegime
+    });
+    lastLockedRegime = lockedRegime;
+  });
+  return quarterly;
+}
+// Predict next regime: fits a transition matrix from quarterly history.
+function predictNextRegimeQuarter(quarterly) {
+  if (!quarterly || quarterly.length < 4) return null;
+  var keys = ['leveraged','growth','neutral','drawdown'];
+  // Build transition counts
+  var counts = {};
+  keys.forEach(function(k){ counts[k] = {}; keys.forEach(function(j){ counts[k][j] = 0; }); });
+  for (var i = 1; i < quarterly.length; i++) {
+    var from = quarterly[i-1].regime;
+    var to = quarterly[i].regime;
+    if (counts[from] && counts[from][to] != null) counts[from][to]++;
+  }
+  var current = quarterly[quarterly.length - 1].regime;
+  var row = counts[current] || {};
+  var rowTotal = keys.reduce(function(s,k){ return s + (row[k]||0); }, 0);
+  if (rowTotal === 0) return { mostLikely: current, probabilities: { leveraged:0.25,growth:0.25,neutral:0.25,drawdown:0.25 }, fallback: true };
+  var probs = {};
+  keys.forEach(function(k){ probs[k] = (row[k]||0) / rowTotal; });
+  // Most likely
+  var mxK = current, mxP = -1;
+  keys.forEach(function(k){ if (probs[k] > mxP) { mxP = probs[k]; mxK = k; } });
+  return { mostLikely: mxK, probabilities: probs, fallback: false };
+}
+// Build daily classification series from SPY+VIX history. Returns array of { date, classification }.
+function buildDailyClassificationHistory(spyPts, vixSeries) {
+  // spyPts: [{date, close}], vixSeries: { 'YYYY-MM-DD': vixClose } or null
+  if (!spyPts || spyPts.length < 252) return [];
+  var out = [];
+  for (var i = 252; i < spyPts.length; i++) {
+    var window = spyPts.slice(i-252, i+1);
+    var closes = window.map(function(p){ return p.close; });
+    var hi = Math.max.apply(null, closes);
+    var lo = Math.min.apply(null, closes);
+    var cur = closes[closes.length-1];
+    var start = closes[0];
+    var dateStr = spyPts[i].date.slice(0,10);
+    var vix = vixSeries ? (vixSeries[dateStr] || null) : null;
+    var sig = {
+      vix: vix,
+      spyCurrent: cur,
+      spy12mHigh: hi,
+      spy12mLow: lo,
+      spyTrailingReturn: (cur - start) / start,
+      drawdownFromPeak: (cur - hi) / hi,
+      spy12mFromLow: (cur - lo) / lo
+    };
+    var cl = psClassifyState(sig);
+    out.push({ date: dateStr, classification: cl, signals: sig });
+  }
+  return out;
+}
+window._quarterlyRegimes = null;
+async function loadQuarterlyRegimes() {
+  if (window._quarterlyRegimesLoading) return window._quarterlyRegimesLoading;
+  window._quarterlyRegimesLoading = (async function(){
+    var WORKER = "https://perry-finance-proxy.zachperrybusiness.workers.dev";
+    try {
+      var spyData = await fetch(WORKER + "/chart?symbol=SPY&range=10y&interval=1d").then(function(r){ return r.json(); });
+      var vixData = await fetch(WORKER + "/chart?symbol=%5EVIX&range=10y&interval=1d").then(function(r){ return r.json(); }).catch(function(){ return null; });
+      var spyPts = (spyData.points || []).filter(function(p){ return p.close != null; });
+      var vixSeries = {};
+      if (vixData && vixData.points) {
+        vixData.points.forEach(function(p){ if (p.close != null) vixSeries[p.date.slice(0,10)] = p.close; });
+      }
+      var daily = buildDailyClassificationHistory(spyPts, vixSeries);
+      var quarterly = aggregateQuarterlyRegime(daily);
+      var prediction = predictNextRegimeQuarter(quarterly);
+      window._quarterlyRegimes = { quarterly: quarterly, daily: daily, prediction: prediction, spyPts: spyPts };
+      return window._quarterlyRegimes;
+    } catch(e) {
+      console.warn('[loadQuarterlyRegimes] failed:', e);
+      return null;
+    }
+  })();
+  return window._quarterlyRegimesLoading;
+}
+function getCurrentQuarterRegime() {
+  if (!window._quarterlyRegimes || !window._quarterlyRegimes.quarterly.length) return null;
+  return window._quarterlyRegimes.quarterly[window._quarterlyRegimes.quarterly.length - 1];
+}
+
 async function psLoadDiagnostic() {
   var el = document.getElementById('psDiagnostic');
   if (!el) return;
@@ -8481,13 +8830,56 @@ async function psLoadDiagnostic() {
       spy12mFromLow: spy12mFromLow
     };
     var classification = psClassifyState(signals);
-    var state = PS_STATES.find(function(s){ return s.key === classification.winner; });
 
-    // Render diagnostic hero
+    // ─── QUARTERLY LOCK ───
+    // Load (or get cached) quarterly regime history. The displayed regime is the
+    // locked-quarter regime, NOT the live daily classification.
+    var quarterlyData = await loadQuarterlyRegimes();
+    var currentQuarter = getCurrentQuarterRegime();
+    var lockedRegimeKey = currentQuarter ? currentQuarter.regime : classification.winner;
+    var state = PS_STATES.find(function(s){ return s.key === lockedRegimeKey; }) || PS_STATES[1];
+
+    // Find when current locked regime actually began (walk back through quarters)
+    var regimeStartDate = currentQuarter ? currentQuarter.startDate : null;
+    if (quarterlyData && quarterlyData.quarterly && quarterlyData.quarterly.length) {
+      var qs = quarterlyData.quarterly;
+      for (var i = qs.length - 1; i >= 0; i--) {
+        if (qs[i].regime === lockedRegimeKey) regimeStartDate = qs[i].startDate;
+        else break;
+      }
+    }
+    var nextQuarter = currentQuarter ? nextQuarterStart(currentQuarter.quarter) : null;
+    var daysToNext = nextQuarter ? Math.max(0, Math.ceil((nextQuarter - new Date()) / 86400000)) : null;
+    var prediction = quarterlyData && quarterlyData.prediction ? quarterlyData.prediction : null;
+    var predictedState = prediction ? PS_STATES.find(function(s){ return s.key === prediction.mostLikely; }) : null;
+
+    // Render diagnostic hero — quarterly-locked regime
     var html = '<div class="ps-diagnostic-hero" style="background:'+state.color+';">';
-    html += '<div style="font-size:11px;opacity:0.85;text-transform:uppercase;letter-spacing:.6px;">Current Market Regime</div>';
+    html += '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:14px;flex-wrap:wrap;">';
+    html += '<div style="flex:1;min-width:260px;">';
+    html += '<div style="font-size:11px;opacity:0.85;text-transform:uppercase;letter-spacing:.6px;">Current Market Regime &middot; Quarterly-Locked</div>';
     html += '<div class="ps-diag-state-name">' + state.name + '</div>';
-    html += '<div class="ps-diag-confidence">Confidence: ' + classification.confidence.toFixed(0) + '% &middot; Signals: ' + classification.reasons.join(' &middot; ') + '</div>';
+    if (regimeStartDate) {
+      var startStr = regimeStartDate.toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric', timeZone:'UTC' });
+      var monthsHeld = currentQuarter ? Math.max(1, Math.round((new Date() - regimeStartDate) / (30*86400000))) : 0;
+      html += '<div style="font-size:12px;opacity:0.9;margin-top:4px;">Regime started <strong>'+startStr+'</strong> &middot; '+monthsHeld+' month'+(monthsHeld===1?'':'s')+' active</div>';
+    }
+    html += '<div class="ps-diag-confidence" style="margin-top:6px;">Quarter confidence: ' + (currentQuarter ? currentQuarter.confidence.toFixed(0) : classification.confidence.toFixed(0)) + '% &middot; Daily signal: ' + (PS_STATES.find(function(s){return s.key===classification.winner;}) || {name:'?'}).name + '</div>';
+    html += '</div>';
+    html += '<div style="background:rgba(0,0,0,0.18);padding:10px 14px;border-radius:6px;min-width:200px;text-align:center;">';
+    html += '<div style="font-size:10px;opacity:0.85;text-transform:uppercase;letter-spacing:.6px;">Next Possible Shift</div>';
+    if (nextQuarter && daysToNext != null) {
+      var nextStr = nextQuarter.toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric', timeZone:'UTC' });
+      html += '<div style="font-size:18px;font-weight:700;margin:4px 0;">'+nextStr+'</div>';
+      html += '<div style="font-size:11px;opacity:0.85;">'+daysToNext+' days &middot; ' + quarterKey(nextQuarter) + '</div>';
+    }
+    if (predictedState) {
+      var probPct = (prediction.probabilities[prediction.mostLikely] * 100).toFixed(0);
+      html += '<div style="font-size:10px;opacity:0.85;margin-top:8px;text-transform:uppercase;letter-spacing:.4px;">Most Likely Next Regime</div>';
+      html += '<div style="font-size:13px;font-weight:700;">'+predictedState.name+' &middot; '+probPct+'%</div>';
+    }
+    html += '</div>';
+    html += '</div>';
     html += '<div class="ps-diag-signals">';
     html += '<div class="ps-diag-signal"><div class="ps-diag-signal-label">VIX</div><div class="ps-diag-signal-value">' + (vix != null ? vix.toFixed(1) : '—') + '</div><div class="ps-diag-signal-detail">' + (vix == null ? '' : (vix >= 30 ? 'Extreme fear' : vix >= 22 ? 'Elevated' : vix >= 15 ? 'Normal' : 'Complacent')) + '</div></div>';
     html += '<div class="ps-diag-signal"><div class="ps-diag-signal-label">SPY Current</div><div class="ps-diag-signal-value">$' + spyCurrent.toFixed(2) + '</div><div class="ps-diag-signal-detail">52W High: $' + spy12mHigh.toFixed(2) + '</div></div>';
@@ -8495,12 +8887,36 @@ async function psLoadDiagnostic() {
     html += '<div class="ps-diag-signal"><div class="ps-diag-signal-label">From 12M High</div><div class="ps-diag-signal-value">' + (spyFromHigh*100).toFixed(1) + '%</div><div class="ps-diag-signal-detail">' + (spyFromHigh >= -0.02 ? 'At/near peak' : spyFromHigh >= -0.1 ? 'Minor pullback' : spyFromHigh >= -0.2 ? 'Correction' : 'Bear market') + '</div></div>';
     html += '<div class="ps-diag-signal"><div class="ps-diag-signal-label">From 12M Low</div><div class="ps-diag-signal-value">+' + (spy12mFromLow*100).toFixed(1) + '%</div><div class="ps-diag-signal-detail">' + (spy12mFromLow >= 0.5 ? 'Massive rip' : spy12mFromLow >= 0.3 ? 'Strong rally' : 'Recovery') + '</div></div>';
     html += '</div>';
-    html += '<div class="ps-diag-posture"><strong>Recommended Posture:</strong> ' + state.posture + '<br><strong>Cash:</strong> ' + state.cash + ' &middot; <strong>Instruments:</strong> ' + state.instruments + '</div>';
+    html += '<div class="ps-diag-posture"><strong>Recommended Posture (3–6 month view):</strong> ' + state.posture + '<br><strong>Cash:</strong> ' + state.cash + ' &middot; <strong>Instruments:</strong> ' + state.instruments + '</div>';
     html += '</div>';
+
+    // Quarterly history strip (last 8 quarters)
+    if (quarterlyData && quarterlyData.quarterly && quarterlyData.quarterly.length) {
+      var recent = quarterlyData.quarterly.slice(-8);
+      html += '<div style="margin-top:14px;padding:14px 18px;background:var(--panel);border:1px solid var(--border);border-radius:6px;">';
+      html += '<div style="font-size:11px;font-weight:700;color:var(--navy);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px;">Quarterly Regime History &middot; Last 2 Years</div>';
+      html += '<div style="display:flex;gap:6px;align-items:stretch;flex-wrap:wrap;">';
+      recent.forEach(function(q){
+        var s = PS_STATES.find(function(x){ return x.key === q.regime; }) || { color: '#888', name: '?' };
+        var isCur = q === currentQuarter;
+        html += '<div style="flex:1;min-width:80px;background:'+s.color+';color:#fff;padding:8px 10px;border-radius:4px;'+(isCur?'box-shadow:0 0 0 2px var(--blue),0 2px 6px rgba(0,0,0,0.15);':'')+'">';
+        html += '<div style="font-size:10px;font-weight:700;letter-spacing:.4px;opacity:0.9;">'+q.quarter+(isCur?' (NOW)':(q.flipped?' ⟲':''))+'</div>';
+        html += '<div style="font-size:11px;font-weight:700;margin-top:2px;">'+s.name+'</div>';
+        html += '<div style="font-size:9.5px;opacity:0.85;margin-top:2px;">'+q.confidence.toFixed(0)+'% conf.</div>';
+        html += '</div>';
+      });
+      html += '</div>';
+      html += '<p style="font-size:10.5px;color:var(--text-sec);margin-top:10px;line-height:1.5;">Regime is locked per quarter to provide a stable 3–6 month positioning thesis. Hysteresis rule: requires <strong>≥60% daily classification dominance</strong> to flip vs. previous quarter\'s regime, otherwise prior regime persists. Symbols: <strong>⟲</strong> = regime flipped from prior quarter.</p>';
+      html += '</div>';
+    }
+
     el.innerHTML = html;
 
-    // Also update the framework grid to highlight the active state
-    psRenderFrameworkGrid(classification.winner);
+    // Update the framework grid to highlight the locked-quarter state (not raw daily)
+    psRenderFrameworkGrid(lockedRegimeKey);
+
+    // Stash the locked regime for downstream consumers (briefing, holdings table)
+    window._briefingState = lockedRegimeKey;
   } catch(e) {
     console.error('[psLoadDiagnostic]', e);
     el.innerHTML = '<div style="padding:20px;color:var(--danger);"><strong>Failed to load diagnostic:</strong> ' + e.message + '<br><button class="btn btn-sm" style="margin-top:8px;" onclick="psLoadDiagnostic()">Retry</button></div>';
@@ -10186,8 +10602,16 @@ async function briefingLoad() {
       var spyCur = closes[closes.length-1], spyStart = closes[0];
       var signals = { vix: vixR.current||vixR.price||null, spyTrailingReturn:(spyCur-spyStart)/spyStart, drawdownFromPeak:(spyCur-spy12mHigh)/spy12mHigh, spy12mFromLow:(spyCur-spy12mLow)/spy12mLow };
       var cl = psClassifyState(signals);
-      window._briefingState = cl.winner;
-      var st = PS_STATES.find(function(s){return s.key===cl.winner;});
+      // Prefer quarterly-locked regime (computed by loadQuarterlyRegimes) when available.
+      // This keeps the morning briefing's state stable across the quarter.
+      try {
+        if (!window._quarterlyRegimes) await loadQuarterlyRegimes();
+      } catch(e) { /* fall back to daily */ }
+      var lockedKey = (window._quarterlyRegimes && window._quarterlyRegimes.quarterly && window._quarterlyRegimes.quarterly.length)
+        ? window._quarterlyRegimes.quarterly[window._quarterlyRegimes.quarterly.length - 1].regime
+        : cl.winner;
+      window._briefingState = lockedKey;
+      var st = PS_STATES.find(function(s){return s.key===lockedKey;}) || PS_STATES[1];
       var qqqPx = qqqR.current || qqqR.price || 0;
       regimeEl.innerHTML = '<div class="briefing-regime-hero" style="background:'+st.color+';border-radius:4px;">'
         + '<div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:12px;">'
@@ -12410,11 +12834,962 @@ async function wfbRun() {
         }
       }
     });
-  } catch(e) { el.innerHTML = '<div style="color:var(--danger);padding:10px;">Error: '+e.message+'</div>'; }
+// ═══════════════════════════════════════════════════════════════════
+// FIXES #2–#6 — Themes tab, What-If, Recommended-State overlay,
+// Holdings collapse, Research/Quant merge, Regime-conditional correlation
+// ═══════════════════════════════════════════════════════════════════
+
+// ────────── Holdings card collapse (Fix #3) ──────────
+window._pfHoldingsCollapsed = false;
+function pfHoldingsToggle() {
+  var body = document.getElementById('pfHoldingsBody');
+  var src = document.getElementById('pfHoldingsSources');
+  var caret = document.getElementById('pfHoldingsCaret');
+  if (!body) return;
+  window._pfHoldingsCollapsed = !window._pfHoldingsCollapsed;
+  body.style.display = window._pfHoldingsCollapsed ? 'none' : '';
+  if (src) src.style.display = window._pfHoldingsCollapsed ? 'none' : '';
+  if (caret) caret.style.transform = window._pfHoldingsCollapsed ? 'rotate(-90deg)' : 'rotate(0deg)';
 }
 
-/* ═══════════════════════════════════════════════════════════════════
-   INSTITUTIONAL UPGRADE — Tabs, Performance, Brinson Attribution,
+// ────────── Research / Quant Models tab merger (Fix #4) ──────────
+function rqShowTab(name) {
+  document.querySelectorAll('#page-research [data-rqtab]').forEach(function(b){
+    b.classList.toggle('active', b.dataset.rqtab === name);
+  });
+  document.querySelectorAll('#page-research .pf-tab-content').forEach(function(c){
+    c.classList.toggle('active', c.id === 'rqtab-' + name);
+  });
+}
+// Lift quant page contents into research's quant tab on first navigation
+window._rqQuantLifted = false;
+function rqLiftQuantContent() {
+  if (window._rqQuantLifted) return;
+  var src = document.getElementById('page-quant');
+  var dst = document.getElementById('rqQuantContainer');
+  if (!src || !dst) return;
+  // Move children of src .content-wrap (skip hero, since combined page has its own hero)
+  var wrap = src.querySelector('.content-wrap');
+  if (!wrap) return;
+  // Drop hero from quant before moving
+  var hero = wrap.querySelector('.hero');
+  if (hero) hero.parentNode.removeChild(hero);
+  // Move children to dst
+  dst.innerHTML = '';
+  while (wrap.firstChild) dst.appendChild(wrap.firstChild);
+  // Hide source page so old anchor link still doesn't show duplicate
+  src.style.display = 'none';
+  window._rqQuantLifted = true;
+}
+function rqSyncQuantTickerAndRun() {
+  rqLiftQuantContent();
+  rqShowTab('quant');
+  var t = document.getElementById('researchTicker');
+  var qt = document.getElementById('quantTicker');
+  if (t && qt && t.value) qt.value = t.value.toUpperCase();
+  if (typeof runQuantAnalysis === 'function') {
+    setTimeout(runQuantAnalysis, 80);
+  }
+}
+// Hook into navigateTo so /quant route still works (redirect to /research with quant tab)
+(function(){
+  document.addEventListener('DOMContentLoaded', function(){
+    var orig = window.navigateTo;
+    if (typeof orig !== 'function') return;
+    window.navigateTo = function(p) {
+      if (p === 'quant') {
+        orig('research');
+        setTimeout(function(){ rqLiftQuantContent(); rqShowTab('quant'); }, 30);
+        return;
+      }
+      orig(p);
+      if (p === 'research') {
+        setTimeout(rqLiftQuantContent, 60);
+      }
+    };
+  });
+})();
+
+// ────────── Add Ticker to Portfolio Chart (Fix #2 — overlay individual ticker on portfolio chart) ──────────
+window._pfChartExtraTickers = []; // [{ticker, color}]
+function pfAddTickerToChart() {
+  var t = prompt('Enter a ticker to overlay on the Portfolio Value chart (e.g., NVDA, BTC-USD):');
+  if (!t) return;
+  t = t.toUpperCase().trim();
+  if (window._pfChartExtraTickers.find(function(x){ return x.ticker === t; })) {
+    alert(t + ' already on chart. Click "Update Chart" to refresh.');
+    return;
+  }
+  var palette = ['#A23B72','#F18F01','#48A9A6','#7B68EE','#C84B31','#0F4C81','#5E8C61'];
+  var color = palette[window._pfChartExtraTickers.length % palette.length];
+  window._pfChartExtraTickers.push({ ticker: t, color: color });
+  if (typeof renderPortfolioChart === 'function') renderPortfolioChart();
+}
+function pfRemoveExtraTicker(t) {
+  window._pfChartExtraTickers = window._pfChartExtraTickers.filter(function(x){ return x.ticker !== t; });
+  if (typeof renderPortfolioChart === 'function') renderPortfolioChart();
+}
+
+// ────────── Recommended Portfolio State backtest overlay (Fix #5) ──────────
+window._showRecState = false;
+window.toggleRecState = function() {
+  window._showRecState = !window._showRecState;
+  var btn = document.getElementById('btnRecState');
+  if (btn) btn.classList.toggle('active', window._showRecState);
+  if (typeof renderPortfolioChart === 'function') renderPortfolioChart();
+};
+// Build a synthetic "Recommended State" return series.
+// For each day, the regime is the locked quarterly regime; allocate per state's posture.
+async function buildRecommendedStateSeries(rangeKey) {
+  // Recommended state weights — proxy ETFs that align with PS_STATES instruments/cash
+  var STATE_WEIGHTS = {
+    leveraged: { TQQQ: 0.4, SOXL: 0.2, SPY: 0.3, CASH: 0.1 },
+    growth:    { QQQ: 0.4, SPY: 0.4, IWM: 0.1, CASH: 0.1 },
+    neutral:   { GLD: 0.2, XLU: 0.15, XLP: 0.15, EFA: 0.1, IEF: 0.1, CASH: 0.3 },
+    drawdown:  { SHV: 0.45, TLT: 0.2, GLD: 0.05, CASH: 0.3 }
+  };
+  var quarterly = window._quarterlyRegimes ? window._quarterlyRegimes.quarterly : null;
+  if (!quarterly || !quarterly.length) return null;
+  // Determine date window
+  var today = new Date();
+  var start = new Date(today);
+  if (rangeKey === '1mo') start.setMonth(today.getMonth() - 1);
+  else if (rangeKey === '3mo') start.setMonth(today.getMonth() - 3);
+  else if (rangeKey === '6mo') start.setMonth(today.getMonth() - 6);
+  else if (rangeKey === 'ytd') start = new Date(today.getFullYear(), 0, 1);
+  else if (rangeKey === '1y') start.setFullYear(today.getFullYear() - 1);
+  else if (rangeKey === '3y') start.setFullYear(today.getFullYear() - 3);
+  else if (rangeKey === '5y') start.setFullYear(today.getFullYear() - 5);
+  else if (rangeKey === '10y') start.setFullYear(today.getFullYear() - 10);
+  else start.setFullYear(today.getFullYear() - 1);
+  // Collect every ticker we may need
+  var tickers = {};
+  Object.values(STATE_WEIGHTS).forEach(function(w){ Object.keys(w).forEach(function(t){ if (t !== 'CASH') tickers[t] = true; }); });
+  var tickerArr = Object.keys(tickers);
+  // Fetch all in parallel
+  var data = {};
+  var fetchRange = (rangeKey === '1mo' || rangeKey === '3mo' || rangeKey === '6mo' || rangeKey === 'ytd' || rangeKey === '1y') ? '1y'
+                  : (rangeKey === '3y') ? '3y' : (rangeKey === '5y') ? '5y' : '10y';
+  await Promise.all(tickerArr.map(async function(t){
+    try {
+      var c = await fetchChart(t, fetchRange, '1d');
+      var m = {};
+      (c.points||[]).forEach(function(p){ if (p.close != null) m[p.date.slice(0,10)] = p.close; });
+      data[t] = m;
+    } catch(e) { data[t] = {}; }
+  }));
+  // Master date series — use SPY (if present) otherwise first ticker
+  var masterTicker = data.SPY ? 'SPY' : (data.QQQ ? 'QQQ' : tickerArr[0]);
+  var masterDates = Object.keys(data[masterTicker]).filter(function(d){ return d >= start.toISOString().slice(0,10); }).sort();
+  if (!masterDates.length) return null;
+  // Build state-by-date map from quarterly
+  function regimeForDate(dateStr) {
+    var d = new Date(dateStr + 'T00:00:00Z');
+    for (var i = quarterly.length - 1; i >= 0; i--) {
+      if (d >= quarterly[i].startDate) return quarterly[i].regime;
+    }
+    return quarterly[0].regime;
+  }
+  // Compute daily returns per ticker; CASH = 0% return (or 4.5%/252 short rate)
+  function tickerDailyReturn(t, idx, dateArr) {
+    if (t === 'CASH') return 0.045 / 252; // approximate risk-free
+    var prev = data[t][dateArr[idx-1]]; var cur = data[t][dateArr[idx]];
+    if (prev != null && cur != null && prev > 0) return Math.log(cur/prev);
+    return 0;
+  }
+  // Walk dates, compute daily portfolio return based on state weights at quarter start (rebalanced quarterly)
+  var values = [100];
+  var labels = [masterDates[0]];
+  for (var i = 1; i < masterDates.length; i++) {
+    var regime = regimeForDate(masterDates[i]);
+    var w = STATE_WEIGHTS[regime] || STATE_WEIGHTS.neutral;
+    var dayRet = 0;
+    Object.keys(w).forEach(function(t){
+      dayRet += w[t] * tickerDailyReturn(t, i, masterDates);
+    });
+    values.push(values[values.length-1] * Math.exp(dayRet));
+    labels.push(masterDates[i]);
+  }
+  return { dates: labels, values: values };
+}
+
+// ────────── Themes tab — compare portfolio vs themes (Fix #2) ──────────
+function themePopulatePicker() {
+  var picker = document.getElementById('themeCmpPicker');
+  if (!picker) return;
+  // Only build once
+  if (picker.dataset.built) return;
+  picker.dataset.built = '1';
+  var html = '';
+  PORTFOLIO_THEMES.forEach(function(t, idx){
+    html += '<label style="font-size:11px;font-weight:600;color:var(--navy);background:#fff;padding:3px 8px;border-radius:3px;border:1px solid var(--border);cursor:pointer;display:inline-flex;align-items:center;gap:5px;">'+
+      '<input type="checkbox" data-themecmp="'+t.key+'" '+(idx<2?'checked':'')+' style="margin:0;">'+
+      t.name.replace(/&amp;/g,'&').replace(/&mdash;/g,'—') +
+      '</label>';
+  });
+  // Custom themes appended dynamically by themeCmpRenderCustom
+  picker.innerHTML = html + '<span id="themeCmpCustomSlot"></span>';
+}
+function themeCmpRenderCustom() {
+  var slot = document.getElementById('themeCmpCustomSlot');
+  if (!slot) return;
+  var customs = window._customThemes || [];
+  var html = '';
+  customs.forEach(function(t){
+    html += '<label style="font-size:11px;font-weight:600;color:var(--navy);background:var(--blue-pale,#EAF2FA);padding:3px 8px;border-radius:3px;border:1px solid var(--blue);cursor:pointer;display:inline-flex;align-items:center;gap:5px;">'+
+      '<input type="checkbox" data-themecmpcustom="'+t.id+'" style="margin:0;">'+
+      '★ '+t.name+
+      '</label>';
+  });
+  slot.innerHTML = html;
+}
+async function themeCompareRun() {
+  var range = document.getElementById('themeCmpRange').value;
+  themePopulatePicker(); themeCmpRenderCustom();
+  var pickedThemes = Array.from(document.querySelectorAll('#themeCmpPicker input[data-themecmp]:checked')).map(function(i){ return i.dataset.themecmp; });
+  var pickedCustom = Array.from(document.querySelectorAll('#themeCmpPicker input[data-themecmpcustom]:checked')).map(function(i){ return i.dataset.themecmpcustom; });
+  if (!pickedThemes.length && !pickedCustom.length) {
+    document.getElementById('themeCmpStats').innerHTML = '<span style="color:var(--text-sec);">Select at least one theme to compare.</span>';
+    return;
+  }
+  var statsEl = document.getElementById('themeCmpStats');
+  statsEl.innerHTML = '<span class="spinner"></span> Loading data…';
+  // Build portfolio series
+  var pfSeries = await pfBuildValueSeries(range === 'ytd' ? '1y' : range);
+  if (!pfSeries.values.length) { statsEl.innerHTML = '<span style="color:var(--danger);">No portfolio data.</span>'; return; }
+  // For each theme, fetch all its tickers and build equal-weight rebased series
+  var themesToRun = [];
+  pickedThemes.forEach(function(k){ var t = PORTFOLIO_THEMES.find(function(x){ return x.key===k; }); if (t) themesToRun.push({key:t.key, name:t.name.replace(/&amp;/g,'&').replace(/&mdash;/g,'—'), tickers:t.tickers}); });
+  pickedCustom.forEach(function(id){ var t = (window._customThemes||[]).find(function(x){ return x.id===id; }); if (t) themesToRun.push({key:t.id, name:'★ '+t.name, tickers:t.tickers, weights:t.weights}); });
+  var fetchRange = range;
+  var allData = {};
+  var allTickers = new Set();
+  themesToRun.forEach(function(t){ t.tickers.forEach(function(tk){ allTickers.add(tk); }); });
+  await Promise.all(Array.from(allTickers).map(async function(tk){
+    try { var c = await fetchChart(tk, fetchRange === 'ytd' ? '1y' : fetchRange, '1d'); allData[tk] = c.points || []; } catch(e) { allData[tk] = []; }
+  }));
+  // Determine common starting date — use portfolio start
+  var startStr = pfSeries.dates[0];
+  if (range === 'ytd') startStr = new Date(new Date().getFullYear(), 0, 1).toISOString().slice(0,10);
+  // Build series
+  var datasets = [];
+  // Portfolio (rebased to 100)
+  var pfStartIdx = 0;
+  for (var i = 0; i < pfSeries.dates.length; i++) { if (pfSeries.dates[i] >= startStr) { pfStartIdx = i; break; } }
+  var pfBase = pfSeries.values[pfStartIdx];
+  var pfRebased = pfSeries.values.slice(pfStartIdx).map(function(v){ return v / pfBase * 100; });
+  var pfDates = pfSeries.dates.slice(pfStartIdx);
+  datasets.push({ label: 'Your Portfolio', data: pfRebased.map(function(v,i){ return {x: pfDates[i], y: v}; }), borderColor:'#003C71', backgroundColor:'rgba(0,60,113,0.1)', borderWidth: 2.5, pointRadius:0, tension:0.15 });
+
+  // Theme baskets — equal-weighted (or custom-weighted) daily-rebalanced rebased
+  var themeColors = ['#5B9BD5','#A23B72','#F18F01','#48A9A6','#7B68EE','#C84B31','#0F4C81','#5E8C61'];
+  themesToRun.forEach(function(theme, ti){
+    var weights = theme.weights || {};
+    if (!Object.keys(weights).length) {
+      var ew = 1 / theme.tickers.length;
+      theme.tickers.forEach(function(t){ weights[t] = ew; });
+    }
+    // Find common dates across this theme's tickers
+    var dateSet = null;
+    theme.tickers.forEach(function(t){
+      var dates = (allData[t]||[]).filter(function(p){ return p.close != null; }).map(function(p){ return p.date.slice(0,10); });
+      if (dateSet === null) dateSet = new Set(dates);
+      else dateSet = new Set(dates.filter(function(d){ return dateSet.has(d); }));
+    });
+    if (!dateSet || !dateSet.size) return;
+    var themeDates = Array.from(dateSet).filter(function(d){ return d >= startStr; }).sort();
+    if (!themeDates.length) return;
+    // Build daily index: weighted average of normalized prices
+    var priceMap = {};
+    theme.tickers.forEach(function(t){
+      priceMap[t] = {};
+      (allData[t]||[]).forEach(function(p){ if (p.close != null) priceMap[t][p.date.slice(0,10)] = p.close; });
+    });
+    var basePrices = {};
+    theme.tickers.forEach(function(t){ basePrices[t] = priceMap[t][themeDates[0]] || 1; });
+    var values = themeDates.map(function(d){
+      var v = 0;
+      theme.tickers.forEach(function(t){
+        var p = priceMap[t][d]; var b = basePrices[t];
+        if (p != null && b > 0) v += (weights[t] || 0) * (p/b);
+      });
+      return v * 100;
+    });
+    datasets.push({ label: theme.name, data: values.map(function(v,i){ return {x: themeDates[i], y: v}; }), borderColor: themeColors[ti % themeColors.length], borderWidth:1.6, pointRadius:0, tension:0.15, borderDash:[] });
+  });
+
+  // Render
+  var ctx = document.getElementById('themeCmpChart');
+  if (window._themeCmpChartObj) window._themeCmpChartObj.destroy();
+  window._themeCmpChartObj = new Chart(ctx, {
+    type: 'line',
+    data: { datasets: datasets },
+    options: {
+      responsive: true, maintainAspectRatio: false, parsing:false, animation:false,
+      plugins: { legend: { position:'top', labels:{color:'#1A2733', font:{size:11}} }, tooltip: { mode:'index', intersect:false } },
+      scales: {
+        x: { type:'category', ticks: { color:'#5A6772', maxTicksLimit: 8 }, grid: { color:'rgba(208,215,224,0.4)' } },
+        y: { ticks: { color:'#5A6772', callback: function(v){ return v.toFixed(0); } }, grid: { color:'rgba(208,215,224,0.4)' }, title:{display:true, text:'Rebased to 100', color:'#5A6772', font:{size:11}} }
+      }
+    }
+  });
+  // Stats table
+  var rows = '<table style="width:100%;border-collapse:collapse;font-size:12px;font-family:Arial;margin-top:10px;">';
+  rows += '<thead><tr style="background:var(--navy);color:#fff;"><th style="padding:7px;text-align:left;">Series</th><th style="padding:7px;text-align:right;">Period Return</th><th style="padding:7px;text-align:right;">Volatility (Ann.)</th></tr></thead><tbody>';
+  datasets.forEach(function(ds){
+    var first = ds.data[0]?.y, last = ds.data[ds.data.length-1]?.y;
+    var ret = first ? ((last/first - 1)*100) : 0;
+    // simple stdev of pct day-over-day
+    var rets = []; for (var i = 1; i < ds.data.length; i++) { var p = ds.data[i-1].y, c = ds.data[i].y; if (p>0&&c>0) rets.push(Math.log(c/p)); }
+    var m = rets.reduce(function(s,v){return s+v;},0)/Math.max(rets.length,1);
+    var v = rets.reduce(function(s,x){return s+(x-m)*(x-m);},0)/Math.max(rets.length-1,1);
+    var volAnn = Math.sqrt(v) * Math.sqrt(252) * 100;
+    rows += '<tr style="border-bottom:1px solid var(--border-light,#E5E9EF);"><td style="padding:6px 8px;color:'+ds.borderColor+';font-weight:700;">'+ds.label+'</td><td style="padding:6px 8px;text-align:right;font-family:Courier New,monospace;color:'+(ret>=0?'var(--success)':'var(--danger)')+';font-weight:700;">'+(ret>=0?'+':'')+ret.toFixed(2)+'%</td><td style="padding:6px 8px;text-align:right;font-family:Courier New,monospace;">'+volAnn.toFixed(1)+'%</td></tr>';
+  });
+  rows += '</tbody></table>';
+  document.getElementById('themeCmpTable').innerHTML = rows;
+  statsEl.innerHTML = '';
+}
+
+// ────────── Custom themed portfolios — Firestore CRUD (Fix #2) ──────────
+window._customThemeBuilder = { tickers: {} }; // ticker -> weight (0-1)
+window._customThemes = []; // [{ id, name, description, regimeFit, tickers:[], weights:{} }]
+function customThemeRefreshUI() {
+  var el = document.getElementById('ctTickersList');
+  if (!el) return;
+  var keys = Object.keys(window._customThemeBuilder.tickers);
+  if (!keys.length) { el.innerHTML = '<p style="color:var(--text-sec);font-size:12px;font-style:italic;">No tickers yet. Add a ticker above.</p>'; return; }
+  var totalW = keys.reduce(function(s,k){ return s + window._customThemeBuilder.tickers[k]; }, 0);
+  var html = '<table style="width:100%;border-collapse:collapse;font-size:12px;font-family:Arial;"><thead><tr style="background:var(--navy);color:#fff;">'+
+    '<th style="padding:7px;text-align:left;">Ticker</th>'+
+    '<th style="padding:7px;text-align:right;">Weight</th>'+
+    '<th style="padding:7px;text-align:right;">% of Theme</th>'+
+    '<th></th></tr></thead><tbody>';
+  keys.forEach(function(t){
+    var w = window._customThemeBuilder.tickers[t];
+    var pct = totalW > 0 ? w/totalW*100 : 0;
+    html += '<tr style="border-bottom:1px solid var(--border-light,#E5E9EF);">'+
+      '<td style="padding:6px 8px;font-weight:700;color:var(--navy);">'+t+'</td>'+
+      '<td style="padding:6px 8px;text-align:right;"><input type="number" value="'+w.toFixed(2)+'" min="0" step="0.01" style="width:70px;text-align:right;" onchange="customThemeSetWeight(\''+t+'\', this.value)"></td>'+
+      '<td style="padding:6px 8px;text-align:right;font-family:Courier New,monospace;">'+pct.toFixed(1)+'%</td>'+
+      '<td style="padding:6px 8px;text-align:right;"><button class="btn-outline btn-sm" onclick="customThemeRemove(\''+t+'\')">×</button></td></tr>';
+  });
+  html += '</tbody></table>';
+  el.innerHTML = html;
+}
+function customThemeAddTicker() {
+  var t = (document.getElementById('ctAddTicker').value || '').toUpperCase().trim();
+  var w = parseFloat(document.getElementById('ctAddWeight').value);
+  if (!t) return;
+  if (isNaN(w) || w <= 0) {
+    // Default equal weight
+    var n = Object.keys(window._customThemeBuilder.tickers).length + 1;
+    w = 1/n;
+    // Re-distribute existing
+    Object.keys(window._customThemeBuilder.tickers).forEach(function(k){ window._customThemeBuilder.tickers[k] = 1/n; });
+  } else {
+    w = w / 100; // user enters as %
+  }
+  window._customThemeBuilder.tickers[t] = w;
+  document.getElementById('ctAddTicker').value = '';
+  document.getElementById('ctAddWeight').value = '';
+  customThemeRefreshUI();
+}
+function customThemeSetWeight(t, v) {
+  var w = parseFloat(v) / 100;
+  if (isNaN(w) || w < 0) return;
+  window._customThemeBuilder.tickers[t] = w;
+  customThemeRefreshUI();
+}
+function customThemeRemove(t) {
+  delete window._customThemeBuilder.tickers[t];
+  customThemeRefreshUI();
+}
+function customThemeNormalize() {
+  var keys = Object.keys(window._customThemeBuilder.tickers);
+  if (!keys.length) return;
+  var ew = 1 / keys.length;
+  keys.forEach(function(k){ window._customThemeBuilder.tickers[k] = ew; });
+  customThemeRefreshUI();
+}
+function customThemeReset() {
+  window._customThemeBuilder = { tickers: {} };
+  document.getElementById('ctName').value = '';
+  document.getElementById('ctDesc').value = '';
+  document.getElementById('ctStatus').textContent = '';
+  customThemeRefreshUI();
+}
+async function customThemeSave() {
+  var user = window._currentUser;
+  var statusEl = document.getElementById('ctStatus');
+  if (!user) { statusEl.textContent = 'Sign in to save custom themes.'; statusEl.style.color = 'var(--danger)'; return; }
+  var name = (document.getElementById('ctName').value || '').trim();
+  var desc = (document.getElementById('ctDesc').value || '').trim();
+  var regime = document.getElementById('ctRegime').value;
+  var tickers = Object.keys(window._customThemeBuilder.tickers);
+  if (!name) { statusEl.textContent = 'Name required.'; statusEl.style.color = 'var(--danger)'; return; }
+  if (!tickers.length) { statusEl.textContent = 'Add at least one ticker.'; statusEl.style.color = 'var(--danger)'; return; }
+  // Normalize weights to sum to 1
+  var sum = tickers.reduce(function(s,k){ return s + window._customThemeBuilder.tickers[k]; }, 0);
+  var weights = {}; tickers.forEach(function(t){ weights[t] = sum > 0 ? window._customThemeBuilder.tickers[t]/sum : 1/tickers.length; });
+  var theme = {
+    name: name, description: desc, regimeFit: regime,
+    tickers: tickers, weights: weights,
+    createdAt: new Date().toISOString(), uid: user.uid
+  };
+  try {
+    statusEl.textContent = 'Saving…'; statusEl.style.color = 'var(--text-sec)';
+    var fb = window.__fb; var db = window.__fbDb;
+    var docRef = await fb.addDoc(fb.collection(db, 'customThemes'), theme);
+    theme.id = docRef.id;
+    window._customThemes.push(theme);
+    statusEl.textContent = 'Saved ✓ Theme available in compare.'; statusEl.style.color = 'var(--success)';
+    customThemeReset();
+    customThemeRenderSavedList();
+    themeCmpRenderCustom();
+  } catch(e) {
+    statusEl.textContent = 'Save failed: ' + e.message; statusEl.style.color = 'var(--danger)';
+  }
+}
+async function customThemeLoad() {
+  var user = window._currentUser; if (!user) return;
+  try {
+    var fb = window.__fb; var db = window.__fbDb;
+    var q = fb.query(fb.collection(db, 'customThemes'), fb.where('uid','==', user.uid));
+    var snap = await fb.getDocs(q);
+    var list = [];
+    snap.forEach(function(d){ list.push(Object.assign({id:d.id}, d.data())); });
+    window._customThemes = list;
+    customThemeRenderSavedList();
+    themeCmpRenderCustom();
+  } catch(e) { console.warn('[customThemeLoad]', e); }
+}
+async function customThemeDelete(id) {
+  if (!confirm('Delete this custom theme?')) return;
+  try {
+    var fb = window.__fb; var db = window.__fbDb;
+    await fb.deleteDoc(fb.doc(db, 'customThemes', id));
+    window._customThemes = window._customThemes.filter(function(t){ return t.id !== id; });
+    customThemeRenderSavedList();
+    themeCmpRenderCustom();
+  } catch(e) { alert('Delete failed: '+e.message); }
+}
+function customThemeRenderSavedList() {
+  var el = document.getElementById('ctSavedList');
+  if (!el) return;
+  var list = window._customThemes || [];
+  if (!list.length) { el.innerHTML = '<p style="color:var(--text-sec);font-size:11.5px;font-style:italic;margin-top:10px;">No saved custom themes.</p>'; return; }
+  var html = '<div style="font-size:11px;font-weight:700;color:var(--navy);text-transform:uppercase;letter-spacing:.4px;margin:14px 0 8px;">Your Saved Themes</div>';
+  list.forEach(function(t){
+    html += '<div style="background:var(--panel);border:1px solid var(--border);border-left:3px solid var(--blue);padding:8px 12px;margin-bottom:6px;border-radius:3px;display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;">'+
+      '<div style="flex:1;min-width:200px;"><strong style="color:var(--navy);">★ '+t.name+'</strong> <span style="font-size:11px;color:var(--text-sec);">('+t.tickers.length+' tickers · regime: '+t.regimeFit+')</span><div style="font-size:10.5px;color:var(--text-sec);margin-top:2px;">'+(t.description||'')+'</div></div>'+
+      '<div><button class="btn-outline btn-sm" onclick="customThemeDelete(\''+t.id+'\')">Delete</button></div>'+
+      '</div>';
+  });
+  el.innerHTML = html;
+}
+
+// ────────── What-If Simulator (Fix #2) ──────────
+async function whatIfRun() {
+  var t = (document.getElementById('whatifTicker').value || '').toUpperCase().trim();
+  var w = parseFloat(document.getElementById('whatifWeight').value);
+  var range = document.getElementById('whatifRange').value;
+  var method = document.getElementById('whatifMethod').value;
+  var statsEl = document.getElementById('whatifStats');
+  if (!t) { statsEl.innerHTML = '<span style="color:var(--danger);">Enter a ticker.</span>'; return; }
+  if (isNaN(w) || w <= 0) { statsEl.innerHTML = '<span style="color:var(--danger);">Weight must be > 0.</span>'; return; }
+  statsEl.innerHTML = '<span class="spinner"></span> Running simulation…';
+  try {
+    var fetchRange = range === 'ytd' ? '1y' : range;
+    // Actual portfolio
+    var pfSeries = await pfBuildValueSeries(fetchRange);
+    if (!pfSeries.values.length) { statsEl.innerHTML = '<span style="color:var(--danger);">No portfolio data.</span>'; return; }
+    // New ticker
+    var c = await fetchChart(t, fetchRange, '1d');
+    var tMap = {}; (c.points||[]).forEach(function(p){ if (p.close != null) tMap[p.date.slice(0,10)] = p.close; });
+    // Filter pf dates to only those where ticker has price
+    var commonDates = pfSeries.dates.filter(function(d){ return tMap[d] != null; });
+    if (commonDates.length < 5) { statsEl.innerHTML = '<span style="color:var(--danger);">Insufficient overlap with '+t+'.</span>'; return; }
+    var startStr = commonDates[0];
+    if (range === 'ytd') {
+      var ytdStart = new Date(new Date().getFullYear(), 0, 1).toISOString().slice(0,10);
+      commonDates = commonDates.filter(function(d){ return d >= ytdStart; });
+      if (!commonDates.length) { statsEl.innerHTML = '<span style="color:var(--danger);">No data in YTD window.</span>'; return; }
+      startStr = commonDates[0];
+    }
+    // Build aligned arrays
+    var pfDateMap = {}; pfSeries.dates.forEach(function(d, i){ pfDateMap[d] = pfSeries.values[i]; });
+    var pfA = commonDates.map(function(d){ return pfDateMap[d]; });
+    var tA = commonDates.map(function(d){ return tMap[d]; });
+    var pfBase = pfA[0], tBase = tA[0];
+    var actualReb = pfA.map(function(v){ return v / pfBase * 100; });
+    // Hypothetical portfolio
+    // Daily portfolio return
+    var pfDailyR = []; for (var i = 1; i < pfA.length; i++) pfDailyR.push(Math.log(pfA[i] / pfA[i-1]));
+    var tDailyR = []; for (var i = 1; i < tA.length; i++) tDailyR.push(Math.log(tA[i] / tA[i-1]));
+    var weightT = w / 100;
+    var hypReb = [100];
+    if (method === 'dilute') {
+      // existing weight is 1 - weightT
+      for (var i = 0; i < pfDailyR.length; i++) {
+        var r = (1 - weightT) * pfDailyR[i] + weightT * tDailyR[i];
+        hypReb.push(hypReb[hypReb.length-1] * Math.exp(r));
+      }
+    } else {
+      // add on top — total notional grows by weightT
+      for (var i = 0; i < pfDailyR.length; i++) {
+        var r = pfDailyR[i] + weightT * tDailyR[i];
+        hypReb.push(hypReb[hypReb.length-1] * Math.exp(r));
+      }
+    }
+    // Render
+    var ctx = document.getElementById('whatifChart');
+    if (window._whatifChart) window._whatifChart.destroy();
+    window._whatifChart = new Chart(ctx, {
+      type: 'line',
+      data: {
+        datasets: [
+          { label: 'Actual Portfolio', data: commonDates.map(function(d,i){ return {x:d,y:actualReb[i]}; }), borderColor:'#003C71', borderWidth:2.5, pointRadius:0, tension:0.15 },
+          { label: 'Hypothetical (+'+t+' @ '+w+'%, '+method+')', data: commonDates.map(function(d,i){ return {x:d,y:hypReb[i]}; }), borderColor:'#A23B72', borderWidth:2, pointRadius:0, tension:0.15, borderDash:[6,3] }
+        ]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false, parsing: false, animation: false,
+        plugins: { legend: { position:'top', labels:{color:'#1A2733', font:{size:11}} }, tooltip: { mode:'index', intersect:false } },
+        scales: {
+          x: { type:'category', ticks:{color:'#5A6772', maxTicksLimit:8}, grid:{color:'rgba(208,215,224,0.4)'} },
+          y: { ticks:{color:'#5A6772'}, grid:{color:'rgba(208,215,224,0.4)'}, title:{display:true,text:'Rebased to 100',color:'#5A6772',font:{size:11}} }
+        }
+      }
+    });
+    var actRet = actualReb[actualReb.length-1] - 100;
+    var hypRet = hypReb[hypReb.length-1] - 100;
+    var diff = hypRet - actRet;
+    statsEl.innerHTML = '<div style="display:flex;gap:14px;flex-wrap:wrap;font-size:12px;">'+
+      '<div style="background:var(--panel);padding:6px 10px;border-radius:3px;border-left:3px solid #003C71;"><strong>Actual:</strong> '+(actRet>=0?'+':'')+actRet.toFixed(2)+'%</div>'+
+      '<div style="background:var(--panel);padding:6px 10px;border-radius:3px;border-left:3px solid #A23B72;"><strong>Hypothetical:</strong> '+(hypRet>=0?'+':'')+hypRet.toFixed(2)+'%</div>'+
+      '<div style="background:'+(diff>=0?'rgba(46,125,82,0.12)':'rgba(139,42,42,0.12)')+';padding:6px 10px;border-radius:3px;border-left:3px solid '+(diff>=0?'var(--success)':'var(--danger)')+';"><strong>Difference:</strong> '+(diff>=0?'+':'')+diff.toFixed(2)+' pp</div>'+
+      '</div>';
+  } catch(e) { statsEl.innerHTML = '<span style="color:var(--danger);">'+e.message+'</span>'; }
+}
+
+// ────────── Patch pfShowTab to also init themes/whatif tabs ──────────
+(function(){
+  var origShow = window.pfShowTab;
+  if (typeof origShow !== 'function') return;
+  window.pfShowTab = function(name) {
+    origShow(name);
+    if (name === 'themes' && !window._themesCmpInit) {
+      window._themesCmpInit = true;
+      themePopulatePicker();
+      customThemeLoad();
+      customThemeRefreshUI();
+      // Auto-run with default
+      setTimeout(themeCompareRun, 60);
+    }
+    if (name === 'themes' && window._currentUser) {
+      // Refresh saved themes on revisit if user changed
+      var gate = document.getElementById('customThemeAuthGate');
+      if (gate) gate.style.display = 'none';
+    } else if (name === 'themes' && !window._currentUser) {
+      var gate = document.getElementById('customThemeAuthGate');
+      if (gate) gate.style.display = '';
+    }
+  };
+})();
+
+// ────────── Regime-Conditional Correlation (Fix #6) ──────────
+window._rccData = null;
+async function rccRun() {
+  var statusEl = document.getElementById('rccStatus');
+  var resultsEl = document.getElementById('rccResults');
+  statusEl.textContent = 'Loading SPY history + Perry regime classification…';
+  resultsEl.innerHTML = '<span class="spinner"></span> Computing regime-conditional correlations…';
+  try {
+    // Use the universe selected in Markets module if available; else default
+    var tickers = (window._mktSelectedAssets && window._mktSelectedAssets.length >= 3) ? window._mktSelectedAssets.slice(0, 12) : ['SPY','QQQ','TLT','GLD','HYG','UUP','USO','VNQ'];
+    // Make sure SPY is included as benchmark
+    if (tickers.indexOf('SPY') === -1) tickers.unshift('SPY');
+    // Load 5y daily data for each + classify Perry regime daily
+    var WORKER = 'https://perry-finance-proxy.zachperrybusiness.workers.dev';
+    var spyData = await fetch(WORKER + '/chart?symbol=SPY&range=5y&interval=1d').then(function(r){ return r.json(); });
+    var vixData = await fetch(WORKER + '/chart?symbol=%5EVIX&range=5y&interval=1d').then(function(r){ return r.json(); }).catch(function(){ return null; });
+    var spyPts = (spyData.points || []).filter(function(p){ return p.close != null; });
+    var vixSeries = {};
+    if (vixData && vixData.points) {
+      vixData.points.forEach(function(p){ if (p.close != null) vixSeries[p.date.slice(0,10)] = p.close; });
+    }
+    statusEl.textContent = 'Classifying daily regimes (5y window)…';
+    // Build daily classification (rolling 252-day)
+    var dailyClass = buildDailyClassificationHistory(spyPts, vixSeries);
+    var classByDate = {};
+    dailyClass.forEach(function(d){ classByDate[d.date] = d.classification.winner; });
+    statusEl.textContent = 'Fetching '+tickers.length+' assets…';
+    // Fetch each asset
+    var data = {};
+    await Promise.all(tickers.map(async function(tk){
+      try {
+        var c = await fetch(WORKER + '/chart?symbol='+encodeURIComponent(tk)+'&range=5y&interval=1d').then(function(r){ return r.json(); });
+        data[tk] = (c.points||[]).filter(function(p){ return p.close != null; });
+      } catch(e) { data[tk] = []; }
+    }));
+    // Align all on common date set
+    var validTickers = tickers.filter(function(tk){ return data[tk] && data[tk].length > 100; });
+    if (validTickers.length < 3) { resultsEl.innerHTML = '<p style="color:var(--danger);">Insufficient data — need at least 3 assets.</p>'; return; }
+    // Build price maps + log returns aligned to common date set
+    var priceMaps = {};
+    validTickers.forEach(function(tk){
+      priceMaps[tk] = {};
+      data[tk].forEach(function(p){ priceMaps[tk][p.date.slice(0,10)] = p.close; });
+    });
+    var spyMap = priceMaps['SPY'];
+    var commonDates = Object.keys(spyMap).filter(function(d){
+      return validTickers.every(function(tk){ return priceMaps[tk][d] != null; }) && classByDate[d] != null;
+    }).sort();
+    var returns = {};
+    validTickers.forEach(function(tk){
+      var r = [];
+      for (var i = 1; i < commonDates.length; i++) {
+        var prev = priceMaps[tk][commonDates[i-1]];
+        var cur = priceMaps[tk][commonDates[i]];
+        r.push(prev > 0 ? Math.log(cur/prev) : 0);
+      }
+      returns[tk] = r;
+    });
+    var dateAligned = commonDates.slice(1);
+    statusEl.textContent = 'Computed '+dateAligned.length+' daily observations across '+validTickers.length+' assets.';
+    window._rccData = { returns: returns, dates: dateAligned, classByDate: classByDate, tickers: validTickers };
+    rccRender();
+  } catch(e) { resultsEl.innerHTML = '<p style="color:var(--danger);">RCC failed: '+e.message+'</p>'; statusEl.textContent = ''; }
+}
+function rccCorrSubset(returns, tickers, indices) {
+  // returns: {ticker: [r1, r2, ...]}, indices: array of position indices to include
+  var m = {};
+  tickers.forEach(function(t1){
+    m[t1] = {};
+    tickers.forEach(function(t2){
+      if (t1 === t2) { m[t1][t2] = 1.0; return; }
+      var x1 = indices.map(function(i){ return returns[t1][i]; });
+      var x2 = indices.map(function(i){ return returns[t2][i]; });
+      var n = x1.length;
+      if (n < 5) { m[t1][t2] = NaN; return; }
+      var m1 = x1.reduce(function(s,v){return s+v;},0)/n;
+      var m2 = x2.reduce(function(s,v){return s+v;},0)/n;
+      var cov=0, v1=0, v2=0;
+      for (var i = 0; i < n; i++) {
+        cov += (x1[i]-m1)*(x2[i]-m2);
+        v1 += (x1[i]-m1)*(x1[i]-m1);
+        v2 += (x2[i]-m2)*(x2[i]-m2);
+      }
+      m[t1][t2] = (v1>0&&v2>0) ? cov/Math.sqrt(v1*v2) : 0;
+    });
+  });
+  return m;
+}
+function rccRender() {
+  if (!window._rccData) return;
+  var d = window._rccData;
+  var mode = document.getElementById('rccMode').value;
+  var regimeFilter = document.getElementById('rccRegime').value;
+  var resultsEl = document.getElementById('rccResults');
+  var tickers = d.tickers;
+  var dates = d.dates;
+  var classByDate = d.classByDate;
+  var returns = d.returns;
+  // Build index sets
+  var allIdx = []; for (var i = 0; i < dates.length; i++) allIdx.push(i);
+  var spyR = returns['SPY'];
+  var downsideIdx = [];
+  for (var i = 0; i < dates.length; i++) if (spyR[i] != null && spyR[i] <= 0) downsideIdx.push(i);
+  var upsideIdx = [];
+  for (var i = 0; i < dates.length; i++) if (spyR[i] != null && spyR[i] > 0) upsideIdx.push(i);
+  var regimeIdx = { leveraged:[], growth:[], neutral:[], drawdown:[] };
+  for (var i = 0; i < dates.length; i++) {
+    var k = classByDate[dates[i]];
+    if (k && regimeIdx[k]) regimeIdx[k].push(i);
+  }
+
+  function renderHeatmap(matrix, label, indicesCount) {
+    var html = '<div style="font-size:12px;font-weight:700;color:var(--navy);margin:10px 0 6px;text-transform:uppercase;letter-spacing:0.5px;">'+label+' <span style="font-weight:400;color:var(--text-sec);font-size:10.5px;">(n='+indicesCount+' days)</span></div>';
+    html += '<div style="overflow-x:auto;"><table class="corr-matrix"><thead><tr><th></th>';
+    tickers.forEach(function(t){ html += '<th>'+t+'</th>'; });
+    html += '</tr></thead><tbody>';
+    for (var ii = 0; ii < tickers.length; ii++) {
+      html += '<tr><td>'+tickers[ii]+'</td>';
+      for (var jj = 0; jj < tickers.length; jj++) {
+        var v = matrix[tickers[ii]][tickers[jj]];
+        if (isNaN(v)) { html += '<td style="background:#eee;color:#999;">—</td>'; continue; }
+        var c = Math.abs(v);
+        var bg, fg;
+        if (v >= 0) { bg = 'rgba(0,60,113,'+(c*0.85+0.05).toFixed(2)+')'; fg = c > 0.55 ? '#fff' : '#1A2733'; }
+        else { bg = 'rgba(139,42,42,'+(c*0.85+0.05).toFixed(2)+')'; fg = c > 0.55 ? '#fff' : '#1A2733'; }
+        html += '<td style="background:'+bg+';color:'+fg+';">'+v.toFixed(2)+'</td>';
+      }
+      html += '</tr>';
+    }
+    html += '</tbody></table></div>';
+    return html;
+  }
+
+  var html = '';
+  if (mode === 'regime') {
+    var regimes = regimeFilter === 'all' ? ['leveraged','growth','neutral','drawdown'] : [regimeFilter];
+    regimes.forEach(function(r){
+      var idx = regimeIdx[r];
+      if (idx.length < 10) {
+        html += '<div style="font-size:12px;font-weight:700;color:var(--navy);margin:10px 0 6px;">'+r.toUpperCase()+' regime</div><p style="color:var(--text-sec);font-size:11.5px;">Insufficient data ('+idx.length+' days). Need 10+.</p>';
+        return;
+      }
+      var stateName = (PS_STATES.find(function(s){return s.key===r;})||{name:r}).name;
+      var matrix = rccCorrSubset(returns, tickers, idx);
+      // average off-diagonal
+      var avg = 0, count = 0;
+      tickers.forEach(function(t1){ tickers.forEach(function(t2){ if (t1!==t2 && !isNaN(matrix[t1][t2])) { avg += matrix[t1][t2]; count++; } }); });
+      avg = count > 0 ? avg / count : 0;
+      html += renderHeatmap(matrix, stateName + ' &middot; Avg ρ = ' + avg.toFixed(3), idx.length);
+    });
+  } else if (mode === 'downside') {
+    var fullM = rccCorrSubset(returns, tickers, allIdx);
+    var downM = rccCorrSubset(returns, tickers, downsideIdx);
+    var upM = rccCorrSubset(returns, tickers, upsideIdx);
+    function avgOff(M) { var a=0,c=0; tickers.forEach(function(t1){ tickers.forEach(function(t2){ if (t1!==t2 && !isNaN(M[t1][t2])) { a+=M[t1][t2]; c++; } }); }); return c>0?a/c:0; }
+    html += '<div style="background:var(--panel);border:1px solid var(--border);padding:12px 16px;border-radius:4px;margin-bottom:12px;font-size:12.5px;">'+
+      '<strong style="color:var(--navy);">Asymmetry summary (avg off-diagonal ρ across universe)</strong><br>'+
+      '<span style="display:inline-block;margin-right:14px;margin-top:6px;">Full sample: <strong style="font-family:Courier New,monospace;">'+avgOff(fullM).toFixed(3)+'</strong></span>'+
+      '<span style="display:inline-block;margin-right:14px;">Upside days only: <strong style="font-family:Courier New,monospace;color:var(--success);">'+avgOff(upM).toFixed(3)+'</strong></span>'+
+      '<span style="display:inline-block;margin-right:14px;">Downside days only: <strong style="font-family:Courier New,monospace;color:var(--danger);">'+avgOff(downM).toFixed(3)+'</strong></span>'+
+      '<span style="display:inline-block;background:rgba(139,42,42,0.12);padding:2px 8px;border-radius:3px;font-weight:700;">Δρ (downside − full): '+(avgOff(downM)-avgOff(fullM)>=0?'+':'')+(avgOff(downM)-avgOff(fullM)).toFixed(3)+'</span>'+
+      '<p style="font-size:11px;color:var(--text-sec);margin-top:8px;line-height:1.5;">A positive Δρ means correlations rise during drawdowns — your diversification benefit erodes precisely when you need it most. This is the empirically documented "correlation breakdown" or asymmetric correlation effect (Longin &amp; Solnik 2001; Ang &amp; Chen 2002).</p>'+
+      '</div>';
+    html += renderHeatmap(fullM, 'Full Sample', allIdx.length);
+    html += renderHeatmap(downM, 'Downside Days Only (R<sub>SPY</sub> ≤ 0)', downsideIdx.length);
+    html += renderHeatmap(upM, 'Upside Days Only (R<sub>SPY</sub> > 0)', upsideIdx.length);
+  } else if (mode === 'rolling') {
+    // Rolling 60D average pairwise correlation
+    var W = 60;
+    var labels = [], avgs = [], regimes = [];
+    for (var s = W; s < dates.length; s++) {
+      var slice = []; for (var k = s - W; k < s; k++) slice.push(k);
+      var M = rccCorrSubset(returns, tickers, slice);
+      var a=0,c=0; tickers.forEach(function(t1){ tickers.forEach(function(t2){ if (t1!==t2 && !isNaN(M[t1][t2])) { a+=M[t1][t2]; c++; } }); });
+      labels.push(dates[s]);
+      avgs.push(c>0?a/c:0);
+      regimes.push(classByDate[dates[s]] || 'neutral');
+    }
+    html += '<div style="font-size:12px;font-weight:700;color:var(--navy);margin:10px 0 6px;text-transform:uppercase;letter-spacing:0.5px;">Rolling 60-Day Average Pairwise Correlation (universe of '+tickers.length+' assets)</div>';
+    html += '<div class="chart-wrap" style="height:300px;"><canvas id="rccRollingChart"></canvas></div>';
+    html += '<p style="font-size:11px;color:var(--text-sec);margin-top:8px;line-height:1.5;">Background bands tinted by Perry regime that day. Spikes coincide with stress regimes — corroborating Longin &amp; Solnik (2001).</p>';
+    resultsEl.innerHTML = html;
+    // Render chart with regime-tinted points
+    var ctx = document.getElementById('rccRollingChart');
+    if (window._rccRollingChart) window._rccRollingChart.destroy();
+    var stateColors = { leveraged:'#2E7D52', growth:'#5B9BD5', neutral:'#8B6914', drawdown:'#8B2A2A' };
+    var pointColors = regimes.map(function(r){ return stateColors[r] || '#999'; });
+    window._rccRollingChart = new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels: labels,
+        datasets: [{
+          label: 'Avg Pairwise ρ (60D)',
+          data: avgs,
+          borderColor: '#003C71',
+          backgroundColor: pointColors,
+          pointBackgroundColor: pointColors,
+          pointRadius: 1.5,
+          pointBorderColor: pointColors,
+          borderWidth: 1.5,
+          fill: false,
+          tension: 0.05
+        }]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false, animation: false,
+        plugins: { legend: { display: false }, tooltip: { callbacks: { label: function(ctx){ var i = ctx.dataIndex; return 'ρ='+avgs[i].toFixed(3)+' &middot; Regime: '+regimes[i]; }}}},
+        scales: {
+          x: { ticks: { color:'#5A6772', maxTicksLimit:10 }, grid: { color:'rgba(208,215,224,0.4)' } },
+          y: { min: 0, max: 1, ticks: { color:'#5A6772' }, grid: { color:'rgba(208,215,224,0.4)' } }
+        }
+      }
+    });
+    return;
+  }
+  resultsEl.innerHTML = html;
+}
+
+// ────────── Patch renderPortfolioChart for Recommended-State + historical-regime overlays + extra tickers ──────────
+(function(){
+  var orig = window.renderPortfolioChart;
+  if (typeof orig !== 'function') return;
+  window.renderPortfolioChart = async function() {
+    await orig.apply(this, arguments);
+    // Now add overlays if their toggles are on, by appending to the chart's datasets
+    var chart = window._chartRef || window.__pfChart || null;
+    // Search for the chart instance by canvas id
+    if (!chart && typeof Chart !== 'undefined') {
+      var cv = document.getElementById('portfolioLineChart');
+      if (cv) chart = Chart.getChart(cv);
+    }
+    if (!chart) return;
+    try {
+      // Recommended State overlay
+      if (window._showRecState) {
+        var range = (typeof currentRange !== 'undefined' ? currentRange : '1y');
+        var recSeries = await buildRecommendedStateSeries(range);
+        if (recSeries && recSeries.values.length) {
+          // Rebase to match user portfolio's start dollar value if possible
+          var pfDataset = chart.data.datasets.find(function(d){ return d.label && d.label.indexOf('Total Value') >= 0; });
+          var startVal = pfDataset && pfDataset.data && pfDataset.data.length ? pfDataset.data[0].y || pfDataset.data[0] : 100;
+          var startBase = recSeries.values[0];
+          var rescaled = recSeries.values.map(function(v){ return v / startBase * startVal; });
+          // Avoid duplicate
+          chart.data.datasets = chart.data.datasets.filter(function(d){ return d.label !== 'Recommended State (Backtest)'; });
+          chart.data.datasets.push({
+            label: 'Recommended State (Backtest)',
+            data: recSeries.dates.map(function(d, i){ return { x: d, y: rescaled[i] }; }),
+            borderColor: '#A23B72',
+            backgroundColor: 'rgba(162,59,114,0.05)',
+            borderWidth: 2,
+            borderDash: [4,3],
+            pointRadius: 0,
+            tension: 0.1,
+            fill: false,
+            yAxisID: pfDataset && pfDataset.yAxisID ? pfDataset.yAxisID : undefined
+          });
+          chart.update('none');
+        }
+      } else {
+        // Remove if exists
+        chart.data.datasets = chart.data.datasets.filter(function(d){ return d.label !== 'Recommended State (Backtest)'; });
+        chart.update('none');
+      }
+      // Forecast historical overlay
+      var mcSel = document.getElementById('mcRegimeSelect').value;
+      var histChk = document.getElementById('mcHistOverlay');
+      if (mcSel && histChk && histChk.checked && window._quarterlyRegimes) {
+        // Show how this regime would have performed on the SAME days the user actually held
+        // Approximation: pick days within the chart range and apply per-state expected return
+        var pfDataset2 = chart.data.datasets.find(function(d){ return d.label && d.label.indexOf('Total Value') >= 0; });
+        if (pfDataset2 && pfDataset2.data && pfDataset2.data.length > 1) {
+          // Use the recommended-state series scaled by selected regime
+          var rangeKey = (typeof currentRange !== 'undefined' ? currentRange : '1y');
+          var recAll = await buildRecommendedStateSeries(rangeKey);
+          if (recAll) {
+            // Approximation: if user picked "growth", show growth-only state holding throughout
+            var STATE_WEIGHTS_OVERRIDE = {
+              leveraged: ['TQQQ','SPY'], growth: ['QQQ','SPY'], neutral: ['GLD','XLU','SHV'], drawdown: ['SHV','TLT']
+            };
+            // We just rebuild a series fixing the regime
+            var fixed = await buildFixedRegimeSeries(mcSel, rangeKey);
+            if (fixed) {
+              var sBase = fixed.values[0];
+              var sStart = pfDataset2.data[0].y || 100;
+              var sRescaled = fixed.values.map(function(v){ return v / sBase * sStart; });
+              chart.data.datasets = chart.data.datasets.filter(function(d){ return d.label !== 'Forecast Regime — Historical'; });
+              chart.data.datasets.push({
+                label: 'Forecast Regime — Historical',
+                data: fixed.dates.map(function(d, i){ return { x: d, y: sRescaled[i] }; }),
+                borderColor: '#F18F01',
+                borderWidth: 1.8,
+                borderDash: [2,3],
+                pointRadius: 0,
+                tension: 0.1,
+                fill: false,
+                yAxisID: pfDataset2.yAxisID
+              });
+              chart.update('none');
+            }
+          }
+        }
+      } else if (chart.data.datasets.find(function(d){ return d.label === 'Forecast Regime — Historical'; })) {
+        chart.data.datasets = chart.data.datasets.filter(function(d){ return d.label !== 'Forecast Regime — Historical'; });
+        chart.update('none');
+      }
+      // Extra tickers
+      if (window._pfChartExtraTickers && window._pfChartExtraTickers.length) {
+        for (var i = 0; i < window._pfChartExtraTickers.length; i++) {
+          var x = window._pfChartExtraTickers[i];
+          var lbl = x.ticker + ' (overlay)';
+          if (chart.data.datasets.find(function(d){ return d.label === lbl; })) continue;
+          try {
+            var c = await fetchChart(x.ticker, currentRange, '1d');
+            var pts = (c.points || []).filter(function(p){ return p.close != null; });
+            if (!pts.length) continue;
+            var pfDataset3 = chart.data.datasets.find(function(d){ return d.label && d.label.indexOf('Total Value') >= 0; });
+            var pfStart = pfDataset3 && pfDataset3.data && pfDataset3.data.length ? pfDataset3.data[0].y || 100 : 100;
+            var firstClose = pts[0].close;
+            var rescaled = pts.map(function(p){ return { x: p.date.slice(0,10), y: p.close / firstClose * pfStart }; });
+            chart.data.datasets.push({
+              label: lbl,
+              data: rescaled,
+              borderColor: x.color,
+              borderWidth: 1.4,
+              pointRadius: 0,
+              tension: 0.1,
+              fill: false,
+              borderDash: [3,2],
+              yAxisID: pfDataset3 && pfDataset3.yAxisID ? pfDataset3.yAxisID : undefined
+            });
+          } catch(e) {}
+        }
+        chart.update('none');
+      }
+    } catch(e) { console.warn('[renderPortfolioChart overlays]', e); }
+  };
+})();
+
+async function buildFixedRegimeSeries(regime, rangeKey) {
+  var STATE_WEIGHTS = {
+    leveraged: { TQQQ: 0.4, SOXL: 0.2, SPY: 0.3, CASH: 0.1 },
+    growth:    { QQQ: 0.4, SPY: 0.4, IWM: 0.1, CASH: 0.1 },
+    neutral:   { GLD: 0.2, XLU: 0.15, XLP: 0.15, EFA: 0.1, IEF: 0.1, CASH: 0.3 },
+    drawdown:  { SHV: 0.45, TLT: 0.2, GLD: 0.05, CASH: 0.3 }
+  };
+  var w = STATE_WEIGHTS[regime] || STATE_WEIGHTS.neutral;
+  var tickerArr = Object.keys(w).filter(function(t){ return t !== 'CASH'; });
+  var fetchRange = (rangeKey === 'ytd' || rangeKey === '1mo' || rangeKey === '3mo' || rangeKey === '6mo' || rangeKey === '1y') ? '1y'
+                  : (rangeKey === '3y') ? '3y' : (rangeKey === '5y') ? '5y' : '10y';
+  var data = {};
+  await Promise.all(tickerArr.map(async function(t){
+    try { var c = await fetchChart(t, fetchRange, '1d'); var m = {}; (c.points||[]).forEach(function(p){ if (p.close!=null) m[p.date.slice(0,10)] = p.close; }); data[t] = m; } catch(e){ data[t] = {}; }
+  }));
+  var anchor = data.SPY || data.QQQ || data[tickerArr[0]]; if (!anchor) return null;
+  var dates = Object.keys(anchor).sort();
+  var today = new Date();
+  var startStr;
+  if (rangeKey === '1mo') { var s = new Date(today); s.setMonth(today.getMonth()-1); startStr = s.toISOString().slice(0,10); }
+  else if (rangeKey === '3mo') { var s = new Date(today); s.setMonth(today.getMonth()-3); startStr = s.toISOString().slice(0,10); }
+  else if (rangeKey === '6mo') { var s = new Date(today); s.setMonth(today.getMonth()-6); startStr = s.toISOString().slice(0,10); }
+  else if (rangeKey === 'ytd') { startStr = new Date(today.getFullYear(),0,1).toISOString().slice(0,10); }
+  else if (rangeKey === '1y') { var s = new Date(today); s.setFullYear(today.getFullYear()-1); startStr = s.toISOString().slice(0,10); }
+  else { startStr = dates[0]; }
+  dates = dates.filter(function(d){ return d >= startStr; });
+  var values = [100];
+  for (var i = 1; i < dates.length; i++) {
+    var dayRet = 0;
+    Object.keys(w).forEach(function(t){
+      if (t === 'CASH') { dayRet += w[t] * (0.045/252); return; }
+      var prev = data[t][dates[i-1]], cur = data[t][dates[i]];
+      if (prev != null && cur != null && prev > 0) dayRet += w[t] * Math.log(cur/prev);
+    });
+    values.push(values[values.length-1] * Math.exp(dayRet));
+  }
+  return { dates: dates, values: values };
+}
+
+// Auto-load quarterly regimes early (kicks off when user signs in or page first loads)
+(function(){
+  document.addEventListener('DOMContentLoaded', function(){
+    setTimeout(function(){ if (typeof loadQuarterlyRegimes === 'function') loadQuarterlyRegimes(); }, 800);
+  });
+  // Also load custom themes once user signs in
+  document.addEventListener('DOMContentLoaded', function(){
+    setTimeout(function(){
+      if (window._currentUser && typeof customThemeLoad === 'function') customThemeLoad();
+    }, 1500);
+  });
+})();
+
+</script>
    Risk Strip, Drift, TLH, Trade Blotter, Global Snapshot,
    Regime Distance, AI Commentary
    ═══════════════════════════════════════════════════════════════════ */
