@@ -1893,7 +1893,7 @@ body.view-mobile .logo-icon { width: 22px !important; height: 22px !important; f
       </div>
       <div class="nav-dropdown">
         <div class="nav-child" data-page="macro" onclick="navigateTo('macro')">Macro Regime Analysis</div>
-        <div class="nav-child" data-page="research" onclick="navigateTo('research')">Stock Research &amp; Quant Models</div>
+        <div class="nav-child" data-page="quant" onclick="navigateTo('quant')">Project Stock Values</div>
         <div class="nav-child" data-page="markets" onclick="navigateTo('markets')">Cross-Asset Analysis</div>
       </div>
     </div>
@@ -2132,8 +2132,6 @@ body.view-mobile .logo-icon { width: 22px !important; height: 22px !important; f
         <button class="pf-tab" data-pftab="risk" onclick="pfShowTab('risk')">Risk</button>
         <button class="pf-tab" data-pftab="characteristics" onclick="pfShowTab('characteristics')">Characteristics</button>
         <button class="pf-tab" data-pftab="scenarios" onclick="pfShowTab('scenarios')">Scenarios</button>
-        <button class="pf-tab" data-pftab="themes" onclick="pfShowTab('themes')">Themes</button>
-        <button class="pf-tab" data-pftab="whatif" onclick="pfShowTab('whatif')">What-If</button>
       </div>
 
       <!-- AI Commentary panel -->
@@ -2191,14 +2189,12 @@ body.view-mobile .logo-icon { width: 22px !important; height: 22px !important; f
               <input type="text" id="compare2" placeholder="QQQ" value="QQQ" style="width:80px;text-transform:uppercase;">
             </div>
             <button class="btn btn-sm" onclick="renderPortfolioChart()">Update Chart</button>
-            <button class="btn-outline btn-sm" onclick="pfAddTickerToChart()" style="margin-left:8px;">+ Add Ticker</button>
             <button class="btn-outline btn-sm" id="btnStress" onclick="toggleStress()" style="margin-left:8px;">Stressed Scenarios</button>
             <button class="btn-outline btn-sm" id="btnVixRange" onclick="toggleVixRange()" style="margin-left:4px;">VIX Range</button>
             <button class="btn-outline btn-sm" id="btnRegimeOverlay" onclick="toggleRegimeOverlay()" style="margin-left:4px;">Market Regime</button>
-            <button class="btn-outline btn-sm" id="btnRecState" onclick="toggleRecState()" style="margin-left:4px;">Recommended State</button>
             <div class="form-group" style="margin-left:12px;display:flex;align-items:center;gap:6px;">
               <label style="font-size:11px;color:var(--text-sec);font-weight:600;margin:0;">Forecast Regime:
-                <span class="help-icon" title="Project a 12-month Monte Carlo forecast onto the chart under the chosen regime assumption. Also overlays a backtest of how that regime would have performed historically (dashed) over the same window. The fan band shows P10–P90 outcomes.">?</span>
+                <span class="help-icon" title="Project a 12-month Monte Carlo forecast onto the chart under the chosen regime assumption. The fan band shows P10–P90 outcomes; benchmark is also forward-projected for comparison.">?</span>
               </label>
               <select id="mcRegimeSelect" onchange="renderPortfolioChart()" style="padding:4px 8px;font-size:12px;">
                 <option value="">— Off —</option>
@@ -2207,9 +2203,6 @@ body.view-mobile .logo-icon { width: 22px !important; height: 22px !important; f
                 <option value="neutral">Neutral</option>
                 <option value="drawdown">Drawdown</option>
               </select>
-              <label style="font-size:11px;color:var(--text-sec);font-weight:600;margin-left:8px;display:flex;align-items:center;gap:4px;">
-                <input type="checkbox" id="mcHistOverlay" onchange="renderPortfolioChart()" style="margin:0;"> Historical
-              </label>
             </div>
           </div>
           <div class="chart-stats" id="chartStats"></div>
@@ -2244,22 +2237,19 @@ body.view-mobile .logo-icon { width: 22px !important; height: 22px !important; f
           &#8226; Yahoo Finance via Cloudflare Worker &#8226; Firebase Firestore
         </div>
       </div>
-      <!-- Holdings table — collapsible -->
-      <div class="card" id="pfHoldingsCard">
-        <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;cursor:pointer;" onclick="pfHoldingsToggle()">
-          <span>
-            <span id="pfHoldingsCaret" style="display:inline-block;width:14px;text-align:center;font-family:'Courier New',monospace;color:#fff;font-weight:700;transition:transform 0.18s ease;">▼</span>
-            Portfolio Holdings <span class="help-icon" title="All your positions across every account (taxable, IRA, 401k, etc.). The Regime Fit column shows whether each holding is appropriate for the current market state. Hover the G/L column for the calculation formula. Click the title bar to collapse/expand.">?</span>
-          </span>
-          <div style="display:flex;gap:8px;align-items:center;" onclick="event.stopPropagation();">
+      <!-- Holdings table -->
+      <div class="card">
+        <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;">
+          <span>Portfolio Holdings <span class="help-icon" title="All your positions across every account (taxable, IRA, 401k, etc.). The Regime Fit column shows whether each holding is appropriate for the current market state. Hover the G/L column for the calculation formula.">?</span></span>
+          <div style="display:flex;gap:8px;align-items:center;">
             <span id="holdingsCountInline" style="font-size:11px;color:var(--text-sec);font-weight:500;text-transform:none;letter-spacing:0;"></span>
-            <button class="btn-outline btn-sm" onclick="event.stopPropagation();navigateTo('holdings')">Manage Holdings</button>
+            <button class="btn-outline btn-sm" onclick="navigateTo('holdings')">Manage Holdings</button>
           </div>
         </div>
-        <div class="card-body" id="pfHoldingsBody">
+        <div class="card-body">
           <div class="table-wrap" id="portfolioTableWrap"></div>
         </div>
-        <div class="card-sources" id="pfHoldingsSources">
+        <div class="card-sources">
           <strong>Sources:</strong><br>
           &#8226; Yahoo Finance via Cloudflare Worker &#8226; Firebase Firestore
         </div>
@@ -2439,130 +2429,6 @@ body.view-mobile .logo-icon { width: 22px !important; height: 22px !important; f
       </div>
 
       </div><!-- /pftab-scenarios -->
-
-      <!-- ═══════════ TAB: THEMES — compare your portfolio to thematic baskets ═══════════ -->
-      <div class="pf-tab-content" id="pftab-themes">
-        <div class="card">
-          <div class="card-title">Compare Portfolio vs. Theme Baskets
-            <span class="help-icon" title="Compares your live portfolio against pre-built thematic baskets (AI Infrastructure, Defensive Yield, etc.). The chart rebases all to 100 at the start so you can see relative performance head-to-head.">?</span>
-          </div>
-          <div class="card-body">
-            <p style="font-size:12px;color:var(--text-sec);margin-bottom:12px;">Side-by-side cumulative return: your <strong>actual portfolio</strong> vs. each theme basket's equal-weight return over the same window. All series rebased to 100 at start. Ideal for asking: "Would I have done better with the AI Infra basket than my own picks?"</p>
-            <div class="form-row" style="margin-bottom:10px;">
-              <div class="form-group"><label>Window</label>
-                <select id="themeCmpRange" onchange="themeCompareRun()">
-                  <option value="3mo">3 Months</option>
-                  <option value="6mo">6 Months</option>
-                  <option value="ytd">YTD</option>
-                  <option value="1y" selected>1 Year</option>
-                  <option value="3y">3 Years</option>
-                  <option value="5y">5 Years</option>
-                </select>
-              </div>
-              <div class="form-group" style="flex:1;min-width:280px;"><label>Themes to Compare (multi-select)</label>
-                <div id="themeCmpPicker" style="display:flex;gap:6px;flex-wrap:wrap;border:1px solid var(--border);padding:6px;border-radius:4px;background:var(--panel);"></div>
-              </div>
-              <button class="btn btn-sm" onclick="themeCompareRun()">Run Comparison</button>
-            </div>
-            <div id="themeCmpStats" class="chart-stats"></div>
-            <div class="chart-wrap" style="height:380px;"><canvas id="themeCmpChart"></canvas></div>
-            <div id="themeCmpTable" style="margin-top:14px;"></div>
-          </div>
-          <div class="card-sources"><strong>Method:</strong> Portfolio dollar-value series reconstructed from holdings; theme basket = equal-weight rebalanced daily over the window; both rebased to 100. Theme constituents from the Portfolio Themes module. &middot; Yahoo Finance via Cloudflare Worker.</div>
-        </div>
-
-        <!-- Custom themed portfolio builder -->
-        <div class="card">
-          <div class="card-title">Create Custom Themed Portfolio
-            <span class="help-icon" title="Build your own thematic basket — give it a name, list tickers and weights — and save it to your account. Saved themes appear in the comparison list above and persist across sessions.">?</span>
-          </div>
-          <div class="card-body">
-            <p style="font-size:12px;color:var(--text-sec);margin-bottom:12px;">Build a custom basket. Equal-weight by default; override individual weights below. Saved baskets persist to your account and become available in <strong>Compare Portfolio vs. Theme Baskets</strong> above.</p>
-            <div id="customThemeAuthGate" class="auth-gate" style="display:none;padding:18px;">
-              <p style="margin:0;">Sign in to save custom themes to your account.</p>
-            </div>
-            <div id="customThemeBuilder">
-              <div class="form-row" style="margin-bottom:10px;">
-                <div class="form-group" style="flex:1;min-width:240px;"><label>Theme Name</label>
-                  <input type="text" id="ctName" placeholder="My Defensive Mix">
-                </div>
-                <div class="form-group"><label>Regime Fit</label>
-                  <select id="ctRegime">
-                    <option value="leveraged">Leveraged</option>
-                    <option value="growth" selected>Non-Levered Growth</option>
-                    <option value="neutral">Neutral</option>
-                    <option value="drawdown">Positioned for Drawdown</option>
-                  </select>
-                </div>
-              </div>
-              <div class="form-row" style="margin-bottom:10px;">
-                <div class="form-group" style="flex:1;"><label>Description</label>
-                  <input type="text" id="ctDesc" placeholder="What's the macro thesis?">
-                </div>
-              </div>
-              <div class="form-row" style="align-items:flex-end;">
-                <div class="form-group" style="min-width:120px;"><label>Add Ticker</label>
-                  <input type="text" id="ctAddTicker" placeholder="NVDA" style="text-transform:uppercase;" onkeydown="if(event.key==='Enter')customThemeAddTicker()">
-                </div>
-                <div class="form-group" style="min-width:80px;"><label>Weight %</label>
-                  <input type="number" id="ctAddWeight" placeholder="auto" min="0" step="0.01">
-                </div>
-                <button class="btn btn-sm" onclick="customThemeAddTicker()">Add</button>
-                <button class="btn-outline btn-sm" onclick="customThemeNormalize()">Equal-Weight All</button>
-              </div>
-              <div id="ctTickersList" style="margin-top:12px;"></div>
-              <div style="display:flex;gap:8px;margin-top:14px;flex-wrap:wrap;">
-                <button class="btn" onclick="customThemeSave()">Save Custom Theme</button>
-                <button class="btn-outline" onclick="customThemeReset()">Reset Builder</button>
-                <span id="ctStatus" style="font-size:11px;color:var(--text-sec);align-self:center;"></span>
-              </div>
-              <div id="ctSavedList" style="margin-top:14px;"></div>
-            </div>
-          </div>
-          <div class="card-sources"><strong>Storage:</strong> Custom themes saved to Firestore under <code>customThemes/{uid}/themes</code>. Available across all your devices when signed in.</div>
-        </div>
-      </div><!-- /pftab-themes -->
-
-      <!-- ═══════════ TAB: WHAT-IF — Add ticker simulator ═══════════ -->
-      <div class="pf-tab-content" id="pftab-whatif">
-        <div class="card">
-          <div class="card-title">What-If: Add Ticker to Portfolio
-            <span class="help-icon" title="Simulate adding (or replacing) a ticker at a chosen weight. The chart shows your actual portfolio vs. the hypothetical portfolio with the new ticker, both starting at the same dollar value.">?</span>
-          </div>
-          <div class="card-body">
-            <p style="font-size:12px;color:var(--text-sec);margin-bottom:12px;">Test how your historical performance would have changed if you'd added a ticker at <em>X%</em> weight (funded pro-rata from existing positions). Useful for evaluating new ideas vs. your live book.</p>
-            <div class="form-row" style="margin-bottom:10px;">
-              <div class="form-group" style="min-width:140px;"><label>Add Ticker</label>
-                <input type="text" id="whatifTicker" placeholder="NVDA" style="text-transform:uppercase;" onkeydown="if(event.key==='Enter')whatIfRun()">
-              </div>
-              <div class="form-group" style="min-width:120px;"><label>Weight (% of portfolio)</label>
-                <input type="number" id="whatifWeight" value="5" min="0.5" max="100" step="0.5">
-              </div>
-              <div class="form-group"><label>Window</label>
-                <select id="whatifRange">
-                  <option value="3mo">3 Months</option>
-                  <option value="6mo">6 Months</option>
-                  <option value="ytd">YTD</option>
-                  <option value="1y" selected>1 Year</option>
-                  <option value="3y">3 Years</option>
-                  <option value="5y">5 Years</option>
-                </select>
-              </div>
-              <div class="form-group"><label>Method</label>
-                <select id="whatifMethod">
-                  <option value="dilute" selected>Dilute existing pro-rata</option>
-                  <option value="add">Add on top (lever up)</option>
-                </select>
-              </div>
-              <button class="btn btn-sm" onclick="whatIfRun()">Run Simulation</button>
-            </div>
-            <div id="whatifStats" class="chart-stats"></div>
-            <div class="chart-wrap" style="height:360px;"><canvas id="whatifChart"></canvas></div>
-            <p style="font-size:11px;color:var(--text-sec);margin-top:8px;line-height:1.5;"><strong>Method.</strong> "Dilute pro-rata" funds the new position by reducing every existing holding by the same proportional fraction (your portfolio stays at its starting dollar value). "Add on top" treats it as additional capital deployed (portfolio scales above 1x).</p>
-          </div>
-          <div class="card-sources"><strong>Sources:</strong> Yahoo Finance via Cloudflare Worker. Chart rebases both series to 100 at window start.</div>
-        </div>
-      </div><!-- /pftab-whatif -->
 
     </div>
   </div>
@@ -2822,37 +2688,25 @@ body.view-mobile .logo-icon { width: 22px !important; height: 22px !important; f
   </div>
 </div>
 
-<!-- ═══════════ RESEARCH (merged with Quant Models) ═══════════ -->
+<!-- ═══════════ RESEARCH ═══════════ -->
 <div class="page" id="page-research">
   <div class="content-wrap">
     <div class="hero" style="padding:32px 40px;">
-      <h1>Stock Research &amp; Quantitative Models</h1>
-      <p>Single-ticker workspace: live financials and chart on the <strong>Research</strong> tab; multivariate regression, regime backtest, walk-forward validation, and Monte Carlo on the <strong>Quant Models</strong> tab. Enter a ticker once and use both lenses head-to-head.</p>
+      <h1>Stock Research</h1>
+      <p>Enter any stock ticker, ETF, or crypto to view a full interactive price chart and comprehensive financial analysis powered by SEC EDGAR filings and real-time market data.</p>
     </div>
-
-    <!-- Shared ticker bar — drives both tabs -->
     <div class="card">
-      <div class="card-title">Ticker Lookup <span class="help-icon" title="Enter any US-listed stock, ETF, ADR, or crypto ticker. The Research tab fetches live price + SEC fundamentals; the Quant Models tab runs MLR, regime backtests, and Monte Carlo.">?</span></div>
+      <div class="card-title">Ticker Lookup <span class="help-icon" title="Enter any US-listed stock, ETF, ADR, or crypto ticker. We'll fetch live price, fundamentals (SEC EDGAR for stocks, fund holdings for ETFs), 5-year regime-conditioned returns, and the live options chain.">?</span></div>
       <div class="card-body">
         <div class="form-row">
           <div class="form-group" style="min-width:140px;">
             <label>Ticker</label>
             <input type="text" id="researchTicker" placeholder="AAPL, SPY, BTC-USD" style="text-transform:uppercase;" onkeydown="if(event.key==='Enter')runResearch()">
           </div>
-          <button class="btn" onclick="runResearch()">Analyze (Research)</button>
-          <button class="btn-outline btn-sm" onclick="rqSyncQuantTickerAndRun()" style="margin-left:6px;">Run Quant Models</button>
+          <button class="btn" onclick="runResearch()">Analyze</button>
         </div>
       </div>
     </div>
-
-    <!-- PORT-style sub-tabs: Research / Quant Models -->
-    <div class="pf-tabs" role="tablist" aria-label="Research workspace">
-      <button class="pf-tab active" data-rqtab="research" onclick="rqShowTab('research')">Research</button>
-      <button class="pf-tab" data-rqtab="quant" onclick="rqShowTab('quant')">Quant Models</button>
-    </div>
-
-    <!-- TAB: RESEARCH -->
-    <div class="pf-tab-content active" id="rqtab-research">
     <!-- Company Header + Metrics (shown above chart) -->
     <div id="researchHeaderResults"></div>
     <!-- Interactive Chart -->
@@ -2940,15 +2794,6 @@ body.view-mobile .logo-icon { width: 22px !important; height: 22px !important; f
     </div>
     <!-- Hidden compat elements — data still available via window._lastSecData and DOM but not displayed -->
     <div id="researchRawCard" style="display:none;"><div id="researchOutput"></div></div>
-    </div><!-- /rqtab-research -->
-
-    <!-- TAB: QUANT MODELS — content lifted at boot from #page-quant -->
-    <div class="pf-tab-content" id="rqtab-quant">
-      <div id="rqQuantContainer">
-        <p style="text-align:center;color:var(--text-sec);padding:18px;font-size:13px;">Quant Models will load here…</p>
-      </div>
-    </div>
-
   </div>
 </div>
 
@@ -3320,38 +3165,6 @@ body.view-mobile .logo-icon { width: 22px !important; height: 22px !important; f
         </div>
       </div>
       <div class="card-sources"><strong>Sources:</strong> Pearson, K. (1895) "Notes on regression and inheritance in the case of two parents," Proc. Royal Society. Price data via Cloudflare Worker / Yahoo Finance.</div>
-    </div>
-
-    <!-- MODULE 2B: REGIME-CONDITIONAL CORRELATION + DOWNSIDE CORRELATION -->
-    <div class="card">
-      <div class="card-title">2B &middot; Regime-Conditional &amp; Downside Correlation
-        <span class="help-icon" title="Correlations rise during downturns — a known phenomenon (Longin &amp; Solnik 2001). This module shows pairwise correlations conditional on (a) Perry market regime and (b) downside-only days (R_SPY ≤ 0). Comparing 'normal' vs 'stress' correlations exposes diversification illusions.">?</span>
-      </div>
-      <div class="card-body">
-        <p style="font-size:12px;color:var(--text-sec);margin-bottom:12px;">Correlations <strong>are not constant</strong> — they rise sharply during drawdowns. This module computes pairwise correlations conditioned on (1) the Perry market regime that day, and (2) downside-only days (where SPY return ≤ 0). The <strong>"correlation gap"</strong> (downside − full sample) is the diversification illusion: a portfolio that looks diversified in calm markets becomes concentrated in a stress event.</p>
-        <div class="form-row" style="margin-bottom:10px;">
-          <div class="form-group"><label>View Mode</label>
-            <select id="rccMode" onchange="rccRender()">
-              <option value="regime" selected>By Perry Regime</option>
-              <option value="downside">Downside vs. Full Sample</option>
-              <option value="rolling">Rolling 60D Avg Correlation</option>
-            </select>
-          </div>
-          <div class="form-group"><label>Regime Filter</label>
-            <select id="rccRegime" onchange="rccRender()">
-              <option value="all" selected>All 4 Regimes</option>
-              <option value="leveraged">Leveraged</option>
-              <option value="growth">Growth</option>
-              <option value="neutral">Neutral</option>
-              <option value="drawdown">Drawdown</option>
-            </select>
-          </div>
-          <button class="btn btn-sm" onclick="rccRun()">Compute</button>
-        </div>
-        <div id="rccStatus" style="font-size:11px;color:var(--text-sec);margin-bottom:8px;"></div>
-        <div id="rccResults" style="text-align:center;padding:18px;color:var(--text-sec);font-size:13px;">Click <strong>Compute</strong> to run regime-conditional correlation across the selected universe.</div>
-      </div>
-      <div class="card-sources"><strong>Method:</strong> For each pair (i,j), compute Pearson ρ over (a) days classified into each Perry regime and (b) days where SPY daily log return ≤ 0. The "correlation asymmetry" Δρ = ρ<sub>downside</sub> − ρ<sub>full</sub> quantifies the diversification illusion. &middot; Longin, F., &amp; Solnik, B. (2001). <em>Extreme Correlation of International Equity Markets.</em> Journal of Finance, 56(2). &middot; Ang, A., &amp; Chen, J. (2002). <em>Asymmetric Correlations of Equity Portfolios.</em> Journal of Financial Economics.</div>
     </div>
 
     <!-- MODULE 3: 3D VOL SURFACE -->
@@ -8628,168 +8441,6 @@ function psClassifyState(signals) {
   return { winner: winner, scores: scores, confidence: confidence, reasons: reasons[winner] };
 }
 
-// ═══════════════════════════════════════════════════════════════════
-// QUARTERLY MARKET REGIME ENGINE
-// Regime can shift at most ONCE per calendar quarter to give the user
-// a 3-6 month positioning thesis. Daily classifications still computed,
-// but regime locks per-quarter to the dominant classification with
-// hysteresis (requires 2/3 of last 3 months agreeing to flip).
-// ═══════════════════════════════════════════════════════════════════
-function quarterKey(date) {
-  var d = (typeof date === 'string') ? new Date(date) : date;
-  var y = d.getUTCFullYear();
-  var q = Math.floor(d.getUTCMonth() / 3) + 1;
-  return y + '-Q' + q;
-}
-function quarterStartDate(qkey) {
-  // qkey like "2026-Q2"
-  var parts = qkey.split('-Q');
-  var y = parseInt(parts[0]); var q = parseInt(parts[1]);
-  var m = (q - 1) * 3; // 0,3,6,9
-  return new Date(Date.UTC(y, m, 1));
-}
-function quarterEndDate(qkey) {
-  var parts = qkey.split('-Q');
-  var y = parseInt(parts[0]); var q = parseInt(parts[1]);
-  var m = (q - 1) * 3 + 3; // last day = day before next quarter starts
-  var d = new Date(Date.UTC(y, m, 1));
-  d.setUTCDate(d.getUTCDate() - 1);
-  return d;
-}
-function nextQuarterStart(qkey) {
-  var end = quarterEndDate(qkey);
-  end.setUTCDate(end.getUTCDate() + 1);
-  return end;
-}
-// Classify a series of daily snapshots and aggregate to quarterly regimes.
-// dailyStates: array of { date: 'YYYY-MM-DD', classification: { winner, ...} }
-// Returns: array of { quarter, startDate, endDate, regime, confidence, dominantPct, prevRegime }
-function aggregateQuarterlyRegime(dailyStates) {
-  if (!dailyStates || !dailyStates.length) return [];
-  // Bucket by quarter
-  var buckets = {};
-  dailyStates.forEach(function(s){
-    var qk = quarterKey(s.date);
-    if (!buckets[qk]) buckets[qk] = [];
-    buckets[qk].push(s);
-  });
-  var qkeys = Object.keys(buckets).sort();
-  var quarterly = [];
-  var lastLockedRegime = null;
-  qkeys.forEach(function(qk, idx){
-    var arr = buckets[qk];
-    // Vote
-    var votes = { leveraged: 0, growth: 0, neutral: 0, drawdown: 0 };
-    arr.forEach(function(s){ if (s.classification && votes[s.classification.winner] != null) votes[s.classification.winner]++; });
-    var winner = 'neutral', mx = 0, total = 0;
-    Object.keys(votes).forEach(function(k){ total += votes[k]; if (votes[k] > mx) { mx = votes[k]; winner = k; } });
-    var dominantPct = total > 0 ? (mx / total) * 100 : 0;
-    // Hysteresis: stay with previous regime unless new dominantPct >= 60%
-    var lockedRegime = winner;
-    if (lastLockedRegime && winner !== lastLockedRegime && dominantPct < 60) {
-      // Not strong enough to flip — stay
-      lockedRegime = lastLockedRegime;
-    }
-    // Confidence: avg confidence across days that voted for this regime
-    var matchingConfidences = arr.filter(function(s){ return s.classification && s.classification.winner === lockedRegime; })
-                                  .map(function(s){ return s.classification.confidence; });
-    var avgConf = matchingConfidences.length ? matchingConfidences.reduce(function(a,b){return a+b;},0) / matchingConfidences.length : dominantPct;
-    quarterly.push({
-      quarter: qk,
-      startDate: quarterStartDate(qk),
-      endDate: quarterEndDate(qk),
-      regime: lockedRegime,
-      regimeRaw: winner,         // unsmoothed daily winner (for diagnostics)
-      confidence: avgConf,
-      dominantPct: dominantPct,
-      prevRegime: lastLockedRegime,
-      flipped: lastLockedRegime != null && lastLockedRegime !== lockedRegime
-    });
-    lastLockedRegime = lockedRegime;
-  });
-  return quarterly;
-}
-// Predict next regime: fits a transition matrix from quarterly history.
-function predictNextRegimeQuarter(quarterly) {
-  if (!quarterly || quarterly.length < 4) return null;
-  var keys = ['leveraged','growth','neutral','drawdown'];
-  // Build transition counts
-  var counts = {};
-  keys.forEach(function(k){ counts[k] = {}; keys.forEach(function(j){ counts[k][j] = 0; }); });
-  for (var i = 1; i < quarterly.length; i++) {
-    var from = quarterly[i-1].regime;
-    var to = quarterly[i].regime;
-    if (counts[from] && counts[from][to] != null) counts[from][to]++;
-  }
-  var current = quarterly[quarterly.length - 1].regime;
-  var row = counts[current] || {};
-  var rowTotal = keys.reduce(function(s,k){ return s + (row[k]||0); }, 0);
-  if (rowTotal === 0) return { mostLikely: current, probabilities: { leveraged:0.25,growth:0.25,neutral:0.25,drawdown:0.25 }, fallback: true };
-  var probs = {};
-  keys.forEach(function(k){ probs[k] = (row[k]||0) / rowTotal; });
-  // Most likely
-  var mxK = current, mxP = -1;
-  keys.forEach(function(k){ if (probs[k] > mxP) { mxP = probs[k]; mxK = k; } });
-  return { mostLikely: mxK, probabilities: probs, fallback: false };
-}
-// Build daily classification series from SPY+VIX history. Returns array of { date, classification }.
-function buildDailyClassificationHistory(spyPts, vixSeries) {
-  // spyPts: [{date, close}], vixSeries: { 'YYYY-MM-DD': vixClose } or null
-  if (!spyPts || spyPts.length < 252) return [];
-  var out = [];
-  for (var i = 252; i < spyPts.length; i++) {
-    var window = spyPts.slice(i-252, i+1);
-    var closes = window.map(function(p){ return p.close; });
-    var hi = Math.max.apply(null, closes);
-    var lo = Math.min.apply(null, closes);
-    var cur = closes[closes.length-1];
-    var start = closes[0];
-    var dateStr = spyPts[i].date.slice(0,10);
-    var vix = vixSeries ? (vixSeries[dateStr] || null) : null;
-    var sig = {
-      vix: vix,
-      spyCurrent: cur,
-      spy12mHigh: hi,
-      spy12mLow: lo,
-      spyTrailingReturn: (cur - start) / start,
-      drawdownFromPeak: (cur - hi) / hi,
-      spy12mFromLow: (cur - lo) / lo
-    };
-    var cl = psClassifyState(sig);
-    out.push({ date: dateStr, classification: cl, signals: sig });
-  }
-  return out;
-}
-window._quarterlyRegimes = null;
-async function loadQuarterlyRegimes() {
-  if (window._quarterlyRegimesLoading) return window._quarterlyRegimesLoading;
-  window._quarterlyRegimesLoading = (async function(){
-    var WORKER = "https://perry-finance-proxy.zachperrybusiness.workers.dev";
-    try {
-      var spyData = await fetch(WORKER + "/chart?symbol=SPY&range=10y&interval=1d").then(function(r){ return r.json(); });
-      var vixData = await fetch(WORKER + "/chart?symbol=%5EVIX&range=10y&interval=1d").then(function(r){ return r.json(); }).catch(function(){ return null; });
-      var spyPts = (spyData.points || []).filter(function(p){ return p.close != null; });
-      var vixSeries = {};
-      if (vixData && vixData.points) {
-        vixData.points.forEach(function(p){ if (p.close != null) vixSeries[p.date.slice(0,10)] = p.close; });
-      }
-      var daily = buildDailyClassificationHistory(spyPts, vixSeries);
-      var quarterly = aggregateQuarterlyRegime(daily);
-      var prediction = predictNextRegimeQuarter(quarterly);
-      window._quarterlyRegimes = { quarterly: quarterly, daily: daily, prediction: prediction, spyPts: spyPts };
-      return window._quarterlyRegimes;
-    } catch(e) {
-      console.warn('[loadQuarterlyRegimes] failed:', e);
-      return null;
-    }
-  })();
-  return window._quarterlyRegimesLoading;
-}
-function getCurrentQuarterRegime() {
-  if (!window._quarterlyRegimes || !window._quarterlyRegimes.quarterly.length) return null;
-  return window._quarterlyRegimes.quarterly[window._quarterlyRegimes.quarterly.length - 1];
-}
-
 async function psLoadDiagnostic() {
   var el = document.getElementById('psDiagnostic');
   if (!el) return;
@@ -8830,56 +8481,13 @@ async function psLoadDiagnostic() {
       spy12mFromLow: spy12mFromLow
     };
     var classification = psClassifyState(signals);
+    var state = PS_STATES.find(function(s){ return s.key === classification.winner; });
 
-    // ─── QUARTERLY LOCK ───
-    // Load (or get cached) quarterly regime history. The displayed regime is the
-    // locked-quarter regime, NOT the live daily classification.
-    var quarterlyData = await loadQuarterlyRegimes();
-    var currentQuarter = getCurrentQuarterRegime();
-    var lockedRegimeKey = currentQuarter ? currentQuarter.regime : classification.winner;
-    var state = PS_STATES.find(function(s){ return s.key === lockedRegimeKey; }) || PS_STATES[1];
-
-    // Find when current locked regime actually began (walk back through quarters)
-    var regimeStartDate = currentQuarter ? currentQuarter.startDate : null;
-    if (quarterlyData && quarterlyData.quarterly && quarterlyData.quarterly.length) {
-      var qs = quarterlyData.quarterly;
-      for (var i = qs.length - 1; i >= 0; i--) {
-        if (qs[i].regime === lockedRegimeKey) regimeStartDate = qs[i].startDate;
-        else break;
-      }
-    }
-    var nextQuarter = currentQuarter ? nextQuarterStart(currentQuarter.quarter) : null;
-    var daysToNext = nextQuarter ? Math.max(0, Math.ceil((nextQuarter - new Date()) / 86400000)) : null;
-    var prediction = quarterlyData && quarterlyData.prediction ? quarterlyData.prediction : null;
-    var predictedState = prediction ? PS_STATES.find(function(s){ return s.key === prediction.mostLikely; }) : null;
-
-    // Render diagnostic hero — quarterly-locked regime
+    // Render diagnostic hero
     var html = '<div class="ps-diagnostic-hero" style="background:'+state.color+';">';
-    html += '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:14px;flex-wrap:wrap;">';
-    html += '<div style="flex:1;min-width:260px;">';
-    html += '<div style="font-size:11px;opacity:0.85;text-transform:uppercase;letter-spacing:.6px;">Current Market Regime &middot; Quarterly-Locked</div>';
+    html += '<div style="font-size:11px;opacity:0.85;text-transform:uppercase;letter-spacing:.6px;">Current Market Regime</div>';
     html += '<div class="ps-diag-state-name">' + state.name + '</div>';
-    if (regimeStartDate) {
-      var startStr = regimeStartDate.toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric', timeZone:'UTC' });
-      var monthsHeld = currentQuarter ? Math.max(1, Math.round((new Date() - regimeStartDate) / (30*86400000))) : 0;
-      html += '<div style="font-size:12px;opacity:0.9;margin-top:4px;">Regime started <strong>'+startStr+'</strong> &middot; '+monthsHeld+' month'+(monthsHeld===1?'':'s')+' active</div>';
-    }
-    html += '<div class="ps-diag-confidence" style="margin-top:6px;">Quarter confidence: ' + (currentQuarter ? currentQuarter.confidence.toFixed(0) : classification.confidence.toFixed(0)) + '% &middot; Daily signal: ' + (PS_STATES.find(function(s){return s.key===classification.winner;}) || {name:'?'}).name + '</div>';
-    html += '</div>';
-    html += '<div style="background:rgba(0,0,0,0.18);padding:10px 14px;border-radius:6px;min-width:200px;text-align:center;">';
-    html += '<div style="font-size:10px;opacity:0.85;text-transform:uppercase;letter-spacing:.6px;">Next Possible Shift</div>';
-    if (nextQuarter && daysToNext != null) {
-      var nextStr = nextQuarter.toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric', timeZone:'UTC' });
-      html += '<div style="font-size:18px;font-weight:700;margin:4px 0;">'+nextStr+'</div>';
-      html += '<div style="font-size:11px;opacity:0.85;">'+daysToNext+' days &middot; ' + quarterKey(nextQuarter) + '</div>';
-    }
-    if (predictedState) {
-      var probPct = (prediction.probabilities[prediction.mostLikely] * 100).toFixed(0);
-      html += '<div style="font-size:10px;opacity:0.85;margin-top:8px;text-transform:uppercase;letter-spacing:.4px;">Most Likely Next Regime</div>';
-      html += '<div style="font-size:13px;font-weight:700;">'+predictedState.name+' &middot; '+probPct+'%</div>';
-    }
-    html += '</div>';
-    html += '</div>';
+    html += '<div class="ps-diag-confidence">Confidence: ' + classification.confidence.toFixed(0) + '% &middot; Signals: ' + classification.reasons.join(' &middot; ') + '</div>';
     html += '<div class="ps-diag-signals">';
     html += '<div class="ps-diag-signal"><div class="ps-diag-signal-label">VIX</div><div class="ps-diag-signal-value">' + (vix != null ? vix.toFixed(1) : '—') + '</div><div class="ps-diag-signal-detail">' + (vix == null ? '' : (vix >= 30 ? 'Extreme fear' : vix >= 22 ? 'Elevated' : vix >= 15 ? 'Normal' : 'Complacent')) + '</div></div>';
     html += '<div class="ps-diag-signal"><div class="ps-diag-signal-label">SPY Current</div><div class="ps-diag-signal-value">$' + spyCurrent.toFixed(2) + '</div><div class="ps-diag-signal-detail">52W High: $' + spy12mHigh.toFixed(2) + '</div></div>';
@@ -8887,36 +8495,12 @@ async function psLoadDiagnostic() {
     html += '<div class="ps-diag-signal"><div class="ps-diag-signal-label">From 12M High</div><div class="ps-diag-signal-value">' + (spyFromHigh*100).toFixed(1) + '%</div><div class="ps-diag-signal-detail">' + (spyFromHigh >= -0.02 ? 'At/near peak' : spyFromHigh >= -0.1 ? 'Minor pullback' : spyFromHigh >= -0.2 ? 'Correction' : 'Bear market') + '</div></div>';
     html += '<div class="ps-diag-signal"><div class="ps-diag-signal-label">From 12M Low</div><div class="ps-diag-signal-value">+' + (spy12mFromLow*100).toFixed(1) + '%</div><div class="ps-diag-signal-detail">' + (spy12mFromLow >= 0.5 ? 'Massive rip' : spy12mFromLow >= 0.3 ? 'Strong rally' : 'Recovery') + '</div></div>';
     html += '</div>';
-    html += '<div class="ps-diag-posture"><strong>Recommended Posture (3–6 month view):</strong> ' + state.posture + '<br><strong>Cash:</strong> ' + state.cash + ' &middot; <strong>Instruments:</strong> ' + state.instruments + '</div>';
+    html += '<div class="ps-diag-posture"><strong>Recommended Posture:</strong> ' + state.posture + '<br><strong>Cash:</strong> ' + state.cash + ' &middot; <strong>Instruments:</strong> ' + state.instruments + '</div>';
     html += '</div>';
-
-    // Quarterly history strip (last 8 quarters)
-    if (quarterlyData && quarterlyData.quarterly && quarterlyData.quarterly.length) {
-      var recent = quarterlyData.quarterly.slice(-8);
-      html += '<div style="margin-top:14px;padding:14px 18px;background:var(--panel);border:1px solid var(--border);border-radius:6px;">';
-      html += '<div style="font-size:11px;font-weight:700;color:var(--navy);text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px;">Quarterly Regime History &middot; Last 2 Years</div>';
-      html += '<div style="display:flex;gap:6px;align-items:stretch;flex-wrap:wrap;">';
-      recent.forEach(function(q){
-        var s = PS_STATES.find(function(x){ return x.key === q.regime; }) || { color: '#888', name: '?' };
-        var isCur = q === currentQuarter;
-        html += '<div style="flex:1;min-width:80px;background:'+s.color+';color:#fff;padding:8px 10px;border-radius:4px;'+(isCur?'box-shadow:0 0 0 2px var(--blue),0 2px 6px rgba(0,0,0,0.15);':'')+'">';
-        html += '<div style="font-size:10px;font-weight:700;letter-spacing:.4px;opacity:0.9;">'+q.quarter+(isCur?' (NOW)':(q.flipped?' ⟲':''))+'</div>';
-        html += '<div style="font-size:11px;font-weight:700;margin-top:2px;">'+s.name+'</div>';
-        html += '<div style="font-size:9.5px;opacity:0.85;margin-top:2px;">'+q.confidence.toFixed(0)+'% conf.</div>';
-        html += '</div>';
-      });
-      html += '</div>';
-      html += '<p style="font-size:10.5px;color:var(--text-sec);margin-top:10px;line-height:1.5;">Regime is locked per quarter to provide a stable 3–6 month positioning thesis. Hysteresis rule: requires <strong>≥60% daily classification dominance</strong> to flip vs. previous quarter\'s regime, otherwise prior regime persists. Symbols: <strong>⟲</strong> = regime flipped from prior quarter.</p>';
-      html += '</div>';
-    }
-
     el.innerHTML = html;
 
-    // Update the framework grid to highlight the locked-quarter state (not raw daily)
-    psRenderFrameworkGrid(lockedRegimeKey);
-
-    // Stash the locked regime for downstream consumers (briefing, holdings table)
-    window._briefingState = lockedRegimeKey;
+    // Also update the framework grid to highlight the active state
+    psRenderFrameworkGrid(classification.winner);
   } catch(e) {
     console.error('[psLoadDiagnostic]', e);
     el.innerHTML = '<div style="padding:20px;color:var(--danger);"><strong>Failed to load diagnostic:</strong> ' + e.message + '<br><button class="btn btn-sm" style="margin-top:8px;" onclick="psLoadDiagnostic()">Retry</button></div>';
@@ -10602,16 +10186,8 @@ async function briefingLoad() {
       var spyCur = closes[closes.length-1], spyStart = closes[0];
       var signals = { vix: vixR.current||vixR.price||null, spyTrailingReturn:(spyCur-spyStart)/spyStart, drawdownFromPeak:(spyCur-spy12mHigh)/spy12mHigh, spy12mFromLow:(spyCur-spy12mLow)/spy12mLow };
       var cl = psClassifyState(signals);
-      // Prefer quarterly-locked regime (computed by loadQuarterlyRegimes) when available.
-      // This keeps the morning briefing's state stable across the quarter.
-      try {
-        if (!window._quarterlyRegimes) await loadQuarterlyRegimes();
-      } catch(e) { /* fall back to daily */ }
-      var lockedKey = (window._quarterlyRegimes && window._quarterlyRegimes.quarterly && window._quarterlyRegimes.quarterly.length)
-        ? window._quarterlyRegimes.quarterly[window._quarterlyRegimes.quarterly.length - 1].regime
-        : cl.winner;
-      window._briefingState = lockedKey;
-      var st = PS_STATES.find(function(s){return s.key===lockedKey;}) || PS_STATES[1];
+      window._briefingState = cl.winner;
+      var st = PS_STATES.find(function(s){return s.key===cl.winner;});
       var qqqPx = qqqR.current || qqqR.price || 0;
       regimeEl.innerHTML = '<div class="briefing-regime-hero" style="background:'+st.color+';border-radius:4px;">'
         + '<div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:12px;">'
@@ -12834,10 +12410,11 @@ async function wfbRun() {
         }
       }
     });
-// ═══════════════════════════════════════════════════════════════════
+  } catch(e) { el.innerHTML = '<div style="color:var(--danger);padding:10px;">Error: '+e.message+'</div>'; }
+}
 
-// (Removed broken injected script block for stability)
-</script>
+/* ═══════════════════════════════════════════════════════════════════
+   INSTITUTIONAL UPGRADE — Tabs, Performance, Brinson Attribution,
    Risk Strip, Drift, TLH, Trade Blotter, Global Snapshot,
    Regime Distance, AI Commentary
    ═══════════════════════════════════════════════════════════════════ */
