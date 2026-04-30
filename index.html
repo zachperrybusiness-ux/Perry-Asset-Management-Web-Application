@@ -2181,6 +2181,26 @@ body.view-mobile .logo-icon { width: 22px !important; height: 22px !important; f
       <div class="card">
         <div class="card-title">Portfolio Value Over Time <span class="help-icon" title="Reconstructs your portfolio's daily market value from when each position was purchased. Cash is held flat at face value. Pre-purchase periods are excluded so the chart shows only what you actually owned.">?</span></div>
         <div class="card-body">
+          <!-- Watchlist / Trial Portfolio row -->
+          <div style="background:var(--panel);border:1px solid var(--border);border-radius:5px;padding:8px 12px;margin-bottom:10px;">
+            <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+              <span style="font-size:11px;font-weight:700;color:var(--navy);text-transform:uppercase;letter-spacing:.4px;">Trial Portfolio / Watchlist</span>
+              <select id="watchlistSelect" onchange="watchlistLoad()" style="font-size:11px;padding:3px 7px;">
+                <option value="">— Off (Current Portfolio Only) —</option>
+                <optgroup label="Built-in Themed Watchlists" id="watchlistBuiltinGroup"></optgroup>
+                <optgroup label="Custom Watchlists" id="watchlistCustomGroup"></optgroup>
+                <option value="__mirror__">Mirror Current Portfolio (add/remove tickers)</option>
+                <option value="__custom__">Custom Watchlist (from scratch)</option>
+              </select>
+              <div id="watchlistEditor" style="display:none;align-items:center;gap:6px;flex-wrap:wrap;">
+                <input type="text" id="watchlistAddTicker" placeholder="NVDA" style="width:70px;font-size:11px;text-transform:uppercase;" onkeydown="if(event.key==='Enter')watchlistAddTicker()">
+                <button class="btn-outline btn-sm" onclick="watchlistAddTicker()" style="font-size:11px;">Add</button>
+                <div id="watchlistTickers" style="display:flex;flex-wrap:wrap;gap:4px;"></div>
+              </div>
+              <button class="btn btn-sm" id="btnWatchlistRun" onclick="renderPortfolioChart()" style="display:none;font-size:11px;">Compare</button>
+              <span id="watchlistStatus" style="font-size:11px;color:var(--text-sec);"></span>
+            </div>
+          </div>
           <div class="form-row" style="margin-bottom:8px;">
             <div class="form-group">
               <label>Benchmark 1</label>
@@ -2192,6 +2212,7 @@ body.view-mobile .logo-icon { width: 22px !important; height: 22px !important; f
             </div>
             <button class="btn btn-sm" onclick="renderPortfolioChart()">Update Chart</button>
             <button class="btn-outline btn-sm" onclick="pfAddTickerToChart()" style="margin-left:8px;">+ Add Ticker</button>
+            <button class="btn-outline btn-sm" id="btnTWR" onclick="toggleTWRMode()" style="margin-left:8px;" title="Toggle between showing Portfolio Dollar Value vs. Time-Weighted Return (strips out deposits for fair comparison)">📊 TWR Mode</button>
             <button class="btn-outline btn-sm" id="btnStress" onclick="toggleStress()" style="margin-left:8px;">Stressed Scenarios</button>
             <button class="btn-outline btn-sm" id="btnVixRange" onclick="toggleVixRange()" style="margin-left:4px;">VIX Range</button>
             <button class="btn-outline btn-sm" id="btnRegimeOverlay" onclick="toggleRegimeOverlay()" style="margin-left:4px;">Market Regime</button>
@@ -2991,6 +3012,10 @@ body.view-mobile .logo-icon { width: 22px !important; height: 22px !important; f
     </div>
     <!-- Regime Verdict Banner — auto-populated -->
     <div id="macroRegimeVerdict" style="display:none;"></div>
+    <div style="background:#E8F4FD;border-left:4px solid #5B9BD5;padding:10px 14px;margin:0 16px 16px;border-radius:4px;font-size:12px;line-height:1.6;color:#1A2733;">
+      <strong>How this relates to the Portfolio State on Cross-Asset Analysis:</strong><br>
+      The <strong>Macro Regime Verdict</strong> here (Early / Mid / Late Cycle / Contraction) uses FRED economic data and operates on a 3–12 month economic cycle frequency. The <strong>Portfolio State</strong> on Cross-Asset Analysis (Leveraged / Growth / Neutral / Drawdown) uses market price action (VIX, SPY momentum) and operates on a shorter tactical frequency. A "Mid-Cycle" economy can simultaneously produce a "Positioned for Drawdown" portfolio signal when equity valuations are stretched — markets lead the economy by 6–12 months on average. Use the Macro Regime for strategic sector rotation and the Portfolio State for tactical position sizing.
+    </div>
     <!-- Single Unified Macro Table — all pillars, all indicators -->
     <div class="card" id="macroLiveTableCard">
       <div class="card-title">Macro Indicator Dashboard — Live FRED Data <span class="help-icon" title="Real-time economic indicators from the St. Louis Fed (FRED). 24 indicators across 6 pillars (Growth, Labor, Inflation, Monetary Policy, Fiscal Policy, Global Liquidity) with traffic-light scoring vs. historical thresholds.">?</span></div>
@@ -3196,6 +3221,12 @@ body.view-mobile .logo-icon { width: 22px !important; height: 22px !important; f
         <button class="btn-sm" style="background:rgba(255,255,255,0.2);color:#fff;border:1px solid rgba(255,255,255,0.4);padding:4px 10px;border-radius:3px;cursor:pointer;font-size:11px;" onclick="psLoadDiagnostic()">Refresh</button>
       </div>
       <div class="card-body" style="padding:0;">
+        <div style="background:#FFF8E1;border-left:4px solid #8B6914;padding:10px 14px;margin:0 0 0 0;font-size:12px;line-height:1.6;color:#4A3F00;">
+          <strong>Why might this differ from the Macro Regime Analysis page?</strong><br>
+          The <strong>Portfolio State</strong> here (Leveraged / Growth / Neutral / Drawdown) is a <em>market-timing</em> signal driven by VIX level, SPY distance from its 52-week high, and short-term price momentum. It answers: <em>"What posture should my portfolio take right now based on current market conditions?"</em><br>
+          The <strong>Macro Regime Verdict</strong> on the Macro page (Early / Mid / Late Cycle / Contraction) is a <em>business cycle</em> classification driven by FRED economic indicators (yield curve, unemployment, leading indicators, etc.). It answers: <em>"Where are we in the economic cycle?"</em><br>
+          These frameworks operate at different frequencies and measure different things. A "Mid-Cycle" economy can still produce a "Positioned for Drawdown" portfolio signal if equity valuations are stretched and volatility is spiking — the market often leads the economy. Both signals are shown below; use them together.
+        </div>
         <div id="psDiagnostic" style="padding:20px;text-align:center;color:var(--text-sec);">
           <span class="spinner"></span> Analyzing current market state...
         </div>
@@ -4721,7 +4752,28 @@ window.sortTable_portfolio = function(key) {
   const h = window._holdings || [];
   const af = document.getElementById('portfolioAccountFilter')?.value || 'all';
   const fh = af === 'all' ? h : h.filter(x => (x.accountType || 'Individual') === af);
-  const tv = fh.reduce((s, x) => s + (x.currentPrice || 0) * x.quantity, 0);
+  // Include cash in TV calculation (same as renderPortfolioOverview)
+  function mvOf(hh) {
+    const isCash = hh.assetClass === 'Cash' || hh.assetClass === 'Money Market' || hh.assetClass === 'CD' || hh.assetClass === 'Bond Position';
+    return isCash ? (hh.costBasis || 0) * hh.quantity : (hh.currentPrice || 0) * hh.quantity;
+  }
+  const tv = fh.reduce((s, x) => s + mvOf(x), 0);
+  renderPortfolioTable(fh, tv);
+};
+
+// Filter Portfolio Holdings table by sector, asset class, or account
+window.pfFilterHoldings = function(filterType, filterValue) {
+  const h = window._holdings || [];
+  const af = document.getElementById('portfolioAccountFilter')?.value || 'all';
+  let fh = af === 'all' ? h : h.filter(x => (x.accountType || 'Individual') === af);
+  if (filterType && filterValue && filterValue !== 'all') {
+    fh = fh.filter(x => (x[filterType] || '') === filterValue);
+  }
+  function mvOf(hh) {
+    const isCash = hh.assetClass === 'Cash' || hh.assetClass === 'Money Market' || hh.assetClass === 'CD' || hh.assetClass === 'Bond Position';
+    return isCash ? (hh.costBasis || 0) * hh.quantity : (hh.currentPrice || 0) * hh.quantity;
+  }
+  const tv = fh.reduce((s, x) => s + mvOf(x), 0);
   renderPortfolioTable(fh, tv);
 };
 
@@ -5004,6 +5056,31 @@ function renderPortfolioTable(holdings, tv) {
     acctTotals[a] = (acctTotals[a] || 0) + mv;
   });
 
+  // Build quick filter chips for sector and asset class
+  const sectors = [...new Set(sorted.map(h => h.sector || 'Other').filter(Boolean))].sort();
+  const assetClasses = [...new Set(sorted.map(h => h.assetClass || 'Equity').filter(Boolean))].sort();
+  const chipStyle = 'display:inline-block;padding:3px 9px;border-radius:12px;font-size:11px;font-weight:600;cursor:pointer;border:1px solid var(--border);background:var(--panel);color:var(--text-sec);margin:2px 3px 2px 0;transition:all 0.15s;';
+  const chipActiveStyle = 'display:inline-block;padding:3px 9px;border-radius:12px;font-size:11px;font-weight:600;cursor:pointer;border:1px solid var(--navy);background:var(--navy);color:#fff;margin:2px 3px 2px 0;transition:all 0.15s;';
+
+  let filterHtml = '<div style="margin-bottom:10px;padding:8px 10px;background:var(--panel);border:1px solid var(--border);border-radius:5px;">';
+  filterHtml += '<div style="font-size:10.5px;font-weight:700;color:var(--navy);text-transform:uppercase;letter-spacing:.4px;margin-bottom:5px;">Quick Filters</div>';
+  filterHtml += '<div style="display:flex;flex-wrap:wrap;align-items:center;gap:4px;">';
+  filterHtml += '<span style="font-size:10.5px;color:var(--text-sec);font-weight:600;margin-right:4px;">Sector:</span>';
+  filterHtml += '<span style="' + (window._pfActiveFilter === 'all' || !window._pfActiveFilter ? chipActiveStyle : chipStyle) + '" onclick="window._pfActiveFilter=\'all\';window._pfActiveFilterType=null;renderPortfolioTable(window._holdings||(window._holdings=[]),(' + tv + '))">All</span>';
+  sectors.forEach(function(s) {
+    const isActive = window._pfActiveFilterType === 'sector' && window._pfActiveFilter === s;
+    filterHtml += '<span style="' + (isActive ? chipActiveStyle : chipStyle) + '" onclick="window._pfActiveFilter=\'' + s.replace(/'/g,"\\'") + '\';window._pfActiveFilterType=\'sector\';pfFilterHoldings(\'sector\',\'' + s.replace(/'/g,"\\'") + '\')">' + s + '</span>';
+  });
+  filterHtml += '</div>';
+  filterHtml += '<div style="display:flex;flex-wrap:wrap;align-items:center;gap:4px;margin-top:4px;">';
+  filterHtml += '<span style="font-size:10.5px;color:var(--text-sec);font-weight:600;margin-right:4px;">Asset Class:</span>';
+  assetClasses.forEach(function(ac) {
+    const isActive = window._pfActiveFilterType === 'assetClass' && window._pfActiveFilter === ac;
+    filterHtml += '<span style="' + (isActive ? chipActiveStyle : chipStyle) + '" onclick="window._pfActiveFilter=\'' + ac.replace(/'/g,"\\'") + '\';window._pfActiveFilterType=\'assetClass\';pfFilterHoldings(\'assetClass\',\'' + ac.replace(/'/g,"\\'") + '\')">' + ac + '</span>';
+  });
+  filterHtml += '</div>';
+  filterHtml += '</div>';
+
   const cols = [
     {key:'ticker',label:'Ticker'}, {key:'companyName',label:'Company'}, {key:'quantity',label:'Shares'},
     {key:'currentPrice',label:'Price'}, {key:'marketValue',label:'Mkt Value'},
@@ -5012,7 +5089,8 @@ function renderPortfolioTable(holdings, tv) {
     {key:'regimeFit',label:'Regime Fit'},
     {key:'accountType',label:'Account'}, {key:'sector',label:'Sector'}, {key:'assetClass',label:'Asset Class'}
   ];
-  let html = '<div style="font-size:11px;color:var(--text-sec);margin-bottom:6px;">Regime Fit is scored against current state: <strong style="color:var(--navy);">' + currentStateName + '</strong>. <span style="color:var(--success);">&#10003; Aligned</span> = appropriate &middot; <span style="color:var(--warning);">&#9888; Neutral</span> = acceptable &middot; <span style="color:var(--danger);">&#10007; Misaligned</span> = consider rotating.</div>';
+  let html = filterHtml;
+  html += '<div style="font-size:11px;color:var(--text-sec);margin-bottom:6px;">Regime Fit is scored against current state: <strong style="color:var(--navy);">' + currentStateName + '</strong>. <span style="color:var(--success);">&#10003; Aligned</span> = appropriate &middot; <span style="color:var(--warning);">&#9888; Neutral</span> = acceptable &middot; <span style="color:var(--danger);">&#10007; Misaligned</span> = consider rotating.</div>';
   html += '<table><thead><tr>' + sortableHeader(cols, _portfolioSort, null, 'portfolio') + '</tr></thead><tbody>';
   sorted.forEach(h => {
     const isCash = h.assetClass === 'Cash' || h.assetClass === 'Money Market' || h.assetClass === 'CD' || h.assetClass === 'Bond Position';
@@ -5503,18 +5581,23 @@ window.renderPortfolioChart = async function() {
     }
   }
 
+  const twrModeOn = !!window._twrModeOnly;
   const ds = [{
     label: 'Portfolio (Total Value, with deposits)',
     data: cv, borderColor: C.navy, backgroundColor: 'rgba(0,60,113,.06)',
-    borderWidth: 2.5, pointRadius: 1, pointHoverRadius: 6,
+    borderWidth: twrModeOn ? 0 : 2.5, pointRadius: twrModeOn ? 0 : 1, pointHoverRadius: twrModeOn ? 0 : 6,
     pointBackgroundColor: C.navy, pointHoverBackgroundColor: C.navy,
-    fill: true, tension: .3, yAxisID: 'y', spanGaps: false
+    fill: !twrModeOn, tension: .3, yAxisID: 'y', spanGaps: false,
+    hidden: twrModeOn
   }, {
-    label: 'Portfolio (TWR, deposits stripped)',
-    data: twrSeries, borderColor: '#2E7D52', backgroundColor: 'transparent',
-    borderWidth: 2, borderDash: [4, 3], pointRadius: 0, pointHoverRadius: 5,
-    pointBackgroundColor: '#2E7D52', pointHoverBackgroundColor: '#2E7D52',
-    fill: false, tension: .3, yAxisID: 'y', spanGaps: false
+    label: twrModeOn ? 'Portfolio (Time-Weighted Return)' : 'Portfolio (TWR, deposits stripped)',
+    data: twrSeries,
+    borderColor: twrModeOn ? C.navy : '#2E7D52',
+    backgroundColor: twrModeOn ? 'rgba(0,60,113,.06)' : 'transparent',
+    borderWidth: twrModeOn ? 2.5 : 2, borderDash: twrModeOn ? [] : [4, 3],
+    pointRadius: twrModeOn ? 1 : 0, pointHoverRadius: 5,
+    pointBackgroundColor: twrModeOn ? C.navy : '#2E7D52',
+    fill: twrModeOn, tension: .3, yAxisID: 'y', spanGaps: false
   }];
 
   // Stash for tooltip
@@ -5556,6 +5639,42 @@ window.renderPortfolioChart = async function() {
       backgroundColor: 'rgba(200,208,216,0.35)', borderWidth: 0,
       yAxisID: 'yVol', order: 10, barPercentage: 0.8, categoryPercentage: 1.0
     });
+  }
+
+  // ── Watchlist / Trial Portfolio overlay ──
+  if (window._watchlistMode && window._watchlistTickers && window._watchlistTickers.length) {
+    try {
+      var wlSeries = await watchlistBuildSeries(currentRange);
+      if (wlSeries && wlSeries.dates.length) {
+        // Rebase watchlist to same start dollar-value as the portfolio for visual alignment
+        // Since watchlist is already rebased to 100, scale it to match portfolio starting value
+        var pfStartVal = null;
+        for (var _wi = 0; _wi < cv.length; _wi++) { if (cv[_wi] != null) { pfStartVal = cv[_wi]; break; } }
+        var scaleFactor = pfStartVal != null ? pfStartVal / 100 : 1;
+        // Map watchlist dates to chart date array (cd)
+        var wlDateMap = {};
+        wlSeries.dates.forEach(function(d, i){ wlDateMap[d] = wlSeries.values[i]; });
+        var wlData = cd.map(function(d) {
+          var v = wlDateMap[d];
+          return v != null ? v * scaleFactor : null;
+        });
+        // Build label
+        var wlLabel = 'Trial Portfolio';
+        if (window._watchlistMode === '__mirror__') wlLabel = 'Mirrored Portfolio';
+        else if (window._watchlistMode === '__custom__') wlLabel = 'Custom Watchlist (' + window._watchlistTickers.length + ' tickers)';
+        else {
+          var th = (window.PORTFOLIO_THEMES||[]).find(function(t){ return t.key === window._watchlistMode; });
+          if (th) wlLabel = 'Theme: ' + th.name.replace(/&amp;/g,'&').replace(/&mdash;/g,'—');
+        }
+        ds.push({
+          label: wlLabel,
+          data: wlData, borderColor: '#E07B39', backgroundColor: 'rgba(224,123,57,0.08)',
+          borderWidth: 2.2, borderDash: [5,3], pointRadius: 0, pointHoverRadius: 5,
+          fill: false, tension: .3, yAxisID: 'y', spanGaps: true
+        });
+        document.getElementById('watchlistStatus').textContent = wlLabel + ' plotted';
+      }
+    } catch(e) { console.warn('[watchlist chart]', e); }
   }
 
   // ─────────────────────────────────────────────────────────────────────
@@ -12943,6 +13062,157 @@ window.toggleRecState = function() {
   if (btn) btn.classList.toggle('active', window._showRecState);
   if (typeof renderPortfolioChart === 'function') renderPortfolioChart();
 };
+
+// TWR Mode toggle — when ON: chart foregrounds only the TWR line; Portfolio Value line is hidden
+// Also adjusts the Forecast Regime overlay to operate on TWR basis
+window._twrModeOnly = false;
+window.toggleTWRMode = function() {
+  window._twrModeOnly = !window._twrModeOnly;
+  var btn = document.getElementById('btnTWR');
+  if (btn) {
+    btn.classList.toggle('active', window._twrModeOnly);
+    btn.textContent = window._twrModeOnly ? '📊 Portfolio Value' : '📊 TWR Mode';
+    btn.title = window._twrModeOnly
+      ? 'Showing Time-Weighted Return — click to switch to Portfolio Dollar Value'
+      : 'Showing Portfolio Dollar Value — click to switch to TWR only';
+  }
+  if (typeof renderPortfolioChart === 'function') renderPortfolioChart();
+};
+
+// ═══════════════════════════════════════════════
+// ════════  WATCHLIST / TRIAL PORTFOLIO ENGINE  ══
+// ═══════════════════════════════════════════════
+window._watchlistTickers = []; // array of ticker strings for custom watchlist
+window._watchlistMode = '';    // '', '__custom__', '__mirror__', or a PORTFOLIO_THEMES key
+
+// Populate the watchlist select with themed portfolios (matches Themes tab)
+function watchlistPopulateSelect() {
+  var builtin = document.getElementById('watchlistBuiltinGroup');
+  if (!builtin || builtin.children.length) return; // already populated
+  (window.PORTFOLIO_THEMES || []).forEach(function(t) {
+    var opt = document.createElement('option');
+    opt.value = t.key;
+    opt.textContent = t.name.replace(/&amp;/g,'&').replace(/&mdash;/g,'—');
+    builtin.appendChild(opt);
+  });
+}
+
+window.watchlistLoad = function() {
+  var sel = document.getElementById('watchlistSelect');
+  if (!sel) return;
+  var val = sel.value;
+  window._watchlistMode = val;
+  var editor = document.getElementById('watchlistEditor');
+  var runBtn = document.getElementById('btnWatchlistRun');
+  var status = document.getElementById('watchlistStatus');
+  if (!val) {
+    if (editor) editor.style.display = 'none';
+    if (runBtn) runBtn.style.display = 'none';
+    if (status) status.textContent = '';
+    window._watchlistTickers = [];
+    if (typeof renderPortfolioChart === 'function') renderPortfolioChart();
+    return;
+  }
+  if (val === '__custom__') {
+    window._watchlistTickers = [];
+    if (editor) editor.style.display = 'flex';
+    if (runBtn) runBtn.style.display = '';
+    if (status) status.textContent = 'Add tickers then click Compare';
+    watchlistRenderChips();
+    return;
+  }
+  if (val === '__mirror__') {
+    // Pre-populate with current holdings tickers
+    var h = window._holdings || [];
+    window._watchlistTickers = [...new Set(h.map(function(hh){ return hh.ticker; }).filter(Boolean))];
+    if (editor) editor.style.display = 'flex';
+    if (runBtn) runBtn.style.display = '';
+    if (status) status.textContent = 'Mirroring your portfolio — add or remove tickers then click Compare';
+    watchlistRenderChips();
+    return;
+  }
+  // Built-in theme
+  var theme = (window.PORTFOLIO_THEMES || []).find(function(t){ return t.key === val; });
+  if (theme) {
+    window._watchlistTickers = theme.tickers.slice();
+    if (editor) editor.style.display = 'none';
+    if (runBtn) runBtn.style.display = '';
+    if (status) status.textContent = theme.tickers.length + ' tickers loaded from theme';
+    if (typeof renderPortfolioChart === 'function') renderPortfolioChart();
+  }
+};
+
+window.watchlistAddTicker = function() {
+  var inp = document.getElementById('watchlistAddTicker');
+  if (!inp) return;
+  var t = inp.value.toUpperCase().trim();
+  if (!t) return;
+  if (!window._watchlistTickers.includes(t)) window._watchlistTickers.push(t);
+  inp.value = '';
+  watchlistRenderChips();
+};
+
+function watchlistRenderChips() {
+  var el = document.getElementById('watchlistTickers');
+  if (!el) return;
+  el.innerHTML = window._watchlistTickers.map(function(t) {
+    return '<span style="background:var(--navy);color:#fff;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:700;cursor:pointer;" title="Click to remove" onclick="watchlistRemoveTicker(\'' + t + '\')">' + t + ' ×</span>';
+  }).join('');
+}
+
+window.watchlistRemoveTicker = function(t) {
+  window._watchlistTickers = window._watchlistTickers.filter(function(x){ return x !== t; });
+  watchlistRenderChips();
+};
+
+// Build equal-weight value series for watchlist tickers over given range
+// Returns same structure as pfBuildValueSeries
+async function watchlistBuildSeries(range) {
+  var tickers = window._watchlistTickers;
+  if (!tickers.length) return null;
+  var WORKER = 'https://perry-finance-proxy.zachperrybusiness.workers.dev';
+  var seriesMap = {};
+  await Promise.all(tickers.map(async function(t) {
+    try {
+      var c = await fetchChart(t, range, '1d');
+      seriesMap[t] = (c.points || []).filter(function(p){ return p.close != null; });
+    } catch(e) { seriesMap[t] = []; }
+  }));
+  // Union of all dates
+  var allDates = new Set();
+  Object.values(seriesMap).forEach(function(pts){ pts.forEach(function(p){ allDates.add(p.date.slice(0,10)); }); });
+  var dates = Array.from(allDates).sort();
+  if (!dates.length) return null;
+  // Forward-fill prices
+  var priceMap = {};
+  tickers.forEach(function(t) {
+    priceMap[t] = {};
+    (seriesMap[t]||[]).forEach(function(p){ priceMap[t][p.date.slice(0,10)] = p.close; });
+  });
+  var filledPrices = {};
+  tickers.forEach(function(t) {
+    var pm = priceMap[t]; var last = null;
+    filledPrices[t] = dates.map(function(d){ if (pm[d] != null) last = pm[d]; return last; });
+  });
+  // Equal-weight rebased index starting at 100
+  var basePrices = {};
+  tickers.forEach(function(t){ basePrices[t] = filledPrices[t][0] || 1; });
+  var values = dates.map(function(d, i) {
+    var v = 0; var count = 0;
+    tickers.forEach(function(t) {
+      var px = filledPrices[t][i]; var b = basePrices[t];
+      if (px != null && b > 0) { v += px/b; count++; }
+    });
+    return count > 0 ? v / count * 100 : 100; // rebased to 100
+  });
+  return { dates: dates, values: values, rebased: true };
+}
+
+// Initialize watchlist select on DOMContentLoaded
+document.addEventListener('DOMContentLoaded', function() {
+  setTimeout(watchlistPopulateSelect, 1200);
+});
+
 // Build a synthetic "Recommended State" return series.
 // For each day, the regime is the locked quarterly regime; allocate per state's posture.
 async function buildRecommendedStateSeries(rangeKey) {
@@ -13061,7 +13331,7 @@ async function themeCompareRun() {
   statsEl.innerHTML = '<span class="spinner"></span> Loading data…';
   // Build portfolio series
   var pfSeries = await pfBuildValueSeries(range === 'ytd' ? '1y' : range);
-  if (!pfSeries.values.length) { statsEl.innerHTML = '<span style="color:var(--danger);">No portfolio data.</span>'; return; }
+  if (!pfSeries.dates || !pfSeries.dates.length) { statsEl.innerHTML = '<span style="color:var(--danger);">No portfolio data — add holdings first.</span>'; return; }
   // For each theme, fetch all its tickers and build equal-weight rebased series
   var themesToRun = [];
   pickedThemes.forEach(function(k){ var t = PORTFOLIO_THEMES.find(function(x){ return x.key===k; }); if (t) themesToRun.push({key:t.key, name:t.name.replace(/&amp;/g,'&').replace(/&mdash;/g,'—'), tickers:t.tickers}); });
@@ -13071,20 +13341,27 @@ async function themeCompareRun() {
   var allTickers = new Set();
   themesToRun.forEach(function(t){ t.tickers.forEach(function(tk){ allTickers.add(tk); }); });
   await Promise.all(Array.from(allTickers).map(async function(tk){
-    try { var c = await fetchChart(tk, fetchRange === 'ytd' ? '1y' : fetchRange, '1d'); allData[tk] = c.points || []; } catch(e) { allData[tk] = []; }
+    try { var c = await fetchChart(tk, fetchRange === 'ytd' ? '1y' : fetchRange, '1d'); allData[tk] = (c.points || []).filter(function(p){ return p.close != null; }); } catch(e) { allData[tk] = []; }
   }));
-  // Determine common starting date — use portfolio start
+  // Determine common starting date — use portfolio start or YTD start
   var startStr = pfSeries.dates[0];
-  if (range === 'ytd') startStr = new Date(new Date().getFullYear(), 0, 1).toISOString().slice(0,10);
+  if (range === 'ytd') {
+    var ytdStart = new Date(new Date().getFullYear(), 0, 1).toISOString().slice(0,10);
+    startStr = ytdStart;
+  }
   // Build series
   var datasets = [];
-  // Portfolio (rebased to 100)
+  // Portfolio (rebased to 100 from startStr)
   var pfStartIdx = 0;
-  for (var i = 0; i < pfSeries.dates.length; i++) { if (pfSeries.dates[i] >= startStr) { pfStartIdx = i; break; } }
-  var pfBase = pfSeries.values[pfStartIdx];
-  var pfRebased = pfSeries.values.slice(pfStartIdx).map(function(v){ return v / pfBase * 100; });
+  for (var i = 0; i < pfSeries.dates.length; i++) {
+    if (pfSeries.dates[i] >= startStr) { pfStartIdx = i; break; }
+  }
   var pfDates = pfSeries.dates.slice(pfStartIdx);
-  datasets.push({ label: 'Your Portfolio', data: pfRebased.map(function(v,i){ return {x: pfDates[i], y: v}; }), borderColor:'#003C71', backgroundColor:'rgba(0,60,113,0.1)', borderWidth: 2.5, pointRadius:0, tension:0.15 });
+  var pfVals = pfSeries.values.slice(pfStartIdx);
+  if (!pfVals.length || pfVals[0] <= 0) { statsEl.innerHTML = '<span style="color:var(--danger);">Insufficient portfolio data for selected window.</span>'; return; }
+  var pfBase = pfVals[0];
+  var pfRebased = pfVals.map(function(v){ return pfBase > 0 ? v / pfBase * 100 : 100; });
+  datasets.push({ label: 'Your Portfolio', data: pfRebased.map(function(v,i){ return {x: pfDates[i], y: +v.toFixed(4)}; }), borderColor:'#003C71', backgroundColor:'rgba(0,60,113,0.1)', borderWidth: 2.5, pointRadius:0, tension:0.15 });
 
   // Theme baskets — equal-weighted (or custom-weighted) daily-rebalanced rebased
   var themeColors = ['#5B9BD5','#A23B72','#F18F01','#48A9A6','#7B68EE','#C84B31','#0F4C81','#5E8C61'];
@@ -13094,33 +13371,43 @@ async function themeCompareRun() {
       var ew = 1 / theme.tickers.length;
       theme.tickers.forEach(function(t){ weights[t] = ew; });
     }
-    // Find common dates across this theme's tickers
-    var dateSet = null;
-    theme.tickers.forEach(function(t){
-      var dates = (allData[t]||[]).filter(function(p){ return p.close != null; }).map(function(p){ return p.date.slice(0,10); });
-      if (dateSet === null) dateSet = new Set(dates);
-      else dateSet = new Set(dates.filter(function(d){ return dateSet.has(d); }));
+    var validTickers = theme.tickers.filter(function(t){ return allData[t] && allData[t].length > 2; });
+    if (!validTickers.length) return;
+    // Build price maps with forward-fill
+    var priceMapTh = {};
+    validTickers.forEach(function(t){
+      priceMapTh[t] = {};
+      (allData[t]||[]).forEach(function(p){ if (p.close != null) priceMapTh[t][p.date.slice(0,10)] = p.close; });
     });
-    if (!dateSet || !dateSet.size) return;
-    var themeDates = Array.from(dateSet).filter(function(d){ return d >= startStr; }).sort();
+    // Union of all dates >= startStr
+    var theDateSet = new Set();
+    validTickers.forEach(function(t){ Object.keys(priceMapTh[t]).forEach(function(d){ if (d >= startStr) theDateSet.add(d); }); });
+    var themeDates = Array.from(theDateSet).sort();
     if (!themeDates.length) return;
-    // Build daily index: weighted average of normalized prices
-    var priceMap = {};
-    theme.tickers.forEach(function(t){
-      priceMap[t] = {};
-      (allData[t]||[]).forEach(function(p){ if (p.close != null) priceMap[t][p.date.slice(0,10)] = p.close; });
+    // Forward-fill prices
+    var filledPricesTh = {};
+    validTickers.forEach(function(t){
+      var pm = priceMapTh[t];
+      var last = null;
+      filledPricesTh[t] = themeDates.map(function(d){ if (pm[d] != null) last = pm[d]; return last; });
     });
-    var basePrices = {};
-    theme.tickers.forEach(function(t){ basePrices[t] = priceMap[t][themeDates[0]] || 1; });
-    var values = themeDates.map(function(d){
+    // Compute per-ticker weights (equal or custom)
+    var wSum = 0;
+    validTickers.forEach(function(t){ wSum += (weights[t] || (1/validTickers.length)); });
+    var normWeights = {};
+    validTickers.forEach(function(t){ normWeights[t] = (weights[t] || (1/validTickers.length)) / Math.max(wSum, 0.0001); });
+    // Base prices at start
+    var basePricesTh = {};
+    validTickers.forEach(function(t){ basePricesTh[t] = filledPricesTh[t][0] || 1; });
+    var values = themeDates.map(function(d, i){
       var v = 0;
-      theme.tickers.forEach(function(t){
-        var p = priceMap[t][d]; var b = basePrices[t];
-        if (p != null && b > 0) v += (weights[t] || 0) * (p/b);
+      validTickers.forEach(function(t){
+        var px = filledPricesTh[t][i]; var b = basePricesTh[t];
+        if (px != null && b > 0) v += normWeights[t] * (px/b);
       });
       return v * 100;
     });
-    datasets.push({ label: theme.name, data: values.map(function(v,i){ return {x: themeDates[i], y: v}; }), borderColor: themeColors[ti % themeColors.length], borderWidth:1.6, pointRadius:0, tension:0.15, borderDash:[] });
+    datasets.push({ label: theme.name, data: values.map(function(v,i){ return {x: themeDates[i], y: +v.toFixed(4)}; }), borderColor: themeColors[ti % themeColors.length], borderWidth:1.8, pointRadius:0, tension:0.15, borderDash:[] });
   });
 
   // Render
@@ -13131,9 +13418,9 @@ async function themeCompareRun() {
     data: { datasets: datasets },
     options: {
       responsive: true, maintainAspectRatio: false, parsing:false, animation:false,
-      plugins: { legend: { position:'top', labels:{color:'#1A2733', font:{size:11}} }, tooltip: { mode:'index', intersect:false } },
+      plugins: { legend: { position:'top', labels:{color:'#1A2733', font:{size:11}} }, tooltip: { mode:'index', intersect:false, callbacks: { label: function(ctx){ return ctx.dataset.label+': '+(ctx.parsed.y != null ? ctx.parsed.y.toFixed(2) : '—'); } } } },
       scales: {
-        x: { type:'category', ticks: { color:'#5A6772', maxTicksLimit: 8 }, grid: { color:'rgba(208,215,224,0.4)' } },
+        x: { type:'category', ticks: { color:'#5A6772', maxTicksLimit: 8, maxRotation: 0 }, grid: { color:'rgba(208,215,224,0.4)' } },
         y: { ticks: { color:'#5A6772', callback: function(v){ return v.toFixed(0); } }, grid: { color:'rgba(208,215,224,0.4)' }, title:{display:true, text:'Rebased to 100', color:'#5A6772', font:{size:11}} }
       }
     }
@@ -13142,12 +13429,14 @@ async function themeCompareRun() {
   var rows = '<table style="width:100%;border-collapse:collapse;font-size:12px;font-family:Arial;margin-top:10px;">';
   rows += '<thead><tr style="background:var(--navy);color:#fff;"><th style="padding:7px;text-align:left;">Series</th><th style="padding:7px;text-align:right;">Period Return</th><th style="padding:7px;text-align:right;">Volatility (Ann.)</th></tr></thead><tbody>';
   datasets.forEach(function(ds){
-    var first = ds.data[0]?.y, last = ds.data[ds.data.length-1]?.y;
-    var ret = first ? ((last/first - 1)*100) : 0;
-    // simple stdev of pct day-over-day
-    var rets = []; for (var i = 1; i < ds.data.length; i++) { var p = ds.data[i-1].y, c = ds.data[i].y; if (p>0&&c>0) rets.push(Math.log(c/p)); }
-    var m = rets.reduce(function(s,v){return s+v;},0)/Math.max(rets.length,1);
-    var v = rets.reduce(function(s,x){return s+(x-m)*(x-m);},0)/Math.max(rets.length-1,1);
+    if (!ds.data.length) return;
+    var first = 100; // all series rebased to 100
+    var last = ds.data[ds.data.length-1] ? ds.data[ds.data.length-1].y : 100;
+    var ret = last - 100; // since rebased to 100
+    // stdev of pct day-over-day log returns
+    var rets2 = []; for (var i = 1; i < ds.data.length; i++) { var p = ds.data[i-1].y, c = ds.data[i].y; if (p>0&&c>0) rets2.push(Math.log(c/p)); }
+    var m = rets2.length ? rets2.reduce(function(s,v){return s+v;},0)/rets2.length : 0;
+    var v = rets2.length > 1 ? rets2.reduce(function(s,x){return s+(x-m)*(x-m);},0)/(rets2.length-1) : 0;
     var volAnn = Math.sqrt(v) * Math.sqrt(252) * 100;
     rows += '<tr style="border-bottom:1px solid var(--border-light,#E5E9EF);"><td style="padding:6px 8px;color:'+ds.borderColor+';font-weight:700;">'+ds.label+'</td><td style="padding:6px 8px;text-align:right;font-family:Courier New,monospace;color:'+(ret>=0?'var(--success)':'var(--danger)')+';font-weight:700;">'+(ret>=0?'+':'')+ret.toFixed(2)+'%</td><td style="padding:6px 8px;text-align:right;font-family:Courier New,monospace;">'+volAnn.toFixed(1)+'%</td></tr>';
   });
@@ -13308,7 +13597,7 @@ async function whatIfRun() {
     var fetchRange = range === 'ytd' ? '1y' : range;
     // Actual portfolio
     var pfSeries = await pfBuildValueSeries(fetchRange);
-    if (!pfSeries.values.length) { statsEl.innerHTML = '<span style="color:var(--danger);">No portfolio data.</span>'; return; }
+    if (!pfSeries.dates || !pfSeries.values || !pfSeries.values.length) { statsEl.innerHTML = '<span style="color:var(--danger);">No portfolio data — add holdings first.</span>'; return; }
     // New ticker
     var c = await fetchChart(t, fetchRange, '1d');
     var tMap = {}; (c.points||[]).forEach(function(p){ if (p.close != null) tMap[p.date.slice(0,10)] = p.close; });
@@ -13350,20 +13639,31 @@ async function whatIfRun() {
     // Render
     var ctx = document.getElementById('whatifChart');
     if (window._whatifChart) window._whatifChart.destroy();
+    // Use thinned date labels for readability
+    var maxLabels = 12;
+    var step = Math.max(1, Math.floor(commonDates.length / maxLabels));
+    var displayLabels = commonDates.map(function(d, i){ return i % step === 0 ? d : ''; });
     window._whatifChart = new Chart(ctx, {
       type: 'line',
       data: {
+        labels: commonDates,
         datasets: [
-          { label: 'Actual Portfolio', data: commonDates.map(function(d,i){ return {x:d,y:actualReb[i]}; }), borderColor:'#003C71', borderWidth:2.5, pointRadius:0, tension:0.15 },
-          { label: 'Hypothetical (+'+t+' @ '+w+'%, '+method+')', data: commonDates.map(function(d,i){ return {x:d,y:hypReb[i]}; }), borderColor:'#A23B72', borderWidth:2, pointRadius:0, tension:0.15, borderDash:[6,3] }
+          { label: 'Actual Portfolio', data: actualReb, borderColor:'#003C71', backgroundColor:'rgba(0,60,113,0.1)', fill:true, borderWidth:2.5, pointRadius:0, tension:0.15 },
+          { label: 'Hypothetical (+'+t+' @ '+w+'%, '+method+')', data: hypReb, borderColor:'#A23B72', backgroundColor:'rgba(162,59,114,0.1)', fill:true, borderWidth:2, pointRadius:0, tension:0.15, borderDash:[6,3] }
         ]
       },
       options: {
-        responsive: true, maintainAspectRatio: false, parsing: false, animation: false,
-        plugins: { legend: { position:'top', labels:{color:'#1A2733', font:{size:11}} }, tooltip: { mode:'index', intersect:false } },
+        responsive: true, maintainAspectRatio: false, animation: false,
+        plugins: {
+          legend: { position:'top', labels:{color:'#1A2733', font:{size:11}} },
+          tooltip: { mode:'index', intersect:false, callbacks: {
+            title: function(items){ return items[0] ? commonDates[items[0].dataIndex] : ''; },
+            label: function(ctx){ return ctx.dataset.label + ': ' + (ctx.parsed.y != null ? ctx.parsed.y.toFixed(2) : '—'); }
+          }}
+        },
         scales: {
-          x: { type:'category', ticks:{color:'#5A6772', maxTicksLimit:8}, grid:{color:'rgba(208,215,224,0.4)'} },
-          y: { ticks:{color:'#5A6772'}, grid:{color:'rgba(208,215,224,0.4)'}, title:{display:true,text:'Rebased to 100',color:'#5A6772',font:{size:11}} }
+          x: { type:'category', ticks:{ color:'#5A6772', maxTicksLimit:10, maxRotation:0, callback: function(v, i){ return i % step === 0 ? commonDates[i] : ''; } }, grid:{color:'rgba(208,215,224,0.4)'} },
+          y: { ticks:{color:'#5A6772', callback: function(v){ return v.toFixed(0); }}, grid:{color:'rgba(208,215,224,0.4)'}, title:{display:true,text:'Rebased to 100',color:'#5A6772',font:{size:11}} }
         }
       }
     });
@@ -14067,34 +14367,88 @@ function chartLogReturns(points) {
   return r;
 }
 async function pfBuildValueSeries(range) {
-  // Reconstruct daily portfolio dollar-value series
+  // Reconstruct daily portfolio dollar-value series with forward-fill for missing prices
   const h = window._holdings || [];
   const isCash = x => ['Cash','Money Market','CD','Bond Position'].includes(x.assetClass);
   const securities = h.filter(x => !isCash(x));
   const cashValue = h.filter(isCash).reduce((s,x) => s + x.costBasis*x.quantity, 0);
-  if (!securities.length) return { dates: [], values: [] };
+  if (!securities.length) return { dates: [], values: [], twrValues: [] };
+
+  // Aggregate by ticker (multiple accounts same ticker = sum quantities)
+  const byTicker = {};
+  securities.forEach(s => {
+    if (!byTicker[s.ticker]) byTicker[s.ticker] = { ticker: s.ticker, quantity: 0, purchaseDate: s.purchaseDate || null };
+    byTicker[s.ticker].quantity += (s.quantity || 0);
+    // Use earliest purchase date
+    if (s.purchaseDate && (!byTicker[s.ticker].purchaseDate || s.purchaseDate < byTicker[s.ticker].purchaseDate)) {
+      byTicker[s.ticker].purchaseDate = s.purchaseDate;
+    }
+  });
+  const aggSecurities = Object.values(byTicker);
+
   // Fetch each ticker's price series
   const seriesMap = {};
-  await Promise.all(securities.map(async s => {
+  await Promise.all(aggSecurities.map(async s => {
     try {
       const c = await fetchChart(s.ticker, range, '1d');
-      seriesMap[s.ticker] = c.points || [];
+      seriesMap[s.ticker] = (c.points || []).filter(p => p.close != null);
     } catch(e) { seriesMap[s.ticker] = []; }
   }));
-  // Find common date set
+
+  // Build price maps with forward-fill
+  const priceMap = {}; // ticker -> { date -> close }
+  aggSecurities.forEach(s => {
+    priceMap[s.ticker] = {};
+    (seriesMap[s.ticker] || []).forEach(p => {
+      priceMap[s.ticker][p.date.slice(0,10)] = p.close;
+    });
+  });
+
+  // Union of all dates
   const allDates = new Set();
   Object.values(seriesMap).forEach(pts => pts.forEach(p => allDates.add(p.date.slice(0,10))));
   const dates = [...allDates].sort();
-  const values = dates.map(d => {
+  if (!dates.length) return { dates: [], values: [], twrValues: [] };
+
+  // Forward-fill each ticker's price across the date array
+  const filledPrices = {}; // ticker -> [price per date index]
+  aggSecurities.forEach(s => {
+    const pm = priceMap[s.ticker];
+    const filled = [];
+    let last = null;
+    dates.forEach(d => {
+      if (pm[d] != null) last = pm[d];
+      filled.push(last);
+    });
+    filledPrices[s.ticker] = filled;
+  });
+
+  // Build portfolio value series (total market value per day)
+  const values = dates.map((d, i) => {
     let v = cashValue;
-    securities.forEach(s => {
-      const pts = seriesMap[s.ticker] || [];
-      const p = pts.find(x => x.date.slice(0,10) === d);
-      if (p && p.close != null) v += p.close * s.quantity;
+    aggSecurities.forEach(s => {
+      const px = filledPrices[s.ticker][i];
+      if (px != null) v += px * s.quantity;
     });
     return v;
   });
-  return { dates, values };
+
+  // Build Time-Weighted Return series (rebased to starting portfolio value)
+  // TWR: chain-link daily portfolio returns, ignore cash flows
+  // We detect large jumps (>15% day-over-day) as likely new deposits and strip them
+  const twrValues = [100]; // rebased index starting at 100
+  for (let i = 1; i < values.length; i++) {
+    if (values[i-1] > 0 && values[i] > 0) {
+      const dailyRet = (values[i] - values[i-1]) / values[i-1];
+      // Cap extreme single-day gains (>20%) as likely deposit events for TWR
+      const clampedRet = Math.abs(dailyRet) > 0.20 ? (dailyRet > 0 ? 0 : dailyRet) : dailyRet;
+      twrValues.push(twrValues[twrValues.length-1] * (1 + clampedRet));
+    } else {
+      twrValues.push(twrValues[twrValues.length-1]);
+    }
+  }
+
+  return { dates, values, twrValues };
 }
 
 // ────────── Brinson-Fachler Attribution ──────────
@@ -14288,50 +14642,60 @@ async function pfRenderRisk() {
   if (!h.length) return;
   try {
     const series = await pfBuildValueSeries('1y');
-    if (series.values.length < 30) {
+    if (!series.values.length || series.values.length < 10) {
       ['kpiVaR95','kpiVaR99','kpiCVaR','kpiVol','kpiMDD','kpiBeta','kpiSharpe','kpiActShare'].forEach(id => {
         const e = document.getElementById(id); if (e) e.textContent = 'n/a';
       });
       return;
     }
     const rets = dailyLogReturns(series.values);
+    if (rets.length < 20) {
+      ['kpiVaR95','kpiVaR99','kpiCVaR','kpiVol','kpiMDD','kpiBeta','kpiSharpe','kpiActShare'].forEach(id => {
+        const e = document.getElementById(id); if (e) e.textContent = 'n/a';
+      });
+      return;
+    }
     const sortedR = rets.slice().sort((a,b)=>a-b);
     const tv = series.values[series.values.length-1];
-
-    // Historical 95% VaR (1-day)
-    const idx95 = Math.floor(sortedR.length * 0.05);
-    const var95Pct = -sortedR[idx95] * 100;
-    const var95Dol = var95Pct / 100 * tv;
-    document.getElementById('kpiVaR95').textContent = '$' + Math.round(var95Dol).toLocaleString();
-
-    // Parametric 99% VaR
     const mean = rets.reduce((s,v)=>s+v,0)/rets.length;
     const variance = rets.reduce((s,v)=>s+(v-mean)*(v-mean),0)/(rets.length-1);
-    const sigma = Math.sqrt(variance);
-    const var99Pct = (2.326 * sigma - mean) * 100;
-    const var99Dol = var99Pct / 100 * tv;
+    const sigma = Math.sqrt(variance); // daily sigma (log return)
+
+    // Historical 95% VaR (1-day) — floor at 5th percentile loss
+    // VaR is expressed as a positive dollar loss number
+    const idx95 = Math.max(0, Math.floor(sortedR.length * 0.05) - 1);
+    const var95LogRet = sortedR[idx95]; // negative log return
+    const var95Dol = Math.max(0, -var95LogRet * tv); // positive loss
+    document.getElementById('kpiVaR95').textContent = '$' + Math.round(var95Dol).toLocaleString();
+
+    // Parametric 99% VaR: VaR = -(μ - z*σ) × TV
+    // z_0.99 = 2.326 for one-tailed 99%
+    const var99LogRet = mean - 2.326 * sigma;
+    const var99Dol = Math.max(0, -var99LogRet * tv);
     document.getElementById('kpiVaR99').textContent = '$' + Math.round(var99Dol).toLocaleString();
 
-    // CVaR (Expected Shortfall) at 95%
-    const tail = sortedR.slice(0, idx95+1);
-    const cvarPct = -tail.reduce((s,v)=>s+v,0)/tail.length * 100;
-    const cvarDol = cvarPct / 100 * tv;
+    // CVaR (Expected Shortfall) at 95% — average of worst 5% days
+    const tail = sortedR.slice(0, idx95 + 1);
+    const cvarLogRet = tail.reduce((s,v)=>s+v,0) / Math.max(tail.length, 1);
+    const cvarDol = Math.max(0, -cvarLogRet * tv);
     document.getElementById('kpiCVaR').textContent = '$' + Math.round(cvarDol).toLocaleString();
 
-    // Annualized vol
+    // Annualized vol (log returns × √252 × 100)
     const volAnn = sigma * Math.sqrt(252) * 100;
     document.getElementById('kpiVol').textContent = volAnn.toFixed(1) + '%';
 
-    // Max drawdown
+    // Max drawdown — track peak-to-trough properly
     let peak = series.values[0], maxDD = 0;
-    for (let i = 0; i < series.values.length; i++) {
+    for (let i = 1; i < series.values.length; i++) {
       if (series.values[i] > peak) peak = series.values[i];
-      const dd = (series.values[i] - peak) / peak;
-      if (dd < maxDD) maxDD = dd;
+      if (peak > 0) {
+        const dd = (series.values[i] - peak) / peak;
+        if (dd < maxDD) maxDD = dd;
+      }
     }
     document.getElementById('kpiMDD').textContent = (maxDD * 100).toFixed(1) + '%';
 
-    // Beta vs SPY
+    // Beta vs SPY and Sharpe
     try {
       const spy = await fetchChart('SPY', '1y', '1d');
       const spyR = chartLogReturns(spy.points);
@@ -14341,12 +14705,17 @@ async function pfRenderRisk() {
         const ma = a.reduce((s,v)=>s+v,0)/a.length, mb = b.reduce((s,v)=>s+v,0)/b.length;
         let cov = 0, varB = 0;
         for (let i = 0; i < minLen; i++) { cov += (a[i]-ma)*(b[i]-mb); varB += (b[i]-mb)*(b[i]-mb); }
+        cov /= (minLen - 1); varB /= (minLen - 1);
         const beta = varB > 0 ? cov / varB : 0;
         document.getElementById('kpiBeta').textContent = beta.toFixed(2);
 
-        // Sharpe (annualized, RF=4.5%)
-        const annR = mean * 252;
-        const sharpe = volAnn > 0 ? (annR - 0.045) / (volAnn/100) : 0;
+        // Sharpe = (annualized arithmetic return − RF) / annualized vol
+        // Daily arithmetic mean = exp(μ_log + σ²/2) − 1 ≈ μ_log + σ²/2
+        const dailyArithMean = mean + variance / 2;
+        const annArithR = dailyArithMean * 252;
+        const annVol = sigma * Math.sqrt(252);
+        const rf = 0.045; // 4.5% risk-free
+        const sharpe = annVol > 0 ? (annArithR - rf) / annVol : 0;
         document.getElementById('kpiSharpe').textContent = sharpe.toFixed(2);
       }
     } catch(e) { document.getElementById('kpiBeta').textContent = 'n/a'; document.getElementById('kpiSharpe').textContent = 'n/a'; }
@@ -14384,6 +14753,8 @@ async function pfRenderRisk() {
           for (let i = 0; i < n; i++) cov += (a[i]-ma)*(b[i]-mb);
           cov /= (n-1);
           const w = totMV > 0 ? (x.currentPrice||0)*x.quantity / totMV : 0;
+          // Marginal VaR = w_i × (cov(R_i, R_p) / σ_p) × z_0.95
+          // sigma here is daily sigma of portfolio log returns
           const mvar = sigma > 0 ? w * (cov / sigma) * 1.645 : 0;
           mvarRows.push({ ticker: x.ticker, w, mvar, mvarDol: mvar * tv });
         } catch(e) {}
