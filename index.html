@@ -13339,22 +13339,29 @@ async function buildRecommendedStateSeries(rangeKey) {
 function themePopulatePicker() {
   var picker = document.getElementById('themeCmpPicker');
   if (!picker) return;
-  // Always rebuild to pick up new custom themes, but skip if already populated this session
   if (picker.dataset.built) return;
   picker.dataset.built = '1';
-  var html = '';
-  (window.PORTFOLIO_THEMES || []).forEach(function(t, idx){
-    var checked = idx < 3 ? 'checked' : '';
-    var activeSty = idx < 3 ? 'background:var(--navy);color:#fff;border-color:var(--navy);' : 'background:#fff;color:var(--navy);border-color:var(--border);';
-    html += '<label style="font-size:11px;font-weight:600;padding:4px 10px;border-radius:12px;border:1px solid var(--border);cursor:pointer;display:inline-flex;align-items:center;gap:5px;margin:2px;transition:all 0.15s;'+activeSty+'" '+
-      'onclick="this.style.background=this.querySelector('input').checked?'var(--navy)':\'#fff\';'+
-      'this.style.color=this.querySelector('input').checked?'#fff':'var(--navy)';'+
-      'this.style.borderColor=this.querySelector('input').checked?'var(--navy)':'var(--border)';">'+
-      '<input type="checkbox" data-themecmp="'+t.key+'" '+checked+' style="display:none;">'+
-      t.name.replace(/&amp;/g,'&').replace(/&mdash;/g,'—') +
-      '</label>';
+  picker.innerHTML = '<span id="themeCmpCustomSlot"></span>';
+  var frag = document.createDocumentFragment();
+  (window.PORTFOLIO_THEMES || []).forEach(function(t, idx) {
+    var isChecked = idx < 3;
+    var label = document.createElement('label');
+    label.style.cssText = 'font-size:11px;font-weight:600;padding:4px 10px;border-radius:12px;border:1px solid var(--border);cursor:pointer;display:inline-flex;align-items:center;gap:5px;margin:2px;transition:all 0.15s;' + (isChecked ? 'background:var(--navy);color:#fff;border-color:var(--navy);' : 'background:#fff;color:var(--navy);border-color:var(--border);');
+    var cb = document.createElement('input');
+    cb.type = 'checkbox';
+    cb.dataset.themecmp = t.key;
+    cb.checked = isChecked;
+    cb.style.display = 'none';
+    cb.addEventListener('change', function() {
+      label.style.background = cb.checked ? 'var(--navy)' : '#fff';
+      label.style.color = cb.checked ? '#fff' : 'var(--navy)';
+      label.style.borderColor = cb.checked ? 'var(--navy)' : 'var(--border)';
+    });
+    label.appendChild(cb);
+    label.appendChild(document.createTextNode(t.name.replace(/&amp;/g,'&').replace(/&mdash;/g,'—')));
+    frag.appendChild(label);
   });
-  picker.innerHTML = html + '<span id="themeCmpCustomSlot"></span>';
+  picker.insertBefore(frag, picker.firstChild);
 }
 function themeCmpRenderCustom() {
   var slot = document.getElementById('themeCmpCustomSlot');
