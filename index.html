@@ -1375,6 +1375,13 @@ body.view-mobile .logo-icon { width: 22px !important; height: 22px !important; f
 .pf-tab-content.active { display: block; }
 @keyframes fadeIn { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: translateY(0); } }
 
+/* Cross-Asset two-column grid — collapses to single on narrow screens */
+@media (max-width: 900px) {
+  #page-markets .pf-tab-content > div[style*="grid-template-columns:1fr 1fr"] {
+    grid-template-columns: 1fr !important;
+  }
+}
+
 /* KPI risk strip */
 .risk-strip {
   display: grid;
@@ -3198,12 +3205,12 @@ body.view-mobile .logo-icon { width: 22px !important; height: 22px !important; f
 <!-- ═══════════ MARKETS ═══════════ -->
 <div class="page" id="page-markets">
   <div class="content-wrap">
-    <div class="hero" style="padding:32px 40px;">
+    <div class="hero" style="padding:28px 40px;">
       <h1>Cross-Asset Analysis</h1>
-      <p>Portfolio-state framework tied to four market regimes &mdash; Leveraged, Non-Levered Positive Growth, Neutral, and Positioned for Drawdown &mdash; plus cross-asset analytics: rebased performance, correlation, 3D volatility surface, Cox jump process, efficient frontier, rolling risk, VaR, and regime signals.</p>
+      <p style="max-width:780px;">Portfolio-state framework tied to four market regimes &mdash; Leveraged, Non-Levered Positive Growth, Neutral, and Positioned for Drawdown &mdash; plus cross-asset analytics, correlation, volatility surface, jump modeling, efficient frontier, and regime signals.</p>
     </div>
 
-    <!-- ═══════════ GLOBAL SNAPSHOT (Bloomberg WEI-style multi-asset grid) ═══════════ -->
+    <!-- ═══════════ ALWAYS-VISIBLE: GLOBAL SNAPSHOT ═══════════ -->
     <div class="card">
       <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
         <span>Global Markets Snapshot
@@ -3216,36 +3223,27 @@ body.view-mobile .logo-icon { width: 22px !important; height: 22px !important; f
       </div>
       <div class="card-body">
         <p style="font-size:12px;color:var(--text-sec);margin-bottom:10px;">Real-time prices and 1-day moves across global equities, rates, currencies, credit, commodities, and volatility. Sparklines show 1-month trend. <strong>Click any cell</strong> to send to Stock Research.</p>
-        <div id="snapshotGrid" style="text-align:center;padding:24px;color:var(--text-sec);font-size:12px;"><span class="spinner"></span> Loading global market snapshot…</div>
+        <div id="snapshotGrid" style="text-align:center;padding:24px;color:#5A6A7A;font-size:12px;font-family:Arial;"><span class="spinner"></span> Loading global market snapshot…</div>
         <div id="aiMarketBox" style="display:none;margin-top:14px;"></div>
       </div>
       <div class="card-sources"><strong>Sources:</strong> Yahoo Finance via Cloudflare Worker. Asset universe modeled on Bloomberg WEI (World Equity Indices) and FXIP (FX Information Platform) standards.</div>
     </div>
 
-    <!-- ═══════════ ROLLING CORRELATION REGIME DISTANCE ═══════════ -->
-    <div class="card">
-      <div class="card-title">Cross-Asset Correlation Regime Distance
-        <span class="help-icon" title="Per Bloomberg's MAC3 framework: rolling 60-day cross-asset correlation matrix is a more robust regime indicator than volatility levels. We measure the Frobenius distance between today's matrix and historical reference regimes (2008 GFC, 2020 COVID, 2022 inflation shock). Smallest distance = closest analogue.">?</span>
-      </div>
-      <div class="card-body">
-        <p style="font-size:12px;color:var(--text-sec);margin-bottom:10px;">Today's rolling 60-day cross-asset correlation matrix vs. three reference regime matrices (2008 GFC, 2020 COVID, 2022 inflation). <strong>Smaller distance = closer analogue</strong>. Methodology cited from Bloomberg Professional Services (March 2026): <em>A correlation-based framework for market regime detection using Bloomberg MAC3</em>. Universe: SPY, TLT, GLD, DXY (UUP), USO, HYG, VIX.</p>
-        <div class="form-row" style="margin-bottom:10px;">
-          <div class="form-group"><label>Rolling Window</label>
-            <select id="regDistWin" onchange="regimeDistanceRun()">
-              <option value="30">30 Days</option>
-              <option value="60" selected>60 Days</option>
-              <option value="90">90 Days</option>
-            </select>
-          </div>
-          <button class="btn btn-sm" onclick="regimeDistanceRun()">Compute Regime Distance</button>
-        </div>
-        <div id="regDistResults" style="text-align:center;padding:18px;color:var(--text-sec);font-size:13px;">Click <strong>Compute Regime Distance</strong> to compare today's correlation structure to historical regimes.</div>
-      </div>
-      <div class="card-sources"><strong>Method:</strong> Frobenius distance ‖C<sub>t</sub> − C<sub>ref</sub>‖<sub>F</sub> = √(Σ(c<sub>ij,t</sub> − c<sub>ij,ref</sub>)²) between rolling-window correlation matrices. Reference regimes: 2008-09-15 to 2009-03-09 (GFC), 2020-02-19 to 2020-03-23 (COVID), 2022-01-03 to 2022-10-12 (inflation shock). &middot; Bloomberg (2026) <em>Bloomberg MAC3 framework</em>.</div>
+    <!-- ═══════════ CA-TABS ═══════════ -->
+    <div class="pf-tabs" role="tablist" aria-label="Cross-Asset Analysis" style="margin-top:18px;">
+      <button class="pf-tab active" data-catab="regime"      onclick="caShowTab('regime')">Market Regime</button>
+      <button class="pf-tab"        data-catab="breadth"     onclick="caShowTab('breadth')">Breadth &amp; Signals</button>
+      <button class="pf-tab"        data-catab="universe"    onclick="caShowTab('universe')">Universe &amp; Returns</button>
+      <button class="pf-tab"        data-catab="correlation" onclick="caShowTab('correlation')">Correlation</button>
+      <button class="pf-tab"        data-catab="risk"        onclick="caShowTab('risk')">Risk &amp; VaR</button>
+      <button class="pf-tab"        data-catab="quant"       onclick="caShowTab('quant')">Quant Models</button>
     </div>
 
-    <!-- ═══════════ PORTFOLIO STATE FRAMEWORK (NEW) ═══════════ -->
-    <div class="card">
+    <!-- ═══ TAB: MARKET REGIME ═══ -->
+    <div class="pf-tab-content active" id="catab-regime">
+      <!-- Regime diagnostic and framework side-by-side -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px;">
+        <div class="card">
       <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;">
         <span>Current Market Regime &amp; Recommended Portfolio State</span>
         <button class="btn-sm" style="background:rgba(255,255,255,0.2);color:#fff;border:1px solid rgba(255,255,255,0.4);padding:4px 10px;border-radius:3px;cursor:pointer;font-size:11px;" onclick="psLoadDiagnostic()">Refresh</button>
@@ -3265,9 +3263,7 @@ body.view-mobile .logo-icon { width: 22px !important; height: 22px !important; f
         <strong>Framework:</strong> Perry Asset Management 4-state portfolio regime classifier &middot; Inputs: VIX (CBOE), SPY / QQQ price data via Cloudflare Worker, trailing 12-month return, distance-from-52W-high, drawdown-from-peak, Fibonacci retracements.
       </div>
     </div>
-
-    <!-- 4-State Framework Reference -->
-    <div class="card">
+        <div class="card">
       <div class="card-title">The Four Portfolio States &mdash; Framework Reference <span class="help-icon" title="The 4 distinct market regimes Perry Asset Management trades around: Leveraged (high-conviction at bottoms with VIX &gt; 30), Non-Levered Positive Growth (steady expansion), Neutral (defensive, more cash), Positioned for Drawdown (mostly cash, no leverage). Highlighted card = current classified state.">?</span></div>
       <div class="card-body">
         <div class="ps-framework-grid" id="psFrameworkGrid"></div>
@@ -3276,9 +3272,10 @@ body.view-mobile .logo-icon { width: 22px !important; height: 22px !important; f
         <strong>Approach:</strong> State-based allocation informed by mean-reversion at extremes (Lo 2004), contrarian entry at VIX &gt; 30 (Whaley 2009), Fibonacci retracement cycles (Frost &amp; Prechter, Elliott Wave Principle), and defensive positioning when trailing returns compress forward expected returns (Shiller CAPE).
       </div>
     </div>
-
-    <!-- QQQ Fibonacci Projection -->
-    <div class="card">
+      </div>
+      <!-- Fibonacci + Bayesian side-by-side -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px;">
+        <div class="card">
       <div class="card-title">QQQ Daily Chart with Fibonacci Projections <span class="help-icon" title="Fibonacci retracement / projection levels (23.6%, 38.2%, 50%, 61.8%, 78.6%, 100%, 127.2%, 161.8%, 261.8%) — derived from the golden ratio φ = 1.618. Used by technical traders to identify potential support/resistance and price targets following major swings.">?</span></div>
       <div class="card-body">
         <p style="font-size:12px;color:var(--text-sec);margin-bottom:12px;">Auto-detects the most recent significant swing low and swing high on QQQ, then plots Fibonacci retracement levels (23.6%, 38.2%, 50%, 61.8%, 78.6%) and projection levels (127.2%, 161.8%, 261.8%). Use these as price pivots &mdash; QQQ approaching a key level during a rip is a signal that "Positioned for Drawdown" posture may be appropriate.</p>
@@ -3295,9 +3292,7 @@ body.view-mobile .logo-icon { width: 22px !important; height: 22px !important; f
         <strong>Sources:</strong> QQQ price data via Cloudflare Worker / Yahoo Finance &middot; Fibonacci ratios from the golden ratio &phi; = 1.618 (Frost &amp; Prechter, <em>Elliott Wave Principle</em>) &middot; Swing detection via local-extremum algorithm.
       </div>
     </div>
-
-    <!-- BAYESIAN REGIME TRANSITION MATRIX -->
-    <div class="card">
+        <div class="card">
       <div class="card-title">Bayesian Regime Transition Probabilities <span class="help-icon" title="Given today's classified market regime, this estimates the probability of being in each state 30, 60, and 90 days from now. Built from 5 years of historical regime sequences using a Markov transition matrix (Hamilton, 1989). Use it for sizing: high probability of Drawdown ahead → keep more cash now.">?</span></div>
       <div class="card-body">
         <p style="font-size:12px;color:var(--text-sec);margin-bottom:10px;">Given the current classified market state, this estimates the probability of transitioning to each of the four portfolio states over the next 30, 60, and 90 days. Transition matrix is fit from historical SPY regime sequences (5 years of daily data). Use this for position sizing: if P(Drawdown in 60 days) is high, hold more cash even if currently in Growth state.</p>
@@ -3312,9 +3307,35 @@ body.view-mobile .logo-icon { width: 22px !important; height: 22px !important; f
         <strong>Method:</strong> Empirical transition matrix P[i,j] = P(state_{t+k} = j | state_t = i) estimated via maximum likelihood from historical 5-year SPY regime sequence &bull; 30/60/90-day transition probabilities computed as P^k where k = horizon/segment length &bull; Bayesian updating: current-state prior combined with transition matrix to produce posterior distribution over future states &bull; Framework: Hamilton (1989) Markov regime-switching, adapted for macro regime classification.
       </div>
     </div>
+      </div>
+      <!-- Regime Distance full-width -->
+      <div class="card">
+      <div class="card-title">Cross-Asset Correlation Regime Distance
+        <span class="help-icon" title="Per Bloomberg's MAC3 framework: rolling 60-day cross-asset correlation matrix is a more robust regime indicator than volatility levels. We measure the Frobenius distance between today's matrix and historical reference regimes (2008 GFC, 2020 COVID, 2022 inflation shock). Smallest distance = closest analogue.">?</span>
+      </div>
+      <div class="card-body">
+        <p style="font-size:12px;color:var(--text-sec);margin-bottom:10px;">Today's rolling 60-day cross-asset correlation matrix vs. three reference regime matrices (2008 GFC, 2020 COVID, 2022 inflation). <strong>Smaller distance = closer analogue</strong>. Methodology cited from Bloomberg Professional Services (March 2026): <em>A correlation-based framework for market regime detection using Bloomberg MAC3</em>. Universe: SPY, TLT, GLD, DXY (UUP), USO, HYG, VIX.</p>
+        <div class="form-row" style="margin-bottom:10px;">
+          <div class="form-group"><label>Rolling Window</label>
+            <select id="regDistWin" onchange="regimeDistanceRun()">
+              <option value="30">30 Days</option>
+              <option value="60" selected>60 Days</option>
+              <option value="90">90 Days</option>
+            </select>
+          </div>
+          <button class="btn btn-sm" onclick="regimeDistanceRun()">Compute Regime Distance</button>
+        </div>
+        <div id="regDistResults" style="text-align:center;padding:18px;color:var(--text-sec);font-size:13px;">Click <strong>Compute Regime Distance</strong> to compare today's correlation structure to historical regimes.</div>
+      </div>
+      <div class="card-sources"><strong>Method:</strong> Frobenius distance ‖C<sub>t</sub> − C<sub>ref</sub>‖<sub>F</sub> = √(Σ(c<sub>ij,t</sub> − c<sub>ij,ref</sub>)²) between rolling-window correlation matrices. Reference regimes: 2008-09-15 to 2009-03-09 (GFC), 2020-02-19 to 2020-03-23 (COVID), 2022-01-03 to 2022-10-12 (inflation shock). &middot; Bloomberg (2026) <em>Bloomberg MAC3 framework</em>.</div>
+    </div>
+    </div><!-- /catab-regime -->
 
-    <!-- ═══════════ MARKET BREADTH & FEAR/GREED COMPOSITE ═══════════ -->
-    <div class="card">
+    <!-- ═══ TAB: BREADTH & SIGNALS ═══ -->
+    <div class="pf-tab-content" id="catab-breadth">
+      <!-- Fear/Greed + Sector Momentum side-by-side -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px;">
+        <div class="card">
       <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;">
         <span>Market Breadth &amp; Composite Fear/Greed Indicator
           <span class="help-icon" title="A composite of 7 market-stress indicators: VIX level, VIX vs. 20D SMA, SPY distance from 52W high, Put/Call ratio proxy, HY vs. IG spread, Safe-haven demand (TLT vs. SPY), and momentum breadth. Modeled on CNN's Fear & Greed index methodology but using real-time market data.">?</span>
@@ -3327,9 +3348,24 @@ body.view-mobile .logo-icon { width: 22px !important; height: 22px !important; f
       </div>
       <div class="card-sources"><strong>Methodology:</strong> Each signal normalized to [0,100] via min-max over trailing 252 trading days. Equal-weight composite. Signals: VIX level, VIX/SMA20 ratio, SPY vs. 52W high, TLT/SPY 20D relative return (safe haven), GLD/SPY 20D relative return, HYG/LQD 20D relative return (credit risk appetite), QQQ/SPY 20D relative return (risk appetite). Inspired by CNN Fear &amp; Greed Index; all computations use live market data.</div>
     </div>
-
-    <!-- ═══════════ ASSET CLASS RETURN HEATMAP ═══════════ -->
-    <div class="card">
+        <div class="card">
+      <div class="card-title">Sector Momentum Scorecard
+        <span class="help-icon" title="Ranks all 11 GICS sectors by multiple momentum signals: 1M, 3M, 6M, and 12M price returns, plus relative strength vs. SPY. Identifies sector rotation trends. Grounded in Fama-French momentum factor and sector rotation frameworks.">?</span>
+      </div>
+      <div class="card-body">
+        <p style="font-size:12px;color:var(--text-sec);margin-bottom:12px;">All 11 GICS sector SPDR ETFs ranked by return momentum across multiple time horizons. Composite rank = average of 1M, 3M, 6M, 12M ranks. <strong>Top 3 sectors = momentum leaders</strong> (typically outperform in the near term). Bottom 3 = candidates for mean-reversion or rotation.</p>
+        <div class="form-row" style="margin-bottom:10px;">
+          <button class="btn btn-sm" onclick="mktLoadSectorMomentum()">Load Sector Momentum</button>
+          <span style="font-size:11px;color:var(--text-sec);align-self:center;margin-left:8px;">11 GICS sectors via SPDR ETFs (XLK, XLE, XLF, etc.)</span>
+        </div>
+        <div id="mktSectorMomentum" style="text-align:center;padding:20px;color:var(--text-sec);">Click <strong>Load Sector Momentum</strong> to rank all 11 sectors.</div>
+      </div>
+      <div class="card-sources"><strong>Sources:</strong> SPDR Select Sector ETFs (State Street). <strong>Method:</strong> Total return for each period. Composite rank = (rank_1M + rank_3M + rank_6M + rank_12M) / 4 where rank 1 = best. Jegadeesh, N. &amp; Titman, S. (1993) "Returns to Buying Winners and Selling Losers," <em>Journal of Finance</em>.</div>
+    </div>
+      </div>
+      <!-- Return Heatmap + Lead/Lag side-by-side -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px;">
+        <div class="card">
       <div class="card-title">Asset Class Return Heatmap
         <span class="help-icon" title="Monthly and weekly returns for major asset classes, color-coded green (positive) to red (negative). Allows rapid identification of which asset classes have been leading/lagging across time periods. Similar to Callan periodic table of investment returns.">?</span>
       </div>
@@ -3343,9 +3379,7 @@ body.view-mobile .logo-icon { width: 22px !important; height: 22px !important; f
       </div>
       <div class="card-sources"><strong>Proxies:</strong> SPY (US Equity), QQQ (Tech), IWM (Small Cap), EFA (Intl Dev.), EEM (EM), TLT (Long Duration), IEF (Intermediate), LQD (IG Credit), HYG (HY Credit), GLD (Gold), USO (Oil), VNQ (REITs). Period: 1W, 1M, 3M, 6M, YTD, 1Y.</div>
     </div>
-
-    <!-- ═══════════ INTERMARKET LEAD/LAG ANALYSIS ═══════════ -->
-    <div class="card">
+        <div class="card">
       <div class="card-title">Intermarket Lead/Lag Analysis
         <span class="help-icon" title="Cross-correlation analysis showing which assets lead or lag others. A positive lag-k correlation between asset A and asset B means A's return today predicts B's return k days later. Grounded in Granger causality intuition.">?</span>
       </div>
@@ -3386,25 +3420,29 @@ body.view-mobile .logo-icon { width: 22px !important; height: 22px !important; f
       </div>
       <div class="card-sources"><strong>Method:</strong> Cross-correlation function r_AB(k) = corr(R_A(t), R_B(t+k)) for k ∈ [-20, +20]. Computed from daily log returns. Bonferroni-corrected 95% confidence band = ±1.96/√n shown as dashed lines. Granger, C.W.J. (1969) "Investigating Causal Relations by Econometric Models," <em>Econometrica</em>.</div>
     </div>
-
-    <!-- ═══════════ SECTOR MOMENTUM SCORECARD ═══════════ -->
-    <div class="card">
-      <div class="card-title">Sector Momentum Scorecard
-        <span class="help-icon" title="Ranks all 11 GICS sectors by multiple momentum signals: 1M, 3M, 6M, and 12M price returns, plus relative strength vs. SPY. Identifies sector rotation trends. Grounded in Fama-French momentum factor and sector rotation frameworks.">?</span>
       </div>
+      <!-- Module 8 Regime Signals full-width -->
+      <div class="card">
+      <div class="card-title">8 &middot; Cross-Asset Regime Signals <span class="help-icon" title="Tracks key cross-market relationships that historically signal regime shifts. Copper/Gold ratio rising = growth dominant. Yield curve inversion = recession signal. HY credit spreads widening = risk-off.">?</span></div>
       <div class="card-body">
-        <p style="font-size:12px;color:var(--text-sec);margin-bottom:12px;">All 11 GICS sector SPDR ETFs ranked by return momentum across multiple time horizons. Composite rank = average of 1M, 3M, 6M, 12M ranks. <strong>Top 3 sectors = momentum leaders</strong> (typically outperform in the near term). Bottom 3 = candidates for mean-reversion or rotation.</p>
-        <div class="form-row" style="margin-bottom:10px;">
-          <button class="btn btn-sm" onclick="mktLoadSectorMomentum()">Load Sector Momentum</button>
-          <span style="font-size:11px;color:var(--text-sec);align-self:center;margin-left:8px;">11 GICS sectors via SPDR ETFs (XLK, XLE, XLF, etc.)</span>
-        </div>
-        <div id="mktSectorMomentum" style="text-align:center;padding:20px;color:var(--text-sec);">Click <strong>Load Sector Momentum</strong> to rank all 11 sectors.</div>
+        <p style="font-size:12px;color:var(--text-sec);margin-bottom:14px;">Six intermarket ratios with 20D SMA overlay. Green shading = ratio above SMA (risk-on); red shading = below (risk-off). Grounded in CFA Business Cycle framework and classical intermarket analysis.</p>
+        <div id="mktRegimeEmpty" style="text-align:center;padding:24px;color:var(--text-sec);font-size:13px;">Loads independently of universe selection. <button class="btn btn-sm" onclick="mktLoadRegime()" style="margin-left:10px;">Load Regime Signals</button></div>
+        <div id="mktRegimeGrid" style="display:none;"></div>
       </div>
-      <div class="card-sources"><strong>Sources:</strong> SPDR Select Sector ETFs (State Street). <strong>Method:</strong> Total return for each period. Composite rank = (rank_1M + rank_3M + rank_6M + rank_12M) / 4 where rank 1 = best. Jegadeesh, N. &amp; Titman, S. (1993) "Returns to Buying Winners and Selling Losers," <em>Journal of Finance</em>.</div>
+      <div class="card-sources">
+        <strong>Sources:</strong>
+        Murphy, J.J. (1991) <em>Intermarket Analysis</em>, John Wiley &amp; Sons &middot;
+        CFA Institute Business Cycle framework (L1-L3) &middot;
+        Perry Asset Management Macro HF Economic Analysis Framework v1.0 &middot;
+        Price data via Cloudflare Worker / Yahoo Finance.
+      </div>
     </div>
+    </div><!-- /catab-breadth -->
 
-    <!-- UNIVERSE SELECTOR -->
-    <div class="card">
+    <!-- ═══ TAB: UNIVERSE & RETURNS ═══ -->
+    <div class="pf-tab-content" id="catab-universe">
+      <!-- Universe selector always at top -->
+      <div class="card">
       <div class="card-title">Universe Selection &amp; Date Range <span class="help-icon" title="Pick the assets you want included in every Cross-Asset module (correlation, frontier, vol surface, etc.). Selection is shared across all 8 modules — change here, all modules refetch.">?</span></div>
       <div class="card-body">
         <p style="font-size:12px;color:var(--text-sec);margin-bottom:14px;">Select assets to include across all Markets modules. All fetched data is shared, so changing selection triggers a refetch for every module.</p>
@@ -3436,9 +3474,8 @@ body.view-mobile .logo-icon { width: 22px !important; height: 22px !important; f
       </div>
       <div class="card-sources"><strong>Sources:</strong> Yahoo Finance via Cloudflare Worker proxy (/chart endpoint).</div>
     </div>
-
-    <!-- MODULE 1: REBASED RETURNS -->
-    <div class="card">
+      <!-- Module 1 Rebased Returns -->
+      <div class="card">
       <div class="card-title">1 &middot; Rebased Return Chart <span class="help-icon" title="Shows how each selected asset would have grown if you invested $100 at the start. All series start at 100, so visual comparisons are apples-to-apples regardless of starting price.">?</span></div>
       <div class="card-body">
         <p style="font-size:12px;color:var(--text-sec);margin-bottom:14px;">All selected series rebased to 100 at the start date. Formula: <code style="background:var(--navy);color:var(--text-on-dark);padding:1px 6px;border-radius:3px;font-family:Arial;">Rebased(t) = P(t) / P(t&#8320;) &times; 100</code></p>
@@ -3450,9 +3487,13 @@ body.view-mobile .logo-icon { width: 22px !important; height: 22px !important; f
       </div>
       <div class="card-sources"><strong>Sources:</strong> Yahoo Finance via Cloudflare Worker proxy. Rebasing standard per CFA Institute performance measurement (L1 Quantitative Methods).</div>
     </div>
+    </div><!-- /catab-universe -->
 
-    <!-- MODULE 2: CORRELATION HEATMAP -->
-    <div class="card">
+    <!-- ═══ TAB: CORRELATION ═══ -->
+    <div class="pf-tab-content" id="catab-correlation">
+      <!-- M2 and M2B side-by-side at top -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px;">
+        <div class="card">
       <div class="card-title">2 &middot; Pairwise Correlation Heatmap <span class="help-icon" title="Pearson correlation (ρ) measures how two assets move together. +1.0 = perfectly in sync, 0 = unrelated, −1.0 = mirror opposites. Diversification benefit comes from holding assets with low or negative correlation.">?</span></div>
       <div class="card-body">
         <p style="font-size:12px;color:var(--text-sec);margin-bottom:10px;">Computed from daily log returns: <code style="background:var(--navy);color:var(--text-on-dark);padding:1px 6px;border-radius:3px;font-family:Arial;">r(t) = ln(P(t)/P(t-1))</code>. Scale: dark red &rho;=&minus;1, white &rho;=0, navy &rho;=+1.</p>
@@ -3472,9 +3513,7 @@ body.view-mobile .logo-icon { width: 22px !important; height: 22px !important; f
       </div>
       <div class="card-sources"><strong>Sources:</strong> Pearson, K. (1895) "Notes on regression and inheritance in the case of two parents," Proc. Royal Society. Price data via Cloudflare Worker / Yahoo Finance.</div>
     </div>
-
-    <!-- MODULE 2B: REGIME-CONDITIONAL CORRELATION + DOWNSIDE CORRELATION -->
-    <div class="card">
+        <div class="card">
       <div class="card-title">2B &middot; Regime-Conditional &amp; Downside Correlation
         <span class="help-icon" title="Correlations rise during downturns — a known phenomenon (Longin &amp; Solnik 2001). This module shows pairwise correlations conditional on (a) Perry market regime and (b) downside-only days (R_SPY ≤ 0). Comparing 'normal' vs 'stress' correlations exposes diversification illusions.">?</span>
       </div>
@@ -3504,9 +3543,9 @@ body.view-mobile .logo-icon { width: 22px !important; height: 22px !important; f
       </div>
       <div class="card-sources"><strong>Method:</strong> For each pair (i,j), compute Pearson ρ over (a) days classified into each Perry regime and (b) days where SPY daily log return ≤ 0. The "correlation asymmetry" Δρ = ρ<sub>downside</sub> − ρ<sub>full</sub> quantifies the diversification illusion. &middot; Longin, F., &amp; Solnik, B. (2001). <em>Extreme Correlation of International Equity Markets.</em> Journal of Finance, 56(2). &middot; Ang, A., &amp; Chen, J. (2002). <em>Asymmetric Correlations of Equity Portfolios.</em> Journal of Financial Economics.</div>
     </div>
-
-    <!-- MODULE 3: 3D VOL SURFACE -->
-    <div class="card">
+      </div>
+      <!-- M3 Vol Surface full-width -->
+      <div class="card">
       <div class="card-title">3 &middot; 3D Volatility Surface <span class="help-icon" title="Shows how volatility (price-swing magnitude) changes across time and rolling-window length. Higher peaks = bigger swings. Useful for spotting regime shifts and persistence of volatility.">?</span></div>
       <div class="card-body">
         <p style="font-size:12px;color:var(--text-sec);margin-bottom:10px;">X = asset, Y = rolling window (10/21/42/63/126/252 days), Z = annualized &sigma;. Click &amp; drag to rotate &middot; scroll to zoom.</p>
@@ -3527,9 +3566,100 @@ body.view-mobile .logo-icon { width: 22px !important; height: 22px !important; f
       </div>
       <div class="card-sources"><strong>Sources:</strong> Three.js r128 &middot; Hull, J.C. (2022) <em>Options, Futures &amp; Other Derivatives</em> &middot; Yahoo Finance via Cloudflare Worker.</div>
     </div>
+    </div><!-- /catab-correlation -->
 
-    <!-- MODULE 4: COX PROCESS -->
-    <div class="card">
+    <!-- ═══ TAB: RISK & VAR ═══ -->
+    <div class="pf-tab-content" id="catab-risk">
+      <!-- M7 VaR + M6 Rolling Risk side-by-side -->
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px;">
+        <div class="card">
+      <div class="card-title">7 &middot; Value at Risk (VaR) <span class="help-icon" title="VaR estimates the worst expected loss over a given period at a given confidence level. 95% 1-day VaR of $1,000 means there's a 95% chance you won't lose more than $1,000 tomorrow. We compute three ways — Historical, Parametric (normal), and Monte Carlo — because each makes different assumptions.">?</span></div>
+      <div class="card-body">
+        <p style="font-size:12px;color:var(--text-sec);margin-bottom:14px;">1-day and 10-day VaR at 95% / 99% confidence for the Primary Asset. Parametric, Historical, and Cornish-Fisher (fat-tail adjusted) methods.</p>
+        <div id="mktVarEmpty" style="text-align:center;padding:24px;color:var(--text-sec);font-size:13px;">Awaiting data.</div>
+        <div id="mktVarResults" style="display:none;">
+          <div class="table-wrap">
+            <table id="mktVarTable" style="margin-bottom:16px;"></table>
+          </div>
+          <div id="mktVarMoments" class="chart-stats" style="margin-bottom:14px;"></div>
+          <div class="chart-wrap" style="height:320px;"><canvas id="mktVarHist"></canvas></div>
+        </div>
+        <div style="margin-top:14px;background:var(--panel);border:1px solid var(--border);border-radius:4px;padding:12px 16px;">
+          <p style="font-size:12px;color:var(--text);line-height:1.7;"><strong>Parametric VaR</strong> assumes normal returns &mdash; a known weakness given empirical fat tails. <strong>Historical simulation</strong> makes no distributional assumption but is limited by sample window. The <strong>Cornish-Fisher expansion</strong> (Cornish &amp; Fisher, 1937) adjusts z-scores for skewness and excess kurtosis: <code style="background:var(--navy);color:var(--text-on-dark);padding:1px 6px;border-radius:3px;font-family:Arial;">z<sub>CF</sub> = z + (z&sup2;&minus;1)S/6 + (z&sup3;&minus;3z)K/24 &minus; (2z&sup3;&minus;5z)S&sup2;/36</code>. <strong>CVaR</strong> (Expected Shortfall) answers: <em>given that we are in the tail, what is the expected loss?</em> CVaR is coherent and sub-additive; plain VaR is not (Artzner et al., 1999).</p>
+        </div>
+      </div>
+      <div class="card-sources">
+        <strong>Sources:</strong>
+        J.P. Morgan <em>RiskMetrics Technical Document</em> (1994) &middot;
+        Rockafellar, R.T. &amp; Uryasev, S. (2000) "Optimization of Conditional Value-at-Risk," <em>J. Risk</em> &middot;
+        Cornish, E.A. &amp; Fisher, R.A. (1937) <em>Revue de l'Institut International de Statistique</em> &middot;
+        Artzner, P., Delbaen, F., Eber, J.-M. &amp; Heath, D. (1999) "Coherent Measures of Risk," <em>Mathematical Finance</em>.
+      </div>
+    </div>
+        <div class="card">
+      <div class="card-title">6 &middot; Rolling Risk Metrics <span class="help-icon" title="Risk measures computed over a moving window of trading days. Sharpe = excess return per unit of total volatility. Sortino = excess return per unit of downside-only volatility (rewards strategies that are volatile to the upside).">?</span></div>
+      <div class="card-body">
+        <p style="font-size:12px;color:var(--text-sec);margin-bottom:14px;">63-day rolling windows on primary asset. Beta computed against SPY (auto-fetched as benchmark).</p>
+        <div id="mktRollEmpty" style="text-align:center;padding:24px;color:var(--text-sec);font-size:13px;">Awaiting data.</div>
+        <div id="mktRollResults" style="display:none;">
+          <div style="background:var(--navy);color:var(--text-on-dark);padding:6px 12px;font-size:12px;font-weight:700;border-radius:4px 4px 0 0;margin-top:4px;">A &middot; Rolling Sharpe &amp; Sortino (63D)</div>
+          <div class="chart-wrap" style="height:240px;border:1px solid var(--border);border-top:none;border-radius:0 0 4px 4px;padding:10px;"><canvas id="mktRollSharpe"></canvas></div>
+          <div style="background:var(--navy);color:var(--text-on-dark);padding:6px 12px;font-size:12px;font-weight:700;border-radius:4px 4px 0 0;margin-top:14px;">B &middot; Rolling Beta vs. SPY (63D)</div>
+          <div class="chart-wrap" style="height:200px;border:1px solid var(--border);border-top:none;border-radius:0 0 4px 4px;padding:10px;"><canvas id="mktRollBeta"></canvas></div>
+          <div style="background:var(--navy);color:var(--text-on-dark);padding:6px 12px;font-size:12px;font-weight:700;border-radius:4px 4px 0 0;margin-top:14px;">C &middot; Maximum Drawdown (Underwater Curve)</div>
+          <div class="chart-wrap" style="height:200px;border:1px solid var(--border);border-top:none;border-radius:0 0 4px 4px;padding:10px;"><canvas id="mktRollDD"></canvas></div>
+        </div>
+      </div>
+      <div class="card-sources">
+        <strong>Sources:</strong>
+        Sharpe, W.F. (1966) <em>Journal of Business</em> &middot;
+        Sortino, F.A. &amp; van der Meer, R. (1991) <em>J. Portfolio Management</em> &middot;
+        Magdon-Ismail, M. &amp; Atiya, A. (2004) "Maximum Drawdown," <em>Risk Magazine</em>.
+      </div>
+    </div>
+      </div>
+      <!-- M5 Efficient Frontier full-width -->
+      <div class="card">
+      <div class="card-title">5 &middot; Efficient Frontier <span class="help-icon" title="The set of portfolios that give you the best possible expected return for a given level of risk (Markowitz, 1952). Anything below the curve is suboptimal — you could get more return for the same risk by changing your mix.">?</span></div>
+      <div class="card-body">
+        <p style="font-size:12px;color:var(--text-sec);margin-bottom:14px;">5,000 Dirichlet-random long-only portfolios. <code style="background:var(--navy);color:var(--text-on-dark);padding:1px 6px;border-radius:3px;font-family:Arial;">&mu;<sub>p</sub> = w'&mu;</code> &middot; <code style="background:var(--navy);color:var(--text-on-dark);padding:1px 6px;border-radius:3px;font-family:Arial;">&sigma;&sup2;<sub>p</sub> = w'&Sigma;w</code> &middot; <code style="background:var(--navy);color:var(--text-on-dark);padding:1px 6px;border-radius:3px;font-family:Arial;">SR = (&mu;<sub>p</sub> &minus; r<sub>f</sub>)/&sigma;<sub>p</sub></code> &middot; r<sub>f</sub> = 5.3%</p>
+        <div id="mktEffEmpty" style="text-align:center;padding:24px;color:var(--text-sec);font-size:13px;">Awaiting data (need 2+ assets).</div>
+        <div id="mktEffResults" style="display:none;">
+          <div class="chart-wrap" style="height:420px;"><canvas id="mktEffChart"></canvas></div>
+          <div class="grid-2" style="margin-top:16px;">
+            <div>
+              <div style="background:var(--navy);color:var(--text-on-dark);padding:6px 10px;font-size:12px;font-weight:700;border-radius:4px 4px 0 0;">Minimum Variance Portfolio (MVP)</div>
+              <div style="border:1px solid var(--border);border-top:none;padding:10px;border-radius:0 0 4px 4px;">
+                <div id="mktEffMVPStats" style="font-size:11px;color:var(--text-sec);margin-bottom:8px;"></div>
+                <div class="chart-wrap" style="height:180px;"><canvas id="mktEffMVPBar"></canvas></div>
+              </div>
+            </div>
+            <div>
+              <div style="background:var(--navy);color:var(--text-on-dark);padding:6px 10px;font-size:12px;font-weight:700;border-radius:4px 4px 0 0;">Maximum Sharpe Portfolio (Tangency)</div>
+              <div style="border:1px solid var(--border);border-top:none;padding:10px;border-radius:0 0 4px 4px;">
+                <div id="mktEffMSPStats" style="font-size:11px;color:var(--text-sec);margin-bottom:8px;"></div>
+                <div class="chart-wrap" style="height:180px;"><canvas id="mktEffMSPBar"></canvas></div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div style="margin-top:14px;background:var(--panel);border:1px solid var(--border);border-radius:4px;padding:12px 16px;">
+          <p style="font-size:12px;color:var(--text);line-height:1.6;"><strong>Markowitz (1952) Mean-Variance Optimization.</strong> Each dot represents a portfolio. The upper-left boundary is the <em>efficient frontier</em> &mdash; portfolios that maximize return for a given level of risk. No rational investor would hold a portfolio interior to this boundary. The <strong>tangency portfolio</strong> (max Sharpe) is the optimal risky portfolio when combined with the risk-free asset (CFA L3 Portfolio Management).</p>
+        </div>
+      </div>
+      <div class="card-sources">
+        <strong>Sources:</strong>
+        Markowitz, H. (1952) "Portfolio Selection," <em>Journal of Finance</em> &middot;
+        Sharpe, W.F. (1966) "Mutual Fund Performance," <em>Journal of Business</em> &middot;
+        CFA Institute L3 Portfolio Management curriculum.
+      </div>
+    </div>
+    </div><!-- /catab-risk -->
+
+    <!-- ═══ TAB: QUANT MODELS ═══ -->
+    <div class="pf-tab-content" id="catab-quant">
+      <!-- M4 Cox Jump Process full-width -->
+      <div class="card">
       <div class="card-title">4 &middot; Jump Detection Model <span class="help-icon" title="Identifies sudden discontinuous price moves that aren't explained by normal volatility — earnings shocks, news jumps, flash crashes. Uses a Cox doubly-stochastic Poisson process where jump intensity itself varies through time.">?</span></div>
       <div class="card-body">
         <p style="font-size:12px;color:var(--text-sec);margin-bottom:14px;">Simulates extreme return events with a stochastic jump intensity &lambda;(t) following a CIR-style diffusion: <code style="background:var(--navy);color:var(--text-on-dark);padding:1px 6px;border-radius:3px;font-family:Arial;">d&lambda; = &kappa;(&theta; &minus; &lambda;)dt + &sigma;<sub>&lambda;</sub>&radic;&lambda; dW</code></p>
@@ -3570,112 +3700,11 @@ body.view-mobile .logo-icon { width: 22px !important; height: 22px !important; f
         Cox, J.C., Ingersoll, J.E. &amp; Ross, S.A. (1985) <em>Econometrica</em>.
       </div>
     </div>
-
-    <!-- MODULE 5: EFFICIENT FRONTIER -->
-    <div class="card">
-      <div class="card-title">5 &middot; Efficient Frontier <span class="help-icon" title="The set of portfolios that give you the best possible expected return for a given level of risk (Markowitz, 1952). Anything below the curve is suboptimal — you could get more return for the same risk by changing your mix.">?</span></div>
-      <div class="card-body">
-        <p style="font-size:12px;color:var(--text-sec);margin-bottom:14px;">5,000 Dirichlet-random long-only portfolios. <code style="background:var(--navy);color:var(--text-on-dark);padding:1px 6px;border-radius:3px;font-family:Arial;">&mu;<sub>p</sub> = w'&mu;</code> &middot; <code style="background:var(--navy);color:var(--text-on-dark);padding:1px 6px;border-radius:3px;font-family:Arial;">&sigma;&sup2;<sub>p</sub> = w'&Sigma;w</code> &middot; <code style="background:var(--navy);color:var(--text-on-dark);padding:1px 6px;border-radius:3px;font-family:Arial;">SR = (&mu;<sub>p</sub> &minus; r<sub>f</sub>)/&sigma;<sub>p</sub></code> &middot; r<sub>f</sub> = 5.3%</p>
-        <div id="mktEffEmpty" style="text-align:center;padding:24px;color:var(--text-sec);font-size:13px;">Awaiting data (need 2+ assets).</div>
-        <div id="mktEffResults" style="display:none;">
-          <div class="chart-wrap" style="height:420px;"><canvas id="mktEffChart"></canvas></div>
-          <div class="grid-2" style="margin-top:16px;">
-            <div>
-              <div style="background:var(--navy);color:var(--text-on-dark);padding:6px 10px;font-size:12px;font-weight:700;border-radius:4px 4px 0 0;">Minimum Variance Portfolio (MVP)</div>
-              <div style="border:1px solid var(--border);border-top:none;padding:10px;border-radius:0 0 4px 4px;">
-                <div id="mktEffMVPStats" style="font-size:11px;color:var(--text-sec);margin-bottom:8px;"></div>
-                <div class="chart-wrap" style="height:180px;"><canvas id="mktEffMVPBar"></canvas></div>
-              </div>
-            </div>
-            <div>
-              <div style="background:var(--navy);color:var(--text-on-dark);padding:6px 10px;font-size:12px;font-weight:700;border-radius:4px 4px 0 0;">Maximum Sharpe Portfolio (Tangency)</div>
-              <div style="border:1px solid var(--border);border-top:none;padding:10px;border-radius:0 0 4px 4px;">
-                <div id="mktEffMSPStats" style="font-size:11px;color:var(--text-sec);margin-bottom:8px;"></div>
-                <div class="chart-wrap" style="height:180px;"><canvas id="mktEffMSPBar"></canvas></div>
-              </div>
-            </div>
-          </div>
-        </div>
-        <div style="margin-top:14px;background:var(--panel);border:1px solid var(--border);border-radius:4px;padding:12px 16px;">
-          <p style="font-size:12px;color:var(--text);line-height:1.6;"><strong>Markowitz (1952) Mean-Variance Optimization.</strong> Each dot represents a portfolio. The upper-left boundary is the <em>efficient frontier</em> &mdash; portfolios that maximize return for a given level of risk. No rational investor would hold a portfolio interior to this boundary. The <strong>tangency portfolio</strong> (max Sharpe) is the optimal risky portfolio when combined with the risk-free asset (CFA L3 Portfolio Management).</p>
-        </div>
-      </div>
-      <div class="card-sources">
-        <strong>Sources:</strong>
-        Markowitz, H. (1952) "Portfolio Selection," <em>Journal of Finance</em> &middot;
-        Sharpe, W.F. (1966) "Mutual Fund Performance," <em>Journal of Business</em> &middot;
-        CFA Institute L3 Portfolio Management curriculum.
-      </div>
-    </div>
-
-    <!-- MODULE 6: ROLLING RISK -->
-    <div class="card">
-      <div class="card-title">6 &middot; Rolling Risk Metrics <span class="help-icon" title="Risk measures computed over a moving window of trading days. Sharpe = excess return per unit of total volatility. Sortino = excess return per unit of downside-only volatility (rewards strategies that are volatile to the upside).">?</span></div>
-      <div class="card-body">
-        <p style="font-size:12px;color:var(--text-sec);margin-bottom:14px;">63-day rolling windows on primary asset. Beta computed against SPY (auto-fetched as benchmark).</p>
-        <div id="mktRollEmpty" style="text-align:center;padding:24px;color:var(--text-sec);font-size:13px;">Awaiting data.</div>
-        <div id="mktRollResults" style="display:none;">
-          <div style="background:var(--navy);color:var(--text-on-dark);padding:6px 12px;font-size:12px;font-weight:700;border-radius:4px 4px 0 0;margin-top:4px;">A &middot; Rolling Sharpe &amp; Sortino (63D)</div>
-          <div class="chart-wrap" style="height:240px;border:1px solid var(--border);border-top:none;border-radius:0 0 4px 4px;padding:10px;"><canvas id="mktRollSharpe"></canvas></div>
-          <div style="background:var(--navy);color:var(--text-on-dark);padding:6px 12px;font-size:12px;font-weight:700;border-radius:4px 4px 0 0;margin-top:14px;">B &middot; Rolling Beta vs. SPY (63D)</div>
-          <div class="chart-wrap" style="height:200px;border:1px solid var(--border);border-top:none;border-radius:0 0 4px 4px;padding:10px;"><canvas id="mktRollBeta"></canvas></div>
-          <div style="background:var(--navy);color:var(--text-on-dark);padding:6px 12px;font-size:12px;font-weight:700;border-radius:4px 4px 0 0;margin-top:14px;">C &middot; Maximum Drawdown (Underwater Curve)</div>
-          <div class="chart-wrap" style="height:200px;border:1px solid var(--border);border-top:none;border-radius:0 0 4px 4px;padding:10px;"><canvas id="mktRollDD"></canvas></div>
-        </div>
-      </div>
-      <div class="card-sources">
-        <strong>Sources:</strong>
-        Sharpe, W.F. (1966) <em>Journal of Business</em> &middot;
-        Sortino, F.A. &amp; van der Meer, R. (1991) <em>J. Portfolio Management</em> &middot;
-        Magdon-Ismail, M. &amp; Atiya, A. (2004) "Maximum Drawdown," <em>Risk Magazine</em>.
-      </div>
-    </div>
-
-    <!-- MODULE 7: VAR -->
-    <div class="card">
-      <div class="card-title">7 &middot; Value at Risk (VaR) <span class="help-icon" title="VaR estimates the worst expected loss over a given period at a given confidence level. 95% 1-day VaR of $1,000 means there's a 95% chance you won't lose more than $1,000 tomorrow. We compute three ways — Historical, Parametric (normal), and Monte Carlo — because each makes different assumptions.">?</span></div>
-      <div class="card-body">
-        <p style="font-size:12px;color:var(--text-sec);margin-bottom:14px;">1-day and 10-day VaR at 95% / 99% confidence for the Primary Asset. Parametric, Historical, and Cornish-Fisher (fat-tail adjusted) methods.</p>
-        <div id="mktVarEmpty" style="text-align:center;padding:24px;color:var(--text-sec);font-size:13px;">Awaiting data.</div>
-        <div id="mktVarResults" style="display:none;">
-          <div class="table-wrap">
-            <table id="mktVarTable" style="margin-bottom:16px;"></table>
-          </div>
-          <div id="mktVarMoments" class="chart-stats" style="margin-bottom:14px;"></div>
-          <div class="chart-wrap" style="height:320px;"><canvas id="mktVarHist"></canvas></div>
-        </div>
-        <div style="margin-top:14px;background:var(--panel);border:1px solid var(--border);border-radius:4px;padding:12px 16px;">
-          <p style="font-size:12px;color:var(--text);line-height:1.7;"><strong>Parametric VaR</strong> assumes normal returns &mdash; a known weakness given empirical fat tails. <strong>Historical simulation</strong> makes no distributional assumption but is limited by sample window. The <strong>Cornish-Fisher expansion</strong> (Cornish &amp; Fisher, 1937) adjusts z-scores for skewness and excess kurtosis: <code style="background:var(--navy);color:var(--text-on-dark);padding:1px 6px;border-radius:3px;font-family:Arial;">z<sub>CF</sub> = z + (z&sup2;&minus;1)S/6 + (z&sup3;&minus;3z)K/24 &minus; (2z&sup3;&minus;5z)S&sup2;/36</code>. <strong>CVaR</strong> (Expected Shortfall) answers: <em>given that we are in the tail, what is the expected loss?</em> CVaR is coherent and sub-additive; plain VaR is not (Artzner et al., 1999).</p>
-        </div>
-      </div>
-      <div class="card-sources">
-        <strong>Sources:</strong>
-        J.P. Morgan <em>RiskMetrics Technical Document</em> (1994) &middot;
-        Rockafellar, R.T. &amp; Uryasev, S. (2000) "Optimization of Conditional Value-at-Risk," <em>J. Risk</em> &middot;
-        Cornish, E.A. &amp; Fisher, R.A. (1937) <em>Revue de l'Institut International de Statistique</em> &middot;
-        Artzner, P., Delbaen, F., Eber, J.-M. &amp; Heath, D. (1999) "Coherent Measures of Risk," <em>Mathematical Finance</em>.
-      </div>
-    </div>
-
-    <!-- MODULE 8: CROSS-ASSET REGIME -->
-    <div class="card">
-      <div class="card-title">8 &middot; Cross-Asset Regime Signals <span class="help-icon" title="Tracks key cross-market relationships that historically signal regime shifts. Copper/Gold ratio rising = growth dominant. Yield curve inversion = recession signal. HY credit spreads widening = risk-off.">?</span></div>
-      <div class="card-body">
-        <p style="font-size:12px;color:var(--text-sec);margin-bottom:14px;">Six intermarket ratios with 20D SMA overlay. Green shading = ratio above SMA (risk-on); red shading = below (risk-off). Grounded in CFA Business Cycle framework and classical intermarket analysis.</p>
-        <div id="mktRegimeEmpty" style="text-align:center;padding:24px;color:var(--text-sec);font-size:13px;">Loads independently of universe selection. <button class="btn btn-sm" onclick="mktLoadRegime()" style="margin-left:10px;">Load Regime Signals</button></div>
-        <div id="mktRegimeGrid" style="display:none;"></div>
-      </div>
-      <div class="card-sources">
-        <strong>Sources:</strong>
-        Murphy, J.J. (1991) <em>Intermarket Analysis</em>, John Wiley &amp; Sons &middot;
-        CFA Institute Business Cycle framework (L1-L3) &middot;
-        Perry Asset Management Macro HF Economic Analysis Framework v1.0 &middot;
-        Price data via Cloudflare Worker / Yahoo Finance.
-      </div>
-    </div>
+    </div><!-- /catab-quant -->
 
   </div>
 </div>
+
 
 <!-- ═══════════ COMMAND PALETTE ═══════════ -->
 <div class="cmdk-overlay" id="cmdkOverlay" onclick="if(event.target===this)closeCmdK()">
@@ -4767,10 +4796,17 @@ function navigateTo(p) {
     setTimeout(function(){ if (typeof briefingLoad === 'function') briefingLoad(); }, 100);
   }
   if (p === 'resources' && typeof resourcesInit === 'function') resourcesInit();
-  if (p === 'markets' && typeof mktInit === 'function' && !window._mktInitialized) { mktInit(); window._mktInitialized = true; }
-  if (p === 'markets' && typeof psLoadDiagnostic === 'function') {
-    psRenderFrameworkGrid && psRenderFrameworkGrid(null); // show framework grid immediately
-    if (!window._psLoaded) { psLoadDiagnostic(); psLoadFib(); window._psLoaded = true; }
+  if (p === 'markets') {
+    // Always show regime tab first on page visit
+    if (typeof caShowTab === 'function') caShowTab('regime');
+    if (typeof psRenderFrameworkGrid === 'function') psRenderFrameworkGrid(null);
+    if (!window._psLoaded && typeof psLoadDiagnostic === 'function') {
+      psLoadDiagnostic(); psLoadFib(); window._psLoaded = true;
+    }
+    if (!window._snapshotLoaded) {
+      window._snapshotLoaded = true;
+      setTimeout(snapshotLoad, 100);
+    }
   }
   if (p === 'quant' && typeof quantInit === 'function' && !window._quantInitialized) { quantInit(); window._quantInitialized = true; }
 }
@@ -15854,25 +15890,27 @@ window.mktLoadFearGreed = async function() {
     ];
     var composite = signals.reduce(function(s, sg) { return s + sg.score; }, 0) / signals.length;
     var compLabel, compColor;
+    // Brand palette: navy=extreme fear, blue=fear, warning=neutral, danger shades=greed
     if (composite >= 75) { compLabel = 'Extreme Greed'; compColor = '#8B2A2A'; }
-    else if (composite >= 60) { compLabel = 'Greed'; compColor = '#C84B31'; }
-    else if (composite >= 45) { compLabel = 'Neutral'; compColor = '#8B6914'; }
-    else if (composite >= 25) { compLabel = 'Fear'; compColor = '#2E7D52'; }
+    else if (composite >= 60) { compLabel = 'Greed'; compColor = '#8B6914'; }
+    else if (composite >= 45) { compLabel = 'Neutral'; compColor = '#5A6A7A'; }
+    else if (composite >= 25) { compLabel = 'Fear'; compColor = '#5B9BD5'; }
     else { compLabel = 'Extreme Fear'; compColor = '#003C71'; }
 
     // Gauge HTML
     var gaugeAngle = ((composite / 100) * 180) - 90; // -90 to +90 degrees
-    var html = '<div style="display:flex;flex-wrap:wrap;gap:20px;align-items:flex-start;">';
+    var html = '<div style="display:flex;flex-wrap:wrap;gap:20px;align-items:flex-start;font-family:Arial,Helvetica,sans-serif;">';
     // Gauge
     html += '<div style="text-align:center;min-width:180px;">';
     html += '<svg viewBox="0 0 200 120" width="180" height="110" style="overflow:visible;">';
     // Background arc
     html += '<path d="M 20 100 A 80 80 0 0 1 180 100" stroke="#eee" stroke-width="16" fill="none" stroke-linecap="round"/>';
     // Colored arcs
-    html += '<path d="M 20 100 A 80 80 0 0 1 60 30" stroke="#003C71" stroke-width="16" fill="none" stroke-linecap="round" opacity="0.8"/>';
-    html += '<path d="M 60 30 A 80 80 0 0 1 100 20" stroke="#2E7D52" stroke-width="16" fill="none" stroke-linecap="round" opacity="0.8"/>';
-    html += '<path d="M 100 20 A 80 80 0 0 1 140 30" stroke="#8B6914" stroke-width="16" fill="none" stroke-linecap="round" opacity="0.8"/>';
-    html += '<path d="M 140 30 A 80 80 0 0 1 180 100" stroke="#C84B31" stroke-width="16" fill="none" stroke-linecap="round" opacity="0.8"/>';
+    // Brand arc colors: navy (extreme fear) → blue (fear) → gray (neutral) → warning (greed) → danger (extreme greed)
+    html += '<path d="M 20 100 A 80 80 0 0 1 60 30" stroke="#003C71" stroke-width="16" fill="none" stroke-linecap="round" opacity="0.9"/>';
+    html += '<path d="M 60 30 A 80 80 0 0 1 100 20" stroke="#5B9BD5" stroke-width="16" fill="none" stroke-linecap="round" opacity="0.9"/>';
+    html += '<path d="M 100 20 A 80 80 0 0 1 140 30" stroke="#8B6914" stroke-width="16" fill="none" stroke-linecap="round" opacity="0.9"/>';
+    html += '<path d="M 140 30 A 80 80 0 0 1 180 100" stroke="#8B2A2A" stroke-width="16" fill="none" stroke-linecap="round" opacity="0.9"/>';
     // Needle
     var needleRad = (gaugeAngle - 90) * Math.PI / 180;
     var nx = 100 + 70 * Math.cos(needleRad); var ny = 100 + 70 * Math.sin(needleRad);
@@ -15885,10 +15923,10 @@ window.mktLoadFearGreed = async function() {
     html += '</div>';
     // Signal breakdown
     html += '<div style="flex:1;min-width:240px;">';
-    html += '<div style="font-size:11px;font-weight:700;color:var(--navy);margin-bottom:8px;text-transform:uppercase;letter-spacing:.4px;">Signal Breakdown</div>';
+    html += '<div style="font-size:11px;font-weight:700;color:#003C71;margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px;font-family:Arial,sans-serif;">Signal Breakdown</div>';
     signals.forEach(function(sg) {
       var sc = sg.score;
-      var barColor = sc >= 75 ? '#C84B31' : sc >= 60 ? '#F18F01' : sc >= 45 ? '#8B6914' : sc >= 25 ? '#2E7D52' : '#003C71';
+      var barColor = sc >= 75 ? '#8B2A2A' : sc >= 60 ? '#8B6914' : sc >= 45 ? '#5A6A7A' : sc >= 25 ? '#5B9BD5' : '#003C71';
       html += '<div style="display:flex;align-items:center;gap:8px;margin-bottom:7px;">';
       html += '<span style="font-size:14px;">' + sg.icon + '</span>';
       html += '<div style="flex:1;min-width:0;">';
@@ -15953,29 +15991,37 @@ window.mktLoadReturnHeatmap = async function() {
       return { label: a.l, ticker: a.t, rets: rets, ytd: ytdVal };
     }).sort(function(a, b) { return (b.ytd || -999) - (a.ytd || -999); }); // sort by YTD desc
 
+    // Brand-compliant heat colors: success green -> white -> danger red
+    // Matte, no neon/saturation
     function heatColor(v) {
-      if (v == null) return 'background:#f0f0f0;color:#999;';
-      const abs = Math.abs(v);
+      if (v == null) return 'background:#F4F6F9;color:#5A6A7A;';
+      var abs = Math.abs(v);
       if (v > 0) {
-        const intensity = Math.min(abs / 25, 1);
-        const g = Math.round(100 + (55 * intensity));
-        const rb = Math.round(255 - (160 * intensity));
-        return 'background:rgb(' + rb + ',' + g + ',' + rb + ');color:' + (intensity > 0.5 ? '#fff' : '#1A2733') + ';';
+        // Positive: white -> muted green (#2E7D52)
+        var t = Math.min(abs / 20, 1);
+        var r = Math.round(255 - t * (255 - 46));
+        var g = Math.round(255 - t * (255 - 125));
+        var b = Math.round(255 - t * (255 - 82));
+        var textCol = t > 0.55 ? '#FFFFFF' : '#000000';
+        return 'background:rgb(' + r + ',' + g + ',' + b + ');color:' + textCol + ';';
       } else {
-        const intensity = Math.min(abs / 25, 1);
-        const r = Math.round(200 + (55 * intensity));
-        const gb = Math.round(255 - (180 * intensity));
-        return 'background:rgb(' + r + ',' + gb + ',' + gb + ');color:' + (intensity > 0.5 ? '#fff' : '#1A2733') + ';';
+        // Negative: white -> muted danger (#8B2A2A)
+        var t2 = Math.min(abs / 20, 1);
+        var r2 = Math.round(255 - t2 * (255 - 139));
+        var g2 = Math.round(255 - t2 * (255 - 42));
+        var b2 = Math.round(255 - t2 * (255 - 42));
+        var textCol2 = t2 > 0.55 ? '#FFFFFF' : '#000000';
+        return 'background:rgb(' + r2 + ',' + g2 + ',' + b2 + ');color:' + textCol2 + ';';
       }
     }
     var html = '<div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;font-size:12px;">';
-    html += '<thead><tr style="background:var(--navy);color:#fff;">';
-    html += '<th style="padding:8px 10px;text-align:left;position:sticky;left:0;background:var(--navy);">Asset Class</th>';
-    periods.forEach(function(p) { html += '<th style="padding:8px 10px;text-align:center;">' + p.l + '</th>'; });
+    html += '<thead><tr style="background:#003C71;color:#FFFFFF;font-family:Arial,sans-serif;">';
+    html += '<th style="padding:9px 10px;text-align:left;position:sticky;left:0;background:#003C71;font-size:12px;font-weight:600;">Asset Class</th>';
+    periods.forEach(function(p) { html += '<th style="padding:9px 10px;text-align:center;font-size:12px;font-weight:600;">' + p.l + '</th>'; });
     html += '</tr></thead><tbody>';
     rows.forEach(function(row, ri) {
       html += '<tr style="border-bottom:1px solid var(--border-light,#E5E9EF);">';
-      html += '<td style="padding:7px 10px;font-weight:700;white-space:nowrap;position:sticky;left:0;background:var(--bg);color:var(--navy);">' + row.label + '</td>';
+      html += '<td style="padding:7px 10px;font-weight:700;white-space:nowrap;position:sticky;left:0;background:#FFFFFF;color:#003C71;font-family:Arial,sans-serif;font-size:12px;">' + row.label + '</td>';
       row.rets.forEach(function(v) {
         html += '<td style="padding:6px 8px;text-align:center;font-family:Courier New,monospace;font-weight:700;' + heatColor(v) + '">';
         html += v != null ? (v >= 0 ? '+' : '') + v.toFixed(1) + '%' : '—';
@@ -15984,7 +16030,7 @@ window.mktLoadReturnHeatmap = async function() {
       html += '</tr>';
     });
     html += '</tbody></table></div>';
-    html += '<div style="font-size:10.5px;color:var(--text-sec);margin-top:8px;">Green = positive return, Red = negative. Sorted by YTD return (best to worst).</div>';
+    html += '<div style="font-size:11px;color:#5A6A7A;margin-top:8px;font-family:Arial,sans-serif;">Green = positive return, Red = negative. Sorted by YTD return (best to worst). Intensity scales with magnitude (20% = full saturation).</div>';
     el.innerHTML = html;
   } catch(e) {
     el.innerHTML = '<span style="color:var(--danger);">Error: ' + e.message + '</span>';
@@ -16053,13 +16099,14 @@ window.mktRunLeadLag = async function() {
       type: 'bar',
       data: {
         labels: lags,
+        // Brand palette for CCF bars
         datasets: [
           { label: 'Cross-Correlation', data: ccf, backgroundColor: ccf.map(function(v, i) {
-            if (lags[i] === peakLag) return 'rgba(0,60,113,0.9)';
-            return v > ciLine ? 'rgba(46,125,82,0.6)' : v < -ciLine ? 'rgba(139,42,42,0.6)' : 'rgba(170,170,170,0.5)';
+            if (lags[i] === peakLag) return '#003C71';
+            return v > ciLine ? 'rgba(46,125,82,0.65)' : v < -ciLine ? 'rgba(139,42,42,0.65)' : '#A8C8E8';
           }), borderColor: 'transparent', borderRadius: 2 },
-          { label: '95% CI +', data: new Array(lags.length).fill(ciLine), type: 'line', borderColor: 'rgba(139,42,42,0.4)', borderDash: [4,3], borderWidth: 1.5, pointRadius: 0, fill: false },
-          { label: '95% CI −', data: new Array(lags.length).fill(-ciLine), type: 'line', borderColor: 'rgba(139,42,42,0.4)', borderDash: [4,3], borderWidth: 1.5, pointRadius: 0, fill: false }
+          { label: '95% CI +', data: new Array(lags.length).fill(ciLine), type: 'line', borderColor: '#8B6914', borderDash: [4,3], borderWidth: 1.5, pointRadius: 0, fill: false },
+          { label: '95% CI −', data: new Array(lags.length).fill(-ciLine), type: 'line', borderColor: '#8B6914', borderDash: [4,3], borderWidth: 1.5, pointRadius: 0, fill: false }
         ]
       },
       options: {
@@ -16130,37 +16177,92 @@ window.mktLoadSectorMomentum = async function() {
       r.compRank = rankCols.length > 0 ? rankCols.reduce(function(s,k){ return s+r['rank_'+k]; }, 0) / rankCols.length : 99;
     });
     rows.sort(function(a,b){ return a.compRank - b.compRank; });
+    // Brand-compliant momentum cell colors
     function fmtR(v, rank) {
-      if (v==null) return '<td style="text-align:right;color:var(--text-sec);">—</td>';
-      var col = v>=0?'var(--success)':'var(--danger)';
-      var bg = rank===1?'rgba(46,125,82,0.12)':rank<=3?'rgba(46,125,82,0.06)':rank>=SECTOR_ETFS.length-1?'rgba(139,42,42,0.08)':'';
+      if (v==null) return '<td style="text-align:right;color:#5A6A7A;font-size:11.5px;padding:7px 8px;">—</td>';
+      var col = v>=0?'#2E7D52':'#8B2A2A';
+      var bg = rank===1?'rgba(46,125,82,0.12)':rank<=3?'rgba(46,125,82,0.05)':rank>=SECTOR_ETFS.length-1?'rgba(139,42,42,0.08)':'transparent';
       return '<td style="text-align:right;font-family:Courier New,monospace;font-size:11.5px;font-weight:700;color:'+col+';background:'+bg+';padding:7px 8px;">'+(v>=0?'+':'')+v.toFixed(1)+'%</td>';
     }
     var html = '<div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;font-size:12px;">';
-    html += '<thead><tr style="background:var(--navy);color:#fff;">';
-    html += '<th style="padding:8px;text-align:left;">Rank</th>';
-    html += '<th style="padding:8px;text-align:left;">Sector (ETF)</th>';
-    html += '<th style="padding:8px;text-align:right;">1M</th><th style="padding:8px;text-align:right;">3M</th><th style="padding:8px;text-align:right;">6M</th><th style="padding:8px;text-align:right;">1Y</th><th style="padding:8px;text-align:right;">YTD</th><th style="padding:8px;text-align:right;">1M vs SPY</th></tr></thead><tbody>';
+    html += '<thead><tr style="background:#003C71;color:#FFFFFF;font-family:Arial,sans-serif;">';
+    html += '<th style="padding:9px 10px;text-align:left;font-size:12px;font-weight:600;">Rank</th>';
+    html += '<th style="padding:9px 10px;text-align:left;font-size:12px;font-weight:600;">Sector (ETF)</th>';
+    html += '<th style="padding:9px 10px;text-align:right;font-size:12px;font-weight:600;">1M</th>';
+    html += '<th style="padding:9px 10px;text-align:right;font-size:12px;font-weight:600;">3M</th>';
+    html += '<th style="padding:9px 10px;text-align:right;font-size:12px;font-weight:600;">6M</th>';
+    html += '<th style="padding:9px 10px;text-align:right;font-size:12px;font-weight:600;">1Y</th>';
+    html += '<th style="padding:9px 10px;text-align:right;font-size:12px;font-weight:600;">YTD</th>';
+    html += '<th style="padding:9px 10px;text-align:right;font-size:12px;font-weight:600;">1M vs SPY</th></tr></thead><tbody>';
     rows.forEach(function(r, i) {
-      var medal = i===0?'🥇 ':i===1?'🥈 ':i===2?'🥉 ':i>=SECTOR_ETFS.length-2?'⚠️ ':'';
-      var rowBg = i < 3 ? 'background:rgba(46,125,82,0.04);' : i >= SECTOR_ETFS.length-2 ? 'background:rgba(139,42,42,0.04);' : '';
+      var medal = i===0?'▲ ':i===1?'▲ ':i===2?'▲ ':i>=SECTOR_ETFS.length-2?'▼ ':'  ';
+      var rowBg = i < 3 ? 'background:rgba(91,155,213,0.06);' : i >= SECTOR_ETFS.length-2 ? 'background:rgba(139,42,42,0.04);' : '';
       html += '<tr style="border-bottom:1px solid var(--border-light);'+rowBg+'">';
-      html += '<td style="padding:7px 8px;font-weight:700;color:var(--navy);">' + medal + '#' + (i+1) + '</td>';
-      html += '<td style="padding:7px 8px;font-weight:700;">' + r.sector + ' <span style="font-size:10px;color:var(--text-sec);">(' + r.ticker + ')</span></td>';
+      var medalColor = i < 3 ? '#003C71' : i >= SECTOR_ETFS.length-2 ? '#8B2A2A' : '#5A6A7A';
+      html += '<td style="padding:7px 8px;font-weight:700;color:' + medalColor + ';font-family:Arial,sans-serif;">' + medal + '#' + (i+1) + '</td>';
+      html += '<td style="padding:7px 8px;font-weight:700;font-family:Arial,sans-serif;color:#000000;">' + r.sector + ' <span style="font-size:10px;color:#5A6A7A;">(' + r.ticker + ')</span></td>';
       html += fmtR(r.r1m, r.rank_r1m);
       html += fmtR(r.r3m, r.rank_r3m);
       html += fmtR(r.r6m, r.rank_r6m);
       html += fmtR(r.r12m, r.rank_r12m);
       html += fmtR(r.ytd, null);
-      var rsBg = r.rs1m==null?'':r.rs1m>0?'rgba(46,125,82,0.1)':'rgba(139,42,42,0.1)';
-      html += '<td style="text-align:right;font-family:Courier New,monospace;font-size:11.5px;font-weight:700;color:'+(r.rs1m==null?'var(--text-sec)':r.rs1m>=0?'var(--success)':'var(--danger)')+';background:'+rsBg+';padding:7px 8px;">';
+      var rsBg = r.rs1m==null?'':r.rs1m>0?'rgba(91,155,213,0.12)':'rgba(139,42,42,0.08)';
+      html += '<td style="text-align:right;font-family:Courier New,monospace;font-size:11.5px;font-weight:700;color:'+(r.rs1m==null?'#5A6A7A':r.rs1m>=0?'#2E7D52':'#8B2A2A')+';background:'+rsBg+';padding:7px 8px;">';
       html += r.rs1m!=null?(r.rs1m>=0?'+':'')+r.rs1m.toFixed(1)+'%':'—';
       html += '</td></tr>';
     });
     html += '</tbody></table></div>';
-    html += '<div style="font-size:10.5px;color:var(--text-sec);margin-top:6px;">Composite rank = average of 1M, 3M, 6M, 1Y ranks. 🥇🥈🥉 = momentum leaders. ⚠️ = laggards. Green shading = top 3 in period.</div>';
+    html += '<div style="font-size:11px;color:#5A6A7A;margin-top:6px;font-family:Arial,sans-serif;">▲ = Momentum leaders (top 3) &nbsp;&bull;&nbsp; ▼ = Laggards (bottom 2) &nbsp;&bull;&nbsp; Composite rank = average of 1M, 3M, 6M, 1Y ranks. Blue shading = top 3 in that period.</div>';
     el.innerHTML = html;
   } catch(e) { el.innerHTML = '<span style="color:var(--danger);">Error: ' + e.message + '</span>'; }
+};
+
+// ═══════════════════════════════════════════════════
+// ════  CROSS-ASSET TAB CONTROLLER  ══════════════════
+// ═══════════════════════════════════════════════════
+window._caTabInit = {};
+
+window.caShowTab = function(name) {
+  // Update tab buttons
+  document.querySelectorAll('[data-catab]').forEach(function(b) {
+    b.classList.toggle('active', b.dataset.catab === name);
+  });
+  // Update tab content panels
+  document.querySelectorAll('#page-markets .pf-tab-content').forEach(function(c) {
+    c.classList.toggle('active', c.id === 'catab-' + name);
+  });
+
+  // Lazy-load tab content on first activation
+  if (!window._caTabInit[name]) {
+    window._caTabInit[name] = true;
+    if (name === 'universe') {
+      // Universe tab: init on first visit
+      if (!window._mktInitialized && typeof mktInit === 'function') {
+        mktInit(); window._mktInitialized = true;
+      }
+      // Set today as end date default if not set
+      var endEl = document.getElementById('mktEndDate');
+      if (endEl && !endEl.value) {
+        endEl.value = new Date().toISOString().slice(0, 10);
+      }
+    }
+    if (name === 'breadth') {
+      // Auto-run sector momentum and heatmap on first visit
+      setTimeout(function() {
+        if (typeof mktLoadSectorMomentum === 'function') mktLoadSectorMomentum();
+        if (typeof mktLoadReturnHeatmap === 'function') mktLoadReturnHeatmap();
+      }, 150);
+    }
+    if (name === 'regime') {
+      // Regime tab: ensure portfolio state is loaded
+      if (!window._psLoaded && typeof psLoadDiagnostic === 'function') {
+        psLoadDiagnostic(); window._psLoaded = true;
+      }
+      if (typeof psLoadFib === 'function' && !window._caFibLoaded) {
+        window._caFibLoaded = true; psLoadFib();
+      }
+    }
+  }
 };
 
 // Auto-load snapshot when Markets page becomes active
@@ -16170,9 +16272,13 @@ window.mktLoadSectorMomentum = async function() {
     if (typeof orig === 'function') {
       window.navigateTo = function(p) {
         orig(p);
-        if (p === 'markets' && !window._snapshotLoaded) {
-          window._snapshotLoaded = true;
-          setTimeout(snapshotLoad, 100);
+        if (p === 'markets') {
+          // Always reset to Regime tab when entering markets page
+          if (typeof caShowTab === 'function') caShowTab('regime');
+          if (!window._snapshotLoaded) {
+            window._snapshotLoaded = true;
+            setTimeout(snapshotLoad, 100);
+          }
         }
         if (p === 'holdings' && window._holdings && window._holdings.length) {
           setTimeout(driftRender, 200);
