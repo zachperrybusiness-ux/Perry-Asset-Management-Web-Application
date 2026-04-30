@@ -2402,7 +2402,10 @@ body.view-mobile .logo-icon { width: 22px !important; height: 22px !important; f
           <div class="risk-kpi" title="Active Share — % of portfolio that differs from SPY by holding/weight. 0% = identical to SPY, 100% = entirely different."><div class="risk-kpi-label">Active Share</div><div class="risk-kpi-value" id="kpiActShare">—</div><div class="risk-kpi-sub">vs. SPY</div></div>
         </div>
         <div class="card">
-          <div class="card-title">Top Contributors to Total Risk (Marginal VaR) <span class="help-icon" title="Marginal VaR shows how much each position contributes to total portfolio risk. Reducing a high-MVaR position cuts risk most. Computed from each position's beta to the portfolio × position weight × portfolio σ.">?</span></div>
+          <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;">
+            <span>Top Contributors to Total Risk (Marginal VaR) <span class="help-icon" title="Marginal VaR shows how much each position contributes to total portfolio risk. Reducing a high-MVaR position cuts risk most. Computed from each position's beta to the portfolio × position weight × portfolio σ.">?</span></span>
+            <button class="btn-light-sm" onclick="window._pfRiskRun=false;pfRenderRisk();">Refresh</button>
+          </div>
           <div class="card-body">
             <div id="mvarTable" style="text-align:center;padding:18px;color:var(--text-sec);">Loading risk decomposition…</div>
           </div>
@@ -2411,7 +2414,10 @@ body.view-mobile .logo-icon { width: 22px !important; height: 22px !important; f
         <div class="card">
           <div class="card-title">Factor-Based Risk Decomposition <span class="help-icon" title="Breaks portfolio risk into systematic factor exposures (Fama-French 5 + Momentum) vs. idiosyncratic. Higher idiosyncratic % = more concentration risk; higher factor risk = more market-beta dependency.">?</span></div>
           <div class="card-body">
-            <div id="factorRiskBox" style="padding:14px;text-align:center;color:var(--text-sec);font-size:13px;">Loaded from Factor Exposure analysis above. Run <strong>Update</strong> on the Snapshot tab's Factor Exposure card if blank.</div>
+            <div id="factorRiskBox" style="padding:14px;text-align:center;color:var(--text-sec);font-size:13px;">
+            <span class="spinner"></span> Loading factor risk…
+            <script>setTimeout(function(){ if(typeof ffRunAnalysis==='function' && !window._ffAutoRan && window._holdings && window._holdings.length){ window._ffAutoRan=true; ffRunAnalysis(); } }, 500);</script>
+          </div>
           </div>
         </div>
       </div>
@@ -4765,16 +4771,19 @@ window.sortTable_portfolio = function(key) {
 window.pfFilterHoldings = function(filterType, filterValue) {
   const h = window._holdings || [];
   const af = document.getElementById('portfolioAccountFilter')?.value || 'all';
-  let fh = af === 'all' ? h : h.filter(x => (x.accountType || 'Individual') === af);
-  if (filterType && filterValue && filterValue !== 'all') {
-    fh = fh.filter(x => (x[filterType] || '') === filterValue);
-  }
+  // Always compute TV from ALL holdings (unfiltered) for correct weight percentages
   function mvOf(hh) {
     const isCash = hh.assetClass === 'Cash' || hh.assetClass === 'Money Market' || hh.assetClass === 'CD' || hh.assetClass === 'Bond Position';
     return isCash ? (hh.costBasis || 0) * hh.quantity : (hh.currentPrice || 0) * hh.quantity;
   }
-  const tv = fh.reduce((s, x) => s + mvOf(x), 0);
-  renderPortfolioTable(fh, tv);
+  const allFiltered = af === 'all' ? h : h.filter(x => (x.accountType || 'Individual') === af);
+  const tvAll = allFiltered.reduce((s, x) => s + mvOf(x), 0);
+  // Now filter by sector/assetClass for display
+  let fh = allFiltered;
+  if (filterType && filterValue && filterValue !== 'all') {
+    fh = allFiltered.filter(x => (x[filterType] || '') === filterValue);
+  }
+  renderPortfolioTable(fh, tvAll); // use total portfolio TV for weight %
 };
 
 window.filterHoldingsByAccount = function() {
@@ -4911,6 +4920,9 @@ async function renderPortfolioOverview() {
   window._pfBrinsonRun = false;
   window._pfRiskRun = false;
   window._pfCharRun = false;
+  // Do NOT reset _themesCmpInit — picker state should persist
+  // But reset the comparison run flag so it re-runs on next visit
+  window._themesCmpRan = false;
 
   // Apply account filter
   const af = document.getElementById('portfolioAccountFilter')?.value || 'all';
@@ -5621,12 +5633,29 @@ window.renderPortfolioChart = async function() {
         const pm = {};
         pts.forEach(p => { pm[p.date.slice(0, 10)] = p.close; if (i === 0 && p.volume) _pfVolume[p.date.slice(0,10)] = p.volume; });
         _chartBenchmarkSeries[sym] = pm;
+        // Add benchmark on right axis (raw price) AND rebased on left axis
         ds.push({
           label: sym, data: cd.map(d => pm[d] != null ? pm[d] : null),
           borderColor: cc2[i], borderWidth: 2, pointRadius: 1, pointHoverRadius: 5,
           pointBackgroundColor: cc2[i], pointHoverBackgroundColor: cc2[i],
           fill: false, tension: .3, spanGaps: true, yAxisID: 'y1'
         });
+        // Rebased benchmark for direct visual comparison on left axis
+        const bmValidIdx = cd.findIndex(d => pm[d] != null);
+        if (bmValidIdx >= 0) {
+          const bmStartPrice = pm[cd[bmValidIdx]];
+          const bmStartPortVal = cv[bmValidIdx] || cv[pfFirstNonNullIdx];
+          if (bmStartPrice && bmStartPortVal) {
+            const rebasedBM = cd.map(d => pm[d] != null ? pm[d] / bmStartPrice * bmStartPortVal : null);
+            ds.push({
+              label: sym + ' (rebased)', data: rebasedBM,
+              borderColor: cc2[i], borderWidth: 1.5, borderDash: [5,3],
+              pointRadius: 0, fill: false, tension: .3, spanGaps: true, yAxisID: 'y',
+              pointHoverRadius: 4,
+              backgroundColor: 'transparent'
+            });
+          }
+        }
       }
     } catch(e) {}
   }
@@ -5683,12 +5712,9 @@ window.renderPortfolioChart = async function() {
   // ─────────────────────────────────────────────────────────────────────
   var mcRegimeSel = document.getElementById('mcRegimeSelect');
   var mcRegime = mcRegimeSel ? mcRegimeSel.value : '';
-  console.log('[MC forecast] dropdown value =', mcRegime);
   if (mcRegime && typeof pfrComputeRegimeDrifts === 'function') {
     try {
-      console.log('[MC forecast] starting projection for regime:', mcRegime);
       var regimeDrifts = await pfrComputeRegimeDrifts();
-      console.log('[MC forecast] regime drifts:', regimeDrifts);
       var mcDailyDrift = regimeDrifts[mcRegime] || regimeDrifts.growth || 0.0003;
       var mcDailyVolByState = { leveraged: 0.022, growth: 0.011, neutral: 0.014, drawdown: 0.025 };
       var mcDailyVol = mcDailyVolByState[mcRegime] || 0.014;
@@ -5829,9 +5855,7 @@ window.renderPortfolioChart = async function() {
         annDrift: (Math.pow(1+portDrift, 252)-1)*100,
         annVol: portVol*Math.sqrt(252)*100
       };
-      console.log('[MC forecast] success — extended chart by', nForecast, 'trading days. P50 end:', p50Path[p50Path.length-1].toFixed(0));
     } catch(mcErr) {
-      console.error('[MC forecast] FAILED:', mcErr);
       window._mcForecast = null;
     }
   } else {
@@ -5912,7 +5936,13 @@ window.renderPortfolioChart = async function() {
         legend: {
           display: hb,
           labels: { font: { family: 'Arial', size: 11 }, color: C.textSec, boxWidth: 10, padding: 16,
-            filter: function(item) { return item.text !== 'Volume'; }
+            filter: function(item) {
+              var t = item.text || '';
+              if (t === 'Volume') return false;
+              if (t.indexOf('Forecast P10') >= 0 || t.indexOf('Forecast P90') >= 0) return false;
+              if (t.indexOf('(rebased)') >= 0) return false; // hide rebased version; price-axis version shows in legend
+              return true;
+            }
           }
         },
         tooltip: {
@@ -5927,8 +5957,11 @@ window.renderPortfolioChart = async function() {
             title: function(items) { return items[0]?.label || ''; },
             label: function(c) {
               const v = c.parsed.y;
-              if (v == null) return null;
-              return c.dataset.yAxisID === 'y' ? ' Portfolio: ' + fmt(v) : ' ' + c.dataset.label + ': ' + fmt(v);
+              if (v == null || c.dataset.label === 'Volume') return null;
+              const label = c.dataset.label || '';
+              if (c.dataset.yAxisID === 'y1') return ' ' + label + ': $' + (v != null ? v.toFixed(2) : '—');
+              if (label.indexOf('Forecast') >= 0) return ' ' + label + ': ' + fmt(v);
+              return ' ' + label + ': ' + fmt(v);
             },
             afterBody: function(items) {
               const idx = items[0]?.dataIndex;
@@ -5986,10 +6019,11 @@ window.renderPortfolioChart = async function() {
               ci.forEach(sym => {
                 const pm = _chartBenchmarkSeries[sym];
                 if (!pm) return;
-                const bd = Object.keys(pm).sort();
-                if (bd.length < 2) return;
-                const bf = pm[bd[0]], ba = pm[cd[idx]];
-                if (bf > 0 && ba != null) lines.push('  ' + sym + ': ' + fmtPct(((ba - bf) / bf) * 100));
+                // Find first & current price for this benchmark
+                let bf = null;
+                for (var bdi = pfFirstNonNullIdx; bdi < cd.length; bdi++) { if (pm[cd[bdi]] != null) { bf = pm[cd[bdi]]; break; } }
+                var ba = pm[cd[idx]];
+                if (bf != null && bf > 0 && ba != null) lines.push('  ' + sym + ': ' + fmtPct(((ba - bf) / bf) * 100));
               });
               return lines;
             }
@@ -6008,7 +6042,7 @@ window.renderPortfolioChart = async function() {
           type: 'linear', position: 'left', grid: chartGrid,
           ticks: { ...chartTicks, callback: function(v) { return '$' + (v >= 1e6 ? (v/1e6).toFixed(1)+'M' : v >= 1e3 ? (v/1e3).toFixed(0)+'K' : v.toFixed(0)); } },
           border: { display: false },
-          title: { display: true, text: 'Portfolio Value ($)', font: { family: 'Arial', size: 12, weight: '600' }, color: C.textSec }
+          title: { display: true, text: (typeof window !== 'undefined' && window._twrModeOnly) ? 'Time-Weighted Return (indexed)' : 'Portfolio Value ($)', font: { family: 'Arial', size: 12, weight: '600' }, color: C.textSec }
         },
         y1: {
           type: 'linear', position: 'right', display: hb,
@@ -13223,8 +13257,21 @@ async function buildRecommendedStateSeries(rangeKey) {
     neutral:   { GLD: 0.2, XLU: 0.15, XLP: 0.15, EFA: 0.1, IEF: 0.1, CASH: 0.3 },
     drawdown:  { SHV: 0.45, TLT: 0.2, GLD: 0.05, CASH: 0.3 }
   };
+  // Load quarterly regimes if not yet available
+  if (!window._quarterlyRegimes) {
+    try { await loadQuarterlyRegimes(); } catch(e) {}
+  }
   var quarterly = window._quarterlyRegimes ? window._quarterlyRegimes.quarterly : null;
-  if (!quarterly || !quarterly.length) return null;
+  // Fallback: if still no quarterly data, use a simple SPY-based series
+  if (!quarterly || !quarterly.length) {
+    try {
+      var spy = await fetchChart('SPY', rangeKey === 'ytd' ? '1y' : rangeKey, '1d');
+      var pts = (spy.points||[]).filter(function(p){return p.close!=null;});
+      if (pts.length < 2) return null;
+      var base = pts[0].close;
+      return { dates: pts.map(function(p){return p.date.slice(0,10);}), values: pts.map(function(p){return p.close/base*100;}) };
+    } catch(e) { return null; }
+  }
   // Determine date window
   var today = new Date();
   var start = new Date(today);
@@ -13292,17 +13339,21 @@ async function buildRecommendedStateSeries(rangeKey) {
 function themePopulatePicker() {
   var picker = document.getElementById('themeCmpPicker');
   if (!picker) return;
-  // Only build once
+  // Always rebuild to pick up new custom themes, but skip if already populated this session
   if (picker.dataset.built) return;
   picker.dataset.built = '1';
   var html = '';
-  PORTFOLIO_THEMES.forEach(function(t, idx){
-    html += '<label style="font-size:11px;font-weight:600;color:var(--navy);background:#fff;padding:3px 8px;border-radius:3px;border:1px solid var(--border);cursor:pointer;display:inline-flex;align-items:center;gap:5px;">'+
-      '<input type="checkbox" data-themecmp="'+t.key+'" '+(idx<2?'checked':'')+' style="margin:0;">'+
+  (window.PORTFOLIO_THEMES || []).forEach(function(t, idx){
+    var checked = idx < 3 ? 'checked' : '';
+    var activeSty = idx < 3 ? 'background:var(--navy);color:#fff;border-color:var(--navy);' : 'background:#fff;color:var(--navy);border-color:var(--border);';
+    html += '<label style="font-size:11px;font-weight:600;padding:4px 10px;border-radius:12px;border:1px solid var(--border);cursor:pointer;display:inline-flex;align-items:center;gap:5px;margin:2px;transition:all 0.15s;'+activeSty+'" '+
+      'onclick="this.style.background=this.querySelector('input').checked?'var(--navy)':\'#fff\';'+
+      'this.style.color=this.querySelector('input').checked?'#fff':'var(--navy)';'+
+      'this.style.borderColor=this.querySelector('input').checked?'var(--navy)':'var(--border)';">'+
+      '<input type="checkbox" data-themecmp="'+t.key+'" '+checked+' style="display:none;">'+
       t.name.replace(/&amp;/g,'&').replace(/&mdash;/g,'—') +
       '</label>';
   });
-  // Custom themes appended dynamically by themeCmpRenderCustom
   picker.innerHTML = html + '<span id="themeCmpCustomSlot"></span>';
 }
 function themeCmpRenderCustom() {
@@ -13323,6 +13374,18 @@ async function themeCompareRun() {
   themePopulatePicker(); themeCmpRenderCustom();
   var pickedThemes = Array.from(document.querySelectorAll('#themeCmpPicker input[data-themecmp]:checked')).map(function(i){ return i.dataset.themecmp; });
   var pickedCustom = Array.from(document.querySelectorAll('#themeCmpPicker input[data-themecmpcustom]:checked')).map(function(i){ return i.dataset.themecmpcustom; });
+  // Auto-select first 3 themes if none checked
+  if (!pickedThemes.length && !pickedCustom.length) {
+    var allCbs = Array.from(document.querySelectorAll('#themeCmpPicker input[data-themecmp]'));
+    var toCheck = allCbs.slice(0, 3);
+    toCheck.forEach(function(cb) {
+      cb.checked = true;
+      // Update parent label style
+      var lbl = cb.closest('label');
+      if (lbl) { lbl.style.background='var(--navy)'; lbl.style.color='#fff'; lbl.style.borderColor='var(--navy)'; }
+    });
+    pickedThemes = toCheck.map(function(cb){ return cb.dataset.themecmp; });
+  }
   if (!pickedThemes.length && !pickedCustom.length) {
     document.getElementById('themeCmpStats').innerHTML = '<span style="color:var(--text-sec);">Select at least one theme to compare.</span>';
     return;
@@ -13361,10 +13424,23 @@ async function themeCompareRun() {
   if (!pfVals.length || pfVals[0] <= 0) { statsEl.innerHTML = '<span style="color:var(--danger);">Insufficient portfolio data for selected window.</span>'; return; }
   var pfBase = pfVals[0];
   var pfRebased = pfVals.map(function(v){ return pfBase > 0 ? v / pfBase * 100 : 100; });
-  datasets.push({ label: 'Your Portfolio', data: pfRebased.map(function(v,i){ return {x: pfDates[i], y: +v.toFixed(4)}; }), borderColor:'#003C71', backgroundColor:'rgba(0,60,113,0.1)', borderWidth: 2.5, pointRadius:0, tension:0.15 });
+  // Portfolio dataset — use labels array with flat values (not {x,y} objects)
+  datasets.push({
+    label: 'Your Portfolio',
+    data: pfRebased,
+    _dates: pfDates,
+    borderColor:'#003C71', backgroundColor:'rgba(0,60,113,0.1)',
+    borderWidth: 2.5, pointRadius:0, tension:0.15, fill: true
+  });
 
   // Theme baskets — equal-weighted (or custom-weighted) daily-rebalanced rebased
   var themeColors = ['#5B9BD5','#A23B72','#F18F01','#48A9A6','#7B68EE','#C84B31','#0F4C81','#5E8C61'];
+
+  // Build a master date union across portfolio + all themes for aligned x-axis
+  var masterDateSet = new Set();
+  pfDates.forEach(function(d){ masterDateSet.add(d); });
+
+  var themeSeriesData = []; // collect before rendering so we can align x-axis
   themesToRun.forEach(function(theme, ti){
     var weights = theme.weights || {};
     if (!Object.keys(weights).length) {
@@ -13373,55 +13449,82 @@ async function themeCompareRun() {
     }
     var validTickers = theme.tickers.filter(function(t){ return allData[t] && allData[t].length > 2; });
     if (!validTickers.length) return;
-    // Build price maps with forward-fill
     var priceMapTh = {};
     validTickers.forEach(function(t){
       priceMapTh[t] = {};
       (allData[t]||[]).forEach(function(p){ if (p.close != null) priceMapTh[t][p.date.slice(0,10)] = p.close; });
     });
-    // Union of all dates >= startStr
     var theDateSet = new Set();
     validTickers.forEach(function(t){ Object.keys(priceMapTh[t]).forEach(function(d){ if (d >= startStr) theDateSet.add(d); }); });
     var themeDates = Array.from(theDateSet).sort();
     if (!themeDates.length) return;
-    // Forward-fill prices
+    themeDates.forEach(function(d){ masterDateSet.add(d); });
     var filledPricesTh = {};
     validTickers.forEach(function(t){
-      var pm = priceMapTh[t];
-      var last = null;
+      var pm = priceMapTh[t]; var last = null;
       filledPricesTh[t] = themeDates.map(function(d){ if (pm[d] != null) last = pm[d]; return last; });
     });
-    // Compute per-ticker weights (equal or custom)
     var wSum = 0;
     validTickers.forEach(function(t){ wSum += (weights[t] || (1/validTickers.length)); });
     var normWeights = {};
     validTickers.forEach(function(t){ normWeights[t] = (weights[t] || (1/validTickers.length)) / Math.max(wSum, 0.0001); });
-    // Base prices at start
-    var basePricesTh = {};
-    validTickers.forEach(function(t){ basePricesTh[t] = filledPricesTh[t][0] || 1; });
-    var values = themeDates.map(function(d, i){
+    // date->value map for alignment
+    var dateValMap = {};
+    var lastFilled = null;
+    themeDates.forEach(function(d, i){
       var v = 0;
       validTickers.forEach(function(t){
-        var px = filledPricesTh[t][i]; var b = basePricesTh[t];
+        var px = filledPricesTh[t][i]; var b = filledPricesTh[t][0] || 1;
         if (px != null && b > 0) v += normWeights[t] * (px/b);
       });
-      return v * 100;
+      dateValMap[d] = v * 100;
+      lastFilled = dateValMap[d];
     });
-    datasets.push({ label: theme.name, data: values.map(function(v,i){ return {x: themeDates[i], y: +v.toFixed(4)}; }), borderColor: themeColors[ti % themeColors.length], borderWidth:1.8, pointRadius:0, tension:0.15, borderDash:[] });
+    themeSeriesData.push({ label: theme.name, dateValMap: dateValMap, color: themeColors[ti % themeColors.length] });
   });
 
-  // Render
+  // Build aligned master dates array
+  var masterDates = Array.from(masterDateSet).sort().filter(function(d){ return d >= startStr; });
+  // Thin to max 500 labels for performance
+  var step = Math.max(1, Math.floor(masterDates.length / 500));
+  var chartDates = masterDates.filter(function(d, i){ return i % step === 0 || i === masterDates.length-1; });
+
+  // Rebuild portfolio data aligned to chartDates (forward-fill)
+  var pfDateValMap = {};
+  pfDates.forEach(function(d, i){ pfDateValMap[d] = pfRebased[i]; });
+  var pfAligned = []; var pfLast = null;
+  chartDates.forEach(function(d){ if (pfDateValMap[d] != null) pfLast = pfDateValMap[d]; pfAligned.push(pfLast); });
+  datasets[0].data = pfAligned;
+  delete datasets[0]._dates;
+
+  // Build theme data aligned to chartDates
+  themeSeriesData.forEach(function(ts){
+    var aligned = []; var last = null;
+    chartDates.forEach(function(d){ if (ts.dateValMap[d] != null) last = ts.dateValMap[d]; aligned.push(last); });
+    datasets.push({ label: ts.label, data: aligned, borderColor: ts.color, backgroundColor: 'transparent', borderWidth:1.8, pointRadius:0, tension:0.15, fill: false });
+  });
+
+  // Render with labels array
   var ctx = document.getElementById('themeCmpChart');
   if (window._themeCmpChartObj) window._themeCmpChartObj.destroy();
   window._themeCmpChartObj = new Chart(ctx, {
     type: 'line',
-    data: { datasets: datasets },
+    data: { labels: chartDates, datasets: datasets },
     options: {
-      responsive: true, maintainAspectRatio: false, parsing:false, animation:false,
-      plugins: { legend: { position:'top', labels:{color:'#1A2733', font:{size:11}} }, tooltip: { mode:'index', intersect:false, callbacks: { label: function(ctx){ return ctx.dataset.label+': '+(ctx.parsed.y != null ? ctx.parsed.y.toFixed(2) : '—'); } } } },
+      responsive: true, maintainAspectRatio: false, animation:false,
+      plugins: {
+        legend: { position:'top', labels:{color:'#1A2733', font:{size:11}, boxWidth:12, padding:14} },
+        tooltip: {
+          mode:'index', intersect:false,
+          callbacks: {
+            title: function(items){ return items[0] ? chartDates[items[0].dataIndex] : ''; },
+            label: function(ctx){ var v=ctx.parsed.y; return ctx.dataset.label+': '+(v!=null?v.toFixed(2)+'%':'—'); }
+          }
+        }
+      },
       scales: {
-        x: { type:'category', ticks: { color:'#5A6772', maxTicksLimit: 8, maxRotation: 0 }, grid: { color:'rgba(208,215,224,0.4)' } },
-        y: { ticks: { color:'#5A6772', callback: function(v){ return v.toFixed(0); } }, grid: { color:'rgba(208,215,224,0.4)' }, title:{display:true, text:'Rebased to 100', color:'#5A6772', font:{size:11}} }
+        x: { ticks: { color:'#5A6772', maxTicksLimit: 10, maxRotation:0 }, grid: { color:'rgba(208,215,224,0.4)' } },
+        y: { ticks: { color:'#5A6772', callback: function(v){ return v!=null?v.toFixed(0):''; } }, grid: { color:'rgba(208,215,224,0.4)' }, title:{display:true, text:'Return indexed to 100', color:'#5A6772', font:{size:11}} }
       }
     }
   });
@@ -13585,98 +13688,125 @@ function customThemeRenderSavedList() {
 
 // ────────── What-If Simulator (Fix #2) ──────────
 async function whatIfRun() {
-  var t = (document.getElementById('whatifTicker').value || '').toUpperCase().trim();
+  var ticker = (document.getElementById('whatifTicker').value || '').toUpperCase().trim();
   var w = parseFloat(document.getElementById('whatifWeight').value);
   var range = document.getElementById('whatifRange').value;
   var method = document.getElementById('whatifMethod').value;
   var statsEl = document.getElementById('whatifStats');
-  if (!t) { statsEl.innerHTML = '<span style="color:var(--danger);">Enter a ticker.</span>'; return; }
-  if (isNaN(w) || w <= 0) { statsEl.innerHTML = '<span style="color:var(--danger);">Weight must be > 0.</span>'; return; }
-  statsEl.innerHTML = '<span class="spinner"></span> Running simulation…';
+  if (!ticker) { statsEl.innerHTML = '<span style="color:var(--danger);">Enter a ticker symbol.</span>'; return; }
+  if (isNaN(w) || w <= 0 || w > 100) { statsEl.innerHTML = '<span style="color:var(--danger);">Weight must be between 0 and 100.</span>'; return; }
+  statsEl.innerHTML = '<div style="padding:8px;"><span class="spinner"></span> Running simulation…</div>';
   try {
-    var fetchRange = range === 'ytd' ? '1y' : range;
-    // Actual portfolio
-    var pfSeries = await pfBuildValueSeries(fetchRange);
-    if (!pfSeries.dates || !pfSeries.values || !pfSeries.values.length) { statsEl.innerHTML = '<span style="color:var(--danger);">No portfolio data — add holdings first.</span>'; return; }
-    // New ticker
-    var c = await fetchChart(t, fetchRange, '1d');
-    var tMap = {}; (c.points||[]).forEach(function(p){ if (p.close != null) tMap[p.date.slice(0,10)] = p.close; });
-    // Filter pf dates to only those where ticker has price
-    var commonDates = pfSeries.dates.filter(function(d){ return tMap[d] != null; });
-    if (commonDates.length < 5) { statsEl.innerHTML = '<span style="color:var(--danger);">Insufficient overlap with '+t+'.</span>'; return; }
-    var startStr = commonDates[0];
+    var fetchRange = (range === 'ytd') ? '1y' : range;
+    var results = await Promise.all([
+      pfBuildValueSeries(fetchRange),
+      fetchChart(ticker, fetchRange, '1d')
+    ]);
+    var pfSeries = results[0]; var tickerChart = results[1];
+    if (!pfSeries.dates || !pfSeries.values.length) {
+      statsEl.innerHTML = '<span style="color:var(--danger);">No portfolio data — add holdings first.</span>'; return;
+    }
+    var tMap = {};
+    (tickerChart.points||[]).filter(function(p){return p.close!=null;}).forEach(function(p){ tMap[p.date.slice(0,10)] = p.close; });
+    var pfMap = {};
+    pfSeries.dates.forEach(function(d,i){ if(pfSeries.values[i]!=null) pfMap[d] = pfSeries.values[i]; });
+    var allDatesSet = new Set(Object.keys(pfMap).concat(Object.keys(tMap)));
+    var commonDates = Array.from(allDatesSet).sort().filter(function(d){ return pfMap[d]!=null && tMap[d]!=null; });
     if (range === 'ytd') {
-      var ytdStart = new Date(new Date().getFullYear(), 0, 1).toISOString().slice(0,10);
+      var ytdStart = new Date().getFullYear() + '-01-01';
       commonDates = commonDates.filter(function(d){ return d >= ytdStart; });
-      if (!commonDates.length) { statsEl.innerHTML = '<span style="color:var(--danger);">No data in YTD window.</span>'; return; }
-      startStr = commonDates[0];
     }
-    // Build aligned arrays
-    var pfDateMap = {}; pfSeries.dates.forEach(function(d, i){ pfDateMap[d] = pfSeries.values[i]; });
-    var pfA = commonDates.map(function(d){ return pfDateMap[d]; });
-    var tA = commonDates.map(function(d){ return tMap[d]; });
-    var pfBase = pfA[0], tBase = tA[0];
+    if (commonDates.length < 5) {
+      statsEl.innerHTML = '<span style="color:var(--danger);">Insufficient overlapping data between portfolio and ' + ticker + '. Try a longer window.</span>'; return;
+    }
+    var pfA = commonDates.map(function(d){ return pfMap[d]; });
+    var tA  = commonDates.map(function(d){ return tMap[d]; });
+    var pfBase = pfA[0];
     var actualReb = pfA.map(function(v){ return v / pfBase * 100; });
-    // Hypothetical portfolio
-    // Daily portfolio return
-    var pfDailyR = []; for (var i = 1; i < pfA.length; i++) pfDailyR.push(Math.log(pfA[i] / pfA[i-1]));
-    var tDailyR = []; for (var i = 1; i < tA.length; i++) tDailyR.push(Math.log(tA[i] / tA[i-1]));
-    var weightT = w / 100;
-    var hypReb = [100];
-    if (method === 'dilute') {
-      // existing weight is 1 - weightT
-      for (var i = 0; i < pfDailyR.length; i++) {
-        var r = (1 - weightT) * pfDailyR[i] + weightT * tDailyR[i];
-        hypReb.push(hypReb[hypReb.length-1] * Math.exp(r));
-      }
-    } else {
-      // add on top — total notional grows by weightT
-      for (var i = 0; i < pfDailyR.length; i++) {
-        var r = pfDailyR[i] + weightT * tDailyR[i];
-        hypReb.push(hypReb[hypReb.length-1] * Math.exp(r));
-      }
+    var tickerReb = tA.map(function(v){ return v / tA[0] * 100; });
+    var pfLogR = []; var tLogR = [];
+    for (var i = 1; i < pfA.length; i++) {
+      pfLogR.push(pfA[i-1]>0&&pfA[i]>0 ? Math.log(pfA[i]/pfA[i-1]) : 0);
+      tLogR.push(tA[i-1]>0&&tA[i]>0   ? Math.log(tA[i]/tA[i-1])  : 0);
     }
-    // Render
-    var ctx = document.getElementById('whatifChart');
-    if (window._whatifChart) window._whatifChart.destroy();
-    // Use thinned date labels for readability
-    var maxLabels = 12;
-    var step = Math.max(1, Math.floor(commonDates.length / maxLabels));
-    var displayLabels = commonDates.map(function(d, i){ return i % step === 0 ? d : ''; });
-    window._whatifChart = new Chart(ctx, {
+    var weightT = w / 100;
+    var hypReb = [100]; var hypLogR = [];
+    for (var i = 0; i < pfLogR.length; i++) {
+      var dayRet = method==='dilute' ? (1-weightT)*pfLogR[i]+weightT*tLogR[i] : pfLogR[i]+weightT*tLogR[i];
+      hypLogR.push(dayRet);
+      hypReb.push(hypReb[hypReb.length-1] * Math.exp(dayRet));
+    }
+    // Thin for chart
+    var step = Math.max(1, Math.floor(commonDates.length / 400));
+    var chartDates = []; var chartActual = []; var chartHyp = []; var chartTicker = [];
+    for (var i = 0; i < commonDates.length; i += step) {
+      chartDates.push(commonDates[i]);
+      chartActual.push(parseFloat(actualReb[i].toFixed(3)));
+      chartHyp.push(parseFloat(hypReb[i].toFixed(3)));
+      chartTicker.push(parseFloat(tickerReb[i].toFixed(3)));
+    }
+    var ctxEl = document.getElementById('whatifChart');
+    if (window._whatifChart) { window._whatifChart.destroy(); window._whatifChart = null; }
+    var lblStep = Math.max(1, Math.floor(chartDates.length / 10));
+    window._whatifChart = new Chart(ctxEl, {
       type: 'line',
       data: {
-        labels: commonDates,
+        labels: chartDates,
         datasets: [
-          { label: 'Actual Portfolio', data: actualReb, borderColor:'#003C71', backgroundColor:'rgba(0,60,113,0.1)', fill:true, borderWidth:2.5, pointRadius:0, tension:0.15 },
-          { label: 'Hypothetical (+'+t+' @ '+w+'%, '+method+')', data: hypReb, borderColor:'#A23B72', backgroundColor:'rgba(162,59,114,0.1)', fill:true, borderWidth:2, pointRadius:0, tension:0.15, borderDash:[6,3] }
+          { label: 'Your Portfolio (actual)', data: chartActual, borderColor:'#003C71', backgroundColor:'rgba(0,60,113,0.08)', fill:true, borderWidth:2.5, pointRadius:0, tension:0.15 },
+          { label: 'Hypothetical (+'+ ticker +' @ '+ w +'%, '+ (method==='dilute'?'pro-rata':'add-on') +')', data: chartHyp, borderColor:'#A23B72', backgroundColor:'rgba(162,59,114,0.08)', fill:false, borderWidth:2.2, pointRadius:0, tension:0.15, borderDash:[6,3] },
+          { label: ticker + ' standalone', data: chartTicker, borderColor:'#F18F01', backgroundColor:'transparent', fill:false, borderWidth:1.5, pointRadius:0, tension:0.15, borderDash:[3,2] }
         ]
       },
       options: {
-        responsive: true, maintainAspectRatio: false, animation: false,
+        responsive:true, maintainAspectRatio:false, animation:false,
         plugins: {
-          legend: { position:'top', labels:{color:'#1A2733', font:{size:11}} },
+          legend: { position:'top', labels:{color:'#1A2733',font:{size:11},boxWidth:12,padding:12} },
           tooltip: { mode:'index', intersect:false, callbacks: {
-            title: function(items){ return items[0] ? commonDates[items[0].dataIndex] : ''; },
-            label: function(ctx){ return ctx.dataset.label + ': ' + (ctx.parsed.y != null ? ctx.parsed.y.toFixed(2) : '—'); }
+            title: function(items){ return items[0] ? chartDates[items[0].dataIndex] : ''; },
+            label: function(ctx){ return ctx.dataset.label + ': ' + (ctx.parsed.y!=null ? ctx.parsed.y.toFixed(2) : '—'); }
           }}
         },
         scales: {
-          x: { type:'category', ticks:{ color:'#5A6772', maxTicksLimit:10, maxRotation:0, callback: function(v, i){ return i % step === 0 ? commonDates[i] : ''; } }, grid:{color:'rgba(208,215,224,0.4)'} },
-          y: { ticks:{color:'#5A6772', callback: function(v){ return v.toFixed(0); }}, grid:{color:'rgba(208,215,224,0.4)'}, title:{display:true,text:'Rebased to 100',color:'#5A6772',font:{size:11}} }
+          x: { ticks:{color:'#5A6772',maxTicksLimit:10,maxRotation:0,callback:function(v,i){return i%lblStep===0?chartDates[i]:'';}}, grid:{color:'rgba(208,215,224,0.35)'} },
+          y: { ticks:{color:'#5A6772',callback:function(v){return v.toFixed(0);}}, grid:{color:'rgba(208,215,224,0.35)'},
+               title:{display:true,text:'Return indexed to 100',color:'#5A6772',font:{size:11}} }
         }
       }
     });
+    function annVol(rets) {
+      if (rets.length < 2) return null;
+      var m = rets.reduce(function(s,v){return s+v;},0)/rets.length;
+      var v = rets.reduce(function(s,r){return s+(r-m)*(r-m);},0)/(rets.length-1);
+      return Math.sqrt(v)*Math.sqrt(252)*100;
+    }
     var actRet = actualReb[actualReb.length-1] - 100;
     var hypRet = hypReb[hypReb.length-1] - 100;
-    var diff = hypRet - actRet;
-    statsEl.innerHTML = '<div style="display:flex;gap:14px;flex-wrap:wrap;font-size:12px;">'+
-      '<div style="background:var(--panel);padding:6px 10px;border-radius:3px;border-left:3px solid #003C71;"><strong>Actual:</strong> '+(actRet>=0?'+':'')+actRet.toFixed(2)+'%</div>'+
-      '<div style="background:var(--panel);padding:6px 10px;border-radius:3px;border-left:3px solid #A23B72;"><strong>Hypothetical:</strong> '+(hypRet>=0?'+':'')+hypRet.toFixed(2)+'%</div>'+
-      '<div style="background:'+(diff>=0?'rgba(46,125,82,0.12)':'rgba(139,42,42,0.12)')+';padding:6px 10px;border-radius:3px;border-left:3px solid '+(diff>=0?'var(--success)':'var(--danger)')+';"><strong>Difference:</strong> '+(diff>=0?'+':'')+diff.toFixed(2)+' pp</div>'+
+    var tkrRet = tickerReb[tickerReb.length-1] - 100;
+    var diff   = hypRet - actRet;
+    var volAct = annVol(pfLogR); var volHyp = annVol(hypLogR);
+    function statBox(label, ret, sub, color) {
+      return '<div style="background:var(--panel);padding:7px 12px;border-radius:4px;border-left:3px solid '+color+';min-width:120px;">'+
+        '<div style="font-size:10.5px;color:var(--text-sec);">'+label+'</div>'+
+        '<div style="font-size:16px;font-weight:700;color:'+(ret>=0?'var(--success)':'var(--danger)')+';">'+(ret>=0?'+':'')+ret.toFixed(2)+'%</div>'+
+        '<div style="font-size:10.5px;color:var(--text-sec);">'+sub+'</div></div>';
+    }
+    statsEl.innerHTML = '<div style="display:flex;gap:10px;flex-wrap:wrap;font-size:12px;">'+
+      statBox('Your Portfolio', actRet, 'Vol: '+(volAct!=null?volAct.toFixed(1)+'%':'—'), '#003C71')+
+      statBox('Hypothetical', hypRet, 'Vol: '+(volHyp!=null?volHyp.toFixed(1)+'%':'—'), '#A23B72')+
+      statBox(ticker+' standalone', tkrRet, '', '#F18F01')+
+      '<div style="background:'+(diff>=0?'rgba(46,125,82,0.12)':'rgba(139,42,42,0.12)')+';padding:7px 12px;border-radius:4px;border-left:3px solid '+(diff>=0?'var(--success)':'var(--danger)')+';min-width:120px;">'+
+      '<div style="font-size:10.5px;color:var(--text-sec);">Impact</div>'+
+      '<div style="font-size:16px;font-weight:700;color:'+(diff>=0?'var(--success)':'var(--danger)')+';">'+(diff>=0?'+':'')+diff.toFixed(2)+' pp</div>'+
+      '<div style="font-size:10.5px;color:var(--text-sec);">vs actual</div></div>'+
       '</div>';
-  } catch(e) { statsEl.innerHTML = '<span style="color:var(--danger);">'+e.message+'</span>'; }
+  } catch(e) {
+    statsEl.innerHTML = '<span style="color:var(--danger);">Error: '+e.message+'</span>';
+    console.error('[whatIfRun]', e);
+  }
 }
+
+// ────────── Patch pfShowTab
 
 // ────────── Patch pfShowTab to also init themes/whatif tabs ──────────
 (function(){
@@ -13684,21 +13814,23 @@ async function whatIfRun() {
   if (typeof origShow !== 'function') return;
   window.pfShowTab = function(name) {
     origShow(name);
-    if (name === 'themes' && !window._themesCmpInit) {
-      window._themesCmpInit = true;
-      themePopulatePicker();
-      customThemeLoad();
-      customThemeRefreshUI();
-      // Auto-run with default
-      setTimeout(themeCompareRun, 60);
-    }
-    if (name === 'themes' && window._currentUser) {
-      // Refresh saved themes on revisit if user changed
-      var gate = document.getElementById('customThemeAuthGate');
-      if (gate) gate.style.display = 'none';
-    } else if (name === 'themes' && !window._currentUser) {
-      var gate = document.getElementById('customThemeAuthGate');
-      if (gate) gate.style.display = '';
+    if (name === 'themes') {
+      if (!window._themesCmpInit) {
+        window._themesCmpInit = true;
+        themePopulatePicker();
+        customThemeLoad();
+        customThemeRefreshUI();
+        watchlistPopulateSelect();
+      }
+      if (window._currentUser) {
+        var gate = document.getElementById('customThemeAuthGate');
+        if (gate) gate.style.display = 'none';
+      } else {
+        var gate = document.getElementById('customThemeAuthGate');
+        if (gate) gate.style.display = '';
+      }
+      // Always run comparison when tab is activated
+      setTimeout(themeCompareRun, 80);
     }
   };
 })();
@@ -13940,30 +14072,31 @@ function rccRender() {
       if (window._showRecState) {
         var range = (typeof currentRange !== 'undefined' ? currentRange : '1y');
         var recSeries = await buildRecommendedStateSeries(range);
-        if (recSeries && recSeries.values.length) {
-          // Rebase to match user portfolio's start dollar value if possible
-          var pfDataset = chart.data.datasets.find(function(d){ return d.label && d.label.indexOf('Total Value') >= 0; });
-          var startVal = pfDataset && pfDataset.data && pfDataset.data.length ? pfDataset.data[0].y || pfDataset.data[0] : 100;
-          var startBase = recSeries.values[0];
-          var rescaled = recSeries.values.map(function(v){ return v / startBase * startVal; });
-          // Avoid duplicate
+        if (recSeries && recSeries.values.length && chart.data.labels && chart.data.labels.length) {
+          var chartLabels = chart.data.labels;
+          // Find the first non-null portfolio value to rebase
+          var pfDataset = chart.data.datasets.find(function(d){ return d.label && (d.label.indexOf('Total Value') >= 0 || d.label.indexOf('Time-Weighted') >= 0); });
+          var startVal = null;
+          if (pfDataset && pfDataset.data) { for (var ri=0; ri<pfDataset.data.length; ri++) { if (pfDataset.data[ri]!=null && pfDataset.data[ri]>0) { startVal=pfDataset.data[ri]; break; } } }
+          if (!startVal) startVal = recSeries.values[0] || 100;
+          var startBase = recSeries.values[0] || 1;
+          // Build date->value map for rec series
+          var recMap = {};
+          recSeries.dates.forEach(function(d,i){ recMap[d] = recSeries.values[i]; });
+          // Align to chart labels (forward-fill)
+          var aligned = []; var lastRec = null;
+          chartLabels.forEach(function(d){ if(recMap[d]!=null) lastRec=recMap[d]; aligned.push(lastRec!=null ? lastRec/startBase*startVal : null); });
           chart.data.datasets = chart.data.datasets.filter(function(d){ return d.label !== 'Recommended State (Backtest)'; });
           chart.data.datasets.push({
             label: 'Recommended State (Backtest)',
-            data: recSeries.dates.map(function(d, i){ return { x: d, y: rescaled[i] }; }),
-            borderColor: '#A23B72',
-            backgroundColor: 'rgba(162,59,114,0.05)',
-            borderWidth: 2,
-            borderDash: [4,3],
-            pointRadius: 0,
-            tension: 0.1,
-            fill: false,
-            yAxisID: pfDataset && pfDataset.yAxisID ? pfDataset.yAxisID : undefined
+            data: aligned, borderColor: '#A23B72', backgroundColor: 'rgba(162,59,114,0.05)',
+            borderWidth: 2, borderDash: [4,3], pointRadius: 0, tension: 0.1,
+            fill: false, yAxisID: pfDataset && pfDataset.yAxisID ? pfDataset.yAxisID : 'y',
+            spanGaps: true
           });
           chart.update('none');
         }
       } else {
-        // Remove if exists
         chart.data.datasets = chart.data.datasets.filter(function(d){ return d.label !== 'Recommended State (Backtest)'; });
         chart.update('none');
       }
@@ -14106,8 +14239,25 @@ function pfShowTab(name) {
   try {
     if (name === 'performance' && !window._pfPerfRun) { window._pfPerfRun = true; pfRenderPerformance(); }
     if (name === 'attribution' && !window._pfBrinsonRun) { window._pfBrinsonRun = true; brinsonRun(); }
-    if (name === 'risk' && !window._pfRiskRun) { window._pfRiskRun = true; pfRenderRisk(); }
+    if (name === 'risk') { 
+      var holdingHash = (window._holdings||[]).length + '_' + ((window._holdings||[])[0]||{}).ticker;
+      if (!window._pfRiskRun || window._pfRiskHoldingHash !== holdingHash) { 
+        window._pfRiskRun = true; window._pfRiskHoldingHash = holdingHash; pfRenderRisk(); 
+      }
+    }
     if (name === 'characteristics' && !window._pfCharRun) { window._pfCharRun = true; pfRenderCharacteristics(); }
+    if (name === 'themes') {
+      themePopulatePicker(); themeCmpRenderCustom();
+      // Auto-run comparison if themes are checked or auto-select first
+      if (typeof themeCompareRun === 'function') {
+        setTimeout(function() { themeCompareRun(); }, 100);
+      }
+    }
+    if (name === 'scenarios') {
+      // Activate first scenario button if none active
+      var active = document.querySelector('#stressScenarioBtns .btn-outline.active');
+      if (!active) { var first = document.querySelector('#stressScenarioBtns .btn-outline'); if (first) first.click(); }
+    }
   } catch(e) { console.warn('Tab init error', e); }
 }
 
@@ -14227,103 +14377,177 @@ async function pfRenderPerformance() {
   const h = window._holdings || [];
   if (!h.length) { el.innerHTML = '<p style="color:var(--text-sec);">Add holdings to compute period returns.</p>'; return; }
 
-  // Pull the existing portfolio chart series if available, else fetch fresh
-  el.innerHTML = '<span class="spinner"></span> Computing period returns…';
+  el.innerHTML = '<div style="padding:16px;text-align:center;"><span class="spinner"></span> Computing period returns…</div>';
   try {
-    // Reconstruct portfolio dollar-value series for last 1Y
-    const pfSeries = await pfBuildValueSeries('1y');
-    const spy = await fetchChart('SPY', '1y', '1d');
-    const qqq = await fetchChart('QQQ', '1y', '1d');
-    if (!pfSeries.values.length) { el.innerHTML = '<p style="color:var(--text-sec);">Insufficient data for performance computation.</p>'; return; }
+    // Fetch 2Y series so we can compute all sub-periods accurately
+    const pfSeries = await pfBuildValueSeries('2y');
+    const spy = await fetchChart('SPY', '2y', '1d');
+    const qqq = await fetchChart('QQQ', '2y', '1d');
+    if (!pfSeries.dates.length || !pfSeries.values.length) {
+      el.innerHTML = '<p style="color:var(--text-sec);">Insufficient data — add holdings to compute period returns.</p>'; return;
+    }
+
+    // Helper: return from N trading days ago to today within a series
+    // Uses the actual date array, not assumed calendar-day counts
+    function seriesReturn(values, n) {
+      const nonNull = values.map((v,i) => v != null ? i : -1).filter(i => i >= 0);
+      if (nonNull.length < 2) return null;
+      const lastIdx = nonNull[nonNull.length - 1];
+      const startIdx = Math.max(0, lastIdx - n);
+      const a = values[startIdx], b = values[lastIdx];
+      if (!a || !b || a <= 0) return null;
+      return ((b - a) / a) * 100;
+    }
+    function benchReturn(points, n) {
+      const valid = (points || []).filter(p => p.close != null);
+      if (valid.length < 2) return null;
+      const lastIdx = valid.length - 1;
+      const startIdx = Math.max(0, lastIdx - n);
+      const a = valid[startIdx].close, b = valid[lastIdx].close;
+      if (!a || !b || a <= 0) return null;
+      return ((b - a) / a) * 100;
+    }
+    // YTD: find first date in pfSeries >= Jan 1 of current year
+    function ytdReturn(dates, values) {
+      const yearStart = new Date().getFullYear() + '-01-01';
+      const idx = dates.findIndex(d => d >= yearStart);
+      if (idx < 0 || idx >= values.length - 1) return null;
+      const nonNull = values.slice(idx).filter(v => v != null);
+      if (nonNull.length < 2) return null;
+      const a = nonNull[0], b = nonNull[nonNull.length - 1];
+      if (!a || a <= 0) return null;
+      return ((b - a) / a) * 100;
+    }
+    function ytdBenchReturn(points) {
+      const yearStart = new Date().getFullYear() + '-01-01';
+      const valid = (points || []).filter(p => p.close != null && p.date >= yearStart);
+      if (valid.length < 2) return null;
+      const a = valid[0].close, b = valid[valid.length-1].close;
+      if (!a || a <= 0) return null;
+      return ((b - a) / a) * 100;
+    }
 
     const periods = [
-      { label: '1 Day', days: 1 },
-      { label: '1 Week', days: 5 },
-      { label: '1 Month', days: 21 },
-      { label: '3 Months', days: 63 },
-      { label: '6 Months', days: 126 },
-      { label: 'YTD', days: ytdDays() },
-      { label: '1 Year', days: 252 }
-    ];
-    const rows = periods.map(p => {
-      const pfR = pctReturn(pfSeries.values, p.days);
-      const spyR = chartReturn(spy.points, p.days);
-      const qqqR = chartReturn(qqq.points, p.days);
-      return { label: p.label, pf: pfR, spy: spyR, qqq: qqqR, vsSpy: pfR != null && spyR != null ? pfR - spyR : null };
+      { label: '1 Day',     pfR: seriesReturn(pfSeries.values, 1),   spyR: benchReturn(spy.points, 1),   qqqR: benchReturn(qqq.points, 1) },
+      { label: '1 Week',    pfR: seriesReturn(pfSeries.values, 5),   spyR: benchReturn(spy.points, 5),   qqqR: benchReturn(qqq.points, 5) },
+      { label: '1 Month',   pfR: seriesReturn(pfSeries.values, 21),  spyR: benchReturn(spy.points, 21),  qqqR: benchReturn(qqq.points, 21) },
+      { label: '3 Months',  pfR: seriesReturn(pfSeries.values, 63),  spyR: benchReturn(spy.points, 63),  qqqR: benchReturn(qqq.points, 63) },
+      { label: '6 Months',  pfR: seriesReturn(pfSeries.values, 126), spyR: benchReturn(spy.points, 126), qqqR: benchReturn(qqq.points, 126) },
+      { label: 'YTD',       pfR: ytdReturn(pfSeries.dates, pfSeries.values), spyR: ytdBenchReturn(spy.points), qqqR: ytdBenchReturn(qqq.points) },
+      { label: '1 Year',    pfR: seriesReturn(pfSeries.values, 252), spyR: benchReturn(spy.points, 252), qqqR: benchReturn(qqq.points, 252) }
+    ].map(p => ({ ...p, active: p.pfR != null && p.spyR != null ? p.pfR - p.spyR : null }));
+
+    const fmt = v => v == null ? '<span style="color:var(--text-sec);">—</span>' : '<span style="color:'+(v>=0?'var(--success)':'var(--danger)')+';font-weight:700;">'+(v>=0?'+':'')+v.toFixed(2)+'%</span>';
+    const fmtN = v => v == null ? '<span style="color:var(--text-sec);">—</span>' : '<span style="color:'+(v>=0?'var(--success)':'var(--danger)')+';">'+(v>=0?'+':'')+v.toFixed(2)+'%</span>';
+
+    let html = '<div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;font-size:12px;font-family:Arial;">';
+    html += '<thead><tr style="background:var(--navy);color:#fff;">'+
+      '<th style="padding:9px 10px;text-align:left;">Period</th>'+
+      '<th style="padding:9px 10px;text-align:right;">Portfolio</th>'+
+      '<th style="padding:9px 10px;text-align:right;">SPY</th>'+
+      '<th style="padding:9px 10px;text-align:right;">QQQ</th>'+
+      '<th style="padding:9px 10px;text-align:right;">vs SPY</th></tr></thead><tbody>';
+    periods.forEach(r => {
+      html += '<tr style="border-bottom:1px solid var(--border-light,#E5E9EF);">'+
+        '<td style="padding:8px 10px;font-weight:600;color:var(--text);">'+r.label+'</td>'+
+        '<td style="padding:8px 10px;text-align:right;font-family:Courier New,monospace;">'+fmt(r.pfR)+'</td>'+
+        '<td style="padding:8px 10px;text-align:right;font-family:Courier New,monospace;">'+fmtN(r.spyR)+'</td>'+
+        '<td style="padding:8px 10px;text-align:right;font-family:Courier New,monospace;">'+fmtN(r.qqqR)+'</td>'+
+        '<td style="padding:8px 10px;text-align:right;font-family:Courier New,monospace;">'+fmt(r.active)+'</td></tr>';
     });
 
-    let html = '<table style="width:100%;border-collapse:collapse;font-size:12px;font-family:Arial;">';
-    html += '<thead><tr style="background:var(--navy);color:#fff;">'+
-      '<th style="padding:8px;text-align:left;">Period</th>'+
-      '<th style="padding:8px;text-align:right;">Portfolio</th>'+
-      '<th style="padding:8px;text-align:right;">SPY</th>'+
-      '<th style="padding:8px;text-align:right;">QQQ</th>'+
-      '<th style="padding:8px;text-align:right;">Active vs SPY</th></tr></thead><tbody>';
-    rows.forEach(r => {
-      const fmt = v => v == null ? '—' : (v >= 0 ? '+' : '') + v.toFixed(2) + '%';
-      const col = v => v == null ? 'var(--text-sec)' : v >= 0 ? 'var(--success)' : 'var(--danger)';
-      html += '<tr style="border-bottom:1px solid var(--border-light,#E5E9EF);">'+
-        '<td style="padding:7px 8px;font-weight:600;">'+r.label+'</td>'+
-        '<td style="padding:7px 8px;text-align:right;font-family:Courier New,monospace;font-weight:700;color:'+col(r.pf)+';">'+fmt(r.pf)+'</td>'+
-        '<td style="padding:7px 8px;text-align:right;font-family:Courier New,monospace;color:'+col(r.spy)+';">'+fmt(r.spy)+'</td>'+
-        '<td style="padding:7px 8px;text-align:right;font-family:Courier New,monospace;color:'+col(r.qqq)+';">'+fmt(r.qqq)+'</td>'+
-        '<td style="padding:7px 8px;text-align:right;font-family:Courier New,monospace;font-weight:700;color:'+col(r.vsSpy)+';">'+fmt(r.vsSpy)+'</td></tr>';
-    });
-    // Tracking error & info ratio (annualized) using daily series
-    const pfRet = dailyLogReturns(pfSeries.values);
-    const spyRet = chartLogReturns(spy.points).slice(-pfRet.length);
-    const minLen = Math.min(pfRet.length, spyRet.length);
+    // Risk metrics from daily returns
+    const pfRets = dailyLogReturns(pfSeries.values.filter(v => v != null));
+    const spyPts = (spy.points || []).filter(p => p.close != null);
+    const spyRets = chartLogReturns(spyPts);
+    const minLen = Math.min(pfRets.length, spyRets.length);
+
     if (minLen >= 30) {
-      const active = []; for (let i = 0; i < minLen; i++) active.push(pfRet[pfRet.length-minLen+i] - spyRet[spyRet.length-minLen+i]);
+      const pfSlice = pfRets.slice(-minLen);
+      const spySlice = spyRets.slice(-minLen);
+      const active = pfSlice.map((r,i) => r - spySlice[i]);
       const meanA = active.reduce((s,v)=>s+v,0)/active.length;
-      const stdA = Math.sqrt(active.reduce((s,v)=>s+(v-meanA)*(v-meanA),0)/(active.length-1));
-      const teAnn = stdA * Math.sqrt(252) * 100;
-      const irAnn = stdA > 0 ? (meanA / stdA) * Math.sqrt(252) : 0;
-      html += '<tr style="background:var(--panel);"><td colspan="5" style="padding:10px 8px;font-size:11px;color:var(--text-sec);">'+
-        '<strong>Tracking Error (1Y, annualized):</strong> '+teAnn.toFixed(2)+'% &nbsp;&middot;&nbsp; '+
-        '<strong>Information Ratio:</strong> '+irAnn.toFixed(2)+
-        '</td></tr>';
+      const varA = active.reduce((s,v)=>s+(v-meanA)*(v-meanA),0)/Math.max(active.length-1,1);
+      const teAnn = Math.sqrt(varA) * Math.sqrt(252) * 100;
+      const irAnn = varA > 0 ? (meanA / Math.sqrt(varA)) * Math.sqrt(252) : 0;
+
+      // Annualized Sharpe
+      const pfMean = pfSlice.reduce((s,v)=>s+v,0)/pfSlice.length;
+      const pfVar = pfSlice.reduce((s,v)=>s+(v-pfMean)*(v-pfMean),0)/Math.max(pfSlice.length-1,1);
+      const pfAnnVol = Math.sqrt(pfVar) * Math.sqrt(252);
+      const pfAnnRet = (pfMean + pfVar/2) * 252;
+      const sharpe = pfAnnVol > 0 ? (pfAnnRet - 0.045) / pfAnnVol : 0;
+
+      // Sortino (downside deviation only)
+      const negRets = pfSlice.filter(r => r < 0);
+      const downVar = negRets.length > 1 ? negRets.reduce((s,v)=>s+v*v,0)/negRets.length : pfVar;
+      const sortino = Math.sqrt(downVar)*Math.sqrt(252) > 0 ? (pfAnnRet - 0.045) / (Math.sqrt(downVar)*Math.sqrt(252)) : 0;
+
+      // Max drawdown 1Y
+      const nonNull1Y = pfSeries.values.slice(-252).filter(v=>v!=null);
+      let peak1Y = nonNull1Y[0]||0, mdd1Y = 0;
+      nonNull1Y.forEach(v=>{ if(v>peak1Y) peak1Y=v; const dd=(v-peak1Y)/peak1Y; if(dd<mdd1Y) mdd1Y=dd; });
+
+      html += '<tr style="background:var(--panel);border-top:2px solid var(--border);"><td colspan="5" style="padding:10px 10px;font-size:11.5px;">'+
+        '<div style="display:flex;flex-wrap:wrap;gap:20px;">'+
+        '<span><strong>Tracking Error:</strong> '+teAnn.toFixed(2)+'%</span>'+
+        '<span><strong>Information Ratio:</strong> '+irAnn.toFixed(2)+'</span>'+
+        '<span><strong>Sharpe (1Y):</strong> '+sharpe.toFixed(2)+'</span>'+
+        '<span><strong>Sortino (1Y):</strong> '+sortino.toFixed(2)+'</span>'+
+        '<span><strong>Max Drawdown (1Y):</strong> <span style="color:var(--danger);">'+((mdd1Y*100).toFixed(1))+'%</span></span>'+
+        '<span><strong>Ann. Vol:</strong> '+(pfAnnVol*100).toFixed(1)+'%</span>'+
+        '</div></td></tr>';
     }
-    html += '</tbody></table>';
+
+    html += '</tbody></table></div>';
     el.innerHTML = html;
 
-    // Active return chart
-    if (typeof Chart !== 'undefined' && minLen >= 90) {
-      const active2 = []; for (let i = 0; i < minLen; i++) active2.push((pfRet[pfRet.length-minLen+i] - spyRet[spyRet.length-minLen+i]) * 100);
-      // Rolling 90-day mean
-      const win = 21;
-      const labels = [];
-      const rollAct = [];
-      for (let i = win; i < active2.length; i++) {
-        const slice = active2.slice(i-win, i);
-        const m = slice.reduce((s,v)=>s+v,0) / slice.length;
-        rollAct.push(m);
-        labels.push(i);
+    // Rolling active return chart with proper dates
+    if (typeof Chart !== 'undefined' && minLen >= 60) {
+      const pfSlice2 = pfRets.slice(-minLen);
+      const spySlice2 = spyRets.slice(-minLen);
+      const active2 = pfSlice2.map((r,i)=>(r - spySlice2[i])*100);
+      const WIN = 21; const rollAct = []; const rollDates = [];
+      const recentDates = pfSeries.dates.slice(-minLen);
+      for (let i = WIN; i < active2.length; i++) {
+        const sl = active2.slice(i-WIN, i);
+        rollAct.push(sl.reduce((s,v)=>s+v,0)/sl.length);
+        rollDates.push(recentDates[i] || String(i));
       }
+      // Thin labels
+      const labelStep = Math.max(1, Math.floor(rollDates.length / 10));
       const cv = document.getElementById('pfActiveChart');
       if (cv && rollAct.length) {
         if (window._pfActiveChart) window._pfActiveChart.destroy();
         window._pfActiveChart = new Chart(cv, {
           type: 'line',
           data: {
-            labels: labels,
-            datasets: [{
-              label: 'Rolling 21D Active Return vs SPY (%)',
-              data: rollAct,
-              borderColor: '#5B9BD5',
-              backgroundColor: 'rgba(91,155,213,0.15)',
-              fill: true,
-              borderWidth: 2,
-              pointRadius: 0,
-              tension: 0.2
-            }]
+            labels: rollDates,
+            datasets: [
+              { label: 'Rolling 21D Active Return vs SPY (%)', data: rollAct,
+                borderColor: '#5B9BD5', backgroundColor: ctx2 => {
+                  const v = ctx2.parsed && ctx2.parsed.y;
+                  return v >= 0 ? 'rgba(46,125,82,0.12)' : 'rgba(139,42,42,0.12)';
+                },
+                fill: 'origin', borderWidth: 2, pointRadius: 0, tension: 0.2 },
+              { label: 'Zero', data: new Array(rollAct.length).fill(0),
+                borderColor: 'rgba(0,0,0,0.2)', borderWidth: 1, borderDash:[3,3],
+                pointRadius:0, fill:false }
+            ]
           },
           options: {
-            responsive: true, maintainAspectRatio: false,
-            plugins: { legend: { display: true, position: 'top', labels: { color: '#1A2733', font: { size: 11 } } } },
+            responsive: true, maintainAspectRatio: false, animation: false,
+            plugins: {
+              legend: { display: true, position: 'top', labels: { color: '#1A2733', font: { size: 11 } } },
+              tooltip: { mode: 'index', intersect: false, callbacks: {
+                title: function(items){ return items[0] ? rollDates[items[0].dataIndex] : ''; },
+                label: function(ctx){ return ctx.dataset.label === 'Zero' ? null : ctx.dataset.label+': '+(ctx.parsed.y||0).toFixed(3)+'%'; }
+              }}
+            },
             scales: {
-              x: { display: false },
-              y: { ticks: { color: '#5A6772', callback: v => v.toFixed(2)+'%' }, grid: { color: 'rgba(208,215,224,0.4)' } }
+              x: { ticks: { color:'#5A6772', maxTicksLimit:8, maxRotation:0, callback: function(v,i){ return i%labelStep===0 ? rollDates[i] : ''; } }, grid: {color:'rgba(208,215,224,0.3)'} },
+              y: { ticks: { color:'#5A6772', callback: v => v.toFixed(2)+'%' }, grid: {color:'rgba(208,215,224,0.3)'},
+                   title: {display:true, text:'Active Return (%)', color:'#5A6772', font:{size:11}} }
             }
           }
         });
@@ -14331,6 +14555,7 @@ async function pfRenderPerformance() {
     }
   } catch(e) {
     el.innerHTML = '<p style="color:var(--danger);">Could not compute: '+e.message+'</p>';
+    console.error('[pfRenderPerformance]', e);
   }
 }
 function ytdDays() {
@@ -14346,11 +14571,15 @@ function pctReturn(arr, lookback) {
   return ((b/a) - 1) * 100;
 }
 function chartReturn(points, lookback) {
-  if (!points || points.length < lookback + 1) return null;
-  const a = points[points.length - 1 - lookback].close;
-  const b = points[points.length - 1].close;
-  if (!a) return null;
-  return ((b/a) - 1) * 100;
+  if (!points || points.length < 2) return null;
+  const valid = points.filter(function(p){ return p && p.close != null && p.close > 0; });
+  if (valid.length < 2) return null;
+  // Use min(lookback, available) so short series still return a value
+  const effectiveLookback = Math.min(lookback, valid.length - 1);
+  const a = valid[valid.length - 1 - effectiveLookback].close;
+  const b = valid[valid.length - 1].close;
+  if (!a || a <= 0) return null;
+  return ((b / a) - 1) * 100;
 }
 function dailyLogReturns(values) {
   const r = [];
@@ -14367,88 +14596,106 @@ function chartLogReturns(points) {
   return r;
 }
 async function pfBuildValueSeries(range) {
-  // Reconstruct daily portfolio dollar-value series with forward-fill for missing prices
+  // Reconstruct daily portfolio dollar-value series
   const h = window._holdings || [];
-  const isCash = x => ['Cash','Money Market','CD','Bond Position'].includes(x.assetClass);
-  const securities = h.filter(x => !isCash(x));
-  const cashValue = h.filter(isCash).reduce((s,x) => s + x.costBasis*x.quantity, 0);
-  if (!securities.length) return { dates: [], values: [], twrValues: [] };
+  const isCashFn = x => ['Cash','Money Market','CD','Bond Position'].includes(x.assetClass);
+  const securities = h.filter(x => !isCashFn(x));
+  const cashHoldings = h.filter(isCashFn);
+  const cashValue = cashHoldings.reduce((s,x) => s + (x.costBasis||0)*(x.quantity||1), 0);
+  if (!securities.length && !cashValue) return { dates: [], values: [], twrValues: [] };
+  if (!securities.length) return { dates: [], values: [cashValue], twrValues: [100] };
 
-  // Aggregate by ticker (multiple accounts same ticker = sum quantities)
+  // Map range to a valid Yahoo Finance range string
+  const validRanges = {'1mo':'1mo','3mo':'3mo','6mo':'6mo','ytd':'1y','1y':'1y','2y':'2y','3y':'5y','5y':'5y','10y':'10y','15y':'max','20y':'max','max':'max'};
+  const fetchRange = validRanges[range] || range;
+
+  // Aggregate by ticker across accounts (sum quantities, use earliest purchase date)
   const byTicker = {};
   securities.forEach(s => {
-    if (!byTicker[s.ticker]) byTicker[s.ticker] = { ticker: s.ticker, quantity: 0, purchaseDate: s.purchaseDate || null };
-    byTicker[s.ticker].quantity += (s.quantity || 0);
-    // Use earliest purchase date
-    if (s.purchaseDate && (!byTicker[s.ticker].purchaseDate || s.purchaseDate < byTicker[s.ticker].purchaseDate)) {
-      byTicker[s.ticker].purchaseDate = s.purchaseDate;
-    }
+    const key = s.ticker;
+    if (!byTicker[key]) byTicker[key] = { ticker: key, quantity: 0, datePurchased: s.datePurchased || null };
+    byTicker[key].quantity += (s.quantity || 0);
+    const dp = s.datePurchased || s.purchaseDate || null;
+    if (dp && (!byTicker[key].datePurchased || dp < byTicker[key].datePurchased)) byTicker[key].datePurchased = dp;
   });
-  const aggSecurities = Object.values(byTicker);
+  const aggSecs = Object.values(byTicker);
 
-  // Fetch each ticker's price series
+  // Fetch price series in parallel
   const seriesMap = {};
-  await Promise.all(aggSecurities.map(async s => {
+  await Promise.all(aggSecs.map(async s => {
     try {
-      const c = await fetchChart(s.ticker, range, '1d');
+      const c = await fetchChart(s.ticker, fetchRange, '1d');
       seriesMap[s.ticker] = (c.points || []).filter(p => p.close != null);
     } catch(e) { seriesMap[s.ticker] = []; }
   }));
 
-  // Build price maps with forward-fill
-  const priceMap = {}; // ticker -> { date -> close }
-  aggSecurities.forEach(s => {
+  // Build date->price maps
+  const priceMap = {};
+  aggSecs.forEach(s => {
     priceMap[s.ticker] = {};
-    (seriesMap[s.ticker] || []).forEach(p => {
-      priceMap[s.ticker][p.date.slice(0,10)] = p.close;
-    });
+    (seriesMap[s.ticker] || []).forEach(p => { priceMap[s.ticker][p.date.slice(0,10)] = p.close; });
   });
 
-  // Union of all dates
-  const allDates = new Set();
-  Object.values(seriesMap).forEach(pts => pts.forEach(p => allDates.add(p.date.slice(0,10))));
-  const dates = [...allDates].sort();
+  // Union of all dates across all tickers
+  const allDatesSet = new Set();
+  Object.values(seriesMap).forEach(pts => pts.forEach(p => allDatesSet.add(p.date.slice(0,10))));
+  const dates = [...allDatesSet].sort();
   if (!dates.length) return { dates: [], values: [], twrValues: [] };
 
-  // Forward-fill each ticker's price across the date array
-  const filledPrices = {}; // ticker -> [price per date index]
-  aggSecurities.forEach(s => {
+  // Filter to requested range window
+  let cutoff = null;
+  const today = new Date();
+  if (range==='1mo') { cutoff=new Date(today); cutoff.setMonth(today.getMonth()-1); }
+  else if (range==='3mo') { cutoff=new Date(today); cutoff.setMonth(today.getMonth()-3); }
+  else if (range==='6mo') { cutoff=new Date(today); cutoff.setMonth(today.getMonth()-6); }
+  else if (range==='ytd') { cutoff=new Date(today.getFullYear(),0,1); }
+  else if (range==='1y') { cutoff=new Date(today); cutoff.setFullYear(today.getFullYear()-1); }
+  else if (range==='2y') { cutoff=new Date(today); cutoff.setFullYear(today.getFullYear()-2); }
+  else if (range==='3y') { cutoff=new Date(today); cutoff.setFullYear(today.getFullYear()-3); }
+  else if (range==='5y') { cutoff=new Date(today); cutoff.setFullYear(today.getFullYear()-5); }
+  else if (range==='10y') { cutoff=new Date(today); cutoff.setFullYear(today.getFullYear()-10); }
+  const cutoffStr = cutoff ? cutoff.toISOString().slice(0,10) : null;
+  const filteredDates = cutoffStr ? dates.filter(d => d >= cutoffStr) : dates;
+  if (!filteredDates.length) return { dates: [], values: [], twrValues: [] };
+
+  // Forward-fill prices across the filtered date array
+  const filledPrices = {};
+  aggSecs.forEach(s => {
     const pm = priceMap[s.ticker];
-    const filled = [];
     let last = null;
-    dates.forEach(d => {
-      if (pm[d] != null) last = pm[d];
-      filled.push(last);
-    });
-    filledPrices[s.ticker] = filled;
+    // Pre-warm with any price from before the window
+    dates.filter(d => cutoffStr && d < cutoffStr).forEach(d => { if (pm[d]!=null) last=pm[d]; });
+    filledPrices[s.ticker] = filteredDates.map(d => { if (pm[d]!=null) last=pm[d]; return last; });
   });
 
-  // Build portfolio value series (total market value per day)
-  const values = dates.map((d, i) => {
+  // Build portfolio value series — only include a security after its purchase date
+  const values = filteredDates.map((d, i) => {
     let v = cashValue;
-    aggSecurities.forEach(s => {
+    let anyPriced = cashValue > 0;
+    aggSecs.forEach(s => {
+      if (s.datePurchased && d < s.datePurchased) return; // not yet purchased
       const px = filledPrices[s.ticker][i];
-      if (px != null) v += px * s.quantity;
+      if (px != null) { v += px * s.quantity; anyPriced = true; }
     });
-    return v;
+    return anyPriced ? v : null;
   });
 
-  // Build Time-Weighted Return series (rebased to starting portfolio value)
-  // TWR: chain-link daily portfolio returns, ignore cash flows
-  // We detect large jumps (>15% day-over-day) as likely new deposits and strip them
-  const twrValues = [100]; // rebased index starting at 100
-  for (let i = 1; i < values.length; i++) {
-    if (values[i-1] > 0 && values[i] > 0) {
-      const dailyRet = (values[i] - values[i-1]) / values[i-1];
-      // Cap extreme single-day gains (>20%) as likely deposit events for TWR
-      const clampedRet = Math.abs(dailyRet) > 0.20 ? (dailyRet > 0 ? 0 : dailyRet) : dailyRet;
-      twrValues.push(twrValues[twrValues.length-1] * (1 + clampedRet));
-    } else {
-      twrValues.push(twrValues[twrValues.length-1]);
-    }
+  // Build TWR series rebased to 100 (strips large cash-flow jumps)
+  const twrValues = [];
+  let twrBase = null;
+  let compound = 1.0;
+  for (let i = 0; i < values.length; i++) {
+    if (values[i] == null) { twrValues.push(null); continue; }
+    if (twrBase == null) { twrBase = values[i]; twrValues.push(100); continue; }
+    if (values[i-1] == null || values[i-1] <= 0) { twrValues.push(twrValues[i-1]||100); continue; }
+    const dailyRet = (values[i] - values[i-1]) / values[i-1];
+    // Treat jumps >15% as cash flows, carry forward
+    if (Math.abs(dailyRet) > 0.15) { twrValues.push(twrValues[i-1]); continue; }
+    compound *= (1 + dailyRet);
+    twrValues.push(parseFloat((100 * compound).toFixed(4)));
   }
 
-  return { dates, values, twrValues };
+  return { dates: filteredDates, values, twrValues };
 }
 
 // ────────── Brinson-Fachler Attribution ──────────
@@ -14538,18 +14785,18 @@ async function brinsonRun() {
     const rows = [];
     let totAlloc = 0, totSelect = 0, totInteract = 0;
     uniqSectors.forEach(k => {
-      const wp = tv > 0 ? sectorMV[k] / tv * 100 : 0;
+      const wp = tv > 0 ? (sectorMV[k] || 0) / tv * 100 : 0;
       const wb = SPY_BENCH_WT[k] || 0;
       const Rb = sectorRets[k];
       const Rp = pfSectorRet[k];
-      const Rbench = benchRet;
+      const Rbench = benchRet != null ? benchRet : 0;
       let alloc = null, sel = null, inter = null;
-      if (Rb != null && Rbench != null) alloc = ((wp - wb)/100) * (Rb - Rbench);
-      if (Rb != null && Rp != null) sel = (wb/100) * (Rp - Rb);
-      if (Rb != null && Rp != null) inter = ((wp - wb)/100) * (Rp - Rb);
-      if (alloc != null) totAlloc += alloc;
-      if (sel != null) totSelect += sel;
-      if (inter != null) totInteract += inter;
+      if (Rb != null && isFinite(Rb)) alloc = ((wp - wb)/100) * (Rb - Rbench);
+      if (Rb != null && Rp != null && isFinite(Rb) && isFinite(Rp)) sel = (wb/100) * (Rp - Rb);
+      if (Rb != null && Rp != null && isFinite(Rb) && isFinite(Rp)) inter = ((wp - wb)/100) * (Rp - Rb);
+      if (alloc != null && isFinite(alloc)) totAlloc += alloc;
+      if (sel != null && isFinite(sel)) totSelect += sel;
+      if (inter != null && isFinite(inter)) totInteract += inter;
       rows.push({ sector: k, wp, wb, Rp, Rb, alloc, sel, inter });
     });
     const totalActive = totAlloc + totSelect + totInteract;
@@ -14786,6 +15033,8 @@ async function pfRenderCharacteristics() {
   const el = document.getElementById('pfCharacteristics');
   if (!el) return;
   const h = window._holdings || [];
+  if (!h.length) { el.innerHTML = '<p style="color:var(--text-sec);padding:12px;">Add holdings to see portfolio characteristics.</p>'; return; }
+  el.innerHTML = '<div style="padding:16px;text-align:center;"><span class="spinner"></span> Loading characteristics…</div>';
   const isCash = x => ['Cash','Money Market','CD','Bond Position'].includes(x.assetClass);
   const sec = h.filter(x => !isCash(x));
   if (!sec.length) { el.innerHTML = '<p>No security positions.</p>'; return; }
