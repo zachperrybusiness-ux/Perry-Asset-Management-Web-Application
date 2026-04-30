@@ -2179,7 +2179,15 @@ body.view-mobile .logo-icon { width: 22px !important; height: 22px !important; f
 
       <!-- Chart card -->
       <div class="card">
-        <div class="card-title">Portfolio Value Over Time <span class="help-icon" title="Reconstructs your portfolio's daily market value from when each position was purchased. Cash is held flat at face value. Pre-purchase periods are excluded so the chart shows only what you actually owned.">?</span></div>
+        <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
+          <span>Portfolio Value Over Time <span class="help-icon" title="Reconstructs your portfolio's daily market value from when each position was purchased. Cash is held flat at face value. Pre-purchase periods are excluded so the chart shows only what you actually owned.">?</span></span>
+          <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">
+            <span style="font-size:10.5px;color:var(--text-sec);font-style:italic;" id="rebasedExplainer">
+              <strong>SPY/QQQ (rebased):</strong> benchmark price indexed to match your portfolio's starting value — apples-to-apples visual comparison.
+            </span>
+            <button class="btn-outline btn-sm" id="btnHideBenchmarks" onclick="toggleBenchmarkVisibility()" style="font-size:11px;" title="Toggle benchmark lines on/off">Hide Benchmarks</button>
+          </div>
+        </div>
         <div class="card-body">
           <!-- Watchlist / Trial Portfolio row -->
           <div style="background:var(--panel);border:1px solid var(--border);border-radius:5px;padding:8px 12px;margin-bottom:10px;">
@@ -2319,15 +2327,25 @@ body.view-mobile .logo-icon { width: 22px !important; height: 22px !important; f
       <!-- FAMA-FRENCH FACTOR EXPOSURE moved to top of page -->
       <!-- PORTFOLIO-STATE MONTE CARLO moved into Portfolio Value chart as forecast overlay -->
 
-      <!-- Pie charts (within Snapshot for at-a-glance allocation) -->
-      <div class="grid-3">
-        <div id="donut-sector"></div>
-        <div id="donut-industry"></div>
-        <div id="donut-mktcap"></div>
-      </div>
-      <div class="grid-2">
-        <div id="donut-weight"></div>
-        <div id="mstar-card"></div>
+      <!-- Portfolio Allocation Charts -->
+      <div class="card" style="margin-top:14px;">
+        <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
+          <span>Portfolio Allocation Breakdown</span>
+          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+            <label style="font-size:11px;font-weight:600;color:var(--text-sec);">Filter by Account:</label>
+            <select id="donutAccountFilter" style="font-size:11px;padding:3px 8px;" onchange="renderAllDonuts()">
+              <option value="all">All Accounts</option>
+            </select>
+          </div>
+        </div>
+        <div class="card-body">
+          <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px;" id="donutGrid">
+            <div id="donut-sector"></div>
+            <div id="donut-weight"></div>
+            <div id="donut-mktcap"></div>
+          </div>
+          <div style="margin-top:16px;" id="mstar-card"></div>
+        </div>
       </div>
 
       </div><!-- /pftab-snapshot -->
@@ -2644,7 +2662,7 @@ body.view-mobile .logo-icon { width: 22px !important; height: 22px !important; f
               <input type="radio" name="holdingType" value="cash" onchange="toggleHoldingType()"> Cash / Money Market / CD / Bond
             </label>
           </div>
-          <div class="form-row" id="securityFields">
+          <div class="form-row" id="securityFields" style="align-items:flex-end;">
             <div class="form-group" style="min-width:110px;">
               <label title="Stock or ETF symbol (e.g., AAPL, NVDA, SPY)">Ticker
                 <span class="help-icon" title="Enter the ticker symbol of the stock, ETF, or fund. We'll auto-fetch its sector, industry, and current price.">?</span>
@@ -2668,7 +2686,7 @@ body.view-mobile .logo-icon { width: 22px !important; height: 22px !important; f
                 <span class="help-icon" title="What you paid per share. If you leave this blank and provide a Date Purchased, we'll auto-fill the closing price from that date via Yahoo Finance.">?</span>
               </label>
               <input type="number" id="inputCost" placeholder="auto-fill" min="0" step="0.01">
-              <div id="inputCostHint" style="font-size:10px;color:var(--text-sec);margin-top:2px;height:12px;"></div>
+              <div id="inputCostHint" style="font-size:10px;color:var(--success);margin-top:2px;min-height:14px;line-height:1.3;"></div>
             </div>
             <div class="form-group" style="min-width:80px;">
               <label>Yield %
@@ -2760,30 +2778,50 @@ body.view-mobile .logo-icon { width: 22px !important; height: 22px !important; f
         </div>
       </div>
 
-      <!-- ═══════════ DRIFT vs. TARGET MODEL ═══════════ -->
+      <!-- ═══════════ REBALANCING WORKBENCH (Drift + Blotter unified) ═══════════ -->
       <div class="card">
-        <div class="card-title">Sector Drift vs. Target Model
-          <span class="help-icon" title="Compares your current sector weights to a configurable target model. Set tolerance bands; positions outside their band are flagged for rebalancing. Targets default to SPY's GICS sector weights — override with your own model.">?</span>
-        </div>
-        <div class="card-body">
-          <p style="font-size:12px;color:var(--text-sec);margin-bottom:12px;">Sector weights vs. target with configurable tolerance bands. Positions outside band are <strong style="color:var(--warning,#8B6914);">flagged</strong>. Default target = SPY GICS sector weights (institutional convention). Click a row to edit its target.</p>
-          <div class="form-row" style="margin-bottom:10px;">
-            <div class="form-group"><label>Target Model</label>
-              <select id="driftModel" onchange="driftRender()">
-                <option value="spy" selected>SPY (S&amp;P 500 sector weights)</option>
-                <option value="qqq">QQQ (Nasdaq 100 weights)</option>
-                <option value="equal">Equal-weight all sectors</option>
-                <option value="custom">Custom (edit each row)</option>
-              </select>
-            </div>
-            <div class="form-group"><label>Tolerance Band (±%)</label>
-              <input type="number" id="driftTol" value="3" min="0.5" step="0.5" style="width:80px;" onchange="driftRender()">
-            </div>
-            <button class="btn btn-sm" onclick="driftProposeRebalance()">Propose Rebalance Trades</button>
+        <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
+          <span>Sector Drift vs. Target Model &amp; Rebalance Blotter
+            <span class="help-icon" title="Compares your current sector weights to a configurable target model. Proposed rebalance trades appear immediately below the drift analysis — they are part of the same workflow. This blotter does NOT execute trades.">?</span>
+          </span>
+          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+            <label style="font-size:11px;font-weight:600;">Target:</label>
+            <select id="driftModel" onchange="driftRender()" style="font-size:11px;padding:3px 8px;">
+              <option value="spy" selected>SPY — S&amp;P 500 Sector Weights</option>
+              <option value="qqq">QQQ — Nasdaq 100 Weights</option>
+              <option value="equal">Equal-Weight All Sectors</option>
+              <option value="aggressive_growth">Aggressive Growth (Tech-heavy)</option>
+              <option value="conservative">Conservative (Dividend/Defensive)</option>
+              <option value="balanced">Balanced / 60-40 Style</option>
+              <option value="custom">Custom (edit each row)</option>
+            </select>
+            <label style="font-size:11px;font-weight:600;">Tolerance:</label>
+            <input type="number" id="driftTol" value="3" min="0.5" step="0.5" style="width:60px;font-size:11px;" onchange="driftRender()">
+            <span style="font-size:10px;color:var(--text-sec);">±%</span>
+            <button class="btn btn-sm" onclick="driftProposeRebalance()" style="white-space:nowrap;">Propose Rebalance</button>
           </div>
-          <div id="driftPanel" style="text-align:center;padding:14px;color:var(--text-sec);font-size:12px;">Loading drift analysis…</div>
         </div>
-        <div class="card-sources"><strong>Method:</strong> Compares current MV-weighted sector exposure to target model. Tolerance band typical institutional convention 3–5%. SPY weights from current iShares/SSGA sector ETF compositions (XLK, XLE, XLF, etc.).</div>
+        <div class="card-body" style="padding-top:0;">
+          <!-- Drift table -->
+          <div id="driftPanel" style="text-align:center;padding:14px;color:var(--text-sec);font-size:12px;">Loading drift analysis…</div>
+          <!-- Blotter — shown inline when trades exist -->
+          <div id="blotterInline" style="display:none;margin-top:16px;">
+            <div style="background:var(--navy);color:#fff;padding:8px 12px;font-size:12px;font-weight:700;border-radius:4px 4px 0 0;display:flex;justify-content:space-between;align-items:center;">
+              <span>📋 Proposed Trade Blotter <span style="font-size:10px;font-weight:400;opacity:.8;">(does not execute — generates order list for your custodian)</span></span>
+              <div style="display:flex;gap:6px;">
+                <button onclick="blotterExportCSV()" style="background:rgba(255,255,255,0.2);border:1px solid rgba(255,255,255,0.4);color:#fff;padding:3px 9px;border-radius:3px;cursor:pointer;font-size:11px;">Export CSV</button>
+                <button onclick="blotterClear()" style="background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.3);color:#fff;padding:3px 9px;border-radius:3px;cursor:pointer;font-size:11px;">Clear</button>
+              </div>
+            </div>
+            <div style="border:1px solid var(--border);border-top:none;border-radius:0 0 4px 4px;padding:10px;">
+              <div id="blotterTable"></div>
+              <div style="margin-top:8px;display:flex;justify-content:flex-end;">
+                <span id="blotterSummary" style="font-size:11px;color:var(--text-sec);"></span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="card-sources"><strong>Method:</strong> MV-weighted sector exposure vs. target. Tolerance band: institutional convention 3–5%. &bull; Aggressive Growth: 40% Tech, 20% Comm. Svcs., 15% Cons. Disc., 10% Healthcare, 15% other. &bull; Conservative: 20% Healthcare, 18% Financials, 15% Cons. Staples, 12% Utilities, 12% Real Estate, 23% other.</div>
       </div>
 
       <!-- ═══════════ TAX-LOSS HARVESTING SCANNER ═══════════ -->
@@ -2792,7 +2830,7 @@ body.view-mobile .logo-icon { width: 22px !important; height: 22px !important; f
           <span class="help-icon" title="Scans positions in TAXABLE accounts (Individual, Joint, Trust) for unrealized losses ≥ threshold. Excludes IRA/401k/Roth/HSA where TLH does not apply. 30-day wash-sale window flagged when applicable.">?</span>
         </div>
         <div class="card-body">
-          <p style="font-size:12px;color:var(--text-sec);margin-bottom:12px;">Scans positions in <strong>taxable accounts</strong> (Individual, Joint, Trust, Custodial) for unrealized losses. Tax-deferred accounts (IRA, 401k, HSA, 529) are excluded — TLH does not apply there. Wash-sale rule (IRC §1091): repurchasing the same or substantially identical security within 30 days disallows the loss.</p>
+          <p style="font-size:12px;color:var(--text-sec);margin-bottom:12px;">Scans positions in <strong>taxable accounts</strong> (Individual, Joint, Trust, Custodial) for unrealized losses. Tax-deferred accounts (IRA, 401k, HSA, 529) are excluded — TLH does not apply there. <strong>Wash-sale rule (IRC §1091):</strong> repurchasing the same or substantially identical security within 30 days disallows the loss.</p>
           <div class="form-row" style="margin-bottom:10px;">
             <div class="form-group"><label>Loss Threshold ($)</label>
               <input type="number" id="tlhThreshold" value="500" min="0" step="100" style="width:120px;" onchange="tlhRender()">
@@ -2804,24 +2842,10 @@ body.view-mobile .logo-icon { width: 22px !important; height: 22px !important; f
           </div>
           <div id="tlhPanel" style="text-align:center;padding:14px;color:var(--text-sec);font-size:12px;">Click <strong>Refresh Scan</strong> to identify TLH candidates.</div>
         </div>
-        <div class="card-sources"><strong>Reference:</strong> IRC §1091 (Wash Sale Rule), 30-day window before/after loss realization. IRS Publication 550 (Investment Income &amp; Expenses). Modeled on iRebal/Tamarac TLH workflows.</div>
+        <div class="card-sources"><strong>Reference:</strong> IRC §1091 (Wash Sale Rule), 30-day window before/after loss realization. IRS Publication 550. Modeled on iRebal/Tamarac TLH workflows.</div>
       </div>
-
-      <!-- ═══════════ PROPOSED TRADE BLOTTER ═══════════ -->
-      <div class="card" id="blotterCard" style="display:none;">
-        <div class="card-title">Proposed Trade Blotter
-          <span class="help-icon" title="Trades proposed by Drift Rebalance / TLH Scanner. Review, edit, and clear before manual execution. This blotter does NOT execute trades — it generates the order list for your custodian.">?</span>
-        </div>
-        <div class="card-body">
-          <p style="font-size:12px;color:var(--text-sec);margin-bottom:10px;">Proposed trades from Drift Rebalance and TLH Scanner. <strong style="color:var(--warning,#8B6914);">This blotter does not execute trades</strong> — it produces an order list. Copy / export to your custodian.</p>
-          <div id="blotterTable"></div>
-          <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;">
-            <button class="btn btn-sm" onclick="blotterExportCSV()">Export to CSV</button>
-            <button class="btn-outline btn-sm" onclick="blotterClear()">Clear All</button>
-            <span id="blotterSummary" style="font-size:11px;color:var(--text-sec);align-self:center;margin-left:auto;"></span>
-          </div>
-        </div>
-      </div>
+      <!-- Legacy blotter card (hidden — blotter now lives inline in drift card) -->
+      <div id="blotterCard" style="display:none;"></div>
 
       <!-- Holdings table card -->
       <div class="card">
@@ -3287,6 +3311,96 @@ body.view-mobile .logo-icon { width: 22px !important; height: 22px !important; f
       <div class="card-sources">
         <strong>Method:</strong> Empirical transition matrix P[i,j] = P(state_{t+k} = j | state_t = i) estimated via maximum likelihood from historical 5-year SPY regime sequence &bull; 30/60/90-day transition probabilities computed as P^k where k = horizon/segment length &bull; Bayesian updating: current-state prior combined with transition matrix to produce posterior distribution over future states &bull; Framework: Hamilton (1989) Markov regime-switching, adapted for macro regime classification.
       </div>
+    </div>
+
+    <!-- ═══════════ MARKET BREADTH & FEAR/GREED COMPOSITE ═══════════ -->
+    <div class="card">
+      <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;">
+        <span>Market Breadth &amp; Composite Fear/Greed Indicator
+          <span class="help-icon" title="A composite of 7 market-stress indicators: VIX level, VIX vs. 20D SMA, SPY distance from 52W high, Put/Call ratio proxy, HY vs. IG spread, Safe-haven demand (TLT vs. SPY), and momentum breadth. Modeled on CNN's Fear & Greed index methodology but using real-time market data.">?</span>
+        </span>
+        <button class="btn-sm" style="background:rgba(255,255,255,0.2);color:#fff;border:1px solid rgba(255,255,255,0.4);padding:4px 10px;border-radius:3px;cursor:pointer;font-size:11px;" onclick="mktLoadFearGreed()">Compute</button>
+      </div>
+      <div class="card-body">
+        <p style="font-size:12px;color:var(--text-sec);margin-bottom:12px;">Composite index (0=Extreme Fear, 100=Extreme Greed) built from 7 independently-normalized signals. Each signal contributes equally. Score &lt; 25 = historically bullish contrarian setup; Score &gt; 75 = elevated complacency / risk of correction.</p>
+        <div id="mktFGResult" style="text-align:center;padding:20px;color:var(--text-sec);">Click <strong>Compute</strong> to run composite indicator.</div>
+      </div>
+      <div class="card-sources"><strong>Methodology:</strong> Each signal normalized to [0,100] via min-max over trailing 252 trading days. Equal-weight composite. Signals: VIX level, VIX/SMA20 ratio, SPY vs. 52W high, TLT/SPY 20D relative return (safe haven), GLD/SPY 20D relative return, HYG/LQD 20D relative return (credit risk appetite), QQQ/SPY 20D relative return (risk appetite). Inspired by CNN Fear &amp; Greed Index; all computations use live market data.</div>
+    </div>
+
+    <!-- ═══════════ ASSET CLASS RETURN HEATMAP ═══════════ -->
+    <div class="card">
+      <div class="card-title">Asset Class Return Heatmap
+        <span class="help-icon" title="Monthly and weekly returns for major asset classes, color-coded green (positive) to red (negative). Allows rapid identification of which asset classes have been leading/lagging across time periods. Similar to Callan periodic table of investment returns.">?</span>
+      </div>
+      <div class="card-body">
+        <p style="font-size:12px;color:var(--text-sec);margin-bottom:12px;">Color-coded return matrix for major ETF proxies across time periods. Green = positive, red = negative. Sorted by YTD performance. Inspired by the <em>Callan Periodic Table of Investment Returns</em>.</p>
+        <div class="form-row" style="margin-bottom:10px;">
+          <button class="btn btn-sm" onclick="mktLoadReturnHeatmap()">Load Heatmap</button>
+          <span style="font-size:11px;color:var(--text-sec);align-self:center;margin-left:8px;">Covers 12 major asset class ETF proxies.</span>
+        </div>
+        <div id="mktReturnHeatmap" style="text-align:center;padding:20px;color:var(--text-sec);">Click <strong>Load Heatmap</strong> to generate.</div>
+      </div>
+      <div class="card-sources"><strong>Proxies:</strong> SPY (US Equity), QQQ (Tech), IWM (Small Cap), EFA (Intl Dev.), EEM (EM), TLT (Long Duration), IEF (Intermediate), LQD (IG Credit), HYG (HY Credit), GLD (Gold), USO (Oil), VNQ (REITs). Period: 1W, 1M, 3M, 6M, YTD, 1Y.</div>
+    </div>
+
+    <!-- ═══════════ INTERMARKET LEAD/LAG ANALYSIS ═══════════ -->
+    <div class="card">
+      <div class="card-title">Intermarket Lead/Lag Analysis
+        <span class="help-icon" title="Cross-correlation analysis showing which assets lead or lag others. A positive lag-k correlation between asset A and asset B means A's return today predicts B's return k days later. Grounded in Granger causality intuition.">?</span>
+      </div>
+      <div class="card-body">
+        <p style="font-size:12px;color:var(--text-sec);margin-bottom:12px;">Cross-correlation function (CCF) between selected pairs at lags −20 to +20 trading days. Positive peak at lag k means the <em>leader</em>'s return today correlates with the <em>follower</em>'s return k days later. Classic relationships: Copper leads Equities, Rates lead Credit, Oil leads Energy stocks.</p>
+        <div class="form-row" style="margin-bottom:10px;">
+          <div class="form-group"><label>Asset A (Leader)</label>
+            <select id="lagAssetA" style="font-size:11px;">
+              <option value="CPER">CPER (Copper)</option>
+              <option value="TLT" selected>TLT (Long Rates)</option>
+              <option value="GLD">GLD (Gold)</option>
+              <option value="USO">USO (Oil)</option>
+              <option value="UUP">UUP (USD)</option>
+              <option value="HYG">HYG (HY Credit)</option>
+            </select>
+          </div>
+          <div class="form-group"><label>Asset B (Follower)</label>
+            <select id="lagAssetB" style="font-size:11px;">
+              <option value="SPY" selected>SPY (US Equity)</option>
+              <option value="XLE">XLE (Energy)</option>
+              <option value="XLF">XLF (Financials)</option>
+              <option value="IWM">IWM (Small Cap)</option>
+              <option value="EEM">EEM (Emerging Mkts)</option>
+              <option value="LQD">LQD (IG Credit)</option>
+            </select>
+          </div>
+          <div class="form-group"><label>Lookback</label>
+            <select id="lagLookback" style="font-size:11px;">
+              <option value="126">6 Months</option>
+              <option value="252" selected>1 Year</option>
+              <option value="504">2 Years</option>
+            </select>
+          </div>
+          <button class="btn btn-sm" onclick="mktRunLeadLag()">Compute Lead/Lag</button>
+        </div>
+        <div id="mktLeadLagResult" style="text-align:center;padding:20px;color:var(--text-sec);">Select assets and click <strong>Compute Lead/Lag</strong>.</div>
+        <div class="chart-wrap" style="height:240px;display:none;" id="mktLeadLagWrap"><canvas id="mktLeadLagChart"></canvas></div>
+      </div>
+      <div class="card-sources"><strong>Method:</strong> Cross-correlation function r_AB(k) = corr(R_A(t), R_B(t+k)) for k ∈ [-20, +20]. Computed from daily log returns. Bonferroni-corrected 95% confidence band = ±1.96/√n shown as dashed lines. Granger, C.W.J. (1969) "Investigating Causal Relations by Econometric Models," <em>Econometrica</em>.</div>
+    </div>
+
+    <!-- ═══════════ SECTOR MOMENTUM SCORECARD ═══════════ -->
+    <div class="card">
+      <div class="card-title">Sector Momentum Scorecard
+        <span class="help-icon" title="Ranks all 11 GICS sectors by multiple momentum signals: 1M, 3M, 6M, and 12M price returns, plus relative strength vs. SPY. Identifies sector rotation trends. Grounded in Fama-French momentum factor and sector rotation frameworks.">?</span>
+      </div>
+      <div class="card-body">
+        <p style="font-size:12px;color:var(--text-sec);margin-bottom:12px;">All 11 GICS sector SPDR ETFs ranked by return momentum across multiple time horizons. Composite rank = average of 1M, 3M, 6M, 12M ranks. <strong>Top 3 sectors = momentum leaders</strong> (typically outperform in the near term). Bottom 3 = candidates for mean-reversion or rotation.</p>
+        <div class="form-row" style="margin-bottom:10px;">
+          <button class="btn btn-sm" onclick="mktLoadSectorMomentum()">Load Sector Momentum</button>
+          <span style="font-size:11px;color:var(--text-sec);align-self:center;margin-left:8px;">11 GICS sectors via SPDR ETFs (XLK, XLE, XLF, etc.)</span>
+        </div>
+        <div id="mktSectorMomentum" style="text-align:center;padding:20px;color:var(--text-sec);">Click <strong>Load Sector Momentum</strong> to rank all 11 sectors.</div>
+      </div>
+      <div class="card-sources"><strong>Sources:</strong> SPDR Select Sector ETFs (State Street). <strong>Method:</strong> Total return for each period. Composite rank = (rank_1M + rank_3M + rank_6M + rank_12M) / 4 where rank 1 = best. Jegadeesh, N. &amp; Titman, S. (1993) "Returns to Buying Winners and Selling Losers," <em>Journal of Finance</em>.</div>
     </div>
 
     <!-- UNIVERSE SELECTOR -->
@@ -4644,7 +4758,14 @@ function navigateTo(p) {
   if (p === 'themes' && typeof themesPopulateDropdown === 'function') {
     themesPopulateDropdown();
   }
-  if (p === 'macro') { loadMacroLiveTable(); if (typeof ycLoad === 'function' && !window._ycLoaded) { ycLoad(); window._ycLoaded = true; } }
+  if (p === 'macro') { 
+    loadMacroLiveTable(); 
+    if (typeof ycLoad === 'function' && !window._ycLoaded) { ycLoad(); window._ycLoaded = true; } 
+  }
+  if (p === 'home') {
+    // Re-run briefing every time home is visited
+    setTimeout(function(){ if (typeof briefingLoad === 'function') briefingLoad(); }, 100);
+  }
   if (p === 'resources' && typeof resourcesInit === 'function') resourcesInit();
   if (p === 'markets' && typeof mktInit === 'function' && !window._mktInitialized) { mktInit(); window._mktInitialized = true; }
   if (p === 'markets' && typeof psLoadDiagnostic === 'function') {
@@ -4982,16 +5103,8 @@ async function renderPortfolioOverview() {
       value: tv > 0 ? Math.round(v / tv * 100) : 0
     })).sort((a, b) => b.value - a.value);
   };
-  renderDonut('donut-sector', 'Portfolio Allocation by Sector', group('sector'));
-  renderDonut('donut-industry', 'Portfolio Allocation by Industry', group('industry').slice(0, 10));
-  renderDonut('donut-mktcap', 'Portfolio by Market Cap / Style', group('mktCapCategory'));
-  renderDonut('donut-weight', 'Portfolio Allocation by Holding',
-    holdings.map(h => ({
-      label: h.ticker,
-      value: tv > 0 ? Math.round(mvOf(h) / tv * 100) : 0
-    })).sort((a, b) => b.value - a.value)
-  );
-  renderMorningstarBox(holdings);
+  // Render allocation charts via unified function (handles account filter + dedup)
+  renderAllDonuts();
   bindTimeframeBtns();
   document.querySelectorAll('#pfTimeframeBtns .btn-outline').forEach(b => {
     b.classList.toggle('active', b.dataset.range === currentRange);
@@ -6104,41 +6217,124 @@ function renderMorningstarBox(holdings) {
 }
 
 // ═══ DONUTS ═══
+// Render a donut chart with deduplication and clean legend
 function renderDonut(id, title, data) {
   const el = document.getElementById(id);
   if (!el) return;
+  // Deduplicate: merge same labels
+  const merged = {};
+  data.forEach(d => {
+    if (merged[d.label]) merged[d.label] += d.value;
+    else merged[d.label] = d.value;
+  });
+  // Filter out zero/tiny slices, sort descending, cap at 15 entries
+  let deduped = Object.entries(merged)
+    .map(([label, value]) => ({ label, value }))
+    .filter(d => d.value >= 0.5)
+    .sort((a, b) => b.value - a.value);
+  // Group small slices into "Other"
+  if (deduped.length > 12) {
+    const top = deduped.slice(0, 11);
+    const otherVal = deduped.slice(11).reduce((s, d) => s + d.value, 0);
+    if (otherVal > 0) top.push({ label: 'Other', value: Math.round(otherVal) });
+    deduped = top;
+  }
+  if (!deduped.length) { el.innerHTML = ''; return; }
   const cid = id + '-c';
-  el.innerHTML = '<div class="card"><div class="card-title">' + title + '</div><div class="card-body">' +
-    '<div class="donut-wrap"><div class="donut-canvas-wrap"><canvas id="' + cid + '"></canvas></div>' +
-    '<div class="donut-legend">' +
-    data.map((d, i) =>
-      '<div class="legend-row"><span class="legend-dot" style="background:' + PALETTE[i % PALETTE.length] + '"></span>' +
-      '<span class="legend-label">' + d.label + '</span><span class="legend-val">' + d.value + '%</span></div>'
+  el.innerHTML = '<div style="border:1px solid var(--border);border-radius:6px;overflow:hidden;">' +
+    '<div style="background:var(--navy);color:#fff;padding:8px 12px;font-size:12px;font-weight:700;">' + title + '</div>' +
+    '<div style="padding:12px;">' +
+    '<div style="display:flex;gap:12px;align-items:center;">' +
+    '<div style="width:160px;height:160px;flex-shrink:0;position:relative;"><canvas id="' + cid + '"></canvas>' +
+    '<div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center;pointer-events:none;">' +
+    '<div style="font-size:18px;font-weight:800;color:var(--navy);">' + deduped.length + '</div>' +
+    '<div style="font-size:10px;color:var(--text-sec);white-space:nowrap;">' + (deduped.length === 1 ? 'category' : 'categories') + '</div>' +
+    '</div></div>' +
+    '<div style="flex:1;min-width:0;max-height:170px;overflow-y:auto;">' +
+    deduped.map((d, i) =>
+      '<div style="display:flex;align-items:center;gap:6px;padding:3px 0;border-bottom:1px solid rgba(0,0,0,0.04);">' +
+      '<span style="width:10px;height:10px;border-radius:2px;flex-shrink:0;background:' + PALETTE[i % PALETTE.length] + ';"></span>' +
+      '<span style="flex:1;font-size:11px;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="' + d.label + '">' + d.label + '</span>' +
+      '<span style="font-size:11px;font-weight:700;color:var(--navy);font-family:Courier New,monospace;">' + d.value.toFixed(1) + '%</span>' +
+      '</div>'
     ).join('') +
-    '</div></div></div><div class="card-sources"><strong>Sources:</strong><br>&#8226; Yahoo Finance &#8226; Firestore</div></div>';
-  const ctx = document.getElementById(cid).getContext('2d');
+    '</div></div></div></div>';
+  const ctx = document.getElementById(cid) ? document.getElementById(cid).getContext('2d') : null;
+  if (!ctx) return;
   if (donutCharts[id]) donutCharts[id].destroy();
   donutCharts[id] = new Chart(ctx, {
     type: 'doughnut',
     data: {
-      labels: data.map(d => d.label),
+      labels: deduped.map(d => d.label),
       datasets: [{
-        data: data.map(d => d.value),
-        backgroundColor: data.map((_, i) => PALETTE[i % PALETTE.length]),
+        data: deduped.map(d => d.value),
+        backgroundColor: deduped.map((_, i) => PALETTE[i % PALETTE.length]),
         borderWidth: 2,
-        borderColor: C.bg
+        borderColor: C.bg,
+        hoverBorderWidth: 3
       }]
     },
     options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      cutout: '62%',
+      responsive: true, maintainAspectRatio: true, cutout: '60%',
       plugins: {
         legend: { display: false },
-        tooltip: { ...chartTooltip, callbacks: { label: c => ' ' + c.label + ': ' + c.parsed + '%' } }
+        tooltip: {
+          callbacks: {
+            label: c => ' ' + c.label + ': ' + (c.parsed != null ? c.parsed.toFixed(1) : '0') + '%'
+          }
+        }
       }
     }
   });
+}
+
+// Render all donuts, respecting the account filter
+function renderAllDonuts() {
+  const allH = window._holdings || [];
+  const af = (document.getElementById('donutAccountFilter') || {}).value || 'all';
+  const holdings = af === 'all' ? allH : allH.filter(h => (h.accountType || 'Individual') === af);
+
+  function mvOf(h) {
+    const isCash = h.assetClass === 'Cash' || h.assetClass === 'Money Market' || h.assetClass === 'CD' || h.assetClass === 'Bond Position';
+    return isCash ? (h.costBasis || 0) * h.quantity : (h.currentPrice || 0) * h.quantity;
+  }
+  const tv = holdings.reduce((s, h) => s + mvOf(h), 0);
+  if (tv <= 0) return;
+
+  const group = (key) => {
+    const g = {};
+    holdings.forEach(h => {
+      const mv = mvOf(h);
+      const k = h[key] || 'Other';
+      g[k] = (g[k] || 0) + mv;
+    });
+    return Object.entries(g).map(([l, v]) => ({
+      label: l, value: tv > 0 ? Math.round(v / tv * 1000) / 10 : 0
+    })).sort((a, b) => b.value - a.value);
+  };
+
+  renderDonut('donut-sector', 'By Sector', group('sector'));
+  renderDonut('donut-weight', 'By Holding (Top Positions)', 
+    holdings.map(h => ({
+      label: h.ticker,
+      value: tv > 0 ? Math.round(mvOf(h) / tv * 1000) / 10 : 0
+    })).sort((a, b) => b.value - a.value)
+  );
+  renderDonut('donut-mktcap', 'By Market Cap / Style', group('mktCapCategory'));
+  renderMorningstarBox(holdings);
+
+  // Populate account filter dropdown
+  const filterEl = document.getElementById('donutAccountFilter');
+  if (filterEl && filterEl.options.length <= 1) {
+    const accts = [...new Set(allH.map(h => h.accountType || 'Individual'))].sort();
+    accts.forEach(a => {
+      if (a !== 'all') {
+        const opt = document.createElement('option');
+        opt.value = a; opt.textContent = a;
+        filterEl.appendChild(opt);
+      }
+    });
+  }
 }
 
 // ═══ BULK IMPORT ═══
@@ -10852,10 +11048,15 @@ async function briefingLoad() {
   }).join('');
 }
 
-// Auto-run when page loads (after auth check) and when Home is navigated to
-(function(){
-  var origNavigateTo = window._origNavigateTo_briefing || null;
-  // We patch navigateTo to trigger briefingLoad on home visits
+// Auto-run briefingLoad on DOMContentLoaded and on every home visit
+(function() {
+  // Fire on initial page load (home is default active page)
+  document.addEventListener('DOMContentLoaded', function() {
+    // Small delay to let Firebase auth initialize
+    setTimeout(function() {
+      if (typeof briefingLoad === 'function') briefingLoad();
+    }, 800);
+  });
 })();
 
 // ═══════════════════════════════════════════════════════════════════
@@ -13097,6 +13298,24 @@ window.toggleRecState = function() {
   if (typeof renderPortfolioChart === 'function') renderPortfolioChart();
 };
 
+// Toggle benchmark line visibility on portfolio chart
+window._benchmarksHidden = false;
+window.toggleBenchmarkVisibility = function() {
+  window._benchmarksHidden = !window._benchmarksHidden;
+  var btn = document.getElementById('btnHideBenchmarks');
+  if (btn) btn.textContent = window._benchmarksHidden ? 'Show Benchmarks' : 'Hide Benchmarks';
+  // Toggle visibility on the live chart
+  if (window.portfolioLineChart && window.portfolioLineChart.data) {
+    window.portfolioLineChart.data.datasets.forEach(function(ds) {
+      var l = ds.label || '';
+      var isBenchmark = l.length <= 8 && !l.includes('Portfolio') && !l.includes('Watchlist') && !l.includes('Forecast') && !l.includes('Recommended') && !l.includes('overlay') && l !== 'Volume';
+      if (isBenchmark || l.includes('(rebased)')) {
+        ds.hidden = window._benchmarksHidden;
+      }
+    });
+    window.portfolioLineChart.update('none');
+  }
+};
 // TWR Mode toggle — when ON: chart foregrounds only the TWR line; Portfolio Value line is hidden
 // Also adjusts the Forecast Regime overlay to operate on TWR basis
 window._twrModeOnly = false;
@@ -15101,6 +15320,19 @@ const QQQ_SECTOR_WEIGHTS = {
   'Technology':62.0,'Communication Services':15.0,'Consumer Discretionary':14.0,
   'Healthcare':5.0,'Industrials':2.5,'Consumer Staples':1.0,'Utilities':0.5
 };
+const AGGRESSIVE_GROWTH_WEIGHTS = {
+  'Technology':40.0,'Communication Services':20.0,'Consumer Discretionary':15.0,
+  'Healthcare':10.0,'Industrials':5.0,'Financials':5.0,'Materials':2.5,'Energy':2.5
+};
+const CONSERVATIVE_WEIGHTS = {
+  'Healthcare':20.0,'Financials':18.0,'Consumer Staples':15.0,'Utilities':12.0,
+  'Real Estate':12.0,'Energy':8.0,'Industrials':7.0,'Technology':5.0,'Materials':3.0
+};
+const BALANCED_WEIGHTS = {
+  'Technology':20.0,'Healthcare':14.0,'Financials':12.0,'Industrials':10.0,
+  'Consumer Discretionary':9.0,'Consumer Staples':8.0,'Communication Services':8.0,
+  'Energy':6.0,'Utilities':5.0,'Real Estate':5.0,'Materials':3.0
+};
 function driftRender() {
   const el = document.getElementById('driftPanel');
   if (!el) return;
@@ -15255,11 +15487,18 @@ function tlhAddToBlotter(id) {
 
 // ────────── Trade Blotter ──────────
 function blotterRender() {
+  // Use inline blotter (within drift card) if available, else legacy card
+  const inlineEl = document.getElementById('blotterInline');
   const card = document.getElementById('blotterCard');
   const t = document.getElementById('blotterTable');
   const blotter = window._blotter || [];
-  if (!blotter.length) { if (card) card.style.display='none'; return; }
-  if (card) card.style.display='';
+  if (!blotter.length) {
+    if (inlineEl) inlineEl.style.display = 'none';
+    if (card) card.style.display = 'none';
+    return;
+  }
+  if (inlineEl) { inlineEl.style.display = ''; }
+  else if (card) { card.style.display = ''; }
   let html = '<div class="blotter-row header">'+
     '<div>Action</div><div>Ticker / Reason</div><div class="blotter-col-px" style="text-align:right;">Price</div><div style="text-align:right;">$ Notional</div><div class="blotter-col-tax" style="text-align:right;">Shares</div><div></div></div>';
   let buyDol = 0, sellDol = 0;
@@ -15516,6 +15755,413 @@ function frobeniusDistance(m1, m2, tickers) {
   }
   return Math.sqrt(sum / Math.max(count, 1));
 }
+
+// ═══════════════════════════════════════════════════════════════════
+// ════  CROSS-ASSET ANALYSIS — FEAR/GREED + HEATMAP + LEAD/LAG + MOMENTUM ════
+// ═══════════════════════════════════════════════════════════════════
+
+var WORKER_URL_CA = 'https://perry-finance-proxy.zachperrybusiness.workers.dev';
+
+// ── FEAR/GREED COMPOSITE ──────────────────────────────────────────
+window.mktLoadFearGreed = async function() {
+  var el = document.getElementById('mktFGResult');
+  el.innerHTML = '<span class="spinner"></span> Computing 7-signal composite…';
+  try {
+    // Fetch all needed series in parallel
+    var tickers = ['SPY', 'QQQ', 'TLT', 'GLD', 'HYG', 'LQD', 'VIX'];
+    var charts = {};
+    await Promise.all(['SPY','QQQ','TLT','GLD','HYG','LQD'].map(async function(t) {
+      try {
+        var r = await fetch(WORKER_URL_CA + '/chart?symbol=' + t + '&range=1y&interval=1d');
+        var d = await r.json();
+        charts[t] = (d.points || []).filter(function(p) { return p.close != null; });
+      } catch(e) { charts[t] = []; }
+    }));
+    var vixR = await fetch(WORKER_URL_CA + '/quote?symbol=%5EVIX').then(function(r){return r.json();});
+    var vixCur = vixR.current || vixR.price || 20;
+
+    function closes(t) { return (charts[t] || []).map(function(p) { return p.close; }); }
+    function last(arr) { return arr[arr.length - 1]; }
+    function pctChange(arr, n) {
+      if (arr.length < n + 1) return 0;
+      return (arr[arr.length-1] - arr[arr.length-1-n]) / arr[arr.length-1-n];
+    }
+    function sma(arr, n) {
+      if (arr.length < n) return arr[arr.length-1] || 0;
+      return arr.slice(-n).reduce(function(s,v){return s+v;}, 0) / n;
+    }
+    function normalize(val, minV, maxV) {
+      if (maxV === minV) return 50;
+      return Math.max(0, Math.min(100, (val - minV) / (maxV - minV) * 100));
+    }
+    function rollingVals(arr, fn, window) {
+      var vals = [];
+      for (var i = window; i < arr.length; i++) vals.push(fn(arr.slice(0, i+1)));
+      return vals;
+    }
+
+    var spyC = closes('SPY');
+    var tltC = closes('TLT');
+    var gldC = closes('GLD');
+    var hygC = closes('HYG');
+    var lqdC = closes('LQD');
+    var qqqC = closes('QQQ');
+
+    if (spyC.length < 20) { el.innerHTML = '<span style="color:var(--danger);">Insufficient data — try again.</span>'; return; }
+
+    // Signal 1: VIX level (inverted — high VIX = fear)
+    var vixSig = 100 - normalize(vixCur, 10, 45);
+
+    // Signal 2: VIX vs 20D SMA (VIX below SMA = greed)
+    var vixHist = [];
+    try {
+      var vixHR = await fetch(WORKER_URL_CA + '/chart?symbol=%5EVIX&range=3mo&interval=1d').then(function(r){return r.json();});
+      vixHist = (vixHR.points || []).filter(function(p){return p.close!=null;}).map(function(p){return p.close;});
+    } catch(e) {}
+    var vixSma20 = vixHist.length >= 20 ? vixHist.slice(-20).reduce(function(s,v){return s+v;},0)/20 : vixCur;
+    var vixVsSma = vixSma20 > 0 ? vixCur / vixSma20 : 1;
+    var vixSmaSig = 100 - normalize(vixVsSma, 0.7, 1.5);
+
+    // Signal 3: SPY vs 52W high (momentum — distance from high = fear)
+    var spy52High = Math.max.apply(null, spyC);
+    var spyDist = (last(spyC) - spy52High) / spy52High; // negative
+    var spyDistSig = normalize(spyDist, -0.35, 0);
+
+    // Signal 4: TLT vs SPY 20D relative return (safe haven demand = fear)
+    var tltRel20 = spyC.length >= 20 && tltC.length >= 20 ? pctChange(tltC, 20) - pctChange(spyC, 20) : 0;
+    var safeHavenSig = 100 - normalize(tltRel20, -0.08, 0.08);
+
+    // Signal 5: GLD vs SPY 20D relative return (gold > stocks = fear)
+    var gldRel20 = spyC.length >= 20 && gldC.length >= 20 ? pctChange(gldC, 20) - pctChange(spyC, 20) : 0;
+    var goldSig = 100 - normalize(gldRel20, -0.06, 0.06);
+
+    // Signal 6: HYG/LQD spread proxy (HYG underperforms LQD = credit stress = fear)
+    var hygLqdRel = hygC.length >= 20 && lqdC.length >= 20 ? pctChange(hygC, 20) - pctChange(lqdC, 20) : 0;
+    var creditSig = normalize(hygLqdRel, -0.05, 0.05);
+
+    // Signal 7: QQQ vs SPY 20D (QQQ leads in risk-on)
+    var riskAppetite = qqqC.length >= 20 && spyC.length >= 20 ? pctChange(qqqC, 20) - pctChange(spyC, 20) : 0;
+    var riskAppSig = normalize(riskAppetite, -0.05, 0.05);
+
+    var signals = [
+      { name: 'VIX Level', score: vixSig, desc: 'Current: ' + vixCur.toFixed(1), icon: '📊' },
+      { name: 'VIX vs 20D SMA', score: vixSmaSig, desc: vixVsSma.toFixed(2) + 'x ratio', icon: '📈' },
+      { name: 'SPY vs 52W High', score: spyDistSig, desc: (spyDist * 100).toFixed(1) + '% from peak', icon: '🏔️' },
+      { name: 'Safe-Haven Demand', score: safeHavenSig, desc: 'TLT/SPY 20D rel: ' + (tltRel20*100).toFixed(1) + '%', icon: '🛡️' },
+      { name: 'Gold Demand', score: goldSig, desc: 'GLD/SPY 20D rel: ' + (gldRel20*100).toFixed(1) + '%', icon: '🥇' },
+      { name: 'Credit Risk Appetite', score: creditSig, desc: 'HYG/LQD 20D rel: ' + (hygLqdRel*100).toFixed(1) + '%', icon: '💳' },
+      { name: 'Risk Appetite (QQQ vs SPY)', score: riskAppSig, desc: 'QQQ/SPY 20D rel: ' + (riskAppetite*100).toFixed(1) + '%', icon: '🚀' }
+    ];
+    var composite = signals.reduce(function(s, sg) { return s + sg.score; }, 0) / signals.length;
+    var compLabel, compColor;
+    if (composite >= 75) { compLabel = 'Extreme Greed'; compColor = '#8B2A2A'; }
+    else if (composite >= 60) { compLabel = 'Greed'; compColor = '#C84B31'; }
+    else if (composite >= 45) { compLabel = 'Neutral'; compColor = '#8B6914'; }
+    else if (composite >= 25) { compLabel = 'Fear'; compColor = '#2E7D52'; }
+    else { compLabel = 'Extreme Fear'; compColor = '#003C71'; }
+
+    // Gauge HTML
+    var gaugeAngle = ((composite / 100) * 180) - 90; // -90 to +90 degrees
+    var html = '<div style="display:flex;flex-wrap:wrap;gap:20px;align-items:flex-start;">';
+    // Gauge
+    html += '<div style="text-align:center;min-width:180px;">';
+    html += '<svg viewBox="0 0 200 120" width="180" height="110" style="overflow:visible;">';
+    // Background arc
+    html += '<path d="M 20 100 A 80 80 0 0 1 180 100" stroke="#eee" stroke-width="16" fill="none" stroke-linecap="round"/>';
+    // Colored arcs
+    html += '<path d="M 20 100 A 80 80 0 0 1 60 30" stroke="#003C71" stroke-width="16" fill="none" stroke-linecap="round" opacity="0.8"/>';
+    html += '<path d="M 60 30 A 80 80 0 0 1 100 20" stroke="#2E7D52" stroke-width="16" fill="none" stroke-linecap="round" opacity="0.8"/>';
+    html += '<path d="M 100 20 A 80 80 0 0 1 140 30" stroke="#8B6914" stroke-width="16" fill="none" stroke-linecap="round" opacity="0.8"/>';
+    html += '<path d="M 140 30 A 80 80 0 0 1 180 100" stroke="#C84B31" stroke-width="16" fill="none" stroke-linecap="round" opacity="0.8"/>';
+    // Needle
+    var needleRad = (gaugeAngle - 90) * Math.PI / 180;
+    var nx = 100 + 70 * Math.cos(needleRad); var ny = 100 + 70 * Math.sin(needleRad);
+    html += '<line x1="100" y1="100" x2="' + nx.toFixed(1) + '" y2="' + ny.toFixed(1) + '" stroke="' + compColor + '" stroke-width="3" stroke-linecap="round"/>';
+    html += '<circle cx="100" cy="100" r="6" fill="' + compColor + '"/>';
+    html += '</svg>';
+    html += '<div style="font-size:28px;font-weight:800;color:' + compColor + ';">' + Math.round(composite) + '</div>';
+    html += '<div style="font-size:14px;font-weight:700;color:' + compColor + ';">' + compLabel + '</div>';
+    html += '<div style="font-size:10.5px;color:var(--text-sec);margin-top:4px;">0 = Extreme Fear &nbsp;|&nbsp; 100 = Extreme Greed</div>';
+    html += '</div>';
+    // Signal breakdown
+    html += '<div style="flex:1;min-width:240px;">';
+    html += '<div style="font-size:11px;font-weight:700;color:var(--navy);margin-bottom:8px;text-transform:uppercase;letter-spacing:.4px;">Signal Breakdown</div>';
+    signals.forEach(function(sg) {
+      var sc = sg.score;
+      var barColor = sc >= 75 ? '#C84B31' : sc >= 60 ? '#F18F01' : sc >= 45 ? '#8B6914' : sc >= 25 ? '#2E7D52' : '#003C71';
+      html += '<div style="display:flex;align-items:center;gap:8px;margin-bottom:7px;">';
+      html += '<span style="font-size:14px;">' + sg.icon + '</span>';
+      html += '<div style="flex:1;min-width:0;">';
+      html += '<div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:2px;">';
+      html += '<span style="font-weight:600;">' + sg.name + '</span><span style="font-family:Courier New;font-weight:700;color:' + barColor + ';">' + sg.score.toFixed(0) + '</span>';
+      html += '</div>';
+      html += '<div style="height:6px;background:#eee;border-radius:3px;overflow:hidden;">';
+      html += '<div style="height:100%;width:' + sg.score.toFixed(0) + '%;background:' + barColor + ';border-radius:3px;transition:width 0.5s;"></div></div>';
+      html += '<div style="font-size:10px;color:var(--text-sec);">' + sg.desc + '</div>';
+      html += '</div></div>';
+    });
+    html += '</div></div>';
+    el.innerHTML = html;
+  } catch(e) {
+    el.innerHTML = '<span style="color:var(--danger);">Error: ' + e.message + '</span>';
+    console.error('[FearGreed]', e);
+  }
+};
+
+// ── ASSET CLASS RETURN HEATMAP ─────────────────────────────────────
+var HEATMAP_ASSETS = [
+  {t:'SPY', l:'US Equity (SPY)'}, {t:'QQQ', l:'US Tech (QQQ)'},
+  {t:'IWM', l:'US Small Cap (IWM)'}, {t:'EFA', l:'Intl Dev. (EFA)'},
+  {t:'EEM', l:'Emerging Mkts (EEM)'}, {t:'TLT', l:'Long Bonds (TLT)'},
+  {t:'IEF', l:'Int. Bonds (IEF)'}, {t:'LQD', l:'IG Credit (LQD)'},
+  {t:'HYG', l:'HY Credit (HYG)'}, {t:'GLD', l:'Gold (GLD)'},
+  {t:'USO', l:'Oil (USO)'}, {t:'VNQ', l:'REITs (VNQ)'}
+];
+window.mktLoadReturnHeatmap = async function() {
+  var el = document.getElementById('mktReturnHeatmap');
+  el.innerHTML = '<span class="spinner"></span> Fetching 12 asset classes…';
+  try {
+    var charts = {};
+    await Promise.all(HEATMAP_ASSETS.map(async function(a) {
+      try {
+        var r = await fetch(WORKER_URL_CA + '/chart?symbol=' + a.t + '&range=1y&interval=1d');
+        var d = await r.json();
+        charts[a.t] = (d.points || []).filter(function(p){return p.close!=null;});
+      } catch(e) { charts[a.t] = []; }
+    }));
+    var today = new Date();
+    function ytdStart() { return new Date(today.getFullYear(), 0, 1); }
+    function retOverDays(arr, n) {
+      if (!arr || arr.length < 2) return null;
+      const eff = Math.min(n, arr.length - 1);
+      const a = arr[arr.length - 1 - eff].close, b = arr[arr.length-1].close;
+      if (!a || a <= 0) return null;
+      return (b - a) / a * 100;
+    }
+    function ytdRet(arr) {
+      if (!arr || arr.length < 2) return null;
+      const ysStr = ytdStart().toISOString().slice(0,10);
+      const start = arr.find(function(p){ return p.date >= ysStr; });
+      if (!start) return null;
+      return (arr[arr.length-1].close - start.close) / start.close * 100;
+    }
+    const periods = [{l:'1W',d:5},{l:'1M',d:21},{l:'3M',d:63},{l:'6M',d:126},{l:'YTD',d:-1},{l:'1Y',d:252}];
+    const rows = HEATMAP_ASSETS.map(function(a) {
+      const pts = charts[a.t] || [];
+      const rets = periods.map(function(p) { return p.d === -1 ? ytdRet(pts) : retOverDays(pts, p.d); });
+      const ytdVal = rets[4];
+      return { label: a.l, ticker: a.t, rets: rets, ytd: ytdVal };
+    }).sort(function(a, b) { return (b.ytd || -999) - (a.ytd || -999); }); // sort by YTD desc
+
+    function heatColor(v) {
+      if (v == null) return 'background:#f0f0f0;color:#999;';
+      const abs = Math.abs(v);
+      if (v > 0) {
+        const intensity = Math.min(abs / 25, 1);
+        const g = Math.round(100 + (55 * intensity));
+        const rb = Math.round(255 - (160 * intensity));
+        return 'background:rgb(' + rb + ',' + g + ',' + rb + ');color:' + (intensity > 0.5 ? '#fff' : '#1A2733') + ';';
+      } else {
+        const intensity = Math.min(abs / 25, 1);
+        const r = Math.round(200 + (55 * intensity));
+        const gb = Math.round(255 - (180 * intensity));
+        return 'background:rgb(' + r + ',' + gb + ',' + gb + ');color:' + (intensity > 0.5 ? '#fff' : '#1A2733') + ';';
+      }
+    }
+    var html = '<div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;font-size:12px;">';
+    html += '<thead><tr style="background:var(--navy);color:#fff;">';
+    html += '<th style="padding:8px 10px;text-align:left;position:sticky;left:0;background:var(--navy);">Asset Class</th>';
+    periods.forEach(function(p) { html += '<th style="padding:8px 10px;text-align:center;">' + p.l + '</th>'; });
+    html += '</tr></thead><tbody>';
+    rows.forEach(function(row, ri) {
+      html += '<tr style="border-bottom:1px solid var(--border-light,#E5E9EF);">';
+      html += '<td style="padding:7px 10px;font-weight:700;white-space:nowrap;position:sticky;left:0;background:var(--bg);color:var(--navy);">' + row.label + '</td>';
+      row.rets.forEach(function(v) {
+        html += '<td style="padding:6px 8px;text-align:center;font-family:Courier New,monospace;font-weight:700;' + heatColor(v) + '">';
+        html += v != null ? (v >= 0 ? '+' : '') + v.toFixed(1) + '%' : '—';
+        html += '</td>';
+      });
+      html += '</tr>';
+    });
+    html += '</tbody></table></div>';
+    html += '<div style="font-size:10.5px;color:var(--text-sec);margin-top:8px;">Green = positive return, Red = negative. Sorted by YTD return (best to worst).</div>';
+    el.innerHTML = html;
+  } catch(e) {
+    el.innerHTML = '<span style="color:var(--danger);">Error: ' + e.message + '</span>';
+  }
+};
+
+// ── LEAD/LAG ANALYSIS ─────────────────────────────────────────────
+window.mktRunLeadLag = async function() {
+  var assetA = document.getElementById('lagAssetA').value;
+  var assetB = document.getElementById('lagAssetB').value;
+  var lookback = parseInt(document.getElementById('lagLookback').value) || 252;
+  var el = document.getElementById('mktLeadLagResult');
+  var wrap = document.getElementById('mktLeadLagWrap');
+  el.innerHTML = '<span class="spinner"></span> Computing cross-correlation…';
+  if (wrap) wrap.style.display = 'none';
+  try {
+    var [dA, dB] = await Promise.all([
+      fetch(WORKER_URL_CA + '/chart?symbol=' + assetA + '&range=' + (lookback > 252 ? '2y' : '1y') + '&interval=1d').then(function(r){return r.json();}),
+      fetch(WORKER_URL_CA + '/chart?symbol=' + assetB + '&range=' + (lookback > 252 ? '2y' : '1y') + '&interval=1d').then(function(r){return r.json();})
+    ]);
+    var ptsA = (dA.points||[]).filter(function(p){return p.close!=null;});
+    var ptsB = (dB.points||[]).filter(function(p){return p.close!=null;});
+    if (ptsA.length < 30 || ptsB.length < 30) { el.innerHTML = '<span style="color:var(--danger);">Insufficient data.</span>'; return; }
+    // Build date-aligned returns
+    var mapA = {}; ptsA.forEach(function(p){ mapA[p.date.slice(0,10)] = p.close; });
+    var mapB = {}; ptsB.forEach(function(p){ mapB[p.date.slice(0,10)] = p.close; });
+    var dates = Object.keys(mapA).filter(function(d){ return mapB[d]!=null; }).sort().slice(-lookback);
+    var rA = [], rB = [];
+    for (var i = 1; i < dates.length; i++) {
+      var pa = mapA[dates[i-1]], ca = mapA[dates[i]];
+      var pb = mapB[dates[i-1]], cb = mapB[dates[i]];
+      if (pa>0&&ca>0&&pb>0&&cb>0) { rA.push(Math.log(ca/pa)); rB.push(Math.log(cb/pb)); }
+    }
+    if (rA.length < 40) { el.innerHTML = '<span style="color:var(--danger);">Insufficient overlap.</span>'; return; }
+    function pearson(x, y) {
+      var n = x.length;
+      if (n < 2) return 0;
+      var mx = x.reduce(function(s,v){return s+v;},0)/n, my = y.reduce(function(s,v){return s+v;},0)/n;
+      var cov = 0, sx = 0, sy = 0;
+      for (var i = 0; i < n; i++) { cov+=(x[i]-mx)*(y[i]-my); sx+=(x[i]-mx)*(x[i]-mx); sy+=(y[i]-my)*(y[i]-my); }
+      return (sx>0&&sy>0) ? cov/Math.sqrt(sx*sy) : 0;
+    }
+    var maxLag = 20;
+    var lags = [], ccf = [];
+    for (var k = -maxLag; k <= maxLag; k++) {
+      lags.push(k);
+      if (k === 0) { ccf.push(pearson(rA, rB)); continue; }
+      var xa, xb;
+      if (k > 0) { xa = rA.slice(0, rA.length - k); xb = rB.slice(k); }
+      else { xa = rA.slice(-k); xb = rB.slice(0, rB.length + k); }
+      ccf.push(pearson(xa, xb));
+    }
+    var ciLine = 1.96 / Math.sqrt(rA.length);
+    var peakLag = lags[ccf.indexOf(Math.max.apply(null, ccf))];
+    var peakCorr = Math.max.apply(null, ccf);
+    var interpretation = peakLag < -2 ? assetB + ' leads ' + assetA + ' by ~' + Math.abs(peakLag) + ' days' :
+      peakLag > 2 ? assetA + ' leads ' + assetB + ' by ~' + peakLag + ' days' :
+      'Contemporaneous (no significant lead/lag)';
+    el.innerHTML = '<div style="background:var(--panel);padding:8px 12px;border-radius:4px;font-size:12px;border-left:3px solid var(--navy);margin-bottom:8px;">' +
+      '<strong>Peak correlation: ' + peakCorr.toFixed(3) + ' at lag ' + peakLag + ' days</strong><br>' +
+      '<span style="color:var(--text-sec);">' + interpretation + ' (n=' + rA.length + ' days, 95% CI: ±' + ciLine.toFixed(3) + ')</span></div>';
+    if (wrap) wrap.style.display = '';
+    var ctx = document.getElementById('mktLeadLagChart');
+    if (window._leadLagChart) window._leadLagChart.destroy();
+    window._leadLagChart = new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels: lags,
+        datasets: [
+          { label: 'Cross-Correlation', data: ccf, backgroundColor: ccf.map(function(v, i) {
+            if (lags[i] === peakLag) return 'rgba(0,60,113,0.9)';
+            return v > ciLine ? 'rgba(46,125,82,0.6)' : v < -ciLine ? 'rgba(139,42,42,0.6)' : 'rgba(170,170,170,0.5)';
+          }), borderColor: 'transparent', borderRadius: 2 },
+          { label: '95% CI +', data: new Array(lags.length).fill(ciLine), type: 'line', borderColor: 'rgba(139,42,42,0.4)', borderDash: [4,3], borderWidth: 1.5, pointRadius: 0, fill: false },
+          { label: '95% CI −', data: new Array(lags.length).fill(-ciLine), type: 'line', borderColor: 'rgba(139,42,42,0.4)', borderDash: [4,3], borderWidth: 1.5, pointRadius: 0, fill: false }
+        ]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false, animation: false,
+        plugins: { legend: { display: false }, tooltip: { callbacks: {
+          title: function(items){ return 'Lag ' + lags[items[0].dataIndex] + ' days'; },
+          label: function(ctx){ return 'ρ = ' + (ctx.parsed.y||0).toFixed(4); }
+        }}},
+        scales: {
+          x: { title: { display: true, text: 'Lag (days) — negative = B leads A, positive = A leads B', font: {size:11}, color: 'var(--text-sec)' }, ticks: { color: 'var(--text-sec)' } },
+          y: { min: -1, max: 1, title: { display: true, text: 'Pearson ρ', font: {size:11}, color: 'var(--text-sec)' }, ticks: { color: 'var(--text-sec)' } }
+        }
+      }
+    });
+  } catch(e) { el.innerHTML = '<span style="color:var(--danger);">Error: ' + e.message + '</span>'; }
+};
+
+// ── SECTOR MOMENTUM SCORECARD ──────────────────────────────────────
+var SECTOR_ETFS = [
+  {t:'XLK',s:'Technology'},{t:'XLF',s:'Financials'},{t:'XLV',s:'Healthcare'},
+  {t:'XLY',s:'Cons. Discretionary'},{t:'XLC',s:'Comm. Services'},{t:'XLI',s:'Industrials'},
+  {t:'XLP',s:'Cons. Staples'},{t:'XLE',s:'Energy'},{t:'XLU',s:'Utilities'},
+  {t:'XLRE',s:'Real Estate'},{t:'XLB',s:'Materials'}
+];
+window.mktLoadSectorMomentum = async function() {
+  var el = document.getElementById('mktSectorMomentum');
+  el.innerHTML = '<span class="spinner"></span> Fetching 11 sector ETFs…';
+  try {
+    var charts = {};
+    await Promise.all(SECTOR_ETFS.map(async function(s) {
+      try {
+        var r = await fetch(WORKER_URL_CA + '/chart?symbol=' + s.t + '&range=1y&interval=1d');
+        var d = await r.json();
+        charts[s.t] = (d.points||[]).filter(function(p){return p.close!=null;});
+      } catch(e) { charts[s.t] = []; }
+    }));
+    // SPY for relative strength
+    var spyR = await fetch(WORKER_URL_CA + '/chart?symbol=SPY&range=1y&interval=1d').then(function(r){return r.json();});
+    var spyPts = (spyR.points||[]).filter(function(p){return p.close!=null;});
+    function pctRet(arr, n) {
+      if (!arr || arr.length < n+1) return null;
+      var a = arr[arr.length-1-n].close, b = arr[arr.length-1].close;
+      return a > 0 ? (b-a)/a*100 : null;
+    }
+    function ytdRetSec(arr) {
+      if (!arr||arr.length<2) return null;
+      var ys = new Date().getFullYear() + '-01-01';
+      var start = arr.find(function(p){return p.date>=ys;});
+      return start ? (arr[arr.length-1].close - start.close)/start.close*100 : null;
+    }
+    var rows = SECTOR_ETFS.map(function(s) {
+      var pts = charts[s.t] || [];
+      var r1m = pctRet(pts, 21), r3m = pctRet(pts, 63), r6m = pctRet(pts, 126), r12m = pctRet(pts, 252);
+      var ytd = ytdRetSec(pts);
+      var spy1m = pctRet(spyPts, 21);
+      var rs1m = r1m != null && spy1m != null ? r1m - spy1m : null;
+      return { ticker: s.t, sector: s.s, r1m, r3m, r6m, r12m, ytd, rs1m };
+    });
+    // Rank each period (1 = best)
+    function rankCol(rows, key) {
+      var valid = rows.filter(function(r){return r[key]!=null;}).sort(function(a,b){return b[key]-a[key];});
+      valid.forEach(function(r,i){ r['rank_'+key] = i+1; });
+      rows.filter(function(r){return r[key]==null;}).forEach(function(r){ r['rank_'+key] = valid.length+1; });
+    }
+    ['r1m','r3m','r6m','r12m'].forEach(function(k){ rankCol(rows, k); });
+    rows.forEach(function(r) {
+      var rankCols = ['r1m','r3m','r6m','r12m'].filter(function(k){ return r[k]!=null; });
+      r.compRank = rankCols.length > 0 ? rankCols.reduce(function(s,k){ return s+r['rank_'+k]; }, 0) / rankCols.length : 99;
+    });
+    rows.sort(function(a,b){ return a.compRank - b.compRank; });
+    function fmtR(v, rank) {
+      if (v==null) return '<td style="text-align:right;color:var(--text-sec);">—</td>';
+      var col = v>=0?'var(--success)':'var(--danger)';
+      var bg = rank===1?'rgba(46,125,82,0.12)':rank<=3?'rgba(46,125,82,0.06)':rank>=SECTOR_ETFS.length-1?'rgba(139,42,42,0.08)':'';
+      return '<td style="text-align:right;font-family:Courier New,monospace;font-size:11.5px;font-weight:700;color:'+col+';background:'+bg+';padding:7px 8px;">'+(v>=0?'+':'')+v.toFixed(1)+'%</td>';
+    }
+    var html = '<div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;font-size:12px;">';
+    html += '<thead><tr style="background:var(--navy);color:#fff;">';
+    html += '<th style="padding:8px;text-align:left;">Rank</th>';
+    html += '<th style="padding:8px;text-align:left;">Sector (ETF)</th>';
+    html += '<th style="padding:8px;text-align:right;">1M</th><th style="padding:8px;text-align:right;">3M</th><th style="padding:8px;text-align:right;">6M</th><th style="padding:8px;text-align:right;">1Y</th><th style="padding:8px;text-align:right;">YTD</th><th style="padding:8px;text-align:right;">1M vs SPY</th></tr></thead><tbody>';
+    rows.forEach(function(r, i) {
+      var medal = i===0?'🥇 ':i===1?'🥈 ':i===2?'🥉 ':i>=SECTOR_ETFS.length-2?'⚠️ ':'';
+      var rowBg = i < 3 ? 'background:rgba(46,125,82,0.04);' : i >= SECTOR_ETFS.length-2 ? 'background:rgba(139,42,42,0.04);' : '';
+      html += '<tr style="border-bottom:1px solid var(--border-light);'+rowBg+'">';
+      html += '<td style="padding:7px 8px;font-weight:700;color:var(--navy);">' + medal + '#' + (i+1) + '</td>';
+      html += '<td style="padding:7px 8px;font-weight:700;">' + r.sector + ' <span style="font-size:10px;color:var(--text-sec);">(' + r.ticker + ')</span></td>';
+      html += fmtR(r.r1m, r.rank_r1m);
+      html += fmtR(r.r3m, r.rank_r3m);
+      html += fmtR(r.r6m, r.rank_r6m);
+      html += fmtR(r.r12m, r.rank_r12m);
+      html += fmtR(r.ytd, null);
+      var rsBg = r.rs1m==null?'':r.rs1m>0?'rgba(46,125,82,0.1)':'rgba(139,42,42,0.1)';
+      html += '<td style="text-align:right;font-family:Courier New,monospace;font-size:11.5px;font-weight:700;color:'+(r.rs1m==null?'var(--text-sec)':r.rs1m>=0?'var(--success)':'var(--danger)')+';background:'+rsBg+';padding:7px 8px;">';
+      html += r.rs1m!=null?(r.rs1m>=0?'+':'')+r.rs1m.toFixed(1)+'%':'—';
+      html += '</td></tr>';
+    });
+    html += '</tbody></table></div>';
+    html += '<div style="font-size:10.5px;color:var(--text-sec);margin-top:6px;">Composite rank = average of 1M, 3M, 6M, 1Y ranks. 🥇🥈🥉 = momentum leaders. ⚠️ = laggards. Green shading = top 3 in period.</div>';
+    el.innerHTML = html;
+  } catch(e) { el.innerHTML = '<span style="color:var(--danger);">Error: ' + e.message + '</span>'; }
+};
 
 // Auto-load snapshot when Markets page becomes active
 (function bindMarketsAutoload() {
