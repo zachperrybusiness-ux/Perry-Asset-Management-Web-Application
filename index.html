@@ -2225,36 +2225,53 @@ body.view-mobile .logo-icon { width: 22px !important; height: 22px !important; f
               <span id="watchlistStatus" style="font-size:11px;color:var(--text-sec);"></span>
             </div>
           </div>
-          <div class="form-row" style="margin-bottom:8px;">
-            <div class="form-group">
-              <label>Benchmark 1</label>
-              <input type="text" id="compare1" placeholder="SPY" value="SPY" style="width:80px;text-transform:uppercase;">
+          <!-- Row 1: Benchmarks + axis + overlay toggles -->
+          <div style="display:flex;flex-wrap:wrap;align-items:flex-end;gap:8px;margin-bottom:8px;padding:8px 10px;background:var(--panel);border:1px solid var(--border);border-radius:5px;">
+            <div style="display:flex;align-items:flex-end;gap:6px;flex-wrap:wrap;">
+              <div class="form-group" style="margin:0;">
+                <label style="font-size:10.5px;">Benchmark 1</label>
+                <input type="text" id="compare1" placeholder="SPY" value="SPY" style="width:72px;text-transform:uppercase;font-size:11px;">
+              </div>
+              <div class="form-group" style="margin:0;">
+                <label style="font-size:10.5px;">Benchmark 2</label>
+                <input type="text" id="compare2" placeholder="QQQ" value="QQQ" style="width:72px;text-transform:uppercase;font-size:11px;">
+              </div>
+              <div class="form-group" style="margin:0;">
+                <label style="font-size:10.5px;">Add Ticker</label>
+                <input type="text" id="addTickerInput" placeholder="TSLA" style="width:72px;text-transform:uppercase;font-size:11px;" onkeydown="if(event.key==='Enter')pfAddTickerToChart()">
+              </div>
+              <button class="btn btn-sm" onclick="renderPortfolioChart()" style="align-self:flex-end;">Update</button>
             </div>
-            <div class="form-group">
-              <label>Benchmark 2</label>
-              <input type="text" id="compare2" placeholder="QQQ" value="QQQ" style="width:80px;text-transform:uppercase;">
+            <div style="height:32px;width:1px;background:var(--border);margin:0 4px;"></div>
+            <!-- Overlay toggle buttons -->
+            <div style="display:flex;align-items:center;gap:4px;flex-wrap:wrap;">
+              <button class="btn-outline btn-sm" id="btnHideBenchmarks" onclick="toggleBenchmarkVisibility()" title="Show/hide SPY, QQQ and other benchmark lines">Benchmarks</button>
+              <button class="btn-outline btn-sm" id="btnTWR" onclick="toggleTWRMode()" title="Toggle Time-Weighted Return vs. Portfolio Dollar Value">TWR Mode</button>
+              <button class="btn-outline btn-sm" id="btnPctAxis" onclick="togglePctAxis()" title="Toggle Y-axis between dollar value and % change from start">% Change Axis</button>
+              <button class="btn-outline btn-sm" id="btnRegimeOverlay" onclick="toggleRegimeOverlay()" title="Show Perry 4-state market regime as colored background bands">Perry Regime</button>
+              <button class="btn-outline btn-sm" id="btnVixRegime" onclick="toggleVixRegime()" title="Show VIX-based volatility regime as background bands (Low / Medium / High / Extreme vol)">VIX Regime</button>
+              <button class="btn-outline btn-sm" id="btnRecState" onclick="toggleRecState()" title="Overlay the historically recommended portfolio state returns">Rec. State</button>
+              <button class="btn-outline btn-sm" id="btnStress" onclick="toggleStress()" title="Show 2008 GFC / COVID / 2022 inflation stress scenarios on the chart">Stress</button>
             </div>
-            <button class="btn btn-sm" onclick="renderPortfolioChart()">Update Chart</button>
-            <button class="btn-outline btn-sm" onclick="pfAddTickerToChart()" style="margin-left:8px;">+ Add Ticker</button>
-            <button class="btn-outline btn-sm" id="btnTWR" onclick="toggleTWRMode()" style="margin-left:8px;" title="Toggle between showing Portfolio Dollar Value vs. Time-Weighted Return (strips out deposits for fair comparison)">📊 TWR Mode</button>
-            <button class="btn-outline btn-sm" id="btnStress" onclick="toggleStress()" style="margin-left:8px;">Stressed Scenarios</button>
-            <button class="btn-outline btn-sm" id="btnVixRange" onclick="toggleVixRange()" style="margin-left:4px;">VIX Range</button>
-            <button class="btn-outline btn-sm" id="btnRegimeOverlay" onclick="toggleRegimeOverlay()" style="margin-left:4px;">Market Regime</button>
-            <button class="btn-outline btn-sm" id="btnRecState" onclick="toggleRecState()" style="margin-left:4px;">Recommended State</button>
-            <div class="form-group" style="margin-left:12px;display:flex;align-items:center;gap:6px;">
-              <label style="font-size:11px;color:var(--text-sec);font-weight:600;margin:0;">Forecast Regime:
-                <span class="help-icon" title="Project a 12-month Monte Carlo forecast onto the chart under the chosen regime assumption. Also overlays a backtest of how that regime would have performed historically (dashed) over the same window. The fan band shows P10–P90 outcomes.">?</span>
-              </label>
-              <select id="mcRegimeSelect" onchange="renderPortfolioChart()" style="padding:4px 8px;font-size:12px;">
-                <option value="">— Off —</option>
-                <option value="leveraged">Leveraged</option>
-                <option value="growth">Non-Levered Growth</option>
-                <option value="neutral">Neutral</option>
-                <option value="drawdown">Drawdown</option>
+          </div>
+
+          <!-- Row 2: Forecast Regime (same style as Watchlist panel) -->
+          <div style="background:var(--panel);border:1px solid var(--border);border-radius:5px;padding:8px 12px;margin-bottom:10px;">
+            <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+              <span style="font-size:11px;font-weight:700;color:var(--navy);text-transform:uppercase;letter-spacing:.4px;">Forecast Regime
+                <span class="help-icon" title="Projects a 12-month Monte Carlo forecast onto the chart under the chosen regime. Fan band = P10–P90 outcomes. Historical toggle shows the same regime applied backward in time as a dashed line.">?</span>
+              </span>
+              <select id="mcRegimeSelect" onchange="renderPortfolioChart()" style="font-size:11px;padding:3px 7px;">
+                <option value="">— Off (No Forecast) —</option>
+                <option value="leveraged">Leveraged Regime Forecast</option>
+                <option value="growth">Non-Levered Growth Forecast</option>
+                <option value="neutral">Neutral / Cautious Forecast</option>
+                <option value="drawdown">Drawdown / Preservation Forecast</option>
               </select>
-              <label style="font-size:11px;color:var(--text-sec);font-weight:600;margin-left:8px;display:flex;align-items:center;gap:4px;">
-                <input type="checkbox" id="mcHistOverlay" onchange="renderPortfolioChart()" style="margin:0;"> Historical
+              <label style="font-size:11px;color:var(--text-sec);display:flex;align-items:center;gap:4px;font-weight:600;">
+                <input type="checkbox" id="mcHistOverlay" onchange="renderPortfolioChart()" style="margin:0;"> Historical Backtest
               </label>
+              <span id="forecastStatus" style="font-size:11px;color:var(--text-sec);"></span>
             </div>
           </div>
           <div class="chart-stats" id="chartStats"></div>
@@ -2316,9 +2333,14 @@ body.view-mobile .logo-icon { width: 22px !important; height: 22px !important; f
         <div class="card-body">
           <p style="font-size:12px;color:var(--text-sec);margin-bottom:10px;">For each regime, solves for optimal weights across your holdings using Markowitz mean-variance optimization (max Sharpe). Compares to your current weights and shows: <strong>(1)</strong> recommended rotation actions (e.g., &quot;Add 8% Energy, reduce Tech by 12%&quot;), <strong>(2)</strong> backtest of optimal weights vs. your actual portfolio over the past 3 years, and <strong>(3)</strong> projected return uplift if you rotate.</p>
           <div class="form-row" style="margin-bottom:10px;">
+            <div class="form-group"><label>Account</label>
+              <select id="poeAccount">
+                <option value="all">All Accounts</option>
+              </select>
+            </div>
             <div class="form-group"><label>Optimization Target</label>
               <select id="poeTarget">
-                <option value="current">Current Regime</option>
+                <option value="current">Current Regime (Auto)</option>
                 <option value="leveraged">Leveraged</option>
                 <option value="growth">Non-Levered Growth</option>
                 <option value="neutral">Neutral</option>
@@ -2342,27 +2364,6 @@ body.view-mobile .logo-icon { width: 22px !important; height: 22px !important; f
 
       <!-- FAMA-FRENCH FACTOR EXPOSURE moved to top of page -->
       <!-- PORTFOLIO-STATE MONTE CARLO moved into Portfolio Value chart as forecast overlay -->
-
-      <!-- Portfolio Allocation Charts -->
-      <div class="card" style="margin-top:14px;">
-        <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
-          <span>Portfolio Allocation Breakdown</span>
-          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
-            <label style="font-size:11px;font-weight:600;color:var(--text-sec);">Filter by Account:</label>
-            <select id="donutAccountFilter" style="font-size:11px;padding:3px 8px;" onchange="renderAllDonuts()">
-              <option value="all">All Accounts</option>
-            </select>
-          </div>
-        </div>
-        <div class="card-body">
-          <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px;" id="donutGrid">
-            <div id="donut-sector"></div>
-            <div id="donut-weight"></div>
-            <div id="donut-mktcap"></div>
-          </div>
-          <div style="margin-top:16px;" id="mstar-card"></div>
-        </div>
-      </div>
 
       </div><!-- /pftab-snapshot -->
 
@@ -2458,22 +2459,78 @@ body.view-mobile .logo-icon { width: 22px !important; height: 22px !important; f
 
       <!-- ═══════════ TAB: CHARACTERISTICS ═══════════ -->
       <div class="pf-tab-content" id="pftab-characteristics">
+        <!-- Portfolio Allocation Breakdown — full width 3-col grid -->
+        <div class="card" style="margin-bottom:14px;">
+          <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
+            <span>Portfolio Allocation Breakdown</span>
+            <div style="display:flex;gap:8px;align-items:center;">
+              <label style="font-size:11px;font-weight:600;color:var(--text-sec);">Account:</label>
+              <select id="donutAccountFilter" style="font-size:11px;padding:3px 8px;" onchange="renderAllDonuts()">
+                <option value="all">All Accounts</option>
+              </select>
+            </div>
+          </div>
+          <div class="card-body" style="padding:14px;">
+            <div style="display:grid;grid-template-columns:repeat(3,minmax(200px,1fr));gap:14px;margin-bottom:14px;" id="donutGrid">
+              <div id="donut-sector"></div>
+              <div id="donut-weight"></div>
+              <div id="donut-mktcap"></div>
+            </div>
+            <div id="mstar-card"></div>
+          </div>
+        </div>
+        <!-- Full CFA-grade Characteristics panel -->
         <div class="card">
-          <div class="card-title">Portfolio Characteristics vs. Benchmark <span class="help-icon" title="Weighted-average fundamental and style metrics for the portfolio compared to SPY. Useful for understanding factor tilts and style biases at a glance.">?</span></div>
+          <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;">
+            <span>Portfolio Characteristics &amp; Quant Metrics
+              <span class="help-icon" title="CFA PM framework metrics: valuation (P/E, P/B, Div Yield), technical (52W range, beta, IV), risk (Sharpe, Sortino, MDD), and terminal value projections.">?</span>
+            </span>
+            <button class="btn-light-sm" onclick="window._pfCharRun=false;pfRenderCharacteristics()">Refresh</button>
+          </div>
           <div class="card-body">
             <div id="pfCharacteristics" style="padding:18px;text-align:center;color:var(--text-sec);"><span class="spinner"></span> Computing characteristics…</div>
           </div>
-          <div class="card-sources"><strong>Method:</strong> Weighted-average using market-value weights. Source data: SEC EDGAR XBRL companyfacts via Cloudflare Worker, Yahoo Finance technicals.</div>
+          <div class="card-sources"><strong>Sources:</strong> Yahoo Finance &bull; SEC EDGAR XBRL &bull; FMP. <strong>Framework:</strong> CFA Portfolio Management (Maginn et al., 4th ed.)</div>
         </div>
       </div>
 
       <!-- ═══════════ TAB: SCENARIOS ═══════════ -->
       <div class="pf-tab-content" id="pftab-scenarios">
 
-      <!-- HISTORICAL STRESS TEST (was inline; now lives in Scenarios tab) -->
+      <!-- HISTORICAL STRESS TEST -->
       <div class="card">
-        <div class="card-title">Historical Crisis Stress Test <span class="help-icon" title="Replays your current portfolio through past market crises (2008 GFC, COVID, 2022 rate shock, etc.). Shows how it would have performed if you'd held those exact positions through each event — uses sector proxies for tickers that didn't yet exist during the event.">?</span></div>
+        <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
+          <span>Historical Crisis Stress Test <span class="help-icon" title="Replays your portfolio through past market crises. Uses sector ETF proxies for positions that didn't exist during the event.">?</span></span>
+          <div style="display:flex;align-items:center;gap:8px;">
+            <label style="font-size:11px;font-weight:600;color:var(--text-sec);">Account:</label>
+            <select id="scenarioAccountFilter" style="font-size:11px;padding:3px 8px;" onchange="stressRerun()">
+              <option value="all">All Accounts</option>
+            </select>
+          </div>
+        </div>
         <div class="card-body">
+          <!-- Factor override controls -->
+          <div style="background:var(--panel);border:1px solid var(--border);border-radius:5px;padding:10px 12px;margin-bottom:12px;">
+            <div style="font-size:11px;font-weight:700;color:var(--navy);text-transform:uppercase;letter-spacing:.4px;margin-bottom:8px;">Modify Scenario Factors</div>
+            <div style="display:flex;flex-wrap:wrap;gap:14px;font-size:11px;">
+              <div class="form-group" style="margin:0;">
+                <label style="font-size:10.5px;">Equity Drop Override (%)</label>
+                <input type="number" id="scenarioEquityDrop" placeholder="Auto" min="-100" max="0" step="1" style="width:100px;font-size:11px;" title="Override the scenario's equity decline. Leave blank to use historical.">
+              </div>
+              <div class="form-group" style="margin:0;">
+                <label style="font-size:10.5px;">Duration Rally (%)</label>
+                <input type="number" id="scenarioDurationRally" placeholder="Auto" step="1" style="width:100px;font-size:11px;" title="Override TLT/IEF return during scenario.">
+              </div>
+              <div class="form-group" style="margin:0;">
+                <label style="font-size:10.5px;">Gold Return (%)</label>
+                <input type="number" id="scenarioGoldReturn" placeholder="Auto" step="1" style="width:100px;font-size:11px;" title="Override GLD return during scenario.">
+              </div>
+              <div style="display:flex;align-items:flex-end;gap:6px;">
+                <button class="btn btn-sm" onclick="stressRerun()">Apply</button>
+                <button class="btn-outline btn-sm" onclick="document.getElementById('scenarioEquityDrop').value='';document.getElementById('scenarioDurationRally').value='';document.getElementById('scenarioGoldReturn').value='';stressRerun();">Reset</button>
+              </div>
+            </div>
+          </div>
           <p style="font-size:12px;color:var(--text-sec);margin-bottom:14px;">Apply historical crisis returns to your <strong>current</strong> portfolio positions. This answers: "If this crisis repeated today with my exact holdings, how would my portfolio perform?" Uses real per-ticker returns from each crisis window; if a ticker didn't exist in that window, its sector-proxy ETF return is used.</p>
           <div class="btn-group" id="stressScenarioBtns">
             <button class="btn-outline active" data-scenario="2008_gfc">2008 GFC<br><span style="font-size:10px;opacity:.85;">Oct '07 – Mar '09</span></button>
@@ -5010,35 +5067,41 @@ let _portfolioSort = { col: null, asc: true };
 
 function sortableHeader(cols, sortState, renderFn, tableId) {
   return cols.map(c => {
-    const arrow = sortState.col === c.key ? (sortState.asc ? '&#9650;' : '&#9660;') : '&#9650;';
-    const active = sortState.col === c.key ? 'active' : '';
-    return '<th onclick="sortTable_' + tableId + '(\'' + c.key + '\')">' +
-      c.label + '<span class="sort-arrow ' + active + '">' + arrow + '</span></th>';
+    const isActive = sortState.col === c.key;
+    const arrow = isActive
+      ? (sortState.asc ? ' <span style="color:#A8C8E8;font-size:9px;">▲</span>' : ' <span style="color:#A8C8E8;font-size:9px;">▼</span>')
+      : ' <span style="color:rgba(255,255,255,0.25);font-size:9px;">⇅</span>';
+    const bg = isActive ? 'background:rgba(255,255,255,0.14);' : '';
+    return '<th title="Click to sort by ' + c.label + '" style="' + bg + 'cursor:pointer;user-select:none;" onclick="sortTable_' + tableId + '(\'' + c.key + '\')">' +
+      c.label + arrow + '</th>';
   }).join('');
 }
 
 function getSortedHoldings(holdings, sortState) {
-  if (!sortState.col) return holdings;
+  if (!sortState.col) return holdings.slice();
   const key = sortState.col;
-  return [...holdings].sort((a, b) => {
-    let va = a[key], vb = b[key];
-    if (key === 'marketValue') {
-      va = (a.currentPrice || 0) * a.quantity;
-      vb = (b.currentPrice || 0) * b.quantity;
-    }
-    if (key === 'glPct') {
-      const ca = a.costBasis * a.quantity, cb = b.costBasis * b.quantity;
-      va = ca > 0 ? (((a.currentPrice || 0) * a.quantity - ca) / ca) * 100 : 0;
-      vb = cb > 0 ? (((b.currentPrice || 0) * b.quantity - cb) / cb) * 100 : 0;
-    }
-    if (key === 'weight') {
-      const tv = holdings.reduce((s, h) => s + (h.currentPrice || 0) * h.quantity, 0);
-      va = tv > 0 ? ((a.currentPrice || 0) * a.quantity) / tv : 0;
-      vb = tv > 0 ? ((b.currentPrice || 0) * b.quantity) / tv : 0;
-    }
-    if (typeof va === 'string' && typeof vb === 'string') return sortState.asc ? va.localeCompare(vb) : vb.localeCompare(va);
-    va = parseFloat(va) || 0;
-    vb = parseFloat(vb) || 0;
+  const rfOrder = { 'Aligned': 1, 'Neutral': 2, 'Misaligned': 3 };
+  function mvOf(h) {
+    const isCash = ['Cash','Money Market','CD','Bond Position'].includes(h.assetClass);
+    return isCash ? (h.costBasis||0)*(h.quantity||0) : (h.currentPrice||0)*(h.quantity||0);
+  }
+  return holdings.slice().sort((a, b) => {
+    let va, vb;
+    if (key === 'marketValue') { va = mvOf(a); vb = mvOf(b); }
+    else if (key === 'glPct') {
+      va = a.costBasis>0 ? (((a.currentPrice||0)-a.costBasis)/a.costBasis)*100 : 0;
+      vb = b.costBasis>0 ? (((b.currentPrice||0)-b.costBasis)/b.costBasis)*100 : 0;
+    } else if (key === 'weight') {
+      va = a._weight || mvOf(a); vb = b._weight || mvOf(b);
+    } else if (key === 'regimeFit') {
+      va = rfOrder[a._regimeFitLabel] || 2;
+      vb = rfOrder[b._regimeFitLabel] || 2;
+    } else if (key === 'currentPrice') {
+      va = a.currentPrice || 0; vb = b.currentPrice || 0;
+    } else { va = a[key]; vb = b[key]; }
+    if (va == null) return 1;
+    if (vb == null) return -1;
+    if (typeof va === 'string') return sortState.asc ? va.localeCompare(vb) : vb.localeCompare(va);
     return sortState.asc ? va - vb : vb - va;
   });
 }
@@ -5050,37 +5113,49 @@ window.sortTable_manage = function(key) {
 };
 
 window.sortTable_portfolio = function(key) {
-  if (_portfolioSort.col === key) _portfolioSort.asc = !_portfolioSort.asc;
-  else { _portfolioSort.col = key; _portfolioSort.asc = true; }
+  if (_portfolioSort.col === key) {
+    _portfolioSort.asc = !_portfolioSort.asc;
+  } else {
+    _portfolioSort.col = key;
+    // Text columns: default A→Z; numeric: default largest first
+    _portfolioSort.asc = ['ticker','companyName','accountType','sector','assetClass'].includes(key);
+  }
   const h = window._holdings || [];
   const af = document.getElementById('portfolioAccountFilter')?.value || 'all';
-  const fh = af === 'all' ? h : h.filter(x => (x.accountType || 'Individual') === af);
-  // Include cash in TV calculation (same as renderPortfolioOverview)
   function mvOf(hh) {
-    const isCash = hh.assetClass === 'Cash' || hh.assetClass === 'Money Market' || hh.assetClass === 'CD' || hh.assetClass === 'Bond Position';
-    return isCash ? (hh.costBasis || 0) * hh.quantity : (hh.currentPrice || 0) * hh.quantity;
+    const isCash = ['Cash','Money Market','CD','Bond Position'].includes(hh.assetClass);
+    return isCash ? (hh.costBasis||0)*hh.quantity : (hh.currentPrice||0)*hh.quantity;
   }
-  const tv = fh.reduce((s, x) => s + mvOf(x), 0);
-  renderPortfolioTable(fh, tv);
+  const allFilt = af === 'all' ? h : h.filter(x => (x.accountType||'Individual') === af);
+  const totalTV = allFilt.reduce((s,x)=>s+mvOf(x),0);
+  // Respect any active chip filter
+  let fh = allFilt;
+  const ft = window._pfActiveFilterType, fv = window._pfActiveFilter;
+  if (ft && fv && fv !== 'all') fh = allFilt.filter(x => (x[ft]||'') === fv);
+  const filtTV = fh.reduce((s,x)=>s+mvOf(x),0);
+  renderPortfolioTable(fh, filtTV, totalTV);
 };
 
 // Filter Portfolio Holdings table by sector, asset class, or account
 window.pfFilterHoldings = function(filterType, filterValue) {
   const h = window._holdings || [];
   const af = document.getElementById('portfolioAccountFilter')?.value || 'all';
-  // Always compute TV from ALL holdings (unfiltered) for correct weight percentages
   function mvOf(hh) {
     const isCash = hh.assetClass === 'Cash' || hh.assetClass === 'Money Market' || hh.assetClass === 'CD' || hh.assetClass === 'Bond Position';
     return isCash ? (hh.costBasis || 0) * hh.quantity : (hh.currentPrice || 0) * hh.quantity;
   }
   const allFiltered = af === 'all' ? h : h.filter(x => (x.accountType || 'Individual') === af);
-  const tvAll = allFiltered.reduce((s, x) => s + mvOf(x), 0);
-  // Now filter by sector/assetClass for display
+  // Apply chip filter
   let fh = allFiltered;
   if (filterType && filterValue && filterValue !== 'all') {
     fh = allFiltered.filter(x => (x[filterType] || '') === filterValue);
   }
-  renderPortfolioTable(fh, tvAll); // use total portfolio TV for weight %
+  // FILTERED TV: compute from the filtered set only (so % weights sum to 100% within filter)
+  // TOTAL TV: still used for % account and % portfolio absolute context
+  const tvFiltered = fh.reduce((s, x) => s + mvOf(x), 0);
+  window._pfFilteredTV = tvFiltered; // store so table can use it
+  window._pfTotalTV = allFiltered.reduce((s, x) => s + mvOf(x), 0); // full portfolio TV
+  renderPortfolioTable(fh, tvFiltered, allFiltered.reduce((s, x) => s + mvOf(x), 0));
 };
 
 window.filterHoldingsByAccount = function() {
@@ -5339,9 +5414,12 @@ async function fetchBenchmarkCards(tickers, labels) {
 }
 
 // ═══ PORTFOLIO TABLE (with Account, Sort, Total, Regime Fit) ═══
-function renderPortfolioTable(holdings, tv) {
+function renderPortfolioTable(holdings, tv, totalPortfolioTV) {
+  // tv = market value of the filtered set (for within-filter % weights)
+  // totalPortfolioTV = market value of the full portfolio (for % of portfolio context)
+  if (!totalPortfolioTV) totalPortfolioTV = window._pfTotalTV || tv;
   const sorted = getSortedHoldings(holdings, _portfolioSort);
-  const tc = sorted.reduce((s, h) => s + h.costBasis * h.quantity, 0);
+  const tc = sorted.reduce((s, h) => s + (h.costBasis || 0) * (h.quantity || 0), 0);
   const tgl = tv - tc;
   const tglp = tc > 0 ? (tgl / tc) * 100 : 0;
   const stateKey = window._briefingState || 'growth';
@@ -5552,10 +5630,13 @@ function drawRegimeRegion(ctx, xScale, si, ei, top, bottom, regime) {
 }
 
 // Custom Chart.js plugin for overlays
+// IMPORTANT: Only fires on the portfolio line chart — never on any other Chart instance
 const overlayPlugin = {
   id: 'stressVixOverlay',
   afterDatasetsDraw(chart) {
-    if (!_showStress && !_showVixRange && !_showRegimeOverlay) return;
+    // Guard: only operate on the portfolio chart canvas
+    if (!chart.canvas || chart.canvas.id !== 'portfolioLineChart') return;
+    if (!_showStress && !_showVixRange && !_showRegimeOverlay && !window._showVixRegime) return;
     const area = chart.chartArea;
     if (!area || !area.left) return;
     const x = chart.scales.x;
@@ -5569,13 +5650,13 @@ const overlayPlugin = {
       if (_showRegimeOverlay) {
         let cr = null, rs = null;
         for (let i = 0; i < dates.length; i++) {
-          const r = _regimeByDate[dates[i]];
+          const r = _regimeByDate[dates[i]] || cr; // forward-fill missing dates
           if (r && r !== cr) {
-            if (cr && rs !== null) drawRegimeRegion(ctx, x, rs, i - 1, top, bottom, cr);
+            if (cr && rs !== null) drawRegimeRegion(ctx, x, rs, i, top, bottom, cr); // end at i not i-1 (no gap)
             cr = r; rs = i;
           } else if (!r && cr) {
-            drawRegimeRegion(ctx, x, rs, i - 1, top, bottom, cr);
-            cr = null; rs = null;
+            // keep cr going (forward-fill) — don't break the band
+            // drawRegimeRegion called at state change only
           }
         }
         if (cr && rs !== null) drawRegimeRegion(ctx, x, rs, dates.length - 1, top, bottom, cr);
@@ -5811,9 +5892,15 @@ window.renderPortfolioChart = async function() {
   }
 
   const cd = reducedDates;
-  const cv = reducedPV;
+  let cv = reducedPV.slice(); // clone so pct mode doesn't mutate original
   _chartDatesGlobal = cd;
-  _chartPortfolioSeries = cv;
+  _chartPortfolioSeries = reducedPV; // always keep dollar values
+
+  // ── % Change Axis Mode: rebase to 100 at first non-null value ──
+  if (window._pctAxisMode) {
+    const pfBase = cv.find(v => v != null && v > 0) || 1;
+    cv = cv.map(v => v != null ? v / pfBase * 100 : null);
+  }
 
   // Compute portfolio start/end (first and last non-null values) for stats row
   var pfFirstNonNullIdx = cv.findIndex(function(v){ return v != null; });
@@ -5854,6 +5941,7 @@ window.renderPortfolioChart = async function() {
   var twrSeries = new Array(cv.length).fill(null);
   var rebaseStart = cv[pfFirstNonNullIdx];
   twrSeries[pfFirstNonNullIdx] = rebaseStart;
+  // In pct mode, rebaseStart is already 100 (we keep it)
   var compoundFactor = 1.0;
   var _twrJumpThreshold = 0.05;  // 5% single-day move
   var _twrDollarThreshold = 1000; // $1K minimum to flag
@@ -5927,7 +6015,8 @@ window.renderPortfolioChart = async function() {
           label: sym, data: cd.map(d => pm[d] != null ? pm[d] : null),
           borderColor: cc2[i], borderWidth: 2, pointRadius: 1, pointHoverRadius: 5,
           pointBackgroundColor: cc2[i], pointHoverBackgroundColor: cc2[i],
-          fill: false, tension: .3, spanGaps: true, yAxisID: 'y1'
+          fill: false, tension: .3, spanGaps: true, yAxisID: 'y1',
+          hidden: !!window._benchmarksHidden
         });
         // Rebased benchmark for direct visual comparison on left axis
         const bmValidIdx = cd.findIndex(d => pm[d] != null);
@@ -5940,8 +6029,8 @@ window.renderPortfolioChart = async function() {
               label: sym + ' (rebased)', data: rebasedBM,
               borderColor: cc2[i], borderWidth: 1.5, borderDash: [5,3],
               pointRadius: 0, fill: false, tension: .3, spanGaps: true, yAxisID: 'y',
-              pointHoverRadius: 4,
-              backgroundColor: 'transparent'
+              pointHoverRadius: 4, backgroundColor: 'transparent',
+              hidden: !!window._benchmarksHidden
             });
           }
         }
@@ -6331,7 +6420,7 @@ window.renderPortfolioChart = async function() {
           type: 'linear', position: 'left', grid: chartGrid,
           ticks: { ...chartTicks, callback: function(v) { return '$' + (v >= 1e6 ? (v/1e6).toFixed(1)+'M' : v >= 1e3 ? (v/1e3).toFixed(0)+'K' : v.toFixed(0)); } },
           border: { display: false },
-          title: { display: true, text: (typeof window !== 'undefined' && window._twrModeOnly) ? 'Time-Weighted Return (indexed)' : 'Portfolio Value ($)', font: { family: 'Arial', size: 12, weight: '600' }, color: C.textSec }
+          title: { display: true, text: window._pctAxisMode ? '% Change from Start (rebased to 100)' : (window._twrModeOnly ? 'Time-Weighted Return (indexed)' : 'Portfolio Value ($)'), font: { family: 'Arial', size: 12, weight: '600' }, color: C.textSec }
         },
         y1: {
           type: 'linear', position: 'right', display: hb,
@@ -13479,18 +13568,30 @@ window._benchmarksHidden = false;
 window.toggleBenchmarkVisibility = function() {
   window._benchmarksHidden = !window._benchmarksHidden;
   var btn = document.getElementById('btnHideBenchmarks');
-  if (btn) btn.textContent = window._benchmarksHidden ? 'Show Benchmarks' : 'Hide Benchmarks';
-  // Toggle visibility on the live chart
-  if (window.portfolioLineChart && window.portfolioLineChart.data) {
-    window.portfolioLineChart.data.datasets.forEach(function(ds) {
-      var l = ds.label || '';
-      var isBenchmark = l.length <= 8 && !l.includes('Portfolio') && !l.includes('Watchlist') && !l.includes('Forecast') && !l.includes('Recommended') && !l.includes('overlay') && l !== 'Volume';
-      if (isBenchmark || l.includes('(rebased)')) {
-        ds.hidden = window._benchmarksHidden;
-      }
-    });
-    window.portfolioLineChart.update('none');
+  if (btn) {
+    btn.classList.toggle('active', !window._benchmarksHidden);
+    btn.textContent = window._benchmarksHidden ? 'Benchmarks (Hidden)' : 'Benchmarks';
   }
+  // Re-render chart with the hidden flag — renderPortfolioChart reads this flag
+  if (typeof renderPortfolioChart === 'function') renderPortfolioChart();
+};
+
+// % Change Y-axis toggle
+window._pctAxisMode = false;
+window.togglePctAxis = function() {
+  window._pctAxisMode = !window._pctAxisMode;
+  var btn = document.getElementById('btnPctAxis');
+  if (btn) btn.classList.toggle('active', window._pctAxisMode);
+  if (typeof renderPortfolioChart === 'function') renderPortfolioChart();
+};
+
+// VIX regime overlay toggle (separate from Perry regime)
+window._showVixRegime = false;
+window.toggleVixRegime = function() {
+  window._showVixRegime = !window._showVixRegime;
+  var btn = document.getElementById('btnVixRegime');
+  if (btn) btn.classList.toggle('active', window._showVixRegime);
+  if (typeof renderPortfolioChart === 'function') renderPortfolioChart();
 };
 // TWR Mode toggle — when ON: chart foregrounds only the TWR line; Portfolio Value line is hidden
 // Also adjusts the Forecast Regime overlay to operate on TWR basis
@@ -16390,6 +16491,29 @@ window.mktLoadSectorMomentum = async function() {
 // ═══════════════════════════════════════════════════
 // ════  CROSS-ASSET TAB CONTROLLER  ══════════════════
 // ═══════════════════════════════════════════════════
+
+// Wrapper to re-run stress test with current account/factor filters
+window.stressRerun = function() {
+  // Get the active scenario button
+  var activeBtn = document.querySelector('#stressScenarioBtns .btn-outline.active');
+  if (!activeBtn) { activeBtn = document.querySelector('#stressScenarioBtns .btn-outline'); }
+  if (activeBtn) activeBtn.click();
+};
+
+// Populate scenario account filter on portfolio load
+function populateScenarioAccountFilter() {
+  var sel = document.getElementById('scenarioAccountFilter');
+  if (!sel) return;
+  var h = window._holdings || [];
+  var accts = [...new Set(h.map(x => x.accountType || 'Individual'))].sort();
+  while (sel.options.length > 1) sel.remove(1);
+  accts.forEach(function(a) {
+    var opt = document.createElement('option');
+    opt.value = a; opt.textContent = a;
+    sel.appendChild(opt);
+  });
+}
+
 window._caTabInit = {};
 
 // ═══════════════════════════════════════════════════════════════════
@@ -16444,12 +16568,25 @@ function tlScoreColor(score) {
   if (score >= 30) return '#8B6914'; // warning amber
   return '#8B2A2A'; // danger red
 }
-function tlScoreLabel(score) {
-  if (score >= 75) return 'Strongly Bullish';
-  if (score >= 60) return 'Bullish';
-  if (score >= 45) return 'Neutral';
-  if (score >= 30) return 'Cautious';
-  return 'Bearish';
+function tlScoreLabel(score, perryState) {
+  // If Perry state is drawdown, never say "Bullish" — say "Positioned for Drawdown" variants
+  var ps = perryState || window._perryState || null;
+  if (ps === 'drawdown') {
+    if (score >= 40) return 'Reduce Risk (Economy Intact)';
+    return 'Defensive / Preserve Capital';
+  }
+  if (ps === 'neutral') {
+    if (score >= 55) return 'Cautiously Constructive';
+    if (score >= 40) return 'Neutral / Hold';
+    return 'Defensive';
+  }
+  if (ps === 'leveraged') return 'Contrarian Buy (Leveraged)';
+  // Normal growth state — score-based
+  if (score >= 70) return 'Constructive / Growth';
+  if (score >= 55) return 'Selective Risk-On';
+  if (score >= 40) return 'Neutral';
+  if (score >= 25) return 'Cautious';
+  return 'Defensive';
 }
 
 // ═══════════════════════════════════════════════
@@ -16484,22 +16621,38 @@ window.topLineRefreshAll = async function() {
       { name: 'Cross-Asset Momentum',weight: 0.10, ...pillarResults[5] },
       { name: 'Sector Rotation',     weight: 0.10, ...pillarResults[6] }
     ];
-    // Composite score (weighted average)
+    // Weighted composite score
     var totalW = pillars.reduce(function(s, p) { return s + (p.score != null ? p.weight : 0); }, 0);
     var weightedSum = pillars.reduce(function(s, p) { return s + (p.score != null ? p.score * p.weight : 0); }, 0);
-    var composite = totalW > 0 ? weightedSum / totalW : 50;
+    var rawComposite = totalW > 0 ? weightedSum / totalW : 50;
+
+    // ── Perry Regime Gate ──
+    // The Perry state is a PRICE-ACTION ceiling. No matter how good the
+    // economic data looks, if markets have already priced in that good news
+    // (SPY +30%+ from lows, near 52W high, low VIX), the forward risk/reward
+    // has shifted. The composite cannot exceed the Perry gate.
+    //
+    //   Drawdown  → composite capped at 42  (reduce risk; economy good but priced in)
+    //   Neutral   → composite capped at 58  (hold; modest risk budget)
+    //   Growth    → composite uncapped (economic + price confirm each other)
+    //   Leveraged → composite floor at 80   (deep discount; load up)
+    //
+    var perryState = window._perryState || 'neutral';
+    var perryCaps = { drawdown: 42, neutral: 58, growth: 100, leveraged: 100 };
+    var perryFloors = { drawdown: 0, neutral: 0, growth: 0, leveraged: 80 };
+    var cap   = perryCaps[perryState]   != null ? perryCaps[perryState]   : 100;
+    var floor = perryFloors[perryState] != null ? perryFloors[perryState] : 0;
+    var composite = Math.max(floor, Math.min(cap, rawComposite));
+
     window._tlPillars = pillars;
     window._tlComposite = composite;
+    window._tlRawComposite = rawComposite;
 
-    // Render Master Verdict strip
-    tlRenderMasterVerdict(composite, pillars);
-    // Render Decision Compass
+    // Render all panels
+    tlRenderMasterVerdict(composite, pillars, rawComposite);
     tlRenderDecisionCompass(composite, pillars);
-    // Render Macro Headwinds
     tlRenderMacroHeadwinds(pillars);
-    // Render Portfolio Archetypes
     tlRenderPortfolioArchetypes(composite, pillars);
-    // Render What's Moving Today
     tlRenderMovingToday();
 
   } catch (e) {
@@ -16530,35 +16683,72 @@ async function tlPillar_BusinessCycle() {
 
 // ─────────────────────────────────────────────
 // PILLAR 2 — Market Regime (Perry State)
+// This pillar uses the SAME psClassifyState logic as the Regime tab
+// so both systems stay in sync. Perry regime maps directly to score:
+//   leveraged   → 85 (deep contrarian buy)
+//   growth      → 65 (normal bullish)
+//   neutral     → 40 (caution)
+//   drawdown    → 20 (reduce risk, wait)
+// This pillar also sets window._perryState so other renderers can
+// read it directly for language and posture gating.
 // ─────────────────────────────────────────────
 async function tlPillar_MarketRegime() {
   try {
-    var [spyPts, vixQ] = await Promise.all([
+    var [spyPts, vixQ, qqqPts] = await Promise.all([
       tlFetchChart('SPY', '1y'),
-      tlFetchQuote('%5EVIX')
+      tlFetchQuote('%5EVIX'),
+      tlFetchChart('QQQ', '1y')
     ]);
     if (spyPts.length < 30) return { score: null, detail: 'insufficient data', subdetail: '' };
     var closes = spyPts.map(function(p) { return p.close; });
     var spy12mHigh = Math.max.apply(null, closes);
-    var spyCur = closes[closes.length - 1];
+    var spy12mLow  = Math.min.apply(null, closes);
+    var spyCur   = closes[closes.length - 1];
     var spyStart = closes[0];
-    var trail = (spyCur - spyStart) / spyStart;
-    var dd = (spyCur - spy12mHigh) / spy12mHigh;
     var vix = (vixQ && (vixQ.current || vixQ.price)) || 20;
-    // Score: better when trail > 0, dd > -10%, vix < 20
-    var trailScore = Math.max(0, Math.min(100, 50 + trail * 200));
-    var ddScore = Math.max(0, Math.min(100, 100 + dd * 500));
-    var vixScore = Math.max(0, Math.min(100, 100 - (vix - 12) * 3));
-    var score = (trailScore + ddScore + vixScore) / 3;
-    var stateLabel;
-    if (score >= 70) stateLabel = 'Non-Levered Growth';
-    else if (score >= 50) stateLabel = 'Neutral';
-    else if (score >= 30) stateLabel = 'Defensive';
-    else stateLabel = 'Drawdown';
+
+    var signals = {
+      vix: vix,
+      spyTrailingReturn: (spyCur - spyStart) / spyStart,
+      drawdownFromPeak:  (spyCur - spy12mHigh) / spy12mHigh,
+      spy12mFromLow:     spy12mLow > 0 ? (spyCur - spy12mLow) / spy12mLow : 0
+    };
+
+    // Use the same classifier as psClassifyState (Perry 4-state)
+    var cl = typeof psClassifyState === 'function'
+      ? psClassifyState(signals)
+      : { winner: 'neutral', confidence: 50, reasons: [] };
+
+    // Also use the quarterly-locked regime if available (same as Regime tab)
+    var perryState = cl.winner;
+    if (window._quarterlyRegimes && window._quarterlyRegimes.quarterly && window._quarterlyRegimes.quarterly.length) {
+      var latestQ = window._quarterlyRegimes.quarterly[window._quarterlyRegimes.quarterly.length - 1];
+      if (latestQ && latestQ.regime) perryState = latestQ.regime;
+    }
+
+    // Store for use by Decision Compass and archetype ranker
+    window._perryState = perryState;
+    window._perrySignals = signals;
+
+    // Map Perry state to score — this is a POSITIONING score, not an economic score
+    var stateScores = { leveraged: 85, growth: 65, neutral: 40, drawdown: 20 };
+    var stateLabels = {
+      leveraged: 'Leveraged (Contrarian Buy)',
+      growth:    'Non-Levered Growth',
+      neutral:   'Neutral / Cautious',
+      drawdown:  'Positioned for Drawdown'
+    };
+    var score = stateScores[perryState] != null ? stateScores[perryState] : 40;
+    var trail = (spyCur - spyStart) / spyStart;
+    var dd    = (spyCur - spy12mHigh) / spy12mHigh;
+
     return {
       score: score,
-      detail: stateLabel,
-      subdetail: 'VIX ' + vix.toFixed(1) + ' | DD ' + (dd * 100).toFixed(1) + '%'
+      detail: stateLabels[perryState] || perryState,
+      subdetail: 'VIX ' + vix.toFixed(1) + ' | 12M +' + (trail * 100).toFixed(1) + '% | DD ' + (dd * 100).toFixed(1) + '%',
+      perryState: perryState,
+      perryConfidence: cl.confidence,
+      perryReasons: cl.reasons
     };
   } catch (e) {
     return { score: null, detail: 'unavailable', subdetail: '' };
@@ -16709,40 +16899,120 @@ async function tlPillar_SectorRotation() {
 // ═══════════════════════════════════════════════
 // ═  RENDERERS
 // ═══════════════════════════════════════════════
-function tlRenderMasterVerdict(composite, pillars) {
+function tlRenderMasterVerdict(composite, pillars, rawComposite) {
   var el = document.getElementById('masterVerdictStrip');
   if (!el) return;
+
+  var perryState = window._perryState || 'neutral';
+  var perryLabels = {
+    leveraged: 'Leveraged (Contrarian Buy)',
+    growth:    'Non-Levered Growth',
+    neutral:   'Neutral / Cautious',
+    drawdown:  'Positioned for Drawdown'
+  };
+  var perryColors = {
+    leveraged: '#2E7D52', growth: '#003C71', neutral: '#8B6914', drawdown: '#8B2A2A'
+  };
+  var perryCol = perryColors[perryState] || '#5A6A7A';
+  var perryName = perryLabels[perryState] || perryState;
+
   var col = tlScoreColor(composite);
   var lbl = tlScoreLabel(composite);
-  var html = '<div style="display:grid;grid-template-columns:auto 1fr;gap:18px;align-items:center;font-family:Arial,Helvetica,sans-serif;">';
-  // Verdict block
-  html += '<div style="background:' + col + ';color:#FFFFFF;padding:14px 22px;border-radius:6px;text-align:center;min-width:180px;">';
-  html += '<div style="font-size:10.5px;font-weight:600;text-transform:uppercase;letter-spacing:.6px;opacity:.85;">Master Verdict</div>';
-  html += '<div style="font-size:28px;font-weight:800;line-height:1.1;margin:4px 0;">' + Math.round(composite) + '</div>';
-  html += '<div style="font-size:13px;font-weight:700;">' + lbl + '</div>';
+
+  // Was composite clipped by Perry gate?
+  var wasClipped = rawComposite != null && Math.abs(rawComposite - composite) > 1;
+  var perryPillar = pillars.find(function(p) { return p.name === 'Market Regime State'; });
+  var bcPillar    = pillars.find(function(p) { return p.name === 'Business Cycle'; });
+
+  var html = '<div style="font-family:Arial,Helvetica,sans-serif;">';
+
+  // ── Row 1: Two verdicts side by side ──
+  html += '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;">';
+
+  // Economic Cycle verdict (FRED)
+  var bcScore = bcPillar ? bcPillar.score : null;
+  var bcCol = bcScore != null ? tlScoreColor(bcScore) : '#5A6A7A';
+  var bcLbl = bcPillar ? bcPillar.detail : '—';
+  html += '<div style="border:1px solid #D0D7E0;border-radius:6px;overflow:hidden;">';
+  html += '<div style="background:#003C71;color:#FFFFFF;padding:7px 12px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;">Economic Cycle (FRED)</div>';
+  html += '<div style="padding:10px 14px;background:#FFFFFF;display:flex;align-items:center;gap:14px;">';
+  html += '<div style="font-size:28px;font-weight:800;color:' + bcCol + ';">' + (bcScore != null ? Math.round(bcScore) : '—') + '</div>';
+  html += '<div>';
+  html += '<div style="font-size:13px;font-weight:700;color:#000000;">' + bcLbl + '</div>';
+  html += '<div style="font-size:11px;color:#5A6A7A;margin-top:2px;">' + (bcPillar ? bcPillar.subdetail : '') + '</div>';
+  html += '<div style="font-size:11px;color:#5A6A7A;margin-top:2px;">Macro conditions via 24 FRED indicators</div>';
+  html += '</div>';
+  html += '</div>';
+  html += '</div>';
+
+  // Market Regime (Perry — price-action driven)
+  html += '<div style="border:1px solid #D0D7E0;border-radius:6px;overflow:hidden;">';
+  html += '<div style="background:' + perryCol + ';color:#FFFFFF;padding:7px 12px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;">Market Regime (Perry State)</div>';
+  html += '<div style="padding:10px 14px;background:#FFFFFF;display:flex;align-items:center;gap:14px;">';
+  html += '<div style="font-size:28px;font-weight:800;color:' + perryCol + ';">' + (perryPillar && perryPillar.score != null ? Math.round(perryPillar.score) : '—') + '</div>';
+  html += '<div>';
+  html += '<div style="font-size:13px;font-weight:700;color:#000000;">' + perryName + '</div>';
+  html += '<div style="font-size:11px;color:#5A6A7A;margin-top:2px;">' + (perryPillar ? perryPillar.subdetail : '') + '</div>';
+  html += '<div style="font-size:11px;color:#5A6A7A;margin-top:2px;">Price-action, VIX, drawdown signals</div>';
+  html += '</div>';
+  html += '</div>';
+  html += '</div>';
+
+  html += '</div>';
+
+  // ── Reconciliation note if signals diverge ──
+  if (wasClipped || (bcScore != null && perryPillar && perryPillar.score != null && Math.abs(bcScore - perryPillar.score) > 25)) {
+    html += '<div style="background:#FFF8E1;border:1px solid #8B6914;border-left:4px solid #8B6914;padding:9px 14px;border-radius:4px;margin-bottom:10px;font-size:12px;line-height:1.6;color:#4A3F00;">';
+    html += '<strong>Why these signals diverge:</strong> ';
+    if (perryState === 'drawdown') {
+      html += 'The economy is in <strong>' + bcLbl + '</strong> — FRED data is positive. ';
+      html += 'However, equity markets have already <em>priced in</em> that good news: SPY has rallied sharply from its lows, ';
+      html += 'is near its 52-week high, and VIX is low/complacent. In this setup, the risk/reward of adding exposure is asymmetric — ';
+      html += 'upside is limited while downside could be swift. <strong>The recommended action: maintain equity exposure but reduce leverage, ';
+      html += 'raise cash, and prepare for a better entry point.</strong> This is not a call for full exit — it is a call for discipline.';
+    } else if (perryState === 'neutral') {
+      html += 'Economic conditions are mixed (' + bcLbl + ') and market price-action is sending caution signals. ';
+      html += 'Hold balanced exposure; avoid new aggressive longs until either the economic picture clarifies or the market pulls back to a better risk/reward entry.';
+    } else {
+      html += 'Economic cycle and market regime are broadly aligned. Follow the composite verdict.';
+    }
+    html += '</div>';
+  }
+
+  // ── Composite + pillar bars ──
+  html += '<div style="display:grid;grid-template-columns:auto 1fr;gap:14px;align-items:center;">';
+  // Composite block
+  html += '<div style="background:' + col + ';color:#FFFFFF;padding:12px 20px;border-radius:6px;text-align:center;min-width:150px;">';
+  html += '<div style="font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.6px;opacity:.85;">Composite Verdict</div>';
+  html += '<div style="font-size:30px;font-weight:800;line-height:1.1;margin:4px 0;">' + Math.round(composite) + '</div>';
+  html += '<div style="font-size:12px;font-weight:700;">' + lbl + '</div>';
+  if (wasClipped) {
+    html += '<div style="font-size:9.5px;opacity:.8;margin-top:3px;">Perry-gated from ' + Math.round(rawComposite) + '</div>';
+  }
   html += '</div>';
   // Pillar mini-bars
-  html += '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:8px;">';
+  html += '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(148px,1fr));gap:7px;">';
   pillars.forEach(function(p) {
     var sc = p.score;
     var pCol = sc != null ? tlScoreColor(sc) : '#A8C8E8';
     var pTxt = sc != null ? Math.round(sc) : '—';
-    var weightPct = (p.weight * 100).toFixed(0);
-    html += '<div style="background:#FFFFFF;border:1px solid #D0D7E0;border-radius:4px;padding:6px 9px;">';
-    html += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3px;">';
-    html += '<span style="font-size:10.5px;font-weight:700;color:#003C71;">' + p.name + '</span>';
-    html += '<span style="font-size:9px;color:#5A6A7A;">(' + weightPct + '%)</span>';
+    var wPct = (p.weight * 100).toFixed(0);
+    html += '<div style="background:#FFFFFF;border:1px solid #D0D7E0;border-radius:4px;padding:5px 8px;">';
+    html += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:2px;">';
+    html += '<span style="font-size:10px;font-weight:700;color:#003C71;">' + p.name + '</span>';
+    html += '<span style="font-size:9px;color:#5A6A7A;">' + wPct + '%</span>';
     html += '</div>';
-    html += '<div style="display:flex;align-items:center;gap:6px;">';
-    html += '<div style="font-size:14px;font-weight:800;color:' + pCol + ';font-family:Arial,Helvetica,sans-serif;min-width:24px;">' + pTxt + '</div>';
+    html += '<div style="display:flex;align-items:center;gap:5px;">';
+    html += '<span style="font-size:14px;font-weight:800;color:' + pCol + ';font-family:Arial,Helvetica,sans-serif;min-width:22px;">' + pTxt + '</span>';
     if (sc != null) {
       html += '<div style="flex:1;height:5px;background:#F4F6F9;border-radius:2px;overflow:hidden;">';
-      html += '<div style="height:100%;width:' + sc + '%;background:' + pCol + ';"></div></div>';
+      html += '<div style="height:100%;width:' + sc.toFixed(0) + '%;background:' + pCol + ';transition:width 0.4s;"></div></div>';
     }
     html += '</div>';
-    html += '<div style="font-size:10px;color:#5A6A7A;margin-top:3px;">' + p.detail + '</div>';
+    html += '<div style="font-size:9.5px;color:#5A6A7A;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + p.detail + '</div>';
     html += '</div>';
   });
+  html += '</div>';
   html += '</div>';
   html += '</div>';
   el.innerHTML = html;
@@ -16751,48 +17021,118 @@ function tlRenderMasterVerdict(composite, pillars) {
 function tlRenderDecisionCompass(composite, pillars) {
   var el = document.getElementById('decisionCompass');
   if (!el) return;
-  // Map composite to recommended posture
-  var posture, postureDetail, riskBudget, equityWt, durationWt, creditWt, cashWt;
-  if (composite >= 70) {
-    posture = 'Risk-On / Pro-Cyclical';
-    postureDetail = 'Macro tailwinds dominant. Lean into equities, growth, credit, EM. Reduce duration and defensive sleeves.';
-    equityWt = 70; durationWt = 10; creditWt = 15; cashWt = 5;
-    riskBudget = 'High';
-  } else if (composite >= 55) {
-    posture = 'Constructive / Selective Risk';
-    postureDetail = 'Net positive macro setup with some friction. Maintain equity exposure but rotate toward quality and dividend payers; trim speculative tails.';
-    equityWt = 60; durationWt = 15; creditWt = 15; cashWt = 10;
-    riskBudget = 'Moderate-High';
-  } else if (composite >= 45) {
-    posture = 'Balanced / Neutral';
-    postureDetail = 'Conflicting macro signals. Hold a balanced portfolio. Increase exposure to gold and TIPS as hedges. Keep cash reserve for opportunistic buys.';
-    equityWt = 50; durationWt = 20; creditWt = 12; cashWt = 18;
-    riskBudget = 'Moderate';
-  } else if (composite >= 30) {
-    posture = 'Defensive / De-Risk';
-    postureDetail = 'Macro headwinds building. Rotate to defensives (staples, utilities, healthcare, long bonds). Reduce credit and EM exposure. Build cash.';
-    equityWt = 35; durationWt = 30; creditWt = 8; cashWt = 27;
-    riskBudget = 'Low';
+
+  // Read the Perry state that was set by Pillar 2
+  var perryState = window._perryState || 'neutral';
+  var bcPillar = pillars.find(function(p) { return p.name === 'Business Cycle'; });
+  var bcScore  = bcPillar ? (bcPillar.score || 50) : 50;
+
+  // ── Posture is driven by Perry state, NOT numeric composite ──
+  // The composite adds nuance within the Perry band (e.g., a "drawdown"
+  // regime with very good FRED data = gentle reduction vs. panic exit).
+  var posture, postureDetail, riskBudget, equityWt, durationWt, creditWt, cashWt, actionItems;
+
+  if (perryState === 'leveraged') {
+    posture = 'Leveraged / Aggressive Entry';
+    postureDetail = 'Markets in deep discount. VIX elevated, SPY far below recent highs. This is the contrarian buy window — add levered exposure with defined risk.';
+    equityWt = 75; durationWt = 10; creditWt = 10; cashWt = 5;
+    riskBudget = 'High (Levered)';
+    actionItems = ['Increase TQQQ / SOXL / UPRO exposure to target', 'Buy quality beaten-down names', 'Add to SPY / QQQ at current levels', 'Reduce cash to minimum buffer'];
+  } else if (perryState === 'growth') {
+    posture = 'Non-Levered Growth / Constructive';
+    // Sub-nuance from FRED
+    if (bcScore >= 65) {
+      postureDetail = 'Healthy price-action confirmed by strong macro. Hold full 1x equity exposure. Rotate toward growth factors (tech, small caps, cyclicals).';
+      equityWt = 65; durationWt = 12; creditWt = 13; cashWt = 10;
+      riskBudget = 'Moderate-High';
+      actionItems = ['Maintain core SPY / QQQ allocation', 'Tilt toward growth factors: XLK, IWM, IGM', 'Hold IG credit (LQD) as carry', 'Keep 10% cash reserve for pullback buys'];
+    } else {
+      postureDetail = 'Price-action is healthy but macro data is mixed. Maintain unleveraged equity exposure; add defensives for ballast.';
+      equityWt = 55; durationWt = 18; creditWt = 12; cashWt = 15;
+      riskBudget = 'Moderate';
+      actionItems = ['Hold SPY / QQQ at target weight', 'Add quality/dividend tilt: QUAL, VYM', 'Increase IEF / TLT for duration hedge', 'Build cash toward 15%'];
+    }
+  } else if (perryState === 'neutral') {
+    posture = 'Neutral / Cautious Hold';
+    postureDetail = 'Mixed signals. Hold current positions but do not add risk. Shift incrementally toward defensives and real assets.';
+    equityWt = 50; durationWt = 20; creditWt = 10; cashWt = 20;
+    riskBudget = 'Moderate-Low';
+    actionItems = ['Hold core equity; do not add', 'Increase GLD and TIPS allocation', 'Reduce HY credit (HYG) toward IG', 'Build cash to 20%, deploy on confirmed signal'];
+  } else if (perryState === 'drawdown') {
+    // Sub-nuance: "Positioned for Drawdown" does NOT mean sell everything.
+    // It means the market is extended — systematically reduce leverage and
+    // raise cash so you have dry powder when the reversion comes.
+    if (bcScore >= 60) {
+      // Economy fine, market extended — gentle reduction
+      posture = 'Reduce Leverage / Raise Cash (Economy Intact)';
+      postureDetail = 'The economy is healthy (' + (bcPillar ? bcPillar.detail : 'Mid-Cycle') + '), but equity markets have priced in that good news and then some. SPY has run sharply off lows. Expected forward returns have compressed. This is NOT a crash call — it is a signal to systematically de-risk: reduce position sizes, eliminate leverage, raise cash for the next better entry.';
+      equityWt = 45; durationWt = 22; creditWt = 8; cashWt = 25;
+      riskBudget = 'Low (Preservation Mode)';
+      actionItems = [
+        'Trim overweight positions; take gains on leaders',
+        'Eliminate any leveraged ETF exposure (TQQQ, SOXL, etc.)',
+        'Raise cash target to 25–35% — this is your next entry fund',
+        'Rotate from growth to quality/dividend: QUAL, VYM, SPHD',
+        'Add TLT / IEF as asymmetric hedge if rates peak',
+        'Add GLD as portfolio insurance (5–10%)',
+        'DO NOT short — this is not a crash, it is a pause'
+      ];
+    } else {
+      // Economy also weakening — more defensive
+      posture = 'Defensive / Capital Preservation';
+      postureDetail = 'Market extended AND macro showing late-cycle stress. Reduce equity meaningfully. Long duration bonds and gold offer best risk-adjusted return in this setup.';
+      equityWt = 30; durationWt = 35; creditWt = 5; cashWt = 30;
+      riskBudget = 'Capital Preservation';
+      actionItems = [
+        'Reduce equity to 30% or below',
+        'Eliminate all speculative / high-beta names',
+        'Increase TLT to 25%+ (duration play on rate peak)',
+        'Add GLD to 10% — real asset hedge',
+        'Hold 30%+ cash for next contrarian entry',
+        'Consider tail hedges: TAIL, VIXM, put spreads on QQQ'
+      ];
+    }
   } else {
-    posture = 'Risk-Off / Capital Preservation';
-    postureDetail = 'Recession or crisis-style backdrop. Long duration, gold, USD cash. Avoid HY credit and small caps. Consider tail hedges.';
-    equityWt = 20; durationWt = 35; creditWt = 5; cashWt = 40;
-    riskBudget = 'Capital Preservation';
+    posture = 'Neutral';
+    postureDetail = 'Regime unclassified. Hold current allocation and wait for signal clarification.';
+    equityWt = 50; durationWt = 20; creditWt = 10; cashWt = 20;
+    riskBudget = 'Moderate';
+    actionItems = ['Hold current allocation', 'Wait for regime signal to clarify'];
   }
+
   var col = tlScoreColor(composite);
 
   var html = '<div style="font-family:Arial,Helvetica,sans-serif;text-align:left;">';
   // Headline posture
-  html += '<div style="background:' + col + ';color:#FFFFFF;padding:14px 16px;border-radius:6px;margin-bottom:14px;">';
+  html += '<div style="background:' + col + ';color:#FFFFFF;padding:14px 16px;border-radius:6px;margin-bottom:12px;">';
   html += '<div style="font-size:10.5px;text-transform:uppercase;letter-spacing:.5px;opacity:.85;font-weight:600;">Recommended Posture</div>';
-  html += '<div style="font-size:20px;font-weight:800;margin:4px 0;">' + posture + '</div>';
-  html += '<div style="font-size:12px;line-height:1.5;opacity:.95;">' + postureDetail + '</div>';
-  html += '<div style="margin-top:10px;font-size:11px;opacity:.85;"><strong>Risk Budget:</strong> ' + riskBudget + '</div>';
+  html += '<div style="font-size:18px;font-weight:800;margin:4px 0;line-height:1.2;">' + posture + '</div>';
+  html += '<div style="font-size:11.5px;line-height:1.55;opacity:.95;margin-top:6px;">' + postureDetail + '</div>';
+  html += '<div style="margin-top:8px;font-size:11px;opacity:.85;"><strong>Risk Budget:</strong> ' + riskBudget + '</div>';
   html += '</div>';
 
+  // Action items
+  if (actionItems && actionItems.length) {
+    html += '<div style="margin-bottom:10px;">';
+    html += '<div style="font-size:10.5px;font-weight:700;color:#003C71;text-transform:uppercase;letter-spacing:.4px;margin-bottom:6px;">Action Checklist</div>';
+    html += '<div style="display:flex;flex-direction:column;gap:4px;">';
+    actionItems.forEach(function(item) {
+      var isDontItem = item.toUpperCase().indexOf('DO NOT') >= 0 || item.toUpperCase().indexOf('AVOID') >= 0;
+      var itemCol = isDontItem ? '#8B2A2A' : '#000000';
+      var itemBg  = isDontItem ? 'rgba(139,42,42,0.06)' : 'transparent';
+      var icon    = isDontItem ? '✕' : '✓';
+      var iconCol = isDontItem ? '#8B2A2A' : '#2E7D52';
+      html += '<div style="display:flex;align-items:flex-start;gap:8px;padding:4px 8px;background:' + itemBg + ';border-radius:3px;">';
+      html += '<span style="color:' + iconCol + ';font-weight:700;font-size:12px;margin-top:1px;flex-shrink:0;">' + icon + '</span>';
+      html += '<span style="font-size:12px;color:' + itemCol + ';line-height:1.4;">' + item + '</span>';
+      html += '</div>';
+    });
+    html += '</div></div>';
+  }
+
   // Asset allocation horizontal bar
-  html += '<div style="margin-bottom:6px;font-size:11.5px;font-weight:700;color:#003C71;text-transform:uppercase;letter-spacing:.4px;">Recommended Allocation</div>';
-  html += '<div style="display:flex;height:32px;border-radius:4px;overflow:hidden;border:1px solid #D0D7E0;">';
+  html += '<div style="margin-bottom:5px;font-size:10.5px;font-weight:700;color:#003C71;text-transform:uppercase;letter-spacing:.4px;">Target Allocation</div>';
+  html += '<div style="display:flex;height:28px;border-radius:4px;overflow:hidden;border:1px solid #D0D7E0;">';
   var segs = [
     { lbl: 'Equity', pct: equityWt, col: '#003C71' },
     { lbl: 'Duration', pct: durationWt, col: '#5B9BD5' },
@@ -16802,12 +17142,12 @@ function tlRenderDecisionCompass(composite, pillars) {
   segs.forEach(function(s) {
     if (s.pct < 4) return;
     var textCol = (s.col === '#A8C8E8' || s.col === '#C8D0D8') ? '#000000' : '#FFFFFF';
-    html += '<div style="width:' + s.pct + '%;background:' + s.col + ';color:' + textCol + ';display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;">' + s.pct + '%</div>';
+    html += '<div style="width:' + s.pct + '%;background:' + s.col + ';color:' + textCol + ';display:flex;align-items:center;justify-content:center;font-size:10.5px;font-weight:700;">' + s.pct + '%</div>';
   });
   html += '</div>';
-  html += '<div style="display:flex;justify-content:space-between;margin-top:6px;font-size:10.5px;color:#5A6A7A;">';
+  html += '<div style="display:flex;justify-content:space-between;margin-top:5px;font-size:10px;color:#5A6A7A;">';
   segs.forEach(function(s) {
-    html += '<span><span style="display:inline-block;width:8px;height:8px;background:' + s.col + ';margin-right:4px;border-radius:1px;"></span>' + s.lbl + '</span>';
+    html += '<span><span style="display:inline-block;width:7px;height:7px;background:' + s.col + ';margin-right:3px;border-radius:1px;"></span>' + s.lbl + ' ' + s.pct + '%</span>';
   });
   html += '</div>';
   html += '</div>';
@@ -16920,20 +17260,23 @@ function tlRenderPortfolioArchetypes(composite, pillars) {
   var brScore = getPillarScore(pillars, 'Business Cycle');
   var crScore = getPillarScore(pillars, 'Credit Conditions');
   var bdScore = getPillarScore(pillars, 'Breadth (Fear/Greed)');
+  // Use Perry state directly for archetype fit scoring
+  var perryStateArch = window._perryState || 'neutral';
+  var perryToArchFit = {
+    // For each Perry state, score each archetype bestRegime
+    leveraged: { 'risk-on': 90, 'neutral': 50, 'defensive': 30, 'risk-off': 20 },
+    growth:    { 'risk-on': 75, 'neutral': 65, 'defensive': 35, 'risk-off': 15 },
+    neutral:   { 'risk-on': 35, 'neutral': 70, 'defensive': 60, 'risk-off': 40 },
+    drawdown:  { 'risk-on': 15, 'neutral': 55, 'defensive': 75, 'risk-off': 85 }
+  };
+  var fitMap = perryToArchFit[perryStateArch] || perryToArchFit['neutral'];
   archetypes.forEach(function(a) {
-    var fit = 50;
-    if (a.bestRegime === 'risk-on') {
-      fit = 50 + (composite - 50) * 0.8;
-    } else if (a.bestRegime === 'risk-off') {
-      fit = 50 + (50 - composite) * 0.8;
-    } else if (a.bestRegime === 'defensive') {
-      // Best when composite is 30-50 (mild stress)
-      fit = 100 - Math.abs(composite - 40);
-    } else if (a.bestRegime === 'neutral') {
-      // Best when composite is 45-65 (balanced)
-      fit = 100 - Math.abs(composite - 55) * 1.4;
-    }
-    a.fitScore = Math.max(0, Math.min(100, fit));
+    // Base fit from Perry state
+    var baseFit = fitMap[a.bestRegime] || 50;
+    // Nudge ±10 from FRED macro for nuance within the band
+    var bcPillarArch = pillars.find(function(p) { return p.name === 'Business Cycle'; });
+    var bcNudge = bcPillarArch && bcPillarArch.score != null ? (bcPillarArch.score - 50) / 10 : 0;
+    a.fitScore = Math.max(0, Math.min(100, baseFit + bcNudge));
   });
   archetypes.sort(function(a, b) { return b.fitScore - a.fitScore; });
 
