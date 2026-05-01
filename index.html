@@ -5051,12 +5051,18 @@ document.getElementById('featureGrid').innerHTML = FEATURES.map(f =>
 
 // ═══ TIMEFRAME BUTTONS ═══
 function bindTimeframeBtns() {
-  document.querySelectorAll('#pfTimeframeBtns .btn-outline').forEach(b => {
+  document.querySelectorAll('#pfTimeframeBtns .btn-outline').forEach(function(b) {
+    // Remove any old listeners by replacing with a fresh handler
     b.onclick = function() {
-      document.querySelectorAll('#pfTimeframeBtns .btn-outline').forEach(x => x.classList.remove('active'));
+      document.querySelectorAll('#pfTimeframeBtns .btn-outline').forEach(function(x) {
+        x.classList.remove('active');
+      });
       this.classList.add('active');
       currentRange = this.dataset.range;
-      renderPortfolioOverview();
+      // Re-render just the chart (fast) — not the entire portfolio overview
+      if (typeof renderPortfolioChart === 'function') {
+        renderPortfolioChart();
+      }
     };
   });
 }
@@ -5528,29 +5534,45 @@ let _regimeByDate = {};   // populated when chart renders
 let _spyDateMap = {};
 let _chartDatesGlobal = [];
 
+// Helper: update a toggle button and trigger chart redraw
+function _pfOverlayToggle(varSetter, btnId) {
+  varSetter();
+  // Sync all button states
+  var btnMap = {
+    btnStress: _showStress,
+    btnRegimeOverlay: _showRegimeOverlay,
+    btnVixRegime: window._showVixRegime
+  };
+  // Also update btnVixRange if it exists (legacy button name)
+  Object.keys(btnMap).forEach(function(id) {
+    var el = document.getElementById(id);
+    if (el) el.classList.toggle('active', !!btnMap[id]);
+  });
+  // Redraw chart — use window reference which is always available
+  if (window.portfolioLineChart) window.portfolioLineChart.update('none');
+}
+
 window.toggleStress = function() {
   _showStress = !_showStress;
-  if (_showStress) { _showVixRange = false; _showRegimeOverlay = false; }
-  document.getElementById('btnStress').classList.toggle('active', _showStress);
-  document.getElementById('btnVixRange').classList.toggle('active', _showVixRange);
-  document.getElementById('btnRegimeOverlay').classList.toggle('active', _showRegimeOverlay);
-  if (portfolioLineChart) portfolioLineChart.update();
+  _pfOverlayToggle(function(){}, 'btnStress');
 };
+
+// toggleVixRange is the OLD function name (still referenced in older code)
 window.toggleVixRange = function() {
-  _showVixRange = !_showVixRange;
-  if (_showVixRange) { _showStress = false; _showRegimeOverlay = false; }
-  document.getElementById('btnVixRange').classList.toggle('active', _showVixRange);
-  document.getElementById('btnStress').classList.toggle('active', _showStress);
-  document.getElementById('btnRegimeOverlay').classList.toggle('active', _showRegimeOverlay);
-  if (portfolioLineChart) portfolioLineChart.update();
+  // Map to new VIX regime toggle for backwards compat
+  window.toggleVixRegime();
 };
+
 window.toggleRegimeOverlay = function() {
   _showRegimeOverlay = !_showRegimeOverlay;
-  if (_showRegimeOverlay) { _showStress = false; _showVixRange = false; }
-  document.getElementById('btnRegimeOverlay').classList.toggle('active', _showRegimeOverlay);
-  document.getElementById('btnVixRange').classList.toggle('active', _showVixRange);
-  document.getElementById('btnStress').classList.toggle('active', _showStress);
-  if (portfolioLineChart) portfolioLineChart.update();
+  _pfOverlayToggle(function(){}, 'btnRegimeOverlay');
+};
+
+// New VIX Regime toggle — uses _showVixRegime AND sets _showVixRange for plugin
+window.toggleVixRegime = function() {
+  window._showVixRegime = !window._showVixRegime;
+  _showVixRange = window._showVixRegime; // keep old var in sync for plugin
+  _pfOverlayToggle(function(){}, 'btnVixRegime');
 };
 
 const STRESS_EVENTS = [
@@ -6022,13 +6044,18 @@ window.renderPortfolioChart = async function() {
         const bmValidIdx = cd.findIndex(d => pm[d] != null);
         if (bmValidIdx >= 0) {
           const bmStartPrice = pm[cd[bmValidIdx]];
+          // In pct mode: rebase benchmark to 100 so it shares the same Y axis as portfolio
+          // In dollar mode: scale to match portfolio starting value
           const bmStartPortVal = cv[bmValidIdx] || cv[pfFirstNonNullIdx];
+          const bmScaleBase = window._pctAxisMode ? 100 : bmStartPortVal;
           if (bmStartPrice && bmStartPortVal) {
-            const rebasedBM = cd.map(d => pm[d] != null ? pm[d] / bmStartPrice * bmStartPortVal : null);
+            const rebasedBM = cd.map(d => pm[d] != null ? pm[d] / bmStartPrice * bmScaleBase : null);
             ds.push({
               label: sym + ' (rebased)', data: rebasedBM,
               borderColor: cc2[i], borderWidth: 1.5, borderDash: [5,3],
-              pointRadius: 0, fill: false, tension: .3, spanGaps: true, yAxisID: 'y',
+              pointRadius: 0, fill: false, tension: .3, spanGaps: true,
+              // In pct mode, benchmarks rebased to 100 — use same y axis as portfolio
+              yAxisID: window._pctAxisMode ? 'y' : 'y',
               pointHoverRadius: 4, backgroundColor: 'transparent',
               hidden: !!window._benchmarksHidden
             });
@@ -6114,7 +6141,11 @@ window.renderPortfolioChart = async function() {
 
       var nForecast = 252;
       var nPaths = 500;
-      var startVal = twrSeries[pfLastNonNullIdx] != null ? twrSeries[pfLastNonNullIdx] : pfE;
+      // Forecast starts from the endpoint of the currently-displayed series
+      // TWR mode → use TWR endpoint (indexed); Dollar mode → use portfolio dollar value
+      var startVal = (window._twrModeOnly && twrSeries[pfLastNonNullIdx] != null)
+        ? twrSeries[pfLastNonNullIdx]
+        : (pfE || (twrSeries[pfLastNonNullIdx] != null ? twrSeries[pfLastNonNullIdx] : 100));
       var paths = [];
       function bmSample(){
         var u1 = Math.random() || 1e-9, u2 = Math.random();
@@ -6219,7 +6250,7 @@ window.renderPortfolioChart = async function() {
           data: bmFull,
           borderColor: bmColor, backgroundColor: 'transparent',
           borderWidth: 1.5, borderDash: [5,5], pointRadius: 0, fill: false, tension: .2,
-          yAxisID: 'y1', spanGaps: false, order: 6
+          yAxisID: window._pctAxisMode ? 'y' : 'y1', spanGaps: false, order: 6
         });
       });
 
@@ -6241,54 +6272,60 @@ window.renderPortfolioChart = async function() {
     window._mcForecast = null;
   }
 
-  // Compute portfolio return: use TWR (deposit-stripped) so alpha vs benchmarks is honest.
-  // Total-Value return is also kept for the secondary "what my dollars did" view.
+  // ─── Stats use the DISPLAYED series (respects TWR mode toggle) ───
+  const twrModeActive = !!window._twrModeOnly;
+
   const pfRetTWR = (twrSeries[pfLastNonNullIdx] != null && rebaseStart > 0)
     ? ((twrSeries[pfLastNonNullIdx] - rebaseStart) / rebaseStart * 100) : 0;
   const pfRetDollar = pfS > 0 ? ((pfE - pfS) / pfS * 100) : 0;
-  // Use TWR for the "Portfolio Return" stat and alpha calc (the apples-to-apples vs benchmark)
-  const pfRet = pfRetTWR;
+  const pfRetPrimary = twrModeActive ? pfRetTWR : pfRetDollar;
+  const primaryLabel  = twrModeActive ? 'Time-Weighted Return' : 'Portfolio Return (Total $)';
+  const primaryHint   = twrModeActive ? 'Deposits stripped — pure investment performance' : 'Includes deposits — total dollar performance';
+
   let bmRet = null, bmSym = ci[0] || '';
   if (bmSym && _chartBenchmarkSeries[bmSym]) {
     var bmMap = _chartBenchmarkSeries[bmSym];
     var bf = null, bl = null;
-    // Use the SAME window as the portfolio (first → last non-null index) so the
-    // benchmark's return is computed over the same period the user actually held.
     for (var i2 = pfFirstNonNullIdx; i2 < cd.length; i2++) { if (bmMap[cd[i2]] != null) { bf = bmMap[cd[i2]]; break; } }
     for (var j2 = pfLastNonNullIdx; j2 >= 0; j2--) { if (bmMap[cd[j2]] != null) { bl = bmMap[cd[j2]]; break; } }
     if (bf != null && bl != null && bf > 0) bmRet = ((bl - bf) / bf) * 100;
   }
-  const alpha = bmRet != null ? (pfRet - bmRet) : null;
-  const gPf = rebaseStart > 0 ? (10000 * (twrSeries[pfLastNonNullIdx] / rebaseStart)) : 10000;
-  const gBm = bmRet != null ? (10000 * (1 + bmRet / 100)) : null;
-  // hb = whether to show the secondary benchmark price axis (only if there's a real benchmark)
-  const hb = ci.length > 0 && ds.length > 2;
+  const alpha    = bmRet != null ? (pfRetTWR - bmRet) : null;
+  const gPfTWR   = rebaseStart > 0 ? (10000 * (twrSeries[pfLastNonNullIdx] / rebaseStart)) : 10000;
+  const gPfDollar = pfS > 0 ? (10000 * (pfE / pfS)) : 10000;
+  const gPf      = twrModeActive ? gPfTWR : gPfDollar;
+  const gBm      = bmRet != null ? (10000 * (1 + bmRet / 100)) : null;
+  const hb       = !window._pctAxisMode && ci.length > 0 && ds.length > 2;
 
-  // Risk
+  // Risk — compute from the displayed series
+  const activeSeries = twrModeActive ? twrSeries : cv;
   const dr = [];
-  for (let j = 1; j < cv.length; j++) { if (cv[j - 1] != null && cv[j] != null && cv[j - 1] > 0) dr.push((cv[j] - cv[j - 1]) / cv[j - 1]); }
+  for (let j = 1; j < activeSeries.length; j++) {
+    if (activeSeries[j-1] != null && activeSeries[j] != null && activeSeries[j-1] > 0)
+      dr.push((activeSeries[j] - activeSeries[j-1]) / activeSeries[j-1]);
+  }
   const mr = dr.length ? dr.reduce((a, b) => a + b, 0) / dr.length : 0;
   const vr = dr.length ? dr.reduce((a, r) => a + (r - mr) ** 2, 0) / dr.length : 0;
   const sd = Math.sqrt(vr) * Math.sqrt(252) * 100;
 
-  // Stat boxes — show BOTH TWR (true performance) and Total Value (with deposits)
   let sh = '';
   if (alpha != null) {
-    sh += '<div class="chart-stat-box" title="Alpha = (Portfolio TWR) - (Benchmark Return). Uses time-weighted return so deposits don\'t falsely inflate alpha."><div class="chart-stat-label">Alpha vs ' + bmSym + ' <span class="help-icon" title="Alpha = portfolio time-weighted return minus benchmark return over the same window. TWR strips out deposits/withdrawals so this is an apples-to-apples performance comparison.">?</span></div>' +
+    sh += '<div class="chart-stat-box"><div class="chart-stat-label">Alpha vs ' + bmSym + ' <span class="help-icon" title="Alpha = portfolio TWR minus benchmark return. Always TWR-based so deposits do not distort.">?</span></div>' +
       '<div class="chart-stat-value" style="color:' + pctColor(alpha) + ';">' + fmtPct(alpha) + '</div>' +
-      '<div class="chart-stat-sub">Portfolio TWR ' + fmtPct(pfRetTWR) + ' vs ' + bmSym + ' ' + fmtPct(bmRet) + '</div></div>';
+      '<div class="chart-stat-sub">TWR ' + fmtPct(pfRetTWR) + ' vs ' + bmSym + ' ' + fmtPct(bmRet) + '</div></div>';
   }
-  sh += '<div class="chart-stat-box"><div class="chart-stat-label">Time-Weighted Return <span class="help-icon" title="Time-Weighted Return (TWR) is the GIPS-standard performance metric. It strips out the effect of deposits and withdrawals so you see real investment performance, not just dollar growth from adding money.">?</span></div>' +
-    '<div class="chart-stat-value" style="color:' + pctColor(pfRetTWR) + ';">' + fmtPct(pfRetTWR) + '</div>' +
-    '<div class="chart-stat-sub">Apples-to-apples vs benchmark</div></div>';
-  sh += '<div class="chart-stat-box"><div class="chart-stat-label">Total Dollar Return <span class="help-icon" title="Total Value Return = (Final $) / (Initial $) - 1. Includes deposits/withdrawals — shows what your dollars did, NOT how your picks performed.">?</span></div>' +
-    '<div class="chart-stat-value" style="color:' + pctColor(pfRetDollar) + ';">' + fmtPct(pfRetDollar) + '</div>' +
-    '<div class="chart-stat-sub">Includes ' + (window._twrDeposits ? window._twrDeposits.length : 0) + ' detected deposit(s)</div></div>';
-  sh += '<div class="chart-stat-box"><div class="chart-stat-label">Growth of $10,000 (TWR)</div>' +
+  sh += '<div class="chart-stat-box"><div class="chart-stat-label">' + primaryLabel + ' <span class="help-icon" title="' + (twrModeActive ? 'Time-Weighted Return: strips deposits. Use TWR Mode button to toggle.' : 'Total Dollar Return: includes deposits. Use TWR Mode button to see deposit-stripped performance.') + '">?</span></div>' +
+    '<div class="chart-stat-value" style="color:' + pctColor(pfRetPrimary) + ';">' + fmtPct(pfRetPrimary) + '</div>' +
+    '<div class="chart-stat-sub">' + primaryHint + '</div></div>';
+  if (twrModeActive) {
+    sh += '<div class="chart-stat-box"><div class="chart-stat-label">Total Dollar Return</div><div class="chart-stat-value" style="color:' + pctColor(pfRetDollar) + ';font-size:15px;">' + fmtPct(pfRetDollar) + '</div><div class="chart-stat-sub">Incl. ' + (window._twrDeposits ? window._twrDeposits.length : 0) + ' deposit(s)</div></div>';
+  } else {
+    sh += '<div class="chart-stat-box"><div class="chart-stat-label">Time-Weighted Return</div><div class="chart-stat-value" style="color:' + pctColor(pfRetTWR) + ';font-size:15px;">' + fmtPct(pfRetTWR) + '</div><div class="chart-stat-sub">Deposit-stripped</div></div>';
+  }
+  sh += '<div class="chart-stat-box"><div class="chart-stat-label">Growth of $10,000 (' + (twrModeActive ? 'TWR' : 'Total $') + ')</div>' +
     '<div class="chart-stat-value">' + fmtInt(gPf) + '</div>' +
     '<div class="chart-stat-sub">' + (gBm != null ? bmSym + ': ' + fmtInt(gBm) : 'Add benchmark') + '</div></div>';
-  sh += '<div class="chart-stat-box"><div class="chart-stat-label">Risk (Annualized)</div>' +
-    '<div class="chart-stat-value">&#963; ' + sd.toFixed(1) + '%</div></div>';
+  sh += '<div class="chart-stat-box"><div class="chart-stat-label">Ann. Volatility</div><div class="chart-stat-value">σ ' + sd.toFixed(1) + '%</div><div class="chart-stat-sub">' + (twrModeActive ? 'TWR-based' : 'Dollar-based') + '</div></div>';
   if (window._mcForecast) {
     var mc = window._mcForecast;
     var medRet = ((mc.p50End / mc.startVal) - 1) * 100;
@@ -6418,16 +6455,33 @@ window.renderPortfolioChart = async function() {
         x: { grid: chartGrid, ticks: { ...chartTicks, maxTicksLimit: 12 }, border: { display: false } },
         y: {
           type: 'linear', position: 'left', grid: chartGrid,
-          ticks: { ...chartTicks, callback: function(v) { return '$' + (v >= 1e6 ? (v/1e6).toFixed(1)+'M' : v >= 1e3 ? (v/1e3).toFixed(0)+'K' : v.toFixed(0)); } },
+          ticks: {
+            ...chartTicks,
+            callback: function(v) {
+              if (window._pctAxisMode || window._twrModeOnly) {
+                // % mode: show as index value with % suffix, 2 decimal places
+                return (v != null ? v.toFixed(1) : '0') + (window._pctAxisMode ? '' : '');
+              }
+              // Dollar mode
+              return '$' + (v >= 1e6 ? (v/1e6).toFixed(1)+'M' : v >= 1e3 ? (v/1e3).toFixed(0)+'K' : (v||0).toFixed(0));
+            }
+          },
           border: { display: false },
-          title: { display: true, text: window._pctAxisMode ? '% Change from Start (rebased to 100)' : (window._twrModeOnly ? 'Time-Weighted Return (indexed)' : 'Portfolio Value ($)'), font: { family: 'Arial', size: 12, weight: '600' }, color: C.textSec }
+          title: {
+            display: true,
+            text: window._pctAxisMode ? '% Change from Start (indexed to 100)' : (window._twrModeOnly ? 'Time-Weighted Return (indexed to 100)' : 'Portfolio Value ($)'),
+            font: { family: 'Arial', size: 12, weight: '600' },
+            color: C.textSec
+          }
         },
         y1: {
-          type: 'linear', position: 'right', display: hb,
+          type: 'linear', position: 'right',
+          // In pct mode, hide y1 since benchmark is also rebased to left axis
+          display: window._pctAxisMode ? false : hb,
           grid: { drawOnChartArea: false },
-          ticks: { ...chartTicks, callback: function(v) { return '$' + v.toFixed(2); } },
+          ticks: { ...chartTicks, callback: function(v) { return '$' + (v||0).toFixed(2); } },
           border: { display: false },
-          title: { display: hb, text: 'Benchmark Price ($)', font: { family: 'Arial', size: 12, weight: '600' }, color: C.textSec }
+          title: { display: window._pctAxisMode ? false : hb, text: 'Benchmark Price ($)', font: { family: 'Arial', size: 12, weight: '600' }, color: C.textSec }
         },
         yVol: {
           position: 'right', display: false,
@@ -11315,8 +11369,19 @@ async function briefingLoad() {
 
 // Auto-run briefingLoad on DOMContentLoaded and on every home visit
 (function() {
-  // Fire on initial page load (home is default active page)
   document.addEventListener('DOMContentLoaded', function() {
+    // Event delegation for timeframe buttons — survives DOM re-renders
+    document.addEventListener('click', function(e) {
+      var btn = e.target.closest && e.target.closest('#pfTimeframeBtns .btn-outline');
+      if (!btn || !btn.dataset || !btn.dataset.range) return;
+      document.querySelectorAll('#pfTimeframeBtns .btn-outline').forEach(function(b) {
+        b.classList.remove('active');
+      });
+      btn.classList.add('active');
+      currentRange = btn.dataset.range;
+      if (typeof renderPortfolioChart === 'function') renderPortfolioChart();
+    });
+
     // Small delay to let Firebase auth initialize
     setTimeout(function() {
       if (typeof briefingLoad === 'function') briefingLoad();
