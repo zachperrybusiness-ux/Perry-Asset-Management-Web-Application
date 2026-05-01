@@ -2230,15 +2230,15 @@ body.view-mobile .logo-icon { width: 22px !important; height: 22px !important; f
             <div style="display:flex;align-items:flex-end;gap:6px;flex-wrap:wrap;">
               <div class="form-group" style="margin:0;">
                 <label style="font-size:10.5px;">Benchmark 1</label>
-                <input type="text" id="compare1" placeholder="SPY" value="SPY" style="width:72px;text-transform:uppercase;font-size:11px;">
+                <input type="text" id="compare1" placeholder="SPY" value="SPY" style="width:72px;text-transform:uppercase;font-size:11px;" onchange="renderPortfolioChart()" onblur="renderPortfolioChart()">
               </div>
               <div class="form-group" style="margin:0;">
                 <label style="font-size:10.5px;">Benchmark 2</label>
-                <input type="text" id="compare2" placeholder="QQQ" value="QQQ" style="width:72px;text-transform:uppercase;font-size:11px;">
+                <input type="text" id="compare2" placeholder="QQQ" value="QQQ" style="width:72px;text-transform:uppercase;font-size:11px;" onchange="renderPortfolioChart()" onblur="renderPortfolioChart()">
               </div>
               <div class="form-group" style="margin:0;">
                 <label style="font-size:10.5px;">Add Ticker</label>
-                <input type="text" id="addTickerInput" placeholder="TSLA" style="width:72px;text-transform:uppercase;font-size:11px;" onkeydown="if(event.key==='Enter')pfAddTickerToChart()">
+                <input type="text" id="addTickerInput" placeholder="TSLA" style="width:72px;text-transform:uppercase;font-size:11px;" onkeydown="if(event.key==='Enter'){pfAddTickerToChart();renderPortfolioChart();}">
               </div>
               <button class="btn btn-sm" onclick="renderPortfolioChart()" style="align-self:flex-end;">Update</button>
             </div>
@@ -5367,7 +5367,7 @@ async function renderPortfolioOverview() {
     b.classList.toggle('active', b.dataset.range === currentRange);
   });
   document.getElementById('btnStress').classList.toggle('active', _showStress);
-  document.getElementById('btnVixRange').classList.toggle('active', _showVixRange);
+  // btnVixRange removed — VIX regime now uses btnVixRegime
   renderPortfolioChart();
   // Ensure Regime Fit column reflects current state. If state is not yet classified, fire psLoadDiagnostic
   // and re-render the holdings table once state arrives.
@@ -5554,7 +5554,14 @@ function _pfOverlayToggle(varSetter, btnId) {
 
 window.toggleStress = function() {
   _showStress = !_showStress;
-  _pfOverlayToggle(function(){}, 'btnStress');
+  var btn = document.getElementById('btnStress');
+  if (btn) btn.classList.toggle('active', _showStress);
+  // Re-render so any missing data is fetched
+  if (typeof renderPortfolioChart === 'function') {
+    renderPortfolioChart();
+  } else if (window.portfolioLineChart) {
+    window.portfolioLineChart.update('none');
+  }
 };
 
 // toggleVixRange is the OLD function name (still referenced in older code)
@@ -5565,14 +5572,29 @@ window.toggleVixRange = function() {
 
 window.toggleRegimeOverlay = function() {
   _showRegimeOverlay = !_showRegimeOverlay;
-  _pfOverlayToggle(function(){}, 'btnRegimeOverlay');
+  var btn = document.getElementById('btnRegimeOverlay');
+  if (btn) btn.classList.toggle('active', _showRegimeOverlay);
+  if (typeof renderPortfolioChart === 'function') {
+    renderPortfolioChart();
+  } else if (window.portfolioLineChart) {
+    window.portfolioLineChart.update('none');
+  }
 };
 
-// New VIX Regime toggle — uses _showVixRegime AND sets _showVixRange for plugin
+// VIX Regime toggle — syncs both vars for plugin, triggers full re-render
+// (VIX data in _vixDateMap only exists after renderPortfolioChart runs,
+//  so we must call renderPortfolioChart not just chart.update)
 window.toggleVixRegime = function() {
   window._showVixRegime = !window._showVixRegime;
-  _showVixRange = window._showVixRegime; // keep old var in sync for plugin
-  _pfOverlayToggle(function(){}, 'btnVixRegime');
+  _showVixRange = window._showVixRegime; // keep old var in sync — plugin checks _showVixRange
+  var btn = document.getElementById('btnVixRegime');
+  if (btn) btn.classList.toggle('active', window._showVixRegime);
+  // Must re-render (not just update) so VIX data is fetched for the chart window
+  if (typeof renderPortfolioChart === 'function') {
+    renderPortfolioChart();
+  } else if (window.portfolioLineChart) {
+    window.portfolioLineChart.update('none');
+  }
 };
 
 const STRESS_EVENTS = [
@@ -5601,35 +5623,59 @@ function getStressEventForDate(d) { for (const e of STRESS_EVENTS) { if (d >= e.
 function getVixEventForDate(d) { for (const e of VIX_EVENTS) { if (d >= e.start && d <= e.end) return e; } return null; }
 
 function drawRegion(ctx, xScale, si, ei, top, bottom, ev) {
-  const x1 = xScale.getPixelForValue(si);
-  const x2 = xScale.getPixelForValue(ei);
-  const w = x2 - x1;
+  const gp = function(idx) { try { var p = xScale.getPixelForValue(idx); return isNaN(p) ? null : p; } catch(e){ return null; } };
+  const x1 = gp(si), x2 = gp(Math.max(si, ei));
+  if (x1 === null || x2 === null) return;
+  const w = Math.abs(x2 - x1);
+  if (w < 1) return;
   ctx.fillStyle = ev.type === 'recession' ? 'rgba(139,42,42,0.12)' : 'rgba(200,208,216,0.25)';
-  ctx.fillRect(x1, top, w, bottom - top);
+  ctx.fillRect(Math.min(x1,x2), top, w, bottom - top);
   if (w > 30) {
     ctx.fillStyle = ev.type === 'recession' ? 'rgba(139,42,42,0.7)' : 'rgba(90,106,122,0.7)';
     ctx.font = (w > 80 ? '600 10px' : '600 8px') + ' Arial';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'top';
-    ctx.fillText(w > 80 ? ev.name : ev.name.split(' ')[0], x1 + w / 2, top + 4, w - 4);
+    ctx.fillText(w > 80 ? ev.name : ev.name.split(' ')[0], Math.min(x1,x2) + w / 2, top + 4, w - 4);
   }
 }
 function drawVixRegion(ctx, xScale, si, ei, top, bottom, zone, name) {
-  const x1 = xScale.getPixelForValue(si);
-  const x2 = xScale.getPixelForValue(ei);
-  const w = x2 - x1;
-  ctx.fillStyle = zone === 'high' ? 'rgba(139,105,20,0.15)' : 'rgba(200,208,216,0.2)';
-  ctx.fillRect(x1, top, w, bottom - top);
-  if (w > 30) {
-    ctx.fillStyle = zone === 'high' ? 'rgba(139,105,20,0.7)' : 'rgba(90,106,122,0.6)';
-    ctx.font = (w > 80 ? '600 10px' : '600 8px') + ' Arial';
+  // Robust pixel calculation that works with both category and linear scales
+  const safePixel = function(idx) {
+    try {
+      var px = xScale.getPixelForValue(idx);
+      return isNaN(px) ? null : px;
+    } catch(e) { return null; }
+  };
+  const x1 = safePixel(si);
+  const x2 = safePixel(Math.max(si, ei));
+  if (x1 === null || x2 === null) return;
+  const w = Math.abs(x2 - x1);
+  if (w < 1) return;
+  // Four VIX zones — brand-aligned matte colors
+  const zoneColors = {
+    calm:     'rgba(46,125,82,0.10)',    // green  — VIX < 15
+    normal:   'rgba(91,155,213,0.09)',   // blue   — VIX 15-20
+    elevated: 'rgba(139,105,20,0.16)',   // amber  — VIX 20-30
+    high:     'rgba(139,42,42,0.20)'     // red    — VIX > 30
+  };
+  const labelColors = {
+    calm: 'rgba(46,125,82,0.7)', normal: 'rgba(0,60,113,0.6)',
+    elevated: 'rgba(139,105,20,0.8)', high: 'rgba(139,42,42,0.85)'
+  };
+  ctx.fillStyle = zoneColors[zone] || 'rgba(91,155,213,0.10)';
+  ctx.fillRect(Math.min(x1, x2), top, w, bottom - top);
+  if (name && w > 50) {
+    ctx.fillStyle = labelColors[zone] || 'rgba(0,0,0,0.5)';
+    ctx.font = '600 9px Arial,Helvetica,sans-serif';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'top';
-    ctx.fillText(w > 80 ? name : (zone === 'high' ? 'VIX>30' : 'VIX>20'), x1 + w / 2, top + 4, w - 4);
+    const label = name.length > 14 ? name.slice(0, 14) : name;
+    ctx.fillText(label, Math.min(x1, x2) + w / 2, top + 3, w - 6);
   }
 }
 
 function drawRegimeRegion(ctx, xScale, si, ei, top, bottom, regime) {
+  const safePixel = (idx) => { try { var p = xScale.getPixelForValue(idx); return isNaN(p) ? null : p; } catch(e){ return null; } };
   const colors = {
     leveraged: { bg: 'rgba(46,125,82,0.12)',  text: 'rgba(46,125,82,0.8)',  label: 'Leveraged' },
     growth:    { bg: 'rgba(0,60,113,0.10)',   text: 'rgba(0,60,113,0.85)',  label: 'Growth' },
@@ -5698,25 +5744,83 @@ const overlayPlugin = {
         if (ce && rs !== null) drawRegion(ctx, x, rs, dates.length - 1, top, bottom, ce);
       }
       if (_showVixRange) {
-        let cz = null, zs = null;
-        for (let i = 0; i < dates.length; i++) {
-          const vix = _vixDateMap[dates[i]];
-          let z = null;
-          if (vix != null) { if (vix >= 30) z = 'high'; else if (vix >= 20) z = 'elevated'; }
+        // Four-zone VIX classification — every date gets a zone, no gaps
+        function vixZone(v) {
+          if (v == null) return null;
+          if (v >= 30) return 'high';
+          if (v >= 20) return 'elevated';
+          if (v >= 15) return 'normal';
+          return 'calm';
+        }
+        function vixZoneName(zone, vix) {
+          var labels = { calm: 'VIX <15 (Calm)', normal: 'VIX 15-20', elevated: 'VIX 20-30', high: 'VIX >30 (Stress)' };
+          return labels[zone] || ('VIX ' + (vix||'').toFixed(0));
+        }
+        let cz = null, zs = 0;
+        // Pre-fill first zone
+        cz = vixZone(_vixDateMap[dates[0]]);
+        for (let i = 1; i < dates.length; i++) {
+          const z = vixZone(_vixDateMap[dates[i]]);
           if (z !== cz) {
-            if (cz && zs !== null) {
-              const ev = getVixEventForDate(dates[zs]) || { name: 'VIX ' + (cz === 'high' ? '>30' : '20-30') };
-              drawVixRegion(ctx, x, zs, i - 1, top, bottom, cz, ev.name);
+            // Close current band (draw from zs to i-1)
+            if (cz != null) {
+              const sampleVix = _vixDateMap[dates[zs]];
+              drawVixRegion(ctx, x, zs, i - 1, top, bottom, cz, vixZoneName(cz, sampleVix));
             }
-            cz = z; zs = z ? i : null;
+            cz = z; zs = i;
           }
         }
-        if (cz && zs !== null) {
-          const ev = getVixEventForDate(dates[zs]) || { name: 'VIX ' + (cz === 'high' ? '>30' : '20-30') };
-          drawVixRegion(ctx, x, zs, dates.length - 1, top, bottom, cz, ev.name);
+        // Draw final band
+        if (cz != null) {
+          const sampleVix = _vixDateMap[dates[zs]];
+          drawVixRegion(ctx, x, zs, dates.length - 1, top, bottom, cz, vixZoneName(cz, sampleVix));
         }
       }
     } catch(e) { /* ignore errors during transitions */ }
+
+    // ── Overlay Legend ── (shown in top-right of chart area)
+    try {
+      var legendItems = [];
+      if (_showRegimeOverlay) {
+        legendItems.push({ color: 'rgba(46,125,82,0.7)', label: 'Leveraged' });
+        legendItems.push({ color: 'rgba(0,60,113,0.6)', label: 'Growth' });
+        legendItems.push({ color: 'rgba(139,105,20,0.7)', label: 'Neutral' });
+        legendItems.push({ color: 'rgba(139,42,42,0.7)', label: 'Drawdown' });
+      }
+      if (_showVixRange) {
+        legendItems.push({ color: 'rgba(46,125,82,0.7)', label: 'VIX <15' });
+        legendItems.push({ color: 'rgba(0,60,113,0.6)', label: 'VIX 15-20' });
+        legendItems.push({ color: 'rgba(139,105,20,0.8)', label: 'VIX 20-30' });
+        legendItems.push({ color: 'rgba(139,42,42,0.85)', label: 'VIX >30' });
+      }
+      if (_showStress) {
+        legendItems.push({ color: 'rgba(139,42,42,0.35)', label: 'Recession' });
+        legendItems.push({ color: 'rgba(139,105,20,0.25)', label: 'Correction' });
+      }
+      if (legendItems.length) {
+        const lx = area.right - 4;
+        const ly = area.top + 4;
+        const lh = 14;
+        const lpad = 6;
+        const lw = 120;
+        ctx.fillStyle = 'rgba(255,255,255,0.88)';
+        ctx.fillRect(lx - lw - lpad, ly - 2, lw + lpad * 2, legendItems.length * lh + 6);
+        ctx.strokeStyle = 'rgba(208,215,224,0.8)';
+        ctx.lineWidth = 0.5;
+        ctx.strokeRect(lx - lw - lpad, ly - 2, lw + lpad * 2, legendItems.length * lh + 6);
+        legendItems.forEach(function(item, idx) {
+          const iy = ly + idx * lh + 3;
+          ctx.fillStyle = item.color;
+          ctx.fillRect(lx - lw - lpad + 4, iy, 10, 9);
+          ctx.fillStyle = 'rgba(0,0,0,0.75)';
+          ctx.font = '9px Arial,Helvetica,sans-serif';
+          ctx.textAlign = 'left';
+          ctx.textBaseline = 'middle';
+          ctx.fillText(item.label, lx - lw - lpad + 18, iy + 4.5);
+        });
+      }
+    } catch(e) {}
+
     ctx.restore();
   }
 };
@@ -6642,18 +6746,19 @@ function renderAllDonuts() {
   renderDonut('donut-mktcap', 'By Market Cap / Style', group('mktCapCategory'));
   renderMorningstarBox(holdings);
 
-  // Populate account filter dropdown
-  const filterEl = document.getElementById('donutAccountFilter');
-  if (filterEl && filterEl.options.length <= 1) {
-    const accts = [...new Set(allH.map(h => h.accountType || 'Individual'))].sort();
-    accts.forEach(a => {
-      if (a !== 'all') {
-        const opt = document.createElement('option');
-        opt.value = a; opt.textContent = a;
-        filterEl.appendChild(opt);
-      }
+  // Populate account filter dropdowns (donut + portfolio optimization + scenarios)
+  function populateAccountSelect(selId) {
+    var filterEl2 = document.getElementById(selId);
+    if (!filterEl2) return;
+    while (filterEl2.options.length > 1) filterEl2.remove(1); // clear except "All"
+    var accts2 = [...new Set(allH.map(h => h.accountType || 'Individual'))].sort();
+    accts2.forEach(function(a) {
+      var opt = document.createElement('option');
+      opt.value = a; opt.textContent = a;
+      filterEl2.appendChild(opt);
     });
   }
+  ['donutAccountFilter', 'poeAccount', 'scenarioAccountFilter'].forEach(populateAccountSelect);
 }
 
 // ═══ BULK IMPORT ═══
@@ -13650,14 +13755,7 @@ window.togglePctAxis = function() {
   if (typeof renderPortfolioChart === 'function') renderPortfolioChart();
 };
 
-// VIX regime overlay toggle (separate from Perry regime)
-window._showVixRegime = false;
-window.toggleVixRegime = function() {
-  window._showVixRegime = !window._showVixRegime;
-  var btn = document.getElementById('btnVixRegime');
-  if (btn) btn.classList.toggle('active', window._showVixRegime);
-  if (typeof renderPortfolioChart === 'function') renderPortfolioChart();
-};
+// toggleVixRegime is defined earlier in the file (search for _pfOverlayToggle)
 // TWR Mode toggle — when ON: chart foregrounds only the TWR line; Portfolio Value line is hidden
 // Also adjusts the Forecast Regime overlay to operate on TWR basis
 window._twrModeOnly = false;
