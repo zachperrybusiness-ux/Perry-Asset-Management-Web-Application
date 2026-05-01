@@ -1375,7 +1375,13 @@ body.view-mobile .logo-icon { width: 22px !important; height: 22px !important; f
 .pf-tab-content.active { display: block; }
 @keyframes fadeIn { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: translateY(0); } }
 
-/* Cross-Asset two-column grid — collapses to single on narrow screens */
+/* Cross-Asset multi-column grids — collapse to single on narrow screens */
+@media (max-width: 1100px) {
+  #page-markets .pf-tab-content > div[style*="grid-template-columns:1.2fr 1fr"],
+  #page-markets .pf-tab-content > div[style*="grid-template-columns:1fr 1.2fr"] {
+    grid-template-columns: 1fr !important;
+  }
+}
 @media (max-width: 900px) {
   #page-markets .pf-tab-content > div[style*="grid-template-columns:1fr 1fr"] {
     grid-template-columns: 1fr !important;
@@ -1573,8 +1579,22 @@ body.view-mobile .logo-icon { width: 22px !important; height: 22px !important; f
   transform: translateY(-1px);
   box-shadow: 0 2px 6px rgba(0, 60, 113, 0.08);
 }
-.snap-cell.up { border-left-color: var(--success, #2E7D52); }
-.snap-cell.down { border-left-color: #c46e6e; }
+.snap-cell.up { border-left-color: #2E7D52; }
+.snap-cell.down { border-left-color: #8B2A2A; }
+.snap-row-header {
+  background: #003C71;
+  color: #FFFFFF;
+  padding: 8px 12px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+  grid-column: 1 / -1;
+  margin-top: 6px;
+  border-radius: 3px;
+  font-family: Arial, Helvetica, sans-serif;
+}
+.snap-row-header:first-child { margin-top: 0; }
 .snap-ticker {
   font-size: 10.5px;
   font-weight: 700;
@@ -1603,18 +1623,7 @@ body.view-mobile .logo-icon { width: 22px !important; height: 22px !important; f
   margin-top: 5px;
   position: relative;
 }
-.snap-row-header {
-  grid-column: 1 / -1;
-  font-size: 10.5px;
-  font-weight: 700;
-  color: var(--navy);
-  text-transform: uppercase;
-  letter-spacing: 0.6px;
-  padding: 8px 0 4px;
-  border-bottom: 1px solid var(--border);
-  margin-top: 8px;
-}
-.snap-row-header:first-child { margin-top: 0; }
+/* duplicate snap-row-header removed — see earlier definition */
 
 /* AI commentary panel */
 .ai-panel {
@@ -3205,33 +3214,33 @@ body.view-mobile .logo-icon { width: 22px !important; height: 22px !important; f
 <!-- ═══════════ MARKETS ═══════════ -->
 <div class="page" id="page-markets">
   <div class="content-wrap">
-    <div class="hero" style="padding:28px 40px;">
-      <h1>Cross-Asset Analysis</h1>
-      <p style="max-width:780px;">Portfolio-state framework tied to four market regimes &mdash; Leveraged, Non-Levered Positive Growth, Neutral, and Positioned for Drawdown &mdash; plus cross-asset analytics, correlation, volatility surface, jump modeling, efficient frontier, and regime signals.</p>
-    </div>
 
-    <!-- ═══════════ ALWAYS-VISIBLE: GLOBAL SNAPSHOT ═══════════ -->
-    <div class="card">
-      <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
-        <span>Global Markets Snapshot
-          <span class="help-icon" title="Bloomberg WEI-style cross-asset dashboard. Equities, rates, FX, credit, commodities, and volatility on one grid with intraday change and 1-month sparklines. Modeled on Bloomberg WEI&lt;GO&gt; / FXIP&lt;GO&gt;.">?</span>
-        </span>
+    <!-- ═══════════ HERO + MASTER VERDICT ═══════════ -->
+    <div style="background:#003C71;color:#FFFFFF;padding:24px 32px 20px;border-radius:6px 6px 0 0;font-family:Arial,Helvetica,sans-serif;">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:16px;">
+        <div style="flex:1;min-width:280px;">
+          <h1 style="margin:0 0 6px;font-size:26px;font-weight:700;">Cross-Asset Analysis</h1>
+          <p style="margin:0;font-size:13px;color:rgba(255,255,255,0.85);max-width:680px;line-height:1.5;">Multi-variate macro analysis platform. Every module feeds a unified <strong>Top-Line View</strong> that tells you what is moving, why it is moving, and which portfolio archetypes are positioned to win in the current regime.</p>
+        </div>
         <div style="display:flex;gap:8px;align-items:center;">
-          <button class="ai-explain-btn" onclick="aiExplainMarket()">Explain Today's Market</button>
-          <button class="btn-sm" style="background:rgba(255,255,255,0.2);color:#fff;border:1px solid rgba(255,255,255,0.4);padding:4px 10px;border-radius:3px;cursor:pointer;font-size:11px;" onclick="snapshotLoad()">Refresh</button>
+          <button id="topLineRefreshBtn" onclick="topLineRefreshAll()" style="background:#5B9BD5;color:#FFFFFF;border:none;padding:9px 18px;border-radius:4px;cursor:pointer;font-size:13px;font-weight:600;font-family:Arial,Helvetica,sans-serif;">Refresh All Data</button>
+          <button onclick="aiExplainMarket()" style="background:rgba(255,255,255,0.18);color:#FFFFFF;border:1px solid rgba(255,255,255,0.4);padding:9px 18px;border-radius:4px;cursor:pointer;font-size:13px;font-weight:600;font-family:Arial,Helvetica,sans-serif;">AI Briefing</button>
         </div>
       </div>
-      <div class="card-body">
-        <p style="font-size:12px;color:var(--text-sec);margin-bottom:10px;">Real-time prices and 1-day moves across global equities, rates, currencies, credit, commodities, and volatility. Sparklines show 1-month trend. <strong>Click any cell</strong> to send to Stock Research.</p>
-        <div id="snapshotGrid" style="text-align:center;padding:24px;color:#5A6A7A;font-size:12px;font-family:Arial;"><span class="spinner"></span> Loading global market snapshot…</div>
-        <div id="aiMarketBox" style="display:none;margin-top:14px;"></div>
+    </div>
+
+    <!-- Master Verdict Strip — populated from topLineRefreshAll -->
+    <div id="masterVerdictStrip" style="background:#F4F6F9;border:1px solid #D0D7E0;border-top:none;padding:14px 32px;font-family:Arial,Helvetica,sans-serif;border-radius:0 0 6px 6px;margin-bottom:20px;">
+      <div style="text-align:center;color:#5A6A7A;font-size:13px;padding:8px;">
+        <span class="spinner"></span> Computing master verdict from 7 signal pillars...
       </div>
-      <div class="card-sources"><strong>Sources:</strong> Yahoo Finance via Cloudflare Worker. Asset universe modeled on Bloomberg WEI (World Equity Indices) and FXIP (FX Information Platform) standards.</div>
     </div>
 
     <!-- ═══════════ CA-TABS ═══════════ -->
-    <div class="pf-tabs" role="tablist" aria-label="Cross-Asset Analysis" style="margin-top:18px;">
-      <button class="pf-tab active" data-catab="regime"      onclick="caShowTab('regime')">Market Regime</button>
+    <div class="pf-tabs" role="tablist" aria-label="Cross-Asset Analysis">
+      <button class="pf-tab active" data-catab="topline"     onclick="caShowTab('topline')">Top-Line View</button>
+      <button class="pf-tab"        data-catab="movers"      onclick="caShowTab('movers')">Movers &amp; Drivers</button>
+      <button class="pf-tab"        data-catab="regime"      onclick="caShowTab('regime')">Market Regime</button>
       <button class="pf-tab"        data-catab="breadth"     onclick="caShowTab('breadth')">Breadth &amp; Signals</button>
       <button class="pf-tab"        data-catab="universe"    onclick="caShowTab('universe')">Universe &amp; Returns</button>
       <button class="pf-tab"        data-catab="correlation" onclick="caShowTab('correlation')">Correlation</button>
@@ -3239,9 +3248,149 @@ body.view-mobile .logo-icon { width: 22px !important; height: 22px !important; f
       <button class="pf-tab"        data-catab="quant"       onclick="caShowTab('quant')">Quant Models</button>
     </div>
 
+    <!-- ═══ TAB: TOP-LINE VIEW (the integrated decision dashboard) ═══ -->
+    <div class="pf-tab-content active" id="catab-topline">
+
+      <!-- 1. Decision Compass + Headline Movers row -->
+      <div style="display:grid;grid-template-columns:1.2fr 1fr;gap:14px;margin-bottom:14px;">
+
+        <!-- Decision Compass -->
+        <div class="card">
+          <div class="card-title">Decision Compass — Where Should Capital Be?</div>
+          <div class="card-body">
+            <p style="font-size:12px;color:#5A6A7A;margin-bottom:10px;font-family:Arial,Helvetica,sans-serif;">Aggregates macro regime, market breadth, credit signals, and volatility into a single recommended portfolio posture. Each pillar is independently scored and combined into a navy / blue / gray heat map.</p>
+            <div id="decisionCompass" style="text-align:center;padding:18px;color:#5A6A7A;font-family:Arial,Helvetica,sans-serif;font-size:13px;">
+              <span class="spinner"></span> Computing posture...
+            </div>
+          </div>
+          <div class="card-sources" style="background:#F4F6F9;border-top:1px solid #D0D7E0;padding:8px 18px 10px;font-family:Arial,Helvetica,sans-serif;font-size:11px;color:#5A6A7A;line-height:1.6;border-radius:0 0 6px 6px;">
+            <strong style="color:#003C71;font-weight:600;">Methodology:</strong> Weighted composite of 7 signal pillars — Business Cycle (FRED scorecard, 25%), Market Regime State (VIX/momentum, 20%), Breadth/Fear-Greed (15%), Credit Conditions (HY OAS + credit spreads, 12%), Yield Curve (8%), Cross-Asset Momentum (10%), Sector Rotation Signal (10%). Outputs map to 4 portfolio archetypes.
+          </div>
+        </div>
+
+        <!-- What's Moving Today -->
+        <div class="card">
+          <div class="card-title">What's Moving Today &mdash; Drivers</div>
+          <div class="card-body">
+            <p style="font-size:12px;color:#5A6A7A;margin-bottom:10px;font-family:Arial,Helvetica,sans-serif;">The 5 largest absolute movers from the global universe ranked by $-vol contribution, with auto-detected driver themes (rates, credit, FX, growth, defensive flight).</p>
+            <div id="movingToday" style="padding:8px;color:#5A6A7A;font-family:Arial,Helvetica,sans-serif;font-size:13px;text-align:center;">
+              <span class="spinner"></span> Identifying moves...
+            </div>
+          </div>
+          <div class="card-sources" style="background:#F4F6F9;border-top:1px solid #D0D7E0;padding:8px 18px 10px;font-family:Arial,Helvetica,sans-serif;font-size:11px;color:#5A6A7A;line-height:1.6;border-radius:0 0 6px 6px;">
+            <strong style="color:#003C71;font-weight:600;">Sources:</strong> Yahoo Finance via Cloudflare Worker. Driver classification via cross-asset rule engine (rates leading equities = duration play, credit spread widening = risk-off, USD strength + commodity weakness = global growth concern).
+          </div>
+        </div>
+      </div>
+
+      <!-- 2. Macro Headwinds compass + Portfolio Archetypes -->
+      <div style="display:grid;grid-template-columns:1fr 1.2fr;gap:14px;margin-bottom:14px;">
+
+        <!-- Macro Headwinds gauge -->
+        <div class="card">
+          <div class="card-title">Macro Headwinds Direction</div>
+          <div class="card-body">
+            <p style="font-size:12px;color:#5A6A7A;margin-bottom:10px;font-family:Arial,Helvetica,sans-serif;">Six macro forces measured against historical norms: growth, inflation, rates, USD, credit, liquidity. Each rendered as a vector showing strength and direction. The composite vector at the bottom = aggregate headwind direction.</p>
+            <div id="macroHeadwinds" style="text-align:center;padding:14px;color:#5A6A7A;font-family:Arial,Helvetica,sans-serif;font-size:13px;">
+              <span class="spinner"></span> Loading FRED data...
+            </div>
+          </div>
+          <div class="card-sources" style="background:#F4F6F9;border-top:1px solid #D0D7E0;padding:8px 18px 10px;font-family:Arial,Helvetica,sans-serif;font-size:11px;color:#5A6A7A;line-height:1.6;border-radius:0 0 6px 6px;">
+            <strong style="color:#003C71;font-weight:600;">Sources:</strong> FRED (FFR, CPI, PCE, USD index, HY OAS), Yahoo Finance (price data). Each force standardized to a z-score over 5-year history and weighted by macro-portfolio sensitivity.
+          </div>
+        </div>
+
+        <!-- Portfolio Archetypes -->
+        <div class="card">
+          <div class="card-title">Recommended Portfolio Archetypes</div>
+          <div class="card-body">
+            <p style="font-size:12px;color:#5A6A7A;margin-bottom:10px;font-family:Arial,Helvetica,sans-serif;">Four institutional portfolio archetypes ranked by current-regime fit. Top-ranked = highest expected risk-adjusted return given the macro state. Each archetype lists representative ETF holdings and target duration / equity / credit weights.</p>
+            <div id="portfolioArchetypes" style="padding:8px;color:#5A6A7A;font-family:Arial,Helvetica,sans-serif;font-size:13px;text-align:center;">
+              <span class="spinner"></span> Ranking archetypes...
+            </div>
+          </div>
+          <div class="card-sources" style="background:#F4F6F9;border-top:1px solid #D0D7E0;padding:8px 18px 10px;font-family:Arial,Helvetica,sans-serif;font-size:11px;color:#5A6A7A;line-height:1.6;border-radius:0 0 6px 6px;">
+            <strong style="color:#003C71;font-weight:600;">Methodology:</strong> Each archetype's regime fit = sum of its asset class exposures × current asset class regime score. Bridgewater All Weather, Permanent Portfolio (Browne 1981), 60/40 (Shiller benchmark), Risk Parity (Asness 2010), Endowment Model (Swensen 2000) representative weights.
+          </div>
+        </div>
+      </div>
+
+      <!-- 3. Cross-Asset Pulse Grid (the snapshot, redesigned) -->
+      <div class="card">
+        <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
+          <span>Global Markets Snapshot &mdash; Daily &amp; Weekly Moves</span>
+          <button onclick="snapshotLoad()" style="background:#5B9BD5;color:#FFFFFF;border:none;padding:5px 14px;border-radius:4px;cursor:pointer;font-size:11px;font-weight:600;font-family:Arial,Helvetica,sans-serif;">Refresh</button>
+        </div>
+        <div class="card-body">
+          <p style="font-size:12px;color:#5A6A7A;margin-bottom:10px;font-family:Arial,Helvetica,sans-serif;">Real-time prices and 1-day, 1-week, 1-month percentage moves across 26 global asset proxies. Sparklines = 1-month price trend. <strong>Click any cell</strong> to send to Stock Research.</p>
+          <div id="snapshotGrid" style="text-align:center;padding:24px;color:#5A6A7A;font-size:12px;font-family:Arial,Helvetica,sans-serif;"><span class="spinner"></span> Loading global market snapshot...</div>
+          <div id="aiMarketBox" style="display:none;margin-top:14px;"></div>
+        </div>
+        <div class="card-sources" style="background:#F4F6F9;border-top:1px solid #D0D7E0;padding:8px 18px 10px;font-family:Arial,Helvetica,sans-serif;font-size:11px;color:#5A6A7A;line-height:1.6;border-radius:0 0 6px 6px;">
+          <strong style="color:#003C71;font-weight:600;">Sources:</strong> Yahoo Finance via Cloudflare Worker. Asset universe modeled on Bloomberg WEI (World Equity Indices) and FXIP (FX Information Platform).
+        </div>
+      </div>
+
+    </div><!-- /catab-topline -->
+
+    <!-- ═══ TAB: MOVERS & DRIVERS — deep dive into what's moving and why ═══ -->
+    <div class="pf-tab-content" id="catab-movers">
+
+      <!-- Top movers leaderboard -->
+      <div class="card">
+        <div class="card-title">Top Movers Leaderboard (1D / 1W / 1M)</div>
+        <div class="card-body">
+          <p style="font-size:12px;color:#5A6A7A;margin-bottom:12px;font-family:Arial,Helvetica,sans-serif;">All 26 global universe assets ranked by absolute move across multiple horizons. Use this to identify rotation signals — assets moving in opposite directions across timeframes often signal regime inflection.</p>
+          <div class="form-row" style="margin-bottom:10px;">
+            <div class="form-group" style="display:flex;gap:6px;align-items:center;">
+              <span style="font-size:11px;font-weight:600;color:#5A6A7A;font-family:Arial,Helvetica,sans-serif;">Rank By:</span>
+              <button class="ca-mover-tf-btn" data-tf="1d" onclick="moversRender('1d')" style="background:#5B9BD5;color:#FFFFFF;border:none;padding:5px 12px;border-radius:4px;cursor:pointer;font-size:11px;font-weight:600;font-family:Arial,Helvetica,sans-serif;">1 Day</button>
+              <button class="ca-mover-tf-btn" data-tf="1w" onclick="moversRender('1w')" style="background:#A8C8E8;color:#FFFFFF;border:none;padding:5px 12px;border-radius:4px;cursor:pointer;font-size:11px;font-weight:600;font-family:Arial,Helvetica,sans-serif;">1 Week</button>
+              <button class="ca-mover-tf-btn" data-tf="1m" onclick="moversRender('1m')" style="background:#A8C8E8;color:#FFFFFF;border:none;padding:5px 12px;border-radius:4px;cursor:pointer;font-size:11px;font-weight:600;font-family:Arial,Helvetica,sans-serif;">1 Month</button>
+            </div>
+          </div>
+          <div id="moversLeaderboard" style="padding:14px;text-align:center;color:#5A6A7A;font-size:13px;font-family:Arial,Helvetica,sans-serif;">
+            <span class="spinner"></span> Loading universe...
+          </div>
+        </div>
+        <div class="card-sources" style="background:#F4F6F9;border-top:1px solid #D0D7E0;padding:8px 18px 10px;font-family:Arial,Helvetica,sans-serif;font-size:11px;color:#5A6A7A;line-height:1.6;border-radius:0 0 6px 6px;">
+          <strong style="color:#003C71;font-weight:600;">Sources:</strong> Yahoo Finance via Cloudflare Worker, 26-asset global universe. Rotation signal: assets ranking in top 5 on one timeframe and bottom 5 on another flagged as inflection candidates.
+        </div>
+      </div>
+
+      <!-- Driver Theme Map -->
+      <div class="card">
+        <div class="card-title">Driver Theme Map &mdash; Why Things Are Moving</div>
+        <div class="card-body">
+          <p style="font-size:12px;color:#5A6A7A;margin-bottom:12px;font-family:Arial,Helvetica,sans-serif;">Today's market moves classified into 8 macro driver themes. Each theme rated as <strong>Active</strong>, <strong>Latent</strong>, or <strong>Inactive</strong> based on a ruleset over current cross-asset behavior. The active themes tell you the dominant narratives the market is pricing right now.</p>
+          <div id="driverThemeMap" style="padding:14px;text-align:center;color:#5A6A7A;font-size:13px;font-family:Arial,Helvetica,sans-serif;">
+            <span class="spinner"></span> Classifying drivers...
+          </div>
+        </div>
+        <div class="card-sources" style="background:#F4F6F9;border-top:1px solid #D0D7E0;padding:8px 18px 10px;font-family:Arial,Helvetica,sans-serif;font-size:11px;color:#5A6A7A;line-height:1.6;border-radius:0 0 6px 6px;">
+          <strong style="color:#003C71;font-weight:600;">Methodology:</strong> Rule-based classifier over cross-asset returns. <em>Disinflation:</em> long bonds + tech rally with dollar weakness. <em>Re-flation:</em> commodities + small caps + cyclicals lead. <em>Defensive Rotation:</em> staples + utilities + healthcare + bonds outperform. <em>Risk-Off:</em> gold + USD + bonds rally with HY underperformance. Mapped to CFA L3 macro factor framework (Ang 2014, Asset Management).
+        </div>
+      </div>
+
+      <!-- Sector Rotation Map -->
+      <div class="card">
+        <div class="card-title">Sector Rotation Map &mdash; Cyclical vs. Defensive Flow</div>
+        <div class="card-body">
+          <p style="font-size:12px;color:#5A6A7A;margin-bottom:12px;font-family:Arial,Helvetica,sans-serif;">Performance ratio of cyclical sectors (XLK, XLY, XLI, XLF, XLE, XLB, XLRE, XLC) vs. defensive sectors (XLP, XLV, XLU). Rising = risk-on rotation; falling = defensive flight. The 60-day moving average overlay is the regime filter — above MA = expansion confirmation, below MA = caution.</p>
+          <div id="rotationMapEmpty" style="padding:14px;text-align:center;color:#5A6A7A;font-size:13px;font-family:Arial,Helvetica,sans-serif;">
+            <span class="spinner"></span> Computing rotation ratio...
+          </div>
+          <div class="chart-wrap" style="height:300px;display:none;" id="rotationMapWrap"><canvas id="rotationMapChart"></canvas></div>
+        </div>
+        <div class="card-sources" style="background:#F4F6F9;border-top:1px solid #D0D7E0;padding:8px 18px 10px;font-family:Arial,Helvetica,sans-serif;font-size:11px;color:#5A6A7A;line-height:1.6;border-radius:0 0 6px 6px;">
+          <strong style="color:#003C71;font-weight:600;">Sources:</strong> SPDR Sector ETFs via Yahoo Finance. Methodology: Cyclical Index = equal-weight XLK + XLY + XLI + XLF + XLE + XLB + XLRE + XLC; Defensive Index = equal-weight XLP + XLV + XLU. Ratio = Cyclical / Defensive, rebased to 100 at start of window.
+        </div>
+      </div>
+
+    </div><!-- /catab-movers -->
+
     <!-- ═══ TAB: MARKET REGIME ═══ -->
-    <div class="pf-tab-content active" id="catab-regime">
-      <!-- Regime diagnostic and framework side-by-side -->
+    <div class="pf-tab-content" id="catab-regime">
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px;">
         <div class="card">
       <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;">
@@ -3273,7 +3422,6 @@ body.view-mobile .logo-icon { width: 22px !important; height: 22px !important; f
       </div>
     </div>
       </div>
-      <!-- Fibonacci + Bayesian side-by-side -->
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px;">
         <div class="card">
       <div class="card-title">QQQ Daily Chart with Fibonacci Projections <span class="help-icon" title="Fibonacci retracement / projection levels (23.6%, 38.2%, 50%, 61.8%, 78.6%, 100%, 127.2%, 161.8%, 261.8%) — derived from the golden ratio φ = 1.618. Used by technical traders to identify potential support/resistance and price targets following major swings.">?</span></div>
@@ -3308,7 +3456,6 @@ body.view-mobile .logo-icon { width: 22px !important; height: 22px !important; f
       </div>
     </div>
       </div>
-      <!-- Regime Distance full-width -->
       <div class="card">
       <div class="card-title">Cross-Asset Correlation Regime Distance
         <span class="help-icon" title="Per Bloomberg's MAC3 framework: rolling 60-day cross-asset correlation matrix is a more robust regime indicator than volatility levels. We measure the Frobenius distance between today's matrix and historical reference regimes (2008 GFC, 2020 COVID, 2022 inflation shock). Smallest distance = closest analogue.">?</span>
@@ -3333,7 +3480,6 @@ body.view-mobile .logo-icon { width: 22px !important; height: 22px !important; f
 
     <!-- ═══ TAB: BREADTH & SIGNALS ═══ -->
     <div class="pf-tab-content" id="catab-breadth">
-      <!-- Fear/Greed + Sector Momentum side-by-side -->
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px;">
         <div class="card">
       <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;">
@@ -3363,7 +3509,6 @@ body.view-mobile .logo-icon { width: 22px !important; height: 22px !important; f
       <div class="card-sources"><strong>Sources:</strong> SPDR Select Sector ETFs (State Street). <strong>Method:</strong> Total return for each period. Composite rank = (rank_1M + rank_3M + rank_6M + rank_12M) / 4 where rank 1 = best. Jegadeesh, N. &amp; Titman, S. (1993) "Returns to Buying Winners and Selling Losers," <em>Journal of Finance</em>.</div>
     </div>
       </div>
-      <!-- Return Heatmap + Lead/Lag side-by-side -->
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px;">
         <div class="card">
       <div class="card-title">Asset Class Return Heatmap
@@ -3421,7 +3566,6 @@ body.view-mobile .logo-icon { width: 22px !important; height: 22px !important; f
       <div class="card-sources"><strong>Method:</strong> Cross-correlation function r_AB(k) = corr(R_A(t), R_B(t+k)) for k ∈ [-20, +20]. Computed from daily log returns. Bonferroni-corrected 95% confidence band = ±1.96/√n shown as dashed lines. Granger, C.W.J. (1969) "Investigating Causal Relations by Econometric Models," <em>Econometrica</em>.</div>
     </div>
       </div>
-      <!-- Module 8 Regime Signals full-width -->
       <div class="card">
       <div class="card-title">8 &middot; Cross-Asset Regime Signals <span class="help-icon" title="Tracks key cross-market relationships that historically signal regime shifts. Copper/Gold ratio rising = growth dominant. Yield curve inversion = recession signal. HY credit spreads widening = risk-off.">?</span></div>
       <div class="card-body">
@@ -3441,7 +3585,6 @@ body.view-mobile .logo-icon { width: 22px !important; height: 22px !important; f
 
     <!-- ═══ TAB: UNIVERSE & RETURNS ═══ -->
     <div class="pf-tab-content" id="catab-universe">
-      <!-- Universe selector always at top -->
       <div class="card">
       <div class="card-title">Universe Selection &amp; Date Range <span class="help-icon" title="Pick the assets you want included in every Cross-Asset module (correlation, frontier, vol surface, etc.). Selection is shared across all 8 modules — change here, all modules refetch.">?</span></div>
       <div class="card-body">
@@ -3474,7 +3617,6 @@ body.view-mobile .logo-icon { width: 22px !important; height: 22px !important; f
       </div>
       <div class="card-sources"><strong>Sources:</strong> Yahoo Finance via Cloudflare Worker proxy (/chart endpoint).</div>
     </div>
-      <!-- Module 1 Rebased Returns -->
       <div class="card">
       <div class="card-title">1 &middot; Rebased Return Chart <span class="help-icon" title="Shows how each selected asset would have grown if you invested $100 at the start. All series start at 100, so visual comparisons are apples-to-apples regardless of starting price.">?</span></div>
       <div class="card-body">
@@ -3491,7 +3633,6 @@ body.view-mobile .logo-icon { width: 22px !important; height: 22px !important; f
 
     <!-- ═══ TAB: CORRELATION ═══ -->
     <div class="pf-tab-content" id="catab-correlation">
-      <!-- M2 and M2B side-by-side at top -->
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px;">
         <div class="card">
       <div class="card-title">2 &middot; Pairwise Correlation Heatmap <span class="help-icon" title="Pearson correlation (ρ) measures how two assets move together. +1.0 = perfectly in sync, 0 = unrelated, −1.0 = mirror opposites. Diversification benefit comes from holding assets with low or negative correlation.">?</span></div>
@@ -3544,7 +3685,6 @@ body.view-mobile .logo-icon { width: 22px !important; height: 22px !important; f
       <div class="card-sources"><strong>Method:</strong> For each pair (i,j), compute Pearson ρ over (a) days classified into each Perry regime and (b) days where SPY daily log return ≤ 0. The "correlation asymmetry" Δρ = ρ<sub>downside</sub> − ρ<sub>full</sub> quantifies the diversification illusion. &middot; Longin, F., &amp; Solnik, B. (2001). <em>Extreme Correlation of International Equity Markets.</em> Journal of Finance, 56(2). &middot; Ang, A., &amp; Chen, J. (2002). <em>Asymmetric Correlations of Equity Portfolios.</em> Journal of Financial Economics.</div>
     </div>
       </div>
-      <!-- M3 Vol Surface full-width -->
       <div class="card">
       <div class="card-title">3 &middot; 3D Volatility Surface <span class="help-icon" title="Shows how volatility (price-swing magnitude) changes across time and rolling-window length. Higher peaks = bigger swings. Useful for spotting regime shifts and persistence of volatility.">?</span></div>
       <div class="card-body">
@@ -3570,7 +3710,6 @@ body.view-mobile .logo-icon { width: 22px !important; height: 22px !important; f
 
     <!-- ═══ TAB: RISK & VAR ═══ -->
     <div class="pf-tab-content" id="catab-risk">
-      <!-- M7 VaR + M6 Rolling Risk side-by-side -->
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px;">
         <div class="card">
       <div class="card-title">7 &middot; Value at Risk (VaR) <span class="help-icon" title="VaR estimates the worst expected loss over a given period at a given confidence level. 95% 1-day VaR of $1,000 means there's a 95% chance you won't lose more than $1,000 tomorrow. We compute three ways — Historical, Parametric (normal), and Monte Carlo — because each makes different assumptions.">?</span></div>
@@ -3618,7 +3757,6 @@ body.view-mobile .logo-icon { width: 22px !important; height: 22px !important; f
       </div>
     </div>
       </div>
-      <!-- M5 Efficient Frontier full-width -->
       <div class="card">
       <div class="card-title">5 &middot; Efficient Frontier <span class="help-icon" title="The set of portfolios that give you the best possible expected return for a given level of risk (Markowitz, 1952). Anything below the curve is suboptimal — you could get more return for the same risk by changing your mix.">?</span></div>
       <div class="card-body">
@@ -3658,7 +3796,6 @@ body.view-mobile .logo-icon { width: 22px !important; height: 22px !important; f
 
     <!-- ═══ TAB: QUANT MODELS ═══ -->
     <div class="pf-tab-content" id="catab-quant">
-      <!-- M4 Cox Jump Process full-width -->
       <div class="card">
       <div class="card-title">4 &middot; Jump Detection Model <span class="help-icon" title="Identifies sudden discontinuous price moves that aren't explained by normal volatility — earnings shocks, news jumps, flash crashes. Uses a Cox doubly-stochastic Poisson process where jump intensity itself varies through time.">?</span></div>
       <div class="card-body">
@@ -4797,15 +4934,18 @@ function navigateTo(p) {
   }
   if (p === 'resources' && typeof resourcesInit === 'function') resourcesInit();
   if (p === 'markets') {
-    // Always show regime tab first on page visit
-    if (typeof caShowTab === 'function') caShowTab('regime');
+    // Show Top-Line tab as the default landing view
+    if (typeof caShowTab === 'function') caShowTab('topline');
     if (typeof psRenderFrameworkGrid === 'function') psRenderFrameworkGrid(null);
-    if (!window._psLoaded && typeof psLoadDiagnostic === 'function') {
-      psLoadDiagnostic(); psLoadFib(); window._psLoaded = true;
-    }
     if (!window._snapshotLoaded) {
       window._snapshotLoaded = true;
-      setTimeout(snapshotLoad, 100);
+      setTimeout(function() {
+        snapshotLoad();
+        if (typeof topLineRefreshAll === 'function') setTimeout(topLineRefreshAll, 600);
+      }, 100);
+    } else {
+      // On revisit, re-run top-line if pillars are stale
+      if (typeof topLineRefreshAll === 'function' && !window._tlPillars) topLineRefreshAll();
     }
   }
   if (p === 'quant' && typeof quantInit === 'function' && !window._quantInitialized) { quantInit(); window._quantInitialized = true; }
@@ -15616,7 +15756,7 @@ const SNAPSHOT_UNIVERSE = [
 async function snapshotLoad() {
   const el = document.getElementById('snapshotGrid');
   if (!el) return;
-  el.innerHTML = '<span class="spinner"></span> Loading global market snapshot…';
+  el.innerHTML = '<div style="text-align:center;padding:24px;color:#5A6A7A;font-family:Arial,Helvetica,sans-serif;font-size:12px;"><span class="spinner"></span> Loading global market snapshot...</div>';
   const cells = [];
   let html = '<div class="snapshot-grid">';
   for (const grp of SNAPSHOT_UNIVERSE) {
@@ -15629,29 +15769,59 @@ async function snapshotLoad() {
   }
   html += '</div>';
   el.innerHTML = html;
-  // Fetch each in parallel; populate as they arrive
+
+  // Fetch quote + 1mo chart for 1W and 1M moves in parallel
   const results = [];
   await Promise.all(cells.map(async c => {
     try {
-      const q = await fetchQuote(c.ticker);
+      const [q, chart] = await Promise.all([
+        fetchQuote(c.ticker),
+        fetchChart(c.ticker, '3mo', '1d').catch(function() { return { points: [] }; })
+      ]);
       const cell = document.getElementById(c.id);
       if (!cell) return;
       const px = getQuotePrice(q);
       const prev = getQuotePrev(q);
       const chg = px - prev;
       const chgPct = prev > 0 ? chg/prev*100 : 0;
+      // Compute 1W and 1M from chart
+      let chg1W = null, chg1M = null;
+      if (chart.points && chart.points.length > 22) {
+        const closes = chart.points.filter(p => p.close != null).map(p => p.close);
+        const last = closes[closes.length - 1];
+        if (closes.length >= 6) {
+          const w = closes[closes.length - 6];
+          if (w > 0) chg1W = (last - w) / w * 100;
+        }
+        if (closes.length >= 22) {
+          const m = closes[closes.length - 22];
+          if (m > 0) chg1M = (last - m) / m * 100;
+        }
+      }
       cell.classList.add(chgPct >= 0 ? 'up' : 'down');
+      const fmt1 = v => v == null ? '—' : (v >= 0 ? '+' : '') + v.toFixed(2) + '%';
+      const col1W = chg1W == null ? '#5A6A7A' : chg1W >= 0 ? '#2E7D52' : '#8B2A2A';
+      const col1M = chg1M == null ? '#5A6A7A' : chg1M >= 0 ? '#2E7D52' : '#8B2A2A';
+      const col1D = chgPct >= 0 ? '#2E7D52' : '#8B2A2A';
       cell.innerHTML = '<div class="snap-ticker">'+c.ticker.replace('^','')+'</div>'+
         '<div class="snap-name">'+c.label+'</div>'+
         '<div class="snap-price">'+(px > 1000 ? px.toLocaleString(undefined,{maximumFractionDigits:0}) : px.toFixed(2))+'</div>'+
-        '<div class="snap-change '+(chgPct>=0?'pos':'neg')+'">'+(chgPct>=0?'+':'')+chgPct.toFixed(2)+'% &nbsp;'+(chg>=0?'+':'')+chg.toFixed(2)+'</div>';
-      results.push({ ticker: c.ticker, label: c.label, price: px, change: chg, changePct: chgPct });
+        '<div style="display:flex;justify-content:space-between;font-size:10px;font-weight:600;font-family:Courier New,monospace;margin-top:2px;border-top:1px solid #D0D7E0;padding-top:3px;">'+
+        '<span style="color:'+col1D+';" title="1 Day">1D '+fmt1(chgPct)+'</span>'+
+        '<span style="color:'+col1W+';" title="1 Week">1W '+fmt1(chg1W)+'</span>'+
+        '<span style="color:'+col1M+';" title="1 Month">1M '+fmt1(chg1M)+'</span>'+
+        '</div>';
+      results.push({ ticker: c.ticker, label: c.label, price: px, change: chg, changePct: chgPct, change1W: chg1W, change1M: chg1M });
     } catch(e) {
       const cell = document.getElementById(c.id);
-      if (cell) cell.querySelector('.snap-price').textContent = 'n/a';
+      if (cell && cell.querySelector('.snap-price')) cell.querySelector('.snap-price').textContent = 'n/a';
     }
   }));
   window._snapshotCells = results;
+  // Trigger downstream renderers that depend on snapshot data
+  if (typeof tlRenderMovingToday === 'function' && document.getElementById('movingToday')) {
+    tlRenderMovingToday();
+  }
 }
 
 // ────────── Cross-Asset Correlation Regime Distance ──────────
@@ -16222,39 +16392,931 @@ window.mktLoadSectorMomentum = async function() {
 // ═══════════════════════════════════════════════════
 window._caTabInit = {};
 
+// ═══════════════════════════════════════════════════════════════════
+// ════  TOP-LINE VIEW ENGINE — Master Macro Decision Pipeline  ══════
+// ═══════════════════════════════════════════════════════════════════
+// Pulls data from FRED + Yahoo + existing modules and produces
+// a unified portfolio-posture verdict.
+
+var WORKER_TL = 'https://perry-finance-proxy.zachperrybusiness.workers.dev';
+
+// Helper: fetch chart with 1y range
+async function tlFetchChart(sym, range) {
+  range = range || '1y';
+  try {
+    var r = await fetch(WORKER_TL + '/chart?symbol=' + encodeURIComponent(sym) + '&range=' + range + '&interval=1d');
+    var d = await r.json();
+    return (d.points || []).filter(function(p) { return p.close != null; });
+  } catch (e) { return []; }
+}
+
+async function tlFetchQuote(sym) {
+  try {
+    var r = await fetch(WORKER_TL + '/quote?symbol=' + encodeURIComponent(sym));
+    return await r.json();
+  } catch (e) { return null; }
+}
+
+// Compute % return over N trading days (returns null if insufficient data)
+function tlPctRet(pts, n) {
+  if (!pts || pts.length < 2) return null;
+  var lastIdx = pts.length - 1;
+  var startIdx = Math.max(0, lastIdx - n);
+  var a = pts[startIdx].close, b = pts[lastIdx].close;
+  return a > 0 ? (b - a) / a * 100 : null;
+}
+
+// Z-score given a window of values (clamped to ±3)
+function tlZScore(arr, val) {
+  if (!arr || arr.length < 5) return 0;
+  var m = arr.reduce(function(s, v) { return s + v; }, 0) / arr.length;
+  var v = arr.reduce(function(s, x) { return s + (x - m) * (x - m); }, 0) / Math.max(arr.length - 1, 1);
+  var sd = Math.sqrt(v);
+  if (sd === 0) return 0;
+  return Math.max(-3, Math.min(3, (val - m) / sd));
+}
+
+// Brand color helper for score [0..100]
+function tlScoreColor(score) {
+  if (score >= 70) return '#2E7D52'; // strong green
+  if (score >= 55) return '#5B9BD5'; // brand blue
+  if (score >= 45) return '#5A6A7A'; // neutral gray
+  if (score >= 30) return '#8B6914'; // warning amber
+  return '#8B2A2A'; // danger red
+}
+function tlScoreLabel(score) {
+  if (score >= 75) return 'Strongly Bullish';
+  if (score >= 60) return 'Bullish';
+  if (score >= 45) return 'Neutral';
+  if (score >= 30) return 'Cautious';
+  return 'Bearish';
+}
+
+// ═══════════════════════════════════════════════
+// ═  MASTER VERDICT — runs all 7 pillars and aggregates
+// ═══════════════════════════════════════════════
+window.topLineRefreshAll = async function() {
+  // Reset spinners on every panel
+  var verd = document.getElementById('masterVerdictStrip');
+  if (verd) verd.innerHTML = '<div style="text-align:center;color:#5A6A7A;font-size:13px;padding:8px;font-family:Arial,Helvetica,sans-serif;"><span class="spinner"></span> Computing master verdict from 7 signal pillars...</div>';
+  ['decisionCompass', 'movingToday', 'macroHeadwinds', 'portfolioArchetypes'].forEach(function(id) {
+    var el = document.getElementById(id);
+    if (el) el.innerHTML = '<div style="padding:18px;text-align:center;color:#5A6A7A;font-family:Arial,Helvetica,sans-serif;font-size:13px;"><span class="spinner"></span> Loading...</div>';
+  });
+
+  // Compute pillars in parallel
+  try {
+    var pillarResults = await Promise.all([
+      tlPillar_BusinessCycle(),
+      tlPillar_MarketRegime(),
+      tlPillar_Breadth(),
+      tlPillar_Credit(),
+      tlPillar_YieldCurve(),
+      tlPillar_CrossAssetMomentum(),
+      tlPillar_SectorRotation()
+    ]);
+    var pillars = [
+      { name: 'Business Cycle',      weight: 0.25, ...pillarResults[0] },
+      { name: 'Market Regime State', weight: 0.20, ...pillarResults[1] },
+      { name: 'Breadth (Fear/Greed)',weight: 0.15, ...pillarResults[2] },
+      { name: 'Credit Conditions',   weight: 0.12, ...pillarResults[3] },
+      { name: 'Yield Curve',         weight: 0.08, ...pillarResults[4] },
+      { name: 'Cross-Asset Momentum',weight: 0.10, ...pillarResults[5] },
+      { name: 'Sector Rotation',     weight: 0.10, ...pillarResults[6] }
+    ];
+    // Composite score (weighted average)
+    var totalW = pillars.reduce(function(s, p) { return s + (p.score != null ? p.weight : 0); }, 0);
+    var weightedSum = pillars.reduce(function(s, p) { return s + (p.score != null ? p.score * p.weight : 0); }, 0);
+    var composite = totalW > 0 ? weightedSum / totalW : 50;
+    window._tlPillars = pillars;
+    window._tlComposite = composite;
+
+    // Render Master Verdict strip
+    tlRenderMasterVerdict(composite, pillars);
+    // Render Decision Compass
+    tlRenderDecisionCompass(composite, pillars);
+    // Render Macro Headwinds
+    tlRenderMacroHeadwinds(pillars);
+    // Render Portfolio Archetypes
+    tlRenderPortfolioArchetypes(composite, pillars);
+    // Render What's Moving Today
+    tlRenderMovingToday();
+
+  } catch (e) {
+    if (verd) verd.innerHTML = '<div style="color:#8B2A2A;padding:12px;font-family:Arial,Helvetica,sans-serif;font-size:13px;">Error computing verdict: ' + e.message + '</div>';
+    console.error('[topLine]', e);
+  }
+};
+
+// ─────────────────────────────────────────────
+// PILLAR 1 — Business Cycle (FRED scorecard)
+// ─────────────────────────────────────────────
+async function tlPillar_BusinessCycle() {
+  try {
+    if (!window._lastMacroData) {
+      var r = await fetch(WORKER_TL + '/fred');
+      window._lastMacroData = await r.json();
+    }
+    var d = window._lastMacroData;
+    var total = d.totalScore || 0;
+    var max = d.maxScore || 1;
+    // Convert to 0-100 score: max=100 (all positive), -max=0 (all negative)
+    var score = Math.max(0, Math.min(100, ((total + max) / (2 * max)) * 100));
+    return { score: score, detail: d.phase || 'Unknown', subdetail: total + ' / ' + max };
+  } catch (e) {
+    return { score: null, detail: 'unavailable', subdetail: '' };
+  }
+}
+
+// ─────────────────────────────────────────────
+// PILLAR 2 — Market Regime (Perry State)
+// ─────────────────────────────────────────────
+async function tlPillar_MarketRegime() {
+  try {
+    var [spyPts, vixQ] = await Promise.all([
+      tlFetchChart('SPY', '1y'),
+      tlFetchQuote('%5EVIX')
+    ]);
+    if (spyPts.length < 30) return { score: null, detail: 'insufficient data', subdetail: '' };
+    var closes = spyPts.map(function(p) { return p.close; });
+    var spy12mHigh = Math.max.apply(null, closes);
+    var spyCur = closes[closes.length - 1];
+    var spyStart = closes[0];
+    var trail = (spyCur - spyStart) / spyStart;
+    var dd = (spyCur - spy12mHigh) / spy12mHigh;
+    var vix = (vixQ && (vixQ.current || vixQ.price)) || 20;
+    // Score: better when trail > 0, dd > -10%, vix < 20
+    var trailScore = Math.max(0, Math.min(100, 50 + trail * 200));
+    var ddScore = Math.max(0, Math.min(100, 100 + dd * 500));
+    var vixScore = Math.max(0, Math.min(100, 100 - (vix - 12) * 3));
+    var score = (trailScore + ddScore + vixScore) / 3;
+    var stateLabel;
+    if (score >= 70) stateLabel = 'Non-Levered Growth';
+    else if (score >= 50) stateLabel = 'Neutral';
+    else if (score >= 30) stateLabel = 'Defensive';
+    else stateLabel = 'Drawdown';
+    return {
+      score: score,
+      detail: stateLabel,
+      subdetail: 'VIX ' + vix.toFixed(1) + ' | DD ' + (dd * 100).toFixed(1) + '%'
+    };
+  } catch (e) {
+    return { score: null, detail: 'unavailable', subdetail: '' };
+  }
+}
+
+// ─────────────────────────────────────────────
+// PILLAR 3 — Breadth (Fear/Greed composite)
+// ─────────────────────────────────────────────
+async function tlPillar_Breadth() {
+  try {
+    var [spy, qqq, tlt, gld, hyg, lqd] = await Promise.all([
+      tlFetchChart('SPY', '1y'), tlFetchChart('QQQ', '1y'),
+      tlFetchChart('TLT', '1y'), tlFetchChart('GLD', '1y'),
+      tlFetchChart('HYG', '1y'), tlFetchChart('LQD', '1y')
+    ]);
+    var vixQ = await tlFetchQuote('%5EVIX');
+    var vixCur = (vixQ && (vixQ.current || vixQ.price)) || 20;
+    if (spy.length < 30) return { score: null, detail: 'insufficient data', subdetail: '' };
+    var spyC = spy.map(function(p) { return p.close; });
+    var spyHigh = Math.max.apply(null, spyC);
+    var spyDist = (spyC[spyC.length - 1] - spyHigh) / spyHigh;
+
+    function pct(arr, n) {
+      if (!arr || arr.length < n + 1) return 0;
+      var c = arr.map(function(p) { return p.close; });
+      return (c[c.length - 1] - c[c.length - 1 - n]) / c[c.length - 1 - n];
+    }
+    function norm(val, lo, hi) { return Math.max(0, Math.min(100, (val - lo) / (hi - lo) * 100)); }
+
+    var s1 = 100 - norm(vixCur, 10, 45);
+    var s2 = norm(spyDist, -0.30, 0);
+    var s3 = 100 - norm(pct(tlt, 20) - pct(spy, 20), -0.08, 0.08);
+    var s4 = 100 - norm(pct(gld, 20) - pct(spy, 20), -0.06, 0.06);
+    var s5 = norm(pct(hyg, 20) - pct(lqd, 20), -0.05, 0.05);
+    var s6 = norm(pct(qqq, 20) - pct(spy, 20), -0.05, 0.05);
+    var score = (s1 + s2 + s3 + s4 + s5 + s6) / 6;
+    var lbl = score >= 70 ? 'Greed' : score >= 50 ? 'Neutral' : score >= 30 ? 'Caution' : 'Fear';
+    return { score: score, detail: lbl, subdetail: Math.round(score) + ' / 100' };
+  } catch (e) { return { score: null, detail: 'unavailable', subdetail: '' }; }
+}
+
+// ─────────────────────────────────────────────
+// PILLAR 4 — Credit Conditions (HY OAS via FRED)
+// ─────────────────────────────────────────────
+async function tlPillar_Credit() {
+  try {
+    if (!window._lastMacroData) {
+      var r = await fetch(WORKER_TL + '/fred');
+      window._lastMacroData = await r.json();
+    }
+    var d = window._lastMacroData;
+    // Find HY OAS indicator
+    var pillars = d.pillars || [];
+    var monetary = pillars.find(function(p) { return p.name === 'Monetary Policy'; });
+    if (!monetary) return { score: null, detail: 'unavailable', subdetail: '' };
+    var hy = monetary.indicators.find(function(i) { return i.indicator.indexOf('HY OAS') >= 0; });
+    if (!hy || hy.value == null) return { score: null, detail: 'unavailable', subdetail: '' };
+    var hyVal = parseFloat(hy.value);
+    // HY OAS: < 3.5% = tight, 3.5-5 = normal, > 5 = stress, > 8 = crisis
+    var score = Math.max(0, Math.min(100, 100 - (hyVal - 3) * 12));
+    var lbl = score >= 70 ? 'Tight (Risk-On)' : score >= 50 ? 'Normal' : score >= 30 ? 'Widening' : 'Stress';
+    return { score: score, detail: lbl, subdetail: 'HY OAS: ' + hyVal.toFixed(2) + '%' };
+  } catch (e) { return { score: null, detail: 'unavailable', subdetail: '' }; }
+}
+
+// ─────────────────────────────────────────────
+// PILLAR 5 — Yield Curve (2s10s + 3m10y)
+// ─────────────────────────────────────────────
+async function tlPillar_YieldCurve() {
+  try {
+    if (!window._lastMacroData) {
+      var r = await fetch(WORKER_TL + '/fred');
+      window._lastMacroData = await r.json();
+    }
+    var d = window._lastMacroData;
+    var pillars = d.pillars || [];
+    var monetary = pillars.find(function(p) { return p.name === 'Monetary Policy'; });
+    if (!monetary) return { score: null, detail: 'unavailable', subdetail: '' };
+    var yc2 = monetary.indicators.find(function(i) { return i.indicator.indexOf('2Y/10Y') >= 0; });
+    var yc3m = monetary.indicators.find(function(i) { return i.indicator.indexOf('3M/10Y') >= 0; });
+    var v2 = yc2 && yc2.value != null ? parseFloat(yc2.value) : null;
+    var v3m = yc3m && yc3m.value != null ? parseFloat(yc3m.value) : null;
+    if (v2 == null && v3m == null) return { score: null, detail: 'unavailable', subdetail: '' };
+    var avg = v2 != null && v3m != null ? (v2 + v3m) / 2 : (v2 != null ? v2 : v3m);
+    // > 100bps positive = 80, 0bps = 50, -100bps inverted = 20
+    var score = Math.max(0, Math.min(100, 50 + avg * 30));
+    var lbl = score >= 65 ? 'Steepening' : score >= 45 ? 'Flat' : 'Inverted';
+    return { score: score, detail: lbl, subdetail: '2s10s ' + (v2 != null ? v2.toFixed(2) + '%' : '—') + ' / 3m10y ' + (v3m != null ? v3m.toFixed(2) + '%' : '—') };
+  } catch (e) { return { score: null, detail: 'unavailable', subdetail: '' }; }
+}
+
+// ─────────────────────────────────────────────
+// PILLAR 6 — Cross-Asset Momentum (rebased SPY/TLT/GLD/USO weighted)
+// ─────────────────────────────────────────────
+async function tlPillar_CrossAssetMomentum() {
+  try {
+    var [spy, tlt, gld, uso, dxy] = await Promise.all([
+      tlFetchChart('SPY', '6mo'), tlFetchChart('TLT', '6mo'),
+      tlFetchChart('GLD', '6mo'), tlFetchChart('USO', '6mo'),
+      tlFetchChart('UUP', '6mo')
+    ]);
+    if (spy.length < 30) return { score: null, detail: 'insufficient', subdetail: '' };
+    function ret63(arr) { return tlPctRet(arr, 63); }
+    var spy3m = ret63(spy), tlt3m = ret63(tlt), gld3m = ret63(gld);
+    // Risk-on regime: equity up, bonds down, gold neutral, dollar weakening
+    var riskOnScore = 50;
+    if (spy3m != null) riskOnScore += spy3m * 2;
+    if (tlt3m != null) riskOnScore -= tlt3m * 1;
+    riskOnScore = Math.max(0, Math.min(100, riskOnScore));
+    var lbl = riskOnScore >= 65 ? 'Risk-On Momentum' : riskOnScore >= 45 ? 'Mixed' : 'Risk-Off';
+    var sub = 'SPY ' + (spy3m != null ? (spy3m >= 0 ? '+' : '') + spy3m.toFixed(1) + '%' : '—') + ' | TLT ' + (tlt3m != null ? (tlt3m >= 0 ? '+' : '') + tlt3m.toFixed(1) + '%' : '—');
+    return { score: riskOnScore, detail: lbl, subdetail: sub };
+  } catch (e) { return { score: null, detail: 'unavailable', subdetail: '' }; }
+}
+
+// ─────────────────────────────────────────────
+// PILLAR 7 — Sector Rotation (Cyclicals vs Defensives)
+// ─────────────────────────────────────────────
+async function tlPillar_SectorRotation() {
+  try {
+    var cyc = ['XLK','XLY','XLI','XLF'];
+    var def = ['XLP','XLV','XLU'];
+    var all = cyc.concat(def);
+    var data = {};
+    await Promise.all(all.map(async function(t) {
+      data[t] = await tlFetchChart(t, '3mo');
+    }));
+    function avgRet(tickers, n) {
+      var rets = [];
+      tickers.forEach(function(t) {
+        var r = tlPctRet(data[t], n);
+        if (r != null) rets.push(r);
+      });
+      return rets.length ? rets.reduce(function(s, v) { return s + v; }, 0) / rets.length : null;
+    }
+    var cyc60 = avgRet(cyc, 60);
+    var def60 = avgRet(def, 60);
+    if (cyc60 == null || def60 == null) return { score: null, detail: 'unavailable', subdetail: '' };
+    var spread = cyc60 - def60;
+    // Strong cyclical leadership = high score
+    var score = Math.max(0, Math.min(100, 50 + spread * 4));
+    var lbl = score >= 65 ? 'Cyclicals Leading' : score >= 45 ? 'Mixed' : 'Defensives Leading';
+    return { score: score, detail: lbl, subdetail: 'Cyc ' + (cyc60 >= 0 ? '+' : '') + cyc60.toFixed(1) + '% vs Def ' + (def60 >= 0 ? '+' : '') + def60.toFixed(1) + '%' };
+  } catch (e) { return { score: null, detail: 'unavailable', subdetail: '' }; }
+}
+
+// ═══════════════════════════════════════════════
+// ═  RENDERERS
+// ═══════════════════════════════════════════════
+function tlRenderMasterVerdict(composite, pillars) {
+  var el = document.getElementById('masterVerdictStrip');
+  if (!el) return;
+  var col = tlScoreColor(composite);
+  var lbl = tlScoreLabel(composite);
+  var html = '<div style="display:grid;grid-template-columns:auto 1fr;gap:18px;align-items:center;font-family:Arial,Helvetica,sans-serif;">';
+  // Verdict block
+  html += '<div style="background:' + col + ';color:#FFFFFF;padding:14px 22px;border-radius:6px;text-align:center;min-width:180px;">';
+  html += '<div style="font-size:10.5px;font-weight:600;text-transform:uppercase;letter-spacing:.6px;opacity:.85;">Master Verdict</div>';
+  html += '<div style="font-size:28px;font-weight:800;line-height:1.1;margin:4px 0;">' + Math.round(composite) + '</div>';
+  html += '<div style="font-size:13px;font-weight:700;">' + lbl + '</div>';
+  html += '</div>';
+  // Pillar mini-bars
+  html += '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:8px;">';
+  pillars.forEach(function(p) {
+    var sc = p.score;
+    var pCol = sc != null ? tlScoreColor(sc) : '#A8C8E8';
+    var pTxt = sc != null ? Math.round(sc) : '—';
+    var weightPct = (p.weight * 100).toFixed(0);
+    html += '<div style="background:#FFFFFF;border:1px solid #D0D7E0;border-radius:4px;padding:6px 9px;">';
+    html += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3px;">';
+    html += '<span style="font-size:10.5px;font-weight:700;color:#003C71;">' + p.name + '</span>';
+    html += '<span style="font-size:9px;color:#5A6A7A;">(' + weightPct + '%)</span>';
+    html += '</div>';
+    html += '<div style="display:flex;align-items:center;gap:6px;">';
+    html += '<div style="font-size:14px;font-weight:800;color:' + pCol + ';font-family:Arial,Helvetica,sans-serif;min-width:24px;">' + pTxt + '</div>';
+    if (sc != null) {
+      html += '<div style="flex:1;height:5px;background:#F4F6F9;border-radius:2px;overflow:hidden;">';
+      html += '<div style="height:100%;width:' + sc + '%;background:' + pCol + ';"></div></div>';
+    }
+    html += '</div>';
+    html += '<div style="font-size:10px;color:#5A6A7A;margin-top:3px;">' + p.detail + '</div>';
+    html += '</div>';
+  });
+  html += '</div>';
+  html += '</div>';
+  el.innerHTML = html;
+}
+
+function tlRenderDecisionCompass(composite, pillars) {
+  var el = document.getElementById('decisionCompass');
+  if (!el) return;
+  // Map composite to recommended posture
+  var posture, postureDetail, riskBudget, equityWt, durationWt, creditWt, cashWt;
+  if (composite >= 70) {
+    posture = 'Risk-On / Pro-Cyclical';
+    postureDetail = 'Macro tailwinds dominant. Lean into equities, growth, credit, EM. Reduce duration and defensive sleeves.';
+    equityWt = 70; durationWt = 10; creditWt = 15; cashWt = 5;
+    riskBudget = 'High';
+  } else if (composite >= 55) {
+    posture = 'Constructive / Selective Risk';
+    postureDetail = 'Net positive macro setup with some friction. Maintain equity exposure but rotate toward quality and dividend payers; trim speculative tails.';
+    equityWt = 60; durationWt = 15; creditWt = 15; cashWt = 10;
+    riskBudget = 'Moderate-High';
+  } else if (composite >= 45) {
+    posture = 'Balanced / Neutral';
+    postureDetail = 'Conflicting macro signals. Hold a balanced portfolio. Increase exposure to gold and TIPS as hedges. Keep cash reserve for opportunistic buys.';
+    equityWt = 50; durationWt = 20; creditWt = 12; cashWt = 18;
+    riskBudget = 'Moderate';
+  } else if (composite >= 30) {
+    posture = 'Defensive / De-Risk';
+    postureDetail = 'Macro headwinds building. Rotate to defensives (staples, utilities, healthcare, long bonds). Reduce credit and EM exposure. Build cash.';
+    equityWt = 35; durationWt = 30; creditWt = 8; cashWt = 27;
+    riskBudget = 'Low';
+  } else {
+    posture = 'Risk-Off / Capital Preservation';
+    postureDetail = 'Recession or crisis-style backdrop. Long duration, gold, USD cash. Avoid HY credit and small caps. Consider tail hedges.';
+    equityWt = 20; durationWt = 35; creditWt = 5; cashWt = 40;
+    riskBudget = 'Capital Preservation';
+  }
+  var col = tlScoreColor(composite);
+
+  var html = '<div style="font-family:Arial,Helvetica,sans-serif;text-align:left;">';
+  // Headline posture
+  html += '<div style="background:' + col + ';color:#FFFFFF;padding:14px 16px;border-radius:6px;margin-bottom:14px;">';
+  html += '<div style="font-size:10.5px;text-transform:uppercase;letter-spacing:.5px;opacity:.85;font-weight:600;">Recommended Posture</div>';
+  html += '<div style="font-size:20px;font-weight:800;margin:4px 0;">' + posture + '</div>';
+  html += '<div style="font-size:12px;line-height:1.5;opacity:.95;">' + postureDetail + '</div>';
+  html += '<div style="margin-top:10px;font-size:11px;opacity:.85;"><strong>Risk Budget:</strong> ' + riskBudget + '</div>';
+  html += '</div>';
+
+  // Asset allocation horizontal bar
+  html += '<div style="margin-bottom:6px;font-size:11.5px;font-weight:700;color:#003C71;text-transform:uppercase;letter-spacing:.4px;">Recommended Allocation</div>';
+  html += '<div style="display:flex;height:32px;border-radius:4px;overflow:hidden;border:1px solid #D0D7E0;">';
+  var segs = [
+    { lbl: 'Equity', pct: equityWt, col: '#003C71' },
+    { lbl: 'Duration', pct: durationWt, col: '#5B9BD5' },
+    { lbl: 'Credit', pct: creditWt, col: '#A8C8E8' },
+    { lbl: 'Cash', pct: cashWt, col: '#C8D0D8' }
+  ];
+  segs.forEach(function(s) {
+    if (s.pct < 4) return;
+    var textCol = (s.col === '#A8C8E8' || s.col === '#C8D0D8') ? '#000000' : '#FFFFFF';
+    html += '<div style="width:' + s.pct + '%;background:' + s.col + ';color:' + textCol + ';display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;">' + s.pct + '%</div>';
+  });
+  html += '</div>';
+  html += '<div style="display:flex;justify-content:space-between;margin-top:6px;font-size:10.5px;color:#5A6A7A;">';
+  segs.forEach(function(s) {
+    html += '<span><span style="display:inline-block;width:8px;height:8px;background:' + s.col + ';margin-right:4px;border-radius:1px;"></span>' + s.lbl + '</span>';
+  });
+  html += '</div>';
+  html += '</div>';
+  el.innerHTML = html;
+}
+
+function tlRenderMacroHeadwinds(pillars) {
+  var el = document.getElementById('macroHeadwinds');
+  if (!el) return;
+  // Build six force vectors mapped from pillars
+  var forces = [
+    { name: 'Growth', score: getPillarScore(pillars, 'Business Cycle'), positive: 'Expansion', negative: 'Contraction' },
+    { name: 'Inflation', score: getInflationScore(pillars), positive: 'Disinflation', negative: 'Inflation Shock' },
+    { name: 'Rates', score: getPillarScore(pillars, 'Yield Curve'), positive: 'Steepening', negative: 'Inverted/Tight' },
+    { name: 'Credit', score: getPillarScore(pillars, 'Credit Conditions'), positive: 'Tight (Risk-On)', negative: 'Stress' },
+    { name: 'Liquidity', score: getLiquidityScore(pillars), positive: 'Ample', negative: 'Tightening' },
+    { name: 'Risk Appetite', score: getPillarScore(pillars, 'Breadth (Fear/Greed)'), positive: 'Greed', negative: 'Fear' }
+  ];
+  var html = '<div style="font-family:Arial,Helvetica,sans-serif;text-align:left;">';
+  forces.forEach(function(f) {
+    var sc = f.score;
+    var col = sc != null ? tlScoreColor(sc) : '#A8C8E8';
+    var pct = sc != null ? sc : 50;
+    html += '<div style="margin-bottom:11px;">';
+    html += '<div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:3px;">';
+    html += '<span style="font-weight:700;color:#003C71;">' + f.name + '</span>';
+    html += '<span style="color:' + col + ';font-weight:700;">' + (sc != null ? Math.round(sc) : '—') + '</span>';
+    html += '</div>';
+    // Bidirectional bar — center is 50, positive goes right, negative goes left
+    html += '<div style="position:relative;height:18px;background:#F4F6F9;border:1px solid #D0D7E0;border-radius:3px;overflow:hidden;">';
+    html += '<div style="position:absolute;top:0;bottom:0;left:50%;width:1px;background:#5A6A7A;"></div>';
+    if (sc != null) {
+      if (sc >= 50) {
+        var w = (sc - 50) * 2; // 0 to 100
+        html += '<div style="position:absolute;top:0;bottom:0;left:50%;width:' + (w / 2) + '%;background:' + col + ';"></div>';
+      } else {
+        var w2 = (50 - sc) * 2;
+        html += '<div style="position:absolute;top:0;bottom:0;right:50%;width:' + (w2 / 2) + '%;background:' + col + ';"></div>';
+      }
+    }
+    html += '</div>';
+    html += '<div style="display:flex;justify-content:space-between;margin-top:2px;font-size:9.5px;color:#5A6A7A;">';
+    html += '<span>← ' + f.negative + '</span><span>' + f.positive + ' →</span>';
+    html += '</div>';
+    html += '</div>';
+  });
+  html += '</div>';
+  el.innerHTML = html;
+}
+
+function getPillarScore(pillars, name) {
+  var p = pillars.find(function(x) { return x.name === name; });
+  return p ? p.score : null;
+}
+function getInflationScore(pillars) {
+  // Pull from FRED data if available
+  if (window._lastMacroData && window._lastMacroData.pillars) {
+    var infl = window._lastMacroData.pillars.find(function(p) { return p.name === 'Inflation'; });
+    if (infl && infl.indicators) {
+      var positive = 0, total = 0;
+      infl.indicators.forEach(function(i) {
+        if (typeof i.score === 'number') { positive += (i.score + 1) / 2; total++; }
+      });
+      return total > 0 ? (positive / total) * 100 : null;
+    }
+  }
+  return null;
+}
+function getLiquidityScore(pillars) {
+  if (window._lastMacroData && window._lastMacroData.pillars) {
+    var glob = window._lastMacroData.pillars.find(function(p) { return p.name === 'Global Liquidity'; });
+    if (glob && glob.indicators) {
+      var positive = 0, total = 0;
+      glob.indicators.forEach(function(i) {
+        if (typeof i.score === 'number') { positive += (i.score + 1) / 2; total++; }
+      });
+      return total > 0 ? (positive / total) * 100 : null;
+    }
+  }
+  return null;
+}
+
+function tlRenderPortfolioArchetypes(composite, pillars) {
+  var el = document.getElementById('portfolioArchetypes');
+  if (!el) return;
+  // 5 archetypes with their target weights
+  var archetypes = [
+    { name: 'All-Weather (Bridgewater)', weights: { equity: 30, longBonds: 40, intlBonds: 15, gold: 7.5, commodities: 7.5 },
+      bestRegime: 'neutral', fitScore: 0,
+      rationale: 'Ray Dalio (1996). Performs across growth/inflation/recession quadrants. Long duration and commodities diversify equity beta.',
+      etfs: 'SPY 30 / TLT 40 / IEF 15 / GLD 7.5 / DBC 7.5' },
+    { name: 'Permanent Portfolio (Browne)', weights: { equity: 25, longBonds: 25, gold: 25, cash: 25 },
+      bestRegime: 'risk-off', fitScore: 0,
+      rationale: 'Harry Browne (1981). Survives any of 4 macro regimes. Heavy gold/cash anchor — lowest drawdowns historically.',
+      etfs: 'SPY 25 / TLT 25 / GLD 25 / SHY 25' },
+    { name: '60/40 Classic (Shiller bench)', weights: { equity: 60, intermBonds: 40 },
+      bestRegime: 'neutral', fitScore: 0,
+      rationale: 'Standard pension benchmark. Works in disinflationary expansion; struggles when bonds + stocks correlate (2022).',
+      etfs: 'SPY 60 / IEF 40' },
+    { name: 'Risk-On Growth Tilt', weights: { equity: 75, smallCap: 10, em: 10, hyCredit: 5 },
+      bestRegime: 'risk-on', fitScore: 0,
+      rationale: 'Aggressive allocation for confirmed expansion + steepening yield curve. Tech/SmallCap/EM lead the cycle up.',
+      etfs: 'QQQ 40 / SPY 25 / IWM 10 / EEM 10 / VTV 10 / HYG 5' },
+    { name: 'Defensive Quality', weights: { qualEquity: 50, longBonds: 25, gold: 10, cash: 15 },
+      bestRegime: 'defensive', fitScore: 0,
+      rationale: 'Late-cycle posture: large-cap quality, dividend payers, long duration as recession hedge.',
+      etfs: 'QUAL 30 / SPHD 20 / TLT 25 / GLD 10 / SHY 15' }
+  ];
+  // Score each archetype based on regime alignment
+  var brScore = getPillarScore(pillars, 'Business Cycle');
+  var crScore = getPillarScore(pillars, 'Credit Conditions');
+  var bdScore = getPillarScore(pillars, 'Breadth (Fear/Greed)');
+  archetypes.forEach(function(a) {
+    var fit = 50;
+    if (a.bestRegime === 'risk-on') {
+      fit = 50 + (composite - 50) * 0.8;
+    } else if (a.bestRegime === 'risk-off') {
+      fit = 50 + (50 - composite) * 0.8;
+    } else if (a.bestRegime === 'defensive') {
+      // Best when composite is 30-50 (mild stress)
+      fit = 100 - Math.abs(composite - 40);
+    } else if (a.bestRegime === 'neutral') {
+      // Best when composite is 45-65 (balanced)
+      fit = 100 - Math.abs(composite - 55) * 1.4;
+    }
+    a.fitScore = Math.max(0, Math.min(100, fit));
+  });
+  archetypes.sort(function(a, b) { return b.fitScore - a.fitScore; });
+
+  var html = '<div style="font-family:Arial,Helvetica,sans-serif;text-align:left;">';
+  archetypes.forEach(function(a, i) {
+    var col = tlScoreColor(a.fitScore);
+    var rank = i + 1;
+    var rankBg = i === 0 ? '#003C71' : i === 1 ? '#5B9BD5' : '#A8C8E8';
+    var rankTxt = i === 0 ? '#FFFFFF' : i === 1 ? '#FFFFFF' : '#000000';
+    html += '<div style="display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center;padding:10px 12px;border:1px solid #D0D7E0;border-radius:4px;margin-bottom:7px;background:' + (i === 0 ? '#F4F6F9' : '#FFFFFF') + ';">';
+    html += '<div style="background:' + rankBg + ';color:' + rankTxt + ';width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:12px;">#' + rank + '</div>';
+    html += '<div>';
+    html += '<div style="font-size:13px;font-weight:700;color:#003C71;">' + a.name + '</div>';
+    html += '<div style="font-size:10.5px;color:#5A6A7A;line-height:1.5;margin-top:2px;">' + a.rationale + '</div>';
+    html += '<div style="font-size:10px;color:#000000;margin-top:4px;font-family:Arial,Helvetica,sans-serif;background:#F4F6F9;padding:3px 6px;border-radius:3px;display:inline-block;">' + a.etfs + '</div>';
+    html += '</div>';
+    html += '<div style="text-align:right;min-width:60px;">';
+    html += '<div style="font-size:11px;color:#5A6A7A;font-weight:600;">Fit</div>';
+    html += '<div style="font-size:18px;font-weight:800;color:' + col + ';">' + Math.round(a.fitScore) + '</div>';
+    html += '</div>';
+    html += '</div>';
+  });
+  html += '</div>';
+  el.innerHTML = html;
+}
+
+async function tlRenderMovingToday() {
+  var el = document.getElementById('movingToday');
+  if (!el) return;
+  // Get the snapshot cells (already loaded by snapshotLoad if available)
+  if (!window._snapshotCells || !window._snapshotCells.length) {
+    // Trigger load and retry
+    if (typeof snapshotLoad === 'function') await snapshotLoad();
+  }
+  var cells = window._snapshotCells || [];
+  if (!cells.length) {
+    el.innerHTML = '<div style="padding:14px;color:#5A6A7A;font-size:12px;font-family:Arial,Helvetica,sans-serif;">Load Global Snapshot first.</div>';
+    return;
+  }
+  // Sort by abs change %
+  var sorted = cells.slice().sort(function(a, b) { return Math.abs(b.changePct) - Math.abs(a.changePct); });
+  var top5 = sorted.slice(0, 5);
+
+  // Driver classification heuristic
+  function classify(c) {
+    var t = c.ticker.replace('^', '');
+    if (['TLT','IEF','SHY'].indexOf(t) >= 0) return c.changePct > 0 ? 'Duration Bid (Risk-Off)' : 'Duration Sold (Yields Up)';
+    if (['HYG','LQD'].indexOf(t) >= 0) return c.changePct > 0 ? 'Credit Demand' : 'Credit Spreads Widening';
+    if (['UUP','FXE','FXY','CYB'].indexOf(t) >= 0) return 'FX Move';
+    if (['GLD','SLV'].indexOf(t) >= 0) return c.changePct > 0 ? 'Safe-Haven Flight' : 'Risk Appetite Returning';
+    if (['USO','UNG','DBA'].indexOf(t) >= 0) return 'Commodity Move';
+    if (['VIX'].indexOf(t) >= 0) return c.changePct > 0 ? 'Volatility Spike' : 'Vol Compressing';
+    if (['SPY','QQQ','DIA','IWM'].indexOf(t) >= 0) return c.changePct > 0 ? 'US Equity Rally' : 'US Equity Selloff';
+    if (['EFA','EEM','EWJ','FXI'].indexOf(t) >= 0) return c.changePct > 0 ? 'Intl Equity Rally' : 'Intl Equity Selloff';
+    return 'Other';
+  }
+
+  var html = '<table style="width:100%;border-collapse:collapse;font-family:Arial,Helvetica,sans-serif;font-size:12px;">';
+  html += '<thead><tr><th style="background:#003C71;color:#FFFFFF;padding:8px 10px;text-align:left;font-size:12px;font-weight:600;">Ticker</th><th style="background:#003C71;color:#FFFFFF;padding:8px 10px;text-align:right;font-size:12px;font-weight:600;">1-Day</th><th style="background:#003C71;color:#FFFFFF;padding:8px 10px;text-align:left;font-size:12px;font-weight:600;">Driver</th></tr></thead><tbody>';
+  top5.forEach(function(c, i) {
+    var col = c.changePct >= 0 ? '#2E7D52' : '#8B2A2A';
+    var rowBg = i % 2 === 0 ? '#FFFFFF' : '#F4F6F9';
+    html += '<tr style="background:' + rowBg + ';">';
+    html += '<td style="padding:8px 10px;font-weight:700;color:#003C71;border-bottom:1px solid #D0D7E0;">' + c.ticker.replace('^','') + '</td>';
+    html += '<td style="padding:8px 10px;text-align:right;font-weight:700;color:' + col + ';border-bottom:1px solid #D0D7E0;font-family:Courier New,monospace;">' + (c.changePct >= 0 ? '+' : '') + c.changePct.toFixed(2) + '%</td>';
+    html += '<td style="padding:8px 10px;color:#000000;border-bottom:1px solid #D0D7E0;">' + classify(c) + '</td>';
+    html += '</tr>';
+  });
+  html += '</tbody></table>';
+  el.innerHTML = html;
+}
+
+// ═══════════════════════════════════════════════
+// MOVERS LEADERBOARD (full universe ranked, multi-timeframe)
+// ═══════════════════════════════════════════════
+window.moversRender = async function(tf) {
+  tf = tf || '1d';
+  var el = document.getElementById('moversLeaderboard');
+  if (!el) return;
+  // Update button state
+  document.querySelectorAll('.ca-mover-tf-btn').forEach(function(b) {
+    b.style.background = b.dataset.tf === tf ? '#5B9BD5' : '#A8C8E8';
+  });
+  el.innerHTML = '<span class="spinner"></span> Computing ' + tf + ' moves across universe...';
+  try {
+    if (!window._snapshotCells || !window._snapshotCells.length) {
+      if (typeof snapshotLoad === 'function') await snapshotLoad();
+    }
+    var cells = window._snapshotCells || [];
+    if (!cells.length) { el.innerHTML = '<span style="color:#8B2A2A;">Snapshot data unavailable.</span>'; return; }
+    var n = tf === '1d' ? 1 : tf === '1w' ? 5 : 21;
+    // For 1w / 1m we need to fetch the chart (1d data is already in cells)
+    if (tf === '1d') {
+      // use existing cell.changePct
+      var rows = cells.map(function(c) { return { ticker: c.ticker, label: c.label, ret: c.changePct }; })
+                      .filter(function(r) { return r.ret != null; })
+                      .sort(function(a, b) { return b.ret - a.ret; });
+      tlRenderMoversTable(rows, tf);
+    } else {
+      // Fetch chart for each ticker
+      var rows2 = [];
+      await Promise.all(cells.map(async function(c) {
+        try {
+          var pts = await tlFetchChart(c.ticker.replace('^', '%5E'), '3mo');
+          if (pts.length >= n + 1) {
+            var ret = (pts[pts.length - 1].close - pts[pts.length - 1 - n].close) / pts[pts.length - 1 - n].close * 100;
+            rows2.push({ ticker: c.ticker, label: c.label, ret: ret });
+          }
+        } catch (e) {}
+      }));
+      rows2.sort(function(a, b) { return b.ret - a.ret; });
+      tlRenderMoversTable(rows2, tf);
+    }
+  } catch (e) { el.innerHTML = '<span style="color:#8B2A2A;">' + e.message + '</span>'; }
+};
+
+function tlRenderMoversTable(rows, tf) {
+  var el = document.getElementById('moversLeaderboard');
+  if (!el) return;
+  var topN = rows.slice(0, 8);
+  var botN = rows.slice(-8).reverse();
+  var label = tf === '1d' ? '1-Day' : tf === '1w' ? '1-Week' : '1-Month';
+  var html = '<div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;font-family:Arial,Helvetica,sans-serif;">';
+  // Top gainers
+  html += '<div>';
+  html += '<div style="background:#003C71;color:#FFFFFF;padding:7px 12px;font-size:12px;font-weight:700;border-radius:4px 4px 0 0;">▲ Top Gainers — ' + label + '</div>';
+  html += '<table style="width:100%;border-collapse:collapse;font-size:12px;border:1px solid #D0D7E0;border-top:none;border-radius:0 0 4px 4px;">';
+  topN.forEach(function(r, i) {
+    html += '<tr style="background:' + (i % 2 === 0 ? '#FFFFFF' : '#F4F6F9') + ';">';
+    html += '<td style="padding:6px 10px;color:#003C71;font-weight:700;border-bottom:1px solid #D0D7E0;">' + r.ticker.replace('^', '') + '</td>';
+    html += '<td style="padding:6px 10px;color:#000000;border-bottom:1px solid #D0D7E0;font-size:11px;">' + r.label + '</td>';
+    html += '<td style="padding:6px 10px;text-align:right;color:#2E7D52;font-weight:700;font-family:Courier New,monospace;border-bottom:1px solid #D0D7E0;">+' + r.ret.toFixed(2) + '%</td>';
+    html += '</tr>';
+  });
+  html += '</table></div>';
+  // Top losers
+  html += '<div>';
+  html += '<div style="background:#003C71;color:#FFFFFF;padding:7px 12px;font-size:12px;font-weight:700;border-radius:4px 4px 0 0;">▼ Top Losers — ' + label + '</div>';
+  html += '<table style="width:100%;border-collapse:collapse;font-size:12px;border:1px solid #D0D7E0;border-top:none;border-radius:0 0 4px 4px;">';
+  botN.forEach(function(r, i) {
+    html += '<tr style="background:' + (i % 2 === 0 ? '#FFFFFF' : '#F4F6F9') + ';">';
+    html += '<td style="padding:6px 10px;color:#003C71;font-weight:700;border-bottom:1px solid #D0D7E0;">' + r.ticker.replace('^', '') + '</td>';
+    html += '<td style="padding:6px 10px;color:#000000;border-bottom:1px solid #D0D7E0;font-size:11px;">' + r.label + '</td>';
+    html += '<td style="padding:6px 10px;text-align:right;color:#8B2A2A;font-weight:700;font-family:Courier New,monospace;border-bottom:1px solid #D0D7E0;">' + r.ret.toFixed(2) + '%</td>';
+    html += '</tr>';
+  });
+  html += '</table></div>';
+  html += '</div>';
+  el.innerHTML = html;
+}
+
+// ═══════════════════════════════════════════════
+// DRIVER THEME MAP
+// ═══════════════════════════════════════════════
+window.driverThemeMapRun = async function() {
+  var el = document.getElementById('driverThemeMap');
+  if (!el) return;
+  el.innerHTML = '<span class="spinner"></span> Classifying market drivers...';
+  try {
+    var [spy, qqq, iwm, xlp, xlu, xlv, tlt, hyg, lqd, gld, uup, uso, vix] = await Promise.all([
+      tlFetchChart('SPY', '3mo'), tlFetchChart('QQQ', '3mo'), tlFetchChart('IWM', '3mo'),
+      tlFetchChart('XLP', '3mo'), tlFetchChart('XLU', '3mo'), tlFetchChart('XLV', '3mo'),
+      tlFetchChart('TLT', '3mo'), tlFetchChart('HYG', '3mo'), tlFetchChart('LQD', '3mo'),
+      tlFetchChart('GLD', '3mo'), tlFetchChart('UUP', '3mo'), tlFetchChart('USO', '3mo'),
+      tlFetchChart('%5EVIX', '3mo')
+    ]);
+    function r(arr, n) { return tlPctRet(arr, n) || 0; }
+    var spy20 = r(spy, 20), qqq20 = r(qqq, 20), iwm20 = r(iwm, 20);
+    var xlp20 = r(xlp, 20), xlu20 = r(xlu, 20), xlv20 = r(xlv, 20);
+    var tlt20 = r(tlt, 20), hyg20 = r(hyg, 20), lqd20 = r(lqd, 20);
+    var gld20 = r(gld, 20), uup20 = r(uup, 20), uso20 = r(uso, 20);
+    var vixCur = vix.length ? vix[vix.length - 1].close : 20;
+    var defensiveAvg = (xlp20 + xlu20 + xlv20) / 3;
+
+    var themes = [
+      {
+        name: 'Disinflation Trade',
+        active: tlt20 > 2 && qqq20 > spy20 && uup20 < 0,
+        latent: tlt20 > 0 && qqq20 > spy20,
+        rationale: 'Long bonds rallying, tech leading, dollar weakening. Falling rates supporting long-duration assets.'
+      },
+      {
+        name: 'Re-Flation / Cyclical',
+        active: iwm20 > spy20 && uso20 > 5 && tlt20 < 0,
+        latent: iwm20 > spy20 || uso20 > 3,
+        rationale: 'Small caps and commodities leading, bonds selling. Growth + inflation expectations rising.'
+      },
+      {
+        name: 'Defensive Rotation',
+        active: defensiveAvg > spy20 && tlt20 > 0,
+        latent: defensiveAvg > spy20,
+        rationale: 'Staples/utilities/healthcare outperforming with bonds rallying. Late-cycle / risk-off positioning.'
+      },
+      {
+        name: 'Risk-Off Flight',
+        active: gld20 > 5 && uup20 > 2 && hyg20 < 0,
+        latent: gld20 > 3 || hyg20 < -1,
+        rationale: 'Gold + dollar bid, HY credit selling. Classic safe-haven flight pattern.'
+      },
+      {
+        name: 'Vol Spike / Tail Risk',
+        active: vixCur > 25,
+        latent: vixCur > 18,
+        rationale: 'Implied vol elevated. Markets pricing tail risk. Hedge demand active.'
+      },
+      {
+        name: 'Credit Stress',
+        active: hyg20 < lqd20 - 2,
+        latent: hyg20 < lqd20,
+        rationale: 'HY underperforming IG credit — early warning for risk assets.'
+      },
+      {
+        name: 'Dollar Strength',
+        active: uup20 > 3,
+        latent: uup20 > 1,
+        rationale: 'USD rally — typically EM negative, commodity negative, growth-headwind.'
+      },
+      {
+        name: 'Tech / AI Leadership',
+        active: qqq20 > spy20 + 3 && qqq20 > 5,
+        latent: qqq20 > spy20,
+        rationale: 'Mega-cap tech leadership. Growth narrative dominant.'
+      }
+    ];
+    var html = '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:10px;font-family:Arial,Helvetica,sans-serif;text-align:left;">';
+    themes.forEach(function(t) {
+      var status = t.active ? 'Active' : t.latent ? 'Latent' : 'Inactive';
+      var col = t.active ? '#2E7D52' : t.latent ? '#8B6914' : '#C8D0D8';
+      var bgCol = t.active ? 'rgba(46,125,82,0.08)' : t.latent ? 'rgba(139,105,20,0.08)' : '#F4F6F9';
+      var textCol = t.active || t.latent ? '#000000' : '#5A6A7A';
+      html += '<div style="border:1px solid #D0D7E0;border-left:3px solid ' + col + ';padding:10px 12px;background:' + bgCol + ';border-radius:4px;">';
+      html += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px;">';
+      html += '<div style="font-size:12px;font-weight:700;color:#003C71;">' + t.name + '</div>';
+      html += '<div style="font-size:10px;font-weight:700;color:#FFFFFF;background:' + col + ';padding:2px 8px;border-radius:8px;text-transform:uppercase;letter-spacing:.4px;">' + status + '</div>';
+      html += '</div>';
+      html += '<div style="font-size:11px;color:' + textCol + ';line-height:1.5;">' + t.rationale + '</div>';
+      html += '</div>';
+    });
+    html += '</div>';
+    el.innerHTML = html;
+  } catch (e) { el.innerHTML = '<span style="color:#8B2A2A;">' + e.message + '</span>'; }
+};
+
+// ═══════════════════════════════════════════════
+// SECTOR ROTATION MAP CHART
+// ═══════════════════════════════════════════════
+window.rotationMapRun = async function() {
+  var emptyEl = document.getElementById('rotationMapEmpty');
+  var wrapEl = document.getElementById('rotationMapWrap');
+  if (!emptyEl) return;
+  emptyEl.innerHTML = '<span class="spinner"></span> Computing rotation ratio...';
+  try {
+    var cyc = ['XLK','XLY','XLI','XLF','XLE','XLB','XLRE','XLC'];
+    var def = ['XLP','XLV','XLU'];
+    var data = {};
+    var allSec = cyc.concat(def);
+    await Promise.all(allSec.map(async function(t) {
+      data[t] = await tlFetchChart(t, '1y');
+    }));
+    if (!data['XLK'].length) { emptyEl.innerHTML = '<span style="color:#8B2A2A;">Sector data unavailable.</span>'; return; }
+    // Find common dates
+    var allDatesSet = new Set();
+    cyc.forEach(function(t) { (data[t]||[]).forEach(function(p) { allDatesSet.add(p.date.slice(0,10)); }); });
+    var dates = Array.from(allDatesSet).sort();
+    // Build price maps with forward-fill
+    var fillMap = {};
+    allSec.forEach(function(t) {
+      var pm = {};
+      (data[t]||[]).forEach(function(p) { pm[p.date.slice(0,10)] = p.close; });
+      var last = null;
+      fillMap[t] = dates.map(function(d) { if (pm[d] != null) last = pm[d]; return last; });
+    });
+    // Build cyclical and defensive equal-weight indices
+    var cycIdx = [], defIdx = [];
+    for (var i = 0; i < dates.length; i++) {
+      var cAvg = 0, cN = 0, dAvg = 0, dN = 0;
+      cyc.forEach(function(t) {
+        var bp = fillMap[t][0];
+        var p = fillMap[t][i];
+        if (bp && p) { cAvg += p / bp; cN++; }
+      });
+      def.forEach(function(t) {
+        var bp = fillMap[t][0];
+        var p = fillMap[t][i];
+        if (bp && p) { dAvg += p / bp; dN++; }
+      });
+      cycIdx.push(cN > 0 ? cAvg / cN : null);
+      defIdx.push(dN > 0 ? dAvg / dN : null);
+    }
+    // Ratio rebased to 100
+    var ratio = [], baseRatio = null;
+    for (var i = 0; i < dates.length; i++) {
+      if (cycIdx[i] != null && defIdx[i] != null && defIdx[i] > 0) {
+        var r = cycIdx[i] / defIdx[i];
+        if (baseRatio == null) baseRatio = r;
+        ratio.push(r / baseRatio * 100);
+      } else { ratio.push(null); }
+    }
+    // 60-day SMA
+    var sma60 = [];
+    for (var i = 0; i < ratio.length; i++) {
+      if (i < 59) { sma60.push(null); continue; }
+      var s = 0, c = 0;
+      for (var j = i - 59; j <= i; j++) { if (ratio[j] != null) { s += ratio[j]; c++; } }
+      sma60.push(c > 30 ? s / c : null);
+    }
+    // Thin labels
+    var step = Math.max(1, Math.floor(dates.length / 12));
+    emptyEl.style.display = 'none';
+    if (wrapEl) wrapEl.style.display = '';
+    var ctx = document.getElementById('rotationMapChart');
+    if (window._rotMapChart) window._rotMapChart.destroy();
+    window._rotMapChart = new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels: dates,
+        datasets: [
+          { label: 'Cyclicals / Defensives Ratio', data: ratio, borderColor: '#003C71', backgroundColor: 'rgba(0,60,113,0.08)', borderWidth: 2.5, pointRadius: 0, tension: 0.15, fill: true },
+          { label: '60-Day SMA', data: sma60, borderColor: '#5B9BD5', backgroundColor: 'transparent', borderWidth: 1.8, borderDash: [5,3], pointRadius: 0, tension: 0.15, fill: false }
+        ]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false, animation: false,
+        plugins: {
+          legend: { position: 'top', labels: { font: { family: 'Arial,Helvetica,sans-serif', size: 11 }, color: '#5A6A7A', boxWidth: 12, padding: 12 } },
+          tooltip: {
+            backgroundColor: '#FFFFFF', titleColor: '#000000', bodyColor: '#000000',
+            borderColor: '#D0D7E0', borderWidth: 1,
+            titleFont: { family: 'Arial,Helvetica,sans-serif', size: 12, weight: '600' },
+            bodyFont: { family: 'Arial,Helvetica,sans-serif', size: 12 }
+          }
+        },
+        scales: {
+          x: {
+            ticks: { font: { family: 'Arial,Helvetica,sans-serif', size: 11 }, color: '#5A6A7A', maxTicksLimit: 10, maxRotation: 0, callback: function(v, i) { return i % step === 0 ? dates[i] : ''; } },
+            grid: { color: 'rgba(208,215,224,0.5)' }
+          },
+          y: {
+            ticks: { font: { family: 'Arial,Helvetica,sans-serif', size: 11 }, color: '#5A6A7A', callback: function(v) { return v.toFixed(1); } },
+            grid: { color: 'rgba(208,215,224,0.5)' },
+            title: { display: true, text: 'Cyc/Def Ratio (rebased to 100)', font: { family: 'Arial,Helvetica,sans-serif', size: 11 }, color: '#5A6A7A' }
+          }
+        }
+      }
+    });
+  } catch (e) { emptyEl.innerHTML = '<span style="color:#8B2A2A;">' + e.message + '</span>'; }
+};
+
 window.caShowTab = function(name) {
-  // Update tab buttons
   document.querySelectorAll('[data-catab]').forEach(function(b) {
     b.classList.toggle('active', b.dataset.catab === name);
   });
-  // Update tab content panels
   document.querySelectorAll('#page-markets .pf-tab-content').forEach(function(c) {
     c.classList.toggle('active', c.id === 'catab-' + name);
   });
 
-  // Lazy-load tab content on first activation
   if (!window._caTabInit[name]) {
     window._caTabInit[name] = true;
+    if (name === 'topline') {
+      // Top-Line tab is the entry point — load everything needed for the master verdict
+      setTimeout(topLineRefreshAll, 80);
+    }
+    if (name === 'movers') {
+      setTimeout(function() {
+        if (typeof moversRender === 'function') moversRender('1d');
+        if (typeof driverThemeMapRun === 'function') driverThemeMapRun();
+        if (typeof rotationMapRun === 'function') rotationMapRun();
+      }, 150);
+    }
     if (name === 'universe') {
-      // Universe tab: init on first visit
       if (!window._mktInitialized && typeof mktInit === 'function') {
         mktInit(); window._mktInitialized = true;
       }
-      // Set today as end date default if not set
       var endEl = document.getElementById('mktEndDate');
-      if (endEl && !endEl.value) {
-        endEl.value = new Date().toISOString().slice(0, 10);
-      }
+      if (endEl && !endEl.value) endEl.value = new Date().toISOString().slice(0, 10);
     }
     if (name === 'breadth') {
-      // Auto-run sector momentum and heatmap on first visit
       setTimeout(function() {
         if (typeof mktLoadSectorMomentum === 'function') mktLoadSectorMomentum();
         if (typeof mktLoadReturnHeatmap === 'function') mktLoadReturnHeatmap();
       }, 150);
     }
     if (name === 'regime') {
-      // Regime tab: ensure portfolio state is loaded
       if (!window._psLoaded && typeof psLoadDiagnostic === 'function') {
         psLoadDiagnostic(); window._psLoaded = true;
       }
@@ -16273,11 +17335,14 @@ window.caShowTab = function(name) {
       window.navigateTo = function(p) {
         orig(p);
         if (p === 'markets') {
-          // Always reset to Regime tab when entering markets page
-          if (typeof caShowTab === 'function') caShowTab('regime');
+          // Default to Top-Line View
+          if (typeof caShowTab === 'function') caShowTab('topline');
           if (!window._snapshotLoaded) {
             window._snapshotLoaded = true;
-            setTimeout(snapshotLoad, 100);
+            setTimeout(function() {
+              snapshotLoad();
+              if (typeof topLineRefreshAll === 'function') setTimeout(topLineRefreshAll, 600);
+            }, 100);
           }
         }
         if (p === 'holdings' && window._holdings && window._holdings.length) {
