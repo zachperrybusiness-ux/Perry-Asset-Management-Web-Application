@@ -3321,7 +3321,7 @@ body.view-mobile .logo-icon { width: 22px !important; height: 22px !important; f
             </div>
           </div>
           <div class="card-sources" style="background:#F4F6F9;border-top:1px solid #D0D7E0;padding:8px 18px 10px;font-family:Arial,Helvetica,sans-serif;font-size:11px;color:#5A6A7A;line-height:1.6;border-radius:0 0 6px 6px;">
-            <strong style="color:#003C71;font-weight:600;">Methodology:</strong> Weighted composite of 7 signal pillars — Business Cycle (FRED scorecard, 25%), Market Regime State (VIX/momentum, 20%), Breadth/Fear-Greed (15%), Credit Conditions (HY OAS + credit spreads, 12%), Yield Curve (8%), Cross-Asset Momentum (10%), Sector Rotation Signal (10%). Outputs map to 4 portfolio archetypes.
+            <strong style="color:#003C71;font-weight:600;">Methodology:</strong> Weighted composite of 7 signal pillars — Business Cycle (FRED scorecard, 25%), Market Regime State (VIX/momentum quarterly-locked, 70% flip threshold, 20%), Breadth/Fear-Greed (15%), Credit Conditions (HY OAS + credit spreads, 12%), Yield Curve (8%), Cross-Asset Momentum (10%), Sector Rotation + Cross-Asset Regime Composite (10%; blends sector leadership with 11-pair intermarket regime score when loaded). Perry State acts as a ceiling/floor gate on the final composite. Phase changes require 2 consecutive FRED fetch cycles to commit. Academic grounding: Horvath et al. (2021), Cain (2023), Lyu et al. (2023), Molero-González et al. (2024).
           </div>
         </div>
 
@@ -3623,17 +3623,63 @@ body.view-mobile .logo-icon { width: 22px !important; height: 22px !important; f
       <div class="card-sources"><strong>Method:</strong> Cross-correlation function r_AB(k) = corr(R_A(t), R_B(t+k)) for k ∈ [-20, +20]. Computed from daily log returns. Bonferroni-corrected 95% confidence band = ±1.96/√n shown as dashed lines. Granger, C.W.J. (1969) "Investigating Causal Relations by Econometric Models," <em>Econometrica</em>.</div>
     </div>
       </div>
+      <!-- ═══ MARKET BROADENING CARD ═══ -->
+      <div class="card" style="margin-bottom:14px;">
+        <div class="card-title">Market Breadth: Is the Rally Broadening?
+          <span class="help-icon" title="RSP (equal-weight S&P 500) vs. SPY (cap-weight) is the clearest measure of whether the market rally is broad-based or driven by a handful of mega-caps. When RSP outperforms SPY, participation is widening — historically a healthy mid-cycle signal. When SPY outperforms RSP, leadership is narrowing — a late-cycle fragility flag consistent with Horvath et al. (2021) regime transition signals.">?</span>
+        </div>
+        <div class="card-body">
+          <p style="font-size:12px;color:var(--text-sec);margin-bottom:14px;">
+            <strong>Equal-weight vs. cap-weight S&P 500</strong> (RSP ÷ SPY ratio) is the cleanest single measure of market breadth. Rising ratio = participation expanding, broad-based leadership. Falling ratio = mega-cap concentration increasing, narrowing breadth — historically a late-cycle vulnerability signal.
+            <br><br>
+            Also shown: <strong>IWM vs. SPY</strong> (Small Cap vs. Large Cap) — small caps outperform when domestic growth expectations are strong and financial conditions are easing. Both signals are consistent with the Quantamental framework (Cain 2023): technical breadth confirming or diverging from fundamental cycle positioning.
+          </p>
+          <div class="form-row" style="margin-bottom:10px;">
+            <button class="btn btn-sm" onclick="mktLoadBroadening()">Load Broadening Charts</button>
+            <span style="font-size:11px;color:var(--text-sec);align-self:center;margin-left:8px;">RSP/SPY &amp; IWM/SPY with 63D SMA — monthly regime frequency</span>
+          </div>
+          <div id="mktBroadeningResult" style="text-align:center;padding:20px;color:var(--text-sec);">Click <strong>Load Broadening Charts</strong> to compute.</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:10px;">
+            <div class="chart-wrap" style="height:200px;display:none;" id="mktRspSpyWrap"><canvas id="mktRspSpyChart"></canvas></div>
+            <div class="chart-wrap" style="height:200px;display:none;" id="mktIwmSpyWrap"><canvas id="mktIwmSpyChart"></canvas></div>
+          </div>
+        </div>
+        <div class="card-sources"><strong>Framework:</strong> Horvath, B., Issa, A. &amp; Muguruza, A. (2021) "Clustering Market Regimes using the Wasserstein Distance." Breadth divergence between RSP and SPY reflects distributional shift in cross-asset return patterns — a precursor to regime transitions. Cain, C. (2023) "Quantementals." Price data via Cloudflare Worker / Yahoo Finance.</div>
+      </div>
+
+      <!-- ═══ SECTOR LIQUIDITY FLOW CARD ═══ -->
+      <div class="card" style="margin-bottom:14px;">
+        <div class="card-title">Where Is Liquidity Moving? — 11-Sector Flow Scorecard
+          <span class="help-icon" title="Ranks all 11 GICS sectors by 1-month, 3-month, and relative-to-SPY momentum, then color-codes by flow direction. Provides a directional read on where institutional capital is rotating within the equity market. Grounded in Jegadeesh & Titman (1993) momentum and the Quantamental framework (Cain 2023): price momentum as a quantitative proxy for fundamental conviction.">?</span>
+        </div>
+        <div class="card-body">
+          <p style="font-size:12px;color:var(--text-sec);margin-bottom:12px;">
+            Capital rotation across GICS sectors as a real-time proxy for where institutional liquidity is flowing. Each sector is scored on 1M and 3M price momentum relative to SPY, then bucketed into <strong>Inflow</strong>, <strong>Neutral</strong>, or <strong>Outflow</strong>. The composite rotation vector identifies the dominant narrative (e.g., "defensive rotation into staples/utilities," "reflation into energy/materials," "growth into tech").
+          </p>
+          <div class="form-row" style="margin-bottom:12px;">
+            <button class="btn btn-sm" onclick="mktLoadSectorFlow()">Load Sector Flow</button>
+            <span style="font-size:11px;color:var(--text-sec);align-self:center;margin-left:8px;">11 SPDR ETFs · 1M + 3M relative to SPY</span>
+          </div>
+          <div id="mktSectorFlowResult" style="padding:10px 0;"></div>
+        </div>
+        <div class="card-sources"><strong>Method:</strong> 1M and 3M excess return vs. SPY. Score = 0.4×(1M rank) + 0.6×(3M rank). Inflow: top 4 sectors. Outflow: bottom 4. Neutral: middle 3. Rotation narrative generated from sector groupings. Sources: Jegadeesh &amp; Titman (1993); Cain, C. (2023) "Quantementals — Combining Technical and Fundamental Analysis." Price data via Cloudflare Worker / Yahoo Finance.</div>
+      </div>
+
       <div class="card">
-      <div class="card-title">8 &middot; Cross-Asset Regime Signals <span class="help-icon" title="Tracks key cross-market relationships that historically signal regime shifts. Copper/Gold ratio rising = growth dominant. Yield curve inversion = recession signal. HY credit spreads widening = risk-off.">?</span></div>
+      <div class="card-title">8 &middot; Cross-Asset Regime Signals <span class="help-icon" title="Tracks key cross-market relationships that historically signal regime shifts. Copper/Gold ratio rising = growth dominant. Yield curve inversion = recession signal. HY credit spreads widening = risk-off. All ratios use 63D SMA (monthly frequency) to filter daily noise. Composite regime score feeds into master verdict Pillar 7.">?</span></div>
       <div class="card-body">
-        <p style="font-size:12px;color:var(--text-sec);margin-bottom:14px;">Six intermarket ratios with 20D SMA overlay. Green shading = ratio above SMA (risk-on); red shading = below (risk-off). Grounded in CFA Business Cycle framework and classical intermarket analysis.</p>
+        <p style="font-size:12px;color:var(--text-sec);margin-bottom:14px;">Eleven intermarket ratios with 63-day SMA overlay (monthly frequency — filters daily noise). Green shading = ratio above SMA (Risk-On); red shading = below (Risk-Off). Composite regime score computed from all 11 pairs, with RSP/SPY and IWM/SPY weighted 2× as primary breadth indicators. Composite feeds into the Master Verdict Pillar 7 when loaded. SMA upgraded from 20D to 63D per Horvath et al. (2021): short-window signals are regime-unstable; distributional shifts in cross-asset relationships require monthly-frequency confirmation. RMT insight (Molero-González et al. 2024): dominant eigenvalue concentration in the correlation matrix accompanies the XLK/RSP ratio rising — both signal narrowing breadth and increased systemic fragility.</p>
         <div id="mktRegimeEmpty" style="text-align:center;padding:24px;color:var(--text-sec);font-size:13px;">Loads independently of universe selection. <button class="btn btn-sm" onclick="mktLoadRegime()" style="margin-left:10px;">Load Regime Signals</button></div>
         <div id="mktRegimeGrid" style="display:none;"></div>
       </div>
       <div class="card-sources">
-        <strong>Sources:</strong>
+        <strong>Sources &amp; Academic Grounding:</strong>
         Murphy, J.J. (1991) <em>Intermarket Analysis</em>, John Wiley &amp; Sons &middot;
         CFA Institute Business Cycle framework (L1-L3) &middot;
+        <strong>Horvath, B., Issa, A. &amp; Muguruza, A. (2021)</strong> "Clustering Market Regimes using the Wasserstein Distance" — basis for 63D SMA threshold and breadth-weighted composite scoring &middot;
+        <strong>Cain, C. (2023)</strong> "Quantementals: Combining Technical and Fundamental Analysis" — basis for cross-asset signal integration into fundamental cycle framework &middot;
+        <strong>Lyu, B. et al. (2023)</strong> "Omega: Robust Online Portfolio Optimization with Cash Flows" — composite score mapped to portfolio posture archetypes &middot;
+        <strong>Molero-González, L. et al. (2024)</strong> "The random matrix-based informative content of correlation matrices in stock markets" — XLK/RSP concentration risk signal grounded in dominant eigenvalue dynamics &middot;
         Perry Asset Management Macro HF Economic Analysis Framework v1.0 &middot;
         Price data via Cloudflare Worker / Yahoo Finance.
       </div>
@@ -7959,6 +8005,49 @@ function loadMacroLiveTable(force) {
   _macroLoaded = true;
   fetch(WORKER_URL + "/fred").then(function(r) { return r.json(); }).then(function(d) {
     if (d.error) throw new Error(d.error);
+
+    // ── MACRO PHASE BUFFER ──────────────────────────────────────────────
+    // Economic cycle phases move on 3–12 month timescales. A single FRED
+    // fetch that crosses a threshold should NOT immediately change the
+    // displayed phase — that would make the analysis reactive to noisy
+    // indicator revisions. We require the new phase to appear on 2
+    // consecutive fetches before committing. This gives roughly 8–24h of
+    // confirmation before the phase label changes. Additionally, we require
+    // the score margin to be meaningful (≥2 points above/below boundaries).
+    // Implementation: persist last-committed phase in sessionStorage.
+    // ────────────────────────────────────────────────────────────────────
+    var phaseKey = 'perry_macro_phase_committed';
+    var phaseCountKey = 'perry_macro_phase_candidate';
+    var committedPhase = null;
+    var candidateData = null;
+    try {
+      committedPhase = sessionStorage.getItem(phaseKey);
+      var candidateRaw = sessionStorage.getItem(phaseCountKey);
+      if (candidateRaw) candidateData = JSON.parse(candidateRaw);
+    } catch(e) {}
+
+    if (!committedPhase) {
+      // First load: commit immediately
+      committedPhase = d.phase;
+      try { sessionStorage.setItem(phaseKey, committedPhase); } catch(e) {}
+    } else if (d.phase !== committedPhase) {
+      // New phase detected — check if it was also the candidate last time
+      if (candidateData && candidateData.phase === d.phase && candidateData.score === Math.round(d.totalScore / d.maxScore * 100)) {
+        // Second consecutive fetch with same new phase + same score bucket → commit
+        committedPhase = d.phase;
+        try { sessionStorage.setItem(phaseKey, committedPhase); sessionStorage.removeItem(phaseCountKey); } catch(e) {}
+      } else {
+        // First time seeing this phase — record as candidate but don't commit yet
+        try { sessionStorage.setItem(phaseCountKey, JSON.stringify({ phase: d.phase, score: Math.round(d.totalScore / d.maxScore * 100) })); } catch(e) {}
+        // Display the committed phase with a "Watching" indicator
+        d._phasePending = d.phase;
+        d.phase = committedPhase;
+      }
+    } else {
+      // Phase confirmed same — clear any pending candidate
+      try { sessionStorage.removeItem(phaseCountKey); } catch(e) {}
+    }
+
     var phaseColors = { "Confirmed Expansion": C.success, "Mid-Cycle": C.navy, "Late Cycle / Transition": '#8B6914', "Confirmed Contraction": C.danger };
     var pc = phaseColors[d.phase] || C.navy;
 
@@ -7968,7 +8057,7 @@ function loadMacroLiveTable(force) {
       var vh = '<div class="card"><div class="card-title" style="background:'+pc+';">Macro Regime Verdict — ' + new Date().toLocaleDateString() + '</div><div class="card-body">';
       vh += '<div style="display:flex;align-items:center;gap:24px;flex-wrap:wrap;">';
       vh += '<div style="text-align:center;min-width:120px;"><div style="font-size:42px;font-weight:800;color:'+pc+';">' + d.totalScore + '</div><div style="font-size:12px;color:'+C.textSec+';">out of ' + d.maxScore + '</div></div>';
-      vh += '<div><div style="font-size:18px;font-weight:700;color:'+pc+';">' + d.phase + '</div>';
+      vh += '<div><div style="font-size:18px;font-weight:700;color:'+pc+';">' + d.phase + (d._phasePending ? ' <span style="font-size:11px;font-weight:600;background:#8B6914;color:#fff;padding:2px 7px;border-radius:10px;margin-left:6px;">WATCHING → '+d._phasePending+'</span>' : '') + '</div>';
       vh += '<div style="font-size:13px;color:'+C.textSec+';margin-top:4px;">' + (d.phaseDescription || '') + '</div></div>';
       vh += '</div>';
       if (d.pillarScores) {
@@ -9457,9 +9546,14 @@ function aggregateQuarterlyRegime(dailyStates) {
     var winner = 'neutral', mx = 0, total = 0;
     Object.keys(votes).forEach(function(k){ total += votes[k]; if (votes[k] > mx) { mx = votes[k]; winner = k; } });
     var dominantPct = total > 0 ? (mx / total) * 100 : 0;
-    // Hysteresis: stay with previous regime unless new dominantPct >= 60%
+    // Hysteresis: stay with previous regime unless new dominantPct >= 70%
+    // 70% threshold requires ~2 of every 3 trading days in the quarter to
+    // classify as the new regime before we commit to the flip. This prevents
+    // a sharp 2-week drawdown or a 1-month rip from re-positioning the entire
+    // portfolio. Regime changes should reflect durable structural shifts, not
+    // daily market noise.
     var lockedRegime = winner;
-    if (lastLockedRegime && winner !== lastLockedRegime && dominantPct < 60) {
+    if (lastLockedRegime && winner !== lastLockedRegime && dominantPct < 70) {
       // Not strong enough to flip — stay
       lockedRegime = lastLockedRegime;
     }
@@ -9679,7 +9773,7 @@ async function psLoadDiagnostic() {
         html += '</div>';
       });
       html += '</div>';
-      html += '<p style="font-size:10.5px;color:var(--text-sec);margin-top:10px;line-height:1.5;">Regime is locked per quarter to provide a stable 3–6 month positioning thesis. Hysteresis rule: requires <strong>≥60% daily classification dominance</strong> to flip vs. previous quarter\'s regime, otherwise prior regime persists. Symbols: <strong>⟲</strong> = regime flipped from prior quarter.</p>';
+      html += '<p style="font-size:10.5px;color:var(--text-sec);margin-top:10px;line-height:1.5;">Regime is locked per quarter to provide a stable 3–6 month positioning thesis. Hysteresis rule: requires <strong>≥70% daily classification dominance</strong> to flip vs. previous quarter\'s regime, A sharp 4–6 week drawdown or rip is insufficient — the new regime must dominate for the majority of the quarter. Symbols: <strong>⟲</strong> = regime flipped from prior quarter.</p>';
       html += '</div>';
     }
 
@@ -11219,17 +11313,53 @@ function mktRenderVaR() {
 
 // ═══ MODULE 8: CROSS-ASSET REGIME ═══
 var MKT_REGIME_PAIRS = [
+  // ── Original 6 ──
   { a: 'XLY', b: 'XLP', label: 'Cyclicals vs. Defensives', interp: 'Rising = risk appetite expanding; falling = defensive rotation and late-cycle concern.' },
   { a: 'XLF', b: 'XLU', label: 'Financials vs. Utilities', interp: 'Rising = steepening curve favoring banks; falling = flattening curve / flight to duration.' },
   { a: 'GLD', b: 'TLT', label: 'Gold vs. Long Bonds', interp: 'Rising = inflation concern dominant; falling = deflationary / disinflationary regime.' },
   { a: 'HYG', b: 'LQD', label: 'High Yield vs. IG Credit', interp: 'Rising = credit risk appetite healthy; falling = spreads widening, credit deterioration.' },
   { a: 'XLB', b: 'XLU', label: 'Materials vs. Utilities', interp: 'Rising = global growth / reflation signal; falling = defensive positioning.' },
-  { a: 'XLRE', b: 'TLT', label: 'Real Estate vs. Bonds', interp: 'Rising = real assets favored over duration; falling = rate sensitivity dominant.' }
+  { a: 'XLRE', b: 'TLT', label: 'Real Estate vs. Bonds', interp: 'Rising = real assets favored over duration; falling = rate sensitivity dominant.' },
+  // ── New: Market Broadening ──
+  { a: 'RSP', b: 'SPY', label: 'Equal-Weight vs. Cap-Weight S&P', interp: 'Rising = market breadth expanding; participation is broad (bullish). Falling = mega-cap concentration, narrow leadership — historically a late-cycle fragility signal. Horvath et al. (2021): divergence in cross-asset distributions signals regime transition.' },
+  // ── New: Small Cap vs. Large Cap ──
+  { a: 'IWM', b: 'SPY', label: 'Small Cap vs. Large Cap', interp: 'Rising = domestic growth expectations strengthening; small caps lead early cycle recoveries. Falling = risk-off, quality flight, or dollar strength suppressing earnings.' },
+  // ── New: Copper/Gold ratio (growth barometer) ──
+  { a: 'CPER', b: 'GLD', label: 'Copper vs. Gold (Growth Barometer)', interp: 'The classic Dr. Copper signal. Rising = global manufacturing demand strengthening relative to safe-haven demand — a reliable leading indicator of global growth. Falling = growth deceleration / recessionary demand.' },
+  // ── New: Tech concentration risk ──
+  { a: 'XLK', b: 'RSP', label: 'Tech vs. Equal-Weight (Concentration Risk)', interp: 'Rising = index performance increasingly driven by mega-cap tech; market returns concentrated. Elevated readings historically precede mean-reversion when growth premium contracts. Linked to RMT: dominant eigenvalue absorption (Molero-González et al. 2024).' },
+  // ── New: Energy sector liquidity ──
+  { a: 'XLE', b: 'XLF', label: 'Energy vs. Financials', interp: 'Rising = commodity/inflation cycle dominant over credit cycle; real assets preferred. Falling = financial conditions tightening, credit conditions driving leadership. Quantamental signal: tracks where capital is flowing within cyclicals.' }
 ];
+
+// ── Regime Signal Composite ──────────────────────────────────────────────────
+// After loading regime pairs, compute a composite directional score.
+// Each pair contributes +1 (Risk-On: ratio > 20D SMA) or -1 (Risk-Off: ratio < SMA).
+// RSP/SPY and IWM/SPY get 2x weight as primary breadth indicators.
+// Score is normalized to [0, 100] and stored in window._regimeSignalScore
+// for consumption by tlPillar_SectorRotation and the master verdict.
+// ─────────────────────────────────────────────────────────────────────────────
+function computeRegimeSignalComposite(pairResults) {
+  // pairResults: array of { risk: 'Risk-On'|'Risk-Off', pair: MKT_REGIME_PAIRS[i] }
+  var totalWeight = 0;
+  var weightedScore = 0;
+  var BREADTH_PAIRS = ['RSP/SPY', 'IWM/SPY'];
+  pairResults.forEach(function(r) {
+    var label = r.pair.a + '/' + r.pair.b;
+    var w = BREADTH_PAIRS.indexOf(label) >= 0 ? 2 : 1; // breadth pairs weighted 2x
+    totalWeight += w;
+    weightedScore += (r.risk === 'Risk-On' ? 1 : -1) * w;
+  });
+  // Normalize to [0, 100]: score of totalWeight = 100, -totalWeight = 0
+  var normalized = totalWeight > 0 ? ((weightedScore + totalWeight) / (2 * totalWeight)) * 100 : 50;
+  window._regimeSignalScore = normalized;
+  window._regimeSignalDetail = pairResults.map(function(r){ return r.pair.a+'/'+r.pair.b+': '+r.risk; }).join(' | ');
+  return normalized;
+}
 
 async function mktLoadRegime() {
   var emptyEl = document.getElementById('mktRegimeEmpty');
-  emptyEl.innerHTML = '<span class="spinner"></span> Loading 12 tickers for ratio pairs...';
+  emptyEl.innerHTML = '<span class="spinner"></span> Loading tickers for ratio pairs...';
   var needed = {};
   for (var p=0;p<MKT_REGIME_PAIRS.length;p++) { needed[MKT_REGIME_PAIRS[p].a] = 1; needed[MKT_REGIME_PAIRS[p].b] = 1; }
   var tickers = Object.keys(needed);
@@ -11241,16 +11371,80 @@ async function mktLoadRegime() {
       data[tickers[i]] = (d.points || []).filter(function(p){ return p.close != null; }).map(function(p){ return { date: p.date.slice(0,10), close: p.close }; });
     } catch(e) { errors.push(tickers[i]); }
   }
-  if (errors.length) { emptyEl.innerHTML = 'Failed to load: ' + errors.join(', ') + '. <button class="btn btn-sm" onclick="mktLoadRegime()">Retry</button>'; return; }
+  if (errors.length > 4) { emptyEl.innerHTML = 'Failed to load: ' + errors.join(', ') + '. <button class="btn btn-sm" onclick="mktLoadRegime()">Retry</button>'; return; }
   emptyEl.style.display = 'none';
   var grid = document.getElementById('mktRegimeGrid');
-  grid.style.display = 'grid';
-  grid.style.gridTemplateColumns = 'repeat(auto-fit, minmax(340px, 1fr))';
-  grid.style.gap = '14px';
+  grid.style.display = 'block';
   grid.innerHTML = '';
 
+  // First pass: compute all pair ratios and Risk-On/Risk-Off classification
+  var pairResults = [];
   for (var pi=0; pi<MKT_REGIME_PAIRS.length; pi++) {
     var pair = MKT_REGIME_PAIRS[pi];
+    if (!data[pair.a] || !data[pair.b]) { pairResults.push({ pair: pair, risk: 'Risk-Off', cur: null, curSMA: null, ratio: [], sma: [], dates: [], error: true }); continue; }
+    var mapA = {}; data[pair.a].forEach(function(p){ mapA[p.date]=p.close; });
+    var mapB = {}; data[pair.b].forEach(function(p){ mapB[p.date]=p.close; });
+    var dates = data[pair.a].map(function(p){return p.date;}).filter(function(d){ return mapB[d]; });
+    dates.sort();
+    var ratio = dates.map(function(d){ return mapA[d]/mapB[d]; });
+    var sma63 = []; // 63-day SMA to reduce noise (vs. prior 20D — monthly smoothing)
+    for (var k=0;k<ratio.length;k++) {
+      if (k < 62) { sma63.push(null); continue; }
+      var ss = 0; for (var kk=k-62;kk<=k;kk++) ss += ratio[kk];
+      sma63.push(ss/63);
+    }
+    var cur = ratio[ratio.length-1];
+    var curSMA = sma63[sma63.length-1];
+    var risk = curSMA != null && cur > curSMA ? 'Risk-On' : 'Risk-Off';
+    pairResults.push({ pair: pair, risk: risk, cur: cur, curSMA: curSMA, ratio: ratio, sma: sma63, dates: dates });
+  }
+
+  // Compute composite and store for master verdict
+  var compositeScore = computeRegimeSignalComposite(pairResults);
+  var riskOnCount = pairResults.filter(function(r){ return r.risk === 'Risk-On'; }).length;
+  var compositeColor = compositeScore >= 65 ? C.success : compositeScore >= 40 ? '#8B6914' : C.danger;
+  var compositeLabel = compositeScore >= 65 ? 'Risk-On Dominant' : compositeScore >= 40 ? 'Mixed / Transitioning' : 'Risk-Off Dominant';
+
+  // ── Composite Header ──
+  var headerHtml = '<div style="background:var(--navy);color:#fff;border-radius:4px;padding:12px 16px;margin-bottom:14px;display:flex;align-items:center;gap:20px;flex-wrap:wrap;">'
+    + '<div style="flex:1;min-width:200px;">'
+    + '<div style="font-size:10px;text-transform:uppercase;letter-spacing:.8px;opacity:.7;margin-bottom:2px;">Cross-Asset Regime Composite</div>'
+    + '<div style="font-size:22px;font-weight:800;">' + compositeLabel + '</div>'
+    + '<div style="font-size:11px;opacity:.75;margin-top:2px;">' + riskOnCount + ' of ' + pairResults.length + ' pairs in Risk-On &middot; Breadth signals weighted 2×</div>'
+    + '</div>'
+    + '<div style="text-align:right;">'
+    + '<div style="font-size:11px;opacity:.7;margin-bottom:2px;">Regime Score</div>'
+    + '<div style="font-size:36px;font-weight:800;color:' + compositeColor + ';">' + Math.round(compositeScore) + '</div>'
+    + '<div style="font-size:10px;opacity:.6;">/ 100 (RSP/SPY + IWM/SPY weighted 2×)</div>'
+    + '</div>'
+    + '</div>'
+    // Breadth spotlight
+    + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px;">';
+
+  // Spotlight: RSP/SPY breadth and CPER/GLD
+  ['RSP/SPY', 'CPER/GLD'].forEach(function(label) {
+    var pr = pairResults.find(function(r){ return r.pair.a+'/'+r.pair.b === label; });
+    if (!pr) return;
+    var col = pr.risk === 'Risk-On' ? C.success : C.danger;
+    var pctVsSMA = pr.cur && pr.curSMA ? ((pr.cur - pr.curSMA) / pr.curSMA * 100) : null;
+    // 3-month vs 12-month ratio change
+    var r3m = pr.ratio.length >= 63 ? ((pr.ratio[pr.ratio.length-1] / pr.ratio[pr.ratio.length-64]) - 1) * 100 : null;
+    var r12m = pr.ratio.length >= 252 ? ((pr.ratio[pr.ratio.length-1] / pr.ratio[pr.ratio.length-253]) - 1) * 100 : null;
+    var spotTitle = label === 'RSP/SPY' ? '🟦 Market Broadening Signal' : '🟤 Growth vs. Safe-Haven (Dr. Copper)';
+    headerHtml += '<div style="background:var(--panel);border:1px solid var(--border);border-left:3px solid '+col+';border-radius:4px;padding:10px 14px;">'
+      + '<div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--text-sec);margin-bottom:4px;">'+spotTitle+'</div>'
+      + '<div style="font-size:13px;font-weight:700;color:'+col+';">'+pr.risk+'</div>'
+      + '<div style="font-size:11px;color:var(--text-sec);margin-top:4px;">'
+      + 'Ratio vs 63D SMA: ' + (pctVsSMA != null ? (pctVsSMA >= 0 ? '+' : '') + pctVsSMA.toFixed(1) + '%' : '—') + ' &nbsp;|&nbsp; '
+      + '3M chg: ' + (r3m != null ? (r3m >= 0 ? '+' : '') + r3m.toFixed(1) + '%' : '—') + ' &nbsp;|&nbsp; '
+      + '12M chg: ' + (r12m != null ? (r12m >= 0 ? '+' : '') + r12m.toFixed(1) + '%' : '—')
+      + '</div>'
+      + '<div style="font-size:10.5px;color:var(--text-sec);margin-top:5px;line-height:1.4;">'+pr.pair.interp+'</div>'
+      + '</div>';
+  });
+  headerHtml += '</div>';
+  headerHtml += '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:14px;" id="mktRegimeGridInner"></div>';
+  grid.innerHTML = headerHtml;
     // Align dates
     var mapA = {}; data[pair.a].forEach(function(p){ mapA[p.date]=p.close; });
     var mapB = {}; data[pair.b].forEach(function(p){ mapB[p.date]=p.close; });
@@ -11284,24 +11478,39 @@ async function mktLoadRegime() {
       + '<div style="height:160px;padding:4px 8px 8px;"><canvas id="'+canvasId+'"></canvas></div>'
       + '<div style="padding:6px 10px;font-size:10.5px;color:var(--text-sec);border-top:1px solid var(--border);background:var(--panel);line-height:1.5;">'+pair.interp+'</div>'
       + '</div>';
-    grid.innerHTML += html;
+  // ── Render individual pair cards into inner grid ──
+  var innerGrid = document.getElementById('mktRegimeGridInner');
+  for (var pi=0; pi<pairResults.length; pi++) {
+    var pr = pairResults[pi];
+    var pair = pr.pair;
+    var cur = pr.cur, curSMA = pr.curSMA, ratio = pr.ratio, sma = pr.sma, dates = pr.dates;
+    var regime = pr.risk;
+    var regimeColor = regime === 'Risk-On' ? C.success : C.danger;
+    var prev = ratio.length >= 2 ? ratio[ratio.length-2] : cur;
+    var direction = cur > prev ? '▲' : (cur < prev ? '▼' : '●');
+    var pctVsSMA = cur && curSMA ? ((cur - curSMA) / curSMA * 100) : null;
+    var canvasId = 'mktReg_'+pi;
+    var html = '<div style="background:var(--bg);border:1px solid var(--border);border-left:3px solid '+regimeColor+';border-radius:4px;overflow:hidden;">'
+      + '<div style="background:var(--navy);color:var(--text-on-dark);padding:6px 10px;font-size:11.5px;font-weight:700;display:flex;justify-content:space-between;align-items:center;">'
+      + '<span>'+pair.a+' / '+pair.b+' &mdash; '+pair.label+'</span>'
+      + '<span style="font-size:10px;background:'+regimeColor+';padding:2px 8px;border-radius:10px;">'+regime+'</span>'
+      + '</div>'
+      + '<div style="padding:8px 10px;display:flex;justify-content:space-between;align-items:center;font-size:11px;">'
+      + '<div><span style="color:var(--text-sec);">Current:</span> <strong>'+(cur != null ? cur.toFixed(3) : '—')+'</strong> <span style="color:'+regimeColor+';font-weight:700;">'+direction+'</span></div>'
+      + '<div style="color:var(--text-sec);">63D SMA: '+(curSMA != null ? curSMA.toFixed(3) : '-')+' &nbsp; <span style="color:'+regimeColor+';">'+(pctVsSMA != null ? (pctVsSMA >= 0 ? '+' : '') + pctVsSMA.toFixed(1) + '% vs SMA' : '')+'</span></div>'
+      + '</div>'
+      + '<div style="height:160px;padding:4px 8px 8px;"><canvas id="'+canvasId+'"></canvas></div>'
+      + '<div style="padding:6px 10px;font-size:10.5px;color:var(--text-sec);border-top:1px solid var(--border);background:var(--panel);line-height:1.5;">'+pair.interp+'</div>'
+      + '</div>';
+    innerGrid.innerHTML += html;
   }
-  // After injecting all cards, render charts
-  for (var ri=0; ri<MKT_REGIME_PAIRS.length; ri++) {
+
+  // ── Render charts ──
+  for (var ri=0; ri<pairResults.length; ri++) {
     (function(ri){
-      var pair = MKT_REGIME_PAIRS[ri];
-      var mapA = {}; data[pair.a].forEach(function(p){ mapA[p.date]=p.close; });
-      var mapB = {}; data[pair.b].forEach(function(p){ mapB[p.date]=p.close; });
-      var dates = data[pair.a].map(function(p){return p.date;}).filter(function(d){ return mapB[d]; });
-      dates.sort();
-      var ratio = dates.map(function(d){ return mapA[d]/mapB[d]; });
-      var sma = [];
-      for (var k=0;k<ratio.length;k++) {
-        if (k < 19) { sma.push(null); continue; }
-        var ss = 0; for (var kk=k-19;kk<=k;kk++) ss += ratio[kk];
-        sma.push(ss/20);
-      }
-      // Shaded above/below SMA
+      var pr = pairResults[ri];
+      if (pr.error || !pr.ratio.length) return;
+      var ratio = pr.ratio, sma = pr.sma, dates = pr.dates;
       var aboveData = ratio.map(function(v,idx){ return sma[idx] != null && v >= sma[idx] ? v : null; });
       var belowData = ratio.map(function(v,idx){ return sma[idx] != null && v < sma[idx] ? v : null; });
       var canvas = document.getElementById('mktReg_'+ri);
@@ -11313,7 +11522,7 @@ async function mktLoadRegime() {
           labels: dates,
           datasets: [
             { label: 'Ratio', data: ratio, borderColor: C.navy, borderWidth: 1.5, pointRadius: 0, fill: false, tension: 0.1 },
-            { label: '20D SMA', data: sma, borderColor: C.blue, borderWidth: 1.2, borderDash: [5,3], pointRadius: 0, fill: false },
+            { label: '63D SMA', data: sma, borderColor: C.blue, borderWidth: 1.2, borderDash: [5,3], pointRadius: 0, fill: false },
             { label: 'Risk-On', data: aboveData, borderColor: 'transparent', backgroundColor: 'rgba(46,125,82,0.12)', pointRadius: 0, fill: '+1' },
             { label: 'Risk-Off', data: belowData, borderColor: 'transparent', backgroundColor: 'rgba(139,42,42,0.12)', pointRadius: 0, fill: 'origin' }
           ]
@@ -11328,6 +11537,192 @@ async function mktLoadRegime() {
         }
       });
     })(ri);
+  }
+}
+
+// ═══ MARKET BROADENING ═══
+var _mktBroadeningCharts = {};
+async function mktLoadBroadening() {
+  var resultEl = document.getElementById('mktBroadeningResult');
+  resultEl.innerHTML = '<span class="spinner"></span> Loading RSP, IWM, SPY...';
+  try {
+    var [rspD, iwmD, spyD] = await Promise.all([
+      fetchChart('RSP', '2y', '1d'),
+      fetchChart('IWM', '2y', '1d'),
+      fetchChart('SPY', '2y', '1d')
+    ]);
+    function toMap(pts) {
+      var m = {};
+      (pts || []).filter(function(p){ return p.close != null; }).forEach(function(p){ m[p.date.slice(0,10)] = p.close; });
+      return m;
+    }
+    var rspM = toMap(rspD.points), iwmM = toMap(iwmD.points), spyM = toMap(spyD.points);
+    var dates = Object.keys(spyM).filter(function(d){ return rspM[d] && iwmM[d]; }).sort();
+
+    function sma63(arr) {
+      return arr.map(function(v, i) {
+        if (i < 62) return null;
+        var s = 0; for (var k = i-62; k <= i; k++) s += arr[k];
+        return s / 63;
+      });
+    }
+
+    var rspSpyRatio = dates.map(function(d){ return rspM[d] / spyM[d]; });
+    var iwmSpyRatio = dates.map(function(d){ return iwmM[d] / spyM[d]; });
+    var rspSmooth = sma63(rspSpyRatio);
+    var iwmSmooth = sma63(iwmSpyRatio);
+
+    var rspCur = rspSpyRatio[rspSpyRatio.length-1];
+    var rspSMA = rspSmooth[rspSmooth.length-1];
+    var iwmCur = iwmSpyRatio[iwmSpyRatio.length-1];
+    var iwmSMA = iwmSmooth[iwmSmooth.length-1];
+    var rsp3m = rspSpyRatio.length >= 63 ? ((rspCur / rspSpyRatio[rspSpyRatio.length-64]) - 1) * 100 : null;
+    var iwm3m = iwmSpyRatio.length >= 63 ? ((iwmCur / iwmSpyRatio[iwmSpyRatio.length-64]) - 1) * 100 : null;
+    var rsp12m = rspSpyRatio.length >= 252 ? ((rspCur / rspSpyRatio[rspSpyRatio.length-253]) - 1) * 100 : null;
+
+    var rspAboveSMA = rspSMA != null && rspCur > rspSMA;
+    var iwmAboveSMA = iwmSMA != null && iwmCur > iwmSMA;
+    var broadeningSignal = rspAboveSMA && iwmAboveSMA ? 'Broadening' : (!rspAboveSMA && !iwmAboveSMA ? 'Narrowing' : 'Mixed');
+    var signalColor = broadeningSignal === 'Broadening' ? C.success : broadeningSignal === 'Narrowing' ? C.danger : '#8B6914';
+
+    resultEl.innerHTML = '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;margin-bottom:14px;">'
+      + '<div style="background:var(--panel);border:1px solid var(--border);border-left:4px solid '+signalColor+';border-radius:4px;padding:10px 14px;">'
+      + '<div style="font-size:10px;text-transform:uppercase;letter-spacing:.6px;color:var(--text-sec);margin-bottom:4px;">Broadening Signal</div>'
+      + '<div style="font-size:20px;font-weight:800;color:'+signalColor+';">'+broadeningSignal+'</div>'
+      + '<div style="font-size:11px;color:var(--text-sec);margin-top:4px;">RSP/SPY '+(rspAboveSMA ? '▲ above' : '▼ below')+' 63D SMA &nbsp;·&nbsp; IWM/SPY '+(iwmAboveSMA ? '▲ above' : '▼ below')+' 63D SMA</div>'
+      + '</div>'
+      + '<div style="background:var(--panel);border:1px solid var(--border);border-radius:4px;padding:10px 14px;">'
+      + '<div style="font-size:10px;text-transform:uppercase;letter-spacing:.6px;color:var(--text-sec);">RSP/SPY Ratio</div>'
+      + '<div style="font-size:15px;font-weight:700;">' + rspCur.toFixed(4) + '</div>'
+      + '<div style="font-size:11px;color:var(--text-sec);">3M: '+(rsp3m != null ? (rsp3m >= 0 ? '+' : '') + rsp3m.toFixed(1) + '%' : '—')+' &nbsp;·&nbsp; 12M: '+(rsp12m != null ? (rsp12m >= 0 ? '+' : '') + rsp12m.toFixed(1) + '%' : '—')+'</div>'
+      + '</div>'
+      + '<div style="background:var(--panel);border:1px solid var(--border);border-radius:4px;padding:10px 14px;">'
+      + '<div style="font-size:10px;text-transform:uppercase;letter-spacing:.6px;color:var(--text-sec);">IWM/SPY Ratio</div>'
+      + '<div style="font-size:15px;font-weight:700;">' + iwmCur.toFixed(4) + '</div>'
+      + '<div style="font-size:11px;color:var(--text-sec);">3M: '+(iwm3m != null ? (iwm3m >= 0 ? '+' : '') + iwm3m.toFixed(1) + '%' : '—')+'</div>'
+      + '</div>'
+      + '</div>';
+
+    // Render charts
+    document.getElementById('mktRspSpyWrap').style.display = 'block';
+    document.getElementById('mktIwmSpyWrap').style.display = 'block';
+    function renderBroadeningChart(canvasId, labels, ratio, smaSmooth, title) {
+      var ctx = document.getElementById(canvasId);
+      if (!ctx) return;
+      if (_mktBroadeningCharts[canvasId]) _mktBroadeningCharts[canvasId].destroy();
+      _mktBroadeningCharts[canvasId] = new Chart(ctx.getContext('2d'), {
+        type: 'line',
+        data: { labels: labels, datasets: [
+          { label: title, data: ratio, borderColor: C.navy, borderWidth: 1.5, pointRadius: 0, fill: false, tension: 0.1 },
+          { label: '63D SMA', data: smaSmooth, borderColor: C.blue, borderWidth: 1.5, borderDash: [5,3], pointRadius: 0, fill: false }
+        ]},
+        options: { responsive: true, maintainAspectRatio: false,
+          plugins: { legend: { display: true, labels: { font: { size: 10 }, color: C.textSec } }, tooltip: chartTooltip },
+          scales: {
+            x: { grid: chartGrid, ticks: Object.assign({}, chartTicks, { maxTicksLimit: 5, font: { size: 9 }, autoSkip: true }) },
+            y: { grid: chartGrid, ticks: Object.assign({}, chartTicks, { font: { size: 9 }, callback: function(v){ return v.toFixed(3); } }) }
+          }
+        }
+      });
+    }
+    renderBroadeningChart('mktRspSpyChart', dates, rspSpyRatio, rspSmooth, 'RSP/SPY');
+    renderBroadeningChart('mktIwmSpyChart', dates, iwmSpyRatio, iwmSmooth, 'IWM/SPY');
+  } catch(e) {
+    document.getElementById('mktBroadeningResult').innerHTML = '<span style="color:var(--danger);">Error: ' + e.message + '</span>';
+  }
+}
+
+// ═══ SECTOR LIQUIDITY FLOW ═══
+async function mktLoadSectorFlow() {
+  var resultEl = document.getElementById('mktSectorFlowResult');
+  resultEl.innerHTML = '<span class="spinner"></span> Loading 11 sectors + SPY...';
+  var sectors = [
+    { t: 'XLK', name: 'Technology', group: 'Growth' },
+    { t: 'XLY', name: 'Consumer Disc.', group: 'Cyclical' },
+    { t: 'XLI', name: 'Industrials', group: 'Cyclical' },
+    { t: 'XLF', name: 'Financials', group: 'Cyclical' },
+    { t: 'XLE', name: 'Energy', group: 'Cyclical' },
+    { t: 'XLB', name: 'Materials', group: 'Cyclical' },
+    { t: 'XLRE', name: 'Real Estate', group: 'Cyclical' },
+    { t: 'XLC', name: 'Comm. Services', group: 'Growth' },
+    { t: 'XLP', name: 'Consumer Staples', group: 'Defensive' },
+    { t: 'XLV', name: 'Health Care', group: 'Defensive' },
+    { t: 'XLU', name: 'Utilities', group: 'Defensive' }
+  ];
+  var PERIODS = [21, 63]; // 1M = 21 trading days, 3M = 63
+
+  try {
+    var data = {};
+    await Promise.all(sectors.concat([{t:'SPY'}]).map(async function(s) {
+      var d = await fetchChart(s.t, '6mo', '1d');
+      data[s.t] = (d.points || []).filter(function(p){ return p.close != null; });
+    }));
+
+    function pctRet(pts, nDays) {
+      if (!pts || pts.length < nDays + 1) return null;
+      var c = pts[pts.length-1].close;
+      var p = pts[pts.length - nDays - 1].close;
+      return p > 0 ? (c / p - 1) * 100 : null;
+    }
+
+    var spyPts = data['SPY'];
+    var results = sectors.map(function(s) {
+      var pts = data[s.t];
+      var r1m = pctRet(pts, 21), spy1m = pctRet(spyPts, 21);
+      var r3m = pctRet(pts, 63), spy3m = pctRet(spyPts, 63);
+      var ex1m = (r1m != null && spy1m != null) ? r1m - spy1m : null;
+      var ex3m = (r3m != null && spy3m != null) ? r3m - spy3m : null;
+      // Composite excess: 40% 1M + 60% 3M
+      var composite = (ex1m != null && ex3m != null) ? 0.4 * ex1m + 0.6 * ex3m
+                    : (ex3m != null ? ex3m : (ex1m != null ? ex1m : null));
+      return { ticker: s.t, name: s.name, group: s.group, ex1m: ex1m, ex3m: ex3m, composite: composite };
+    });
+
+    // Sort by composite descending
+    results.sort(function(a, b) { return (b.composite || -99) - (a.composite || -99); });
+
+    // Assign flow labels
+    results.forEach(function(r, i) {
+      r.flow = i < 4 ? 'Inflow' : i >= 7 ? 'Outflow' : 'Neutral';
+      r.flowColor = r.flow === 'Inflow' ? C.success : r.flow === 'Outflow' ? C.danger : '#8B6914';
+    });
+
+    // Narrative: identify dominant rotation theme
+    var inflowGroups = results.filter(function(r){ return r.flow === 'Inflow'; }).map(function(r){ return r.group; });
+    var outflowGroups = results.filter(function(r){ return r.flow === 'Outflow'; }).map(function(r){ return r.name; });
+    function mode(arr) { var counts = {}; arr.forEach(function(v){ counts[v] = (counts[v]||0)+1; }); return Object.keys(counts).sort(function(a,b){return counts[b]-counts[a];})[0]; }
+    var inflowTheme = mode(inflowGroups) || '—';
+    var narrativeMap = {
+      'Defensive': 'Defensive rotation — capital moving to safety. Consistent with Risk-Off / late-cycle positioning.',
+      'Cyclical': 'Cyclical inflow — growth and reflation trade active. Early/mid-cycle signal.',
+      'Growth': 'Growth leadership — tech/comms leading. Risk appetite elevated but watch for concentration.'
+    };
+    var narrative = narrativeMap[inflowTheme] || 'Mixed rotation — no dominant theme identified.';
+
+    var html = '<div style="background:var(--panel);border:1px solid var(--border);border-radius:4px;padding:10px 14px;margin-bottom:12px;font-size:12px;">'
+      + '<strong>Rotation Narrative:</strong> ' + narrative
+      + ' <span style="color:var(--text-sec);">Inflows concentrated in: ' + inflowTheme + ' sectors.</span>'
+      + ' <span style="color:var(--text-sec);">Outflows from: ' + outflowGroups.join(', ') + '.</span>'
+      + '</div>'
+      + '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:8px;">';
+
+    results.forEach(function(r) {
+      html += '<div style="background:var(--bg);border:1px solid var(--border);border-left:4px solid '+r.flowColor+';border-radius:4px;padding:8px 12px;">'
+        + '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3px;">'
+        + '<strong style="font-size:12px;">'+r.ticker+'</strong>'
+        + '<span style="font-size:10px;background:'+r.flowColor+';color:#fff;padding:1px 7px;border-radius:10px;">'+r.flow+'</span>'
+        + '</div>'
+        + '<div style="font-size:10.5px;color:var(--text-sec);margin-bottom:4px;">'+r.name+'</div>'
+        + '<div style="font-size:11px;display:flex;gap:12px;">'
+        + '<span>1M vs SPY: <strong style="color:'+(r.ex1m != null && r.ex1m >= 0 ? C.success : C.danger)+';">'+(r.ex1m != null ? (r.ex1m >= 0 ? '+' : '') + r.ex1m.toFixed(1) + '%' : '—')+'</strong></span>'
+        + '<span>3M vs SPY: <strong style="color:'+(r.ex3m != null && r.ex3m >= 0 ? C.success : C.danger)+';">'+(r.ex3m != null ? (r.ex3m >= 0 ? '+' : '') + r.ex3m.toFixed(1) + '%' : '—')+'</strong></span>'
+        + '</div>'
+        + '</div>';
+    });
+    html += '</div>';
+    resultEl.innerHTML = html;
+  } catch(e) {
+    resultEl.innerHTML = '<span style="color:var(--danger);">Error: ' + e.message + '</span>';
   }
 }
 
@@ -17029,7 +17424,13 @@ async function tlPillar_CrossAssetMomentum() {
 }
 
 // ─────────────────────────────────────────────
-// PILLAR 7 — Sector Rotation (Cyclicals vs Defensives)
+// PILLAR 7 — Sector Rotation + Cross-Asset Regime Composite
+// If the regime signal composite (from mktLoadRegime) is available,
+// blend it 50/50 with the sector momentum signal. Both capture the same
+// underlying regime but via different lenses:
+//   Sector momentum → internal leadership shift (1-2 week signal)
+//   Cross-asset composite → structural positioning across 11 pairs (monthly signal)
+// The blend provides a more stable, multi-timeframe regime read.
 // ─────────────────────────────────────────────
 async function tlPillar_SectorRotation() {
   try {
@@ -17052,10 +17453,25 @@ async function tlPillar_SectorRotation() {
     var def60 = avgRet(def, 60);
     if (cyc60 == null || def60 == null) return { score: null, detail: 'unavailable', subdetail: '' };
     var spread = cyc60 - def60;
-    // Strong cyclical leadership = high score
-    var score = Math.max(0, Math.min(100, 50 + spread * 4));
-    var lbl = score >= 65 ? 'Cyclicals Leading' : score >= 45 ? 'Mixed' : 'Defensives Leading';
-    return { score: score, detail: lbl, subdetail: 'Cyc ' + (cyc60 >= 0 ? '+' : '') + cyc60.toFixed(1) + '% vs Def ' + (def60 >= 0 ? '+' : '') + def60.toFixed(1) + '%' };
+    var sectorScore = Math.max(0, Math.min(100, 50 + spread * 4));
+
+    // Blend with cross-asset composite if available (populated by mktLoadRegime)
+    var regScore = window._regimeSignalScore != null ? window._regimeSignalScore : null;
+    var finalScore, blendNote;
+    if (regScore != null) {
+      finalScore = sectorScore * 0.50 + regScore * 0.50;
+      blendNote = 'Sector Momentum ' + sectorScore.toFixed(0) + ' | Cross-Asset Regime ' + regScore.toFixed(0) + ' → Blended';
+    } else {
+      finalScore = sectorScore;
+      blendNote = 'Sector momentum only (load Cross-Asset Regime Signals for enhanced composite)';
+    }
+
+    var lbl = finalScore >= 65 ? 'Cyclicals Leading' : finalScore >= 45 ? 'Mixed' : 'Defensives Leading';
+    return {
+      score: finalScore,
+      detail: lbl,
+      subdetail: 'Cyc ' + (cyc60 >= 0 ? '+' : '') + cyc60.toFixed(1) + '% vs Def ' + (def60 >= 0 ? '+' : '') + def60.toFixed(1) + '% | ' + blendNote
+    };
   } catch (e) { return { score: null, detail: 'unavailable', subdetail: '' }; }
 }
 
