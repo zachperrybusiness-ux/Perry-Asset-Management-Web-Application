@@ -3120,67 +3120,111 @@ body.view-mobile .logo-icon { width: 22px !important; height: 22px !important; f
       <strong>How this relates to the Portfolio State on Cross-Asset Analysis:</strong><br>
       The <strong>Macro Regime Verdict</strong> here (Early / Mid / Late Cycle / Contraction) uses FRED economic data and operates on a 3–12 month economic cycle frequency. The <strong>Portfolio State</strong> on Cross-Asset Analysis (Leveraged / Growth / Neutral / Drawdown) uses market price action (VIX, SPY momentum) and operates on a shorter tactical frequency. A "Mid-Cycle" economy can simultaneously produce a "Positioned for Drawdown" portfolio signal when equity valuations are stretched — markets lead the economy by 6–12 months on average. Use the Macro Regime for strategic sector rotation and the Portfolio State for tactical position sizing.
     </div>
-    <!-- Single Unified Macro Table — all pillars, all indicators -->
-    <div class="card" id="macroLiveTableCard">
-      <div class="card-title">Macro Indicator Dashboard — Live FRED Data <span class="help-icon" title="Real-time economic indicators from the St. Louis Fed (FRED). 24 indicators across 6 pillars (Growth, Labor, Inflation, Monetary Policy, Fiscal Policy, Global Liquidity) with traffic-light scoring vs. historical thresholds.">?</span></div>
-      <div class="card-body" style="padding:0;" id="macroLiveTableBody">
-        <div style="padding:40px;text-align:center;">
-          <span class="spinner"></span><br><br>
-          <strong style="font-size:14px;">Loading live FRED indicators...</strong><br>
-          <span style="font-size:12px;color:var(--text-sec);">Pulling 24 indicators across 6 categories from the Federal Reserve...</span>
-        </div>
-      </div>
-      <div class="card-sources"><strong>Sources:</strong><br>&#8226; Data provided by FRED&reg;, Federal Reserve Bank of St. Louis &mdash; <a href="https://fred.stlouisfed.org" target="_blank" style="color:var(--navy);">fred.stlouisfed.org</a></div>
-    </div>
-    <!-- CFA Business Cycle Guide -->
-    <div id="macroCycleGuide" style="display:none;"></div>
-    <!-- Business Cycle Curve Chart -->
-    <div class="card" id="businessCycleCard">
-      <div class="card-title">Business Cycle Curve <span class="help-icon" title="The 4-phase business cycle from CFA economics curriculum: Early Expansion → Mid Expansion → Late Expansion / Peak → Contraction. Each phase favors different sectors and asset classes; the dot shows the model's current placement.">?</span></div>
-      <div class="card-body">
-        <div style="position:relative;height:420px;"><canvas id="businessCycleChart"></canvas></div>
-      </div>
-      <div class="card-sources"><strong>Sources:</strong><br>&#8226; FRED&reg; Macro Regime Scorecard &bull; CFA Business Cycle Framework</div>
+
+    <!-- ═══════════ MACRO PAGE TABS ═══════════ -->
+    <div class="pf-tabs" style="margin:0 0 0 0;">
+      <button class="pf-tab active" data-macrotab="dashboard"  onclick="macroShowTab('dashboard')">Macro Indicator Dashboard</button>
+      <button class="pf-tab"        data-macrotab="biz"        onclick="macroShowTab('biz')">Business Cycle</button>
+      <button class="pf-tab"        data-macrotab="breakdown"  onclick="macroShowTab('breakdown')">Economic Cycle Breakdown</button>
+      <button class="pf-tab"        data-macrotab="yieldcurve" onclick="macroShowTab('yieldcurve')">Yield Curve</button>
+      <button class="pf-tab"        data-macrotab="lic"        onclick="macroShowTab('lic')">Leading Indicator Composite</button>
     </div>
 
-    <!-- FULL YIELD CURVE VISUALIZATION -->
-    <div class="card">
-      <div class="card-title">Full Treasury Yield Curve &mdash; Live + Historical Snapshots <span class="help-icon" title="The yield on US Treasuries at every maturity from 1 month to 30 years. Normally upward-sloping (longer = higher yield). When inverted (short rates above long rates), it has historically preceded every US recession in the past 50 years.">?</span></div>
-      <div class="card-body">
-        <p style="font-size:12px;color:var(--text-sec);margin-bottom:10px;">All 11 constant-maturity Treasury points from 1M to 30Y. Overlay historical snapshots to see how the curve has re-shaped. <strong>Bull steepening</strong> (short rates falling fast, long rates stable) signals expected Fed cuts. <strong>Bear flattening</strong> (short rates rising to long rates) signals Fed hiking pressure. Inversion signals recession expectation.</p>
-        <div class="form-row" style="margin-bottom:10px;">
-          <div class="form-group"><label>Compare Periods</label>
-            <select id="ycOverlay" onchange="ycRender()">
-              <option value="current">Current Only</option>
-              <option value="1m">+ 1 Month Ago</option>
-              <option value="3m" selected>+ 3 Months Ago</option>
-              <option value="6m">+ 6 Months Ago</option>
-              <option value="1y">+ 1 Year Ago</option>
-              <option value="all">+ All Snapshots</option>
-            </select>
+    <!-- ── TAB: Macro Indicator Dashboard ── -->
+    <div class="pf-tab-content active" id="macrotab-dashboard">
+      <div class="card" id="macroLiveTableCard">
+        <div class="card-title">Macro Indicator Dashboard — Live FRED Data <span class="help-icon" title="Real-time economic indicators from the St. Louis Fed (FRED). 24 indicators across 6 pillars (Growth, Labor, Inflation, Monetary Policy, Fiscal Policy, Global Liquidity) with traffic-light scoring vs. historical thresholds.">?</span></div>
+        <div class="card-body" style="padding:0;" id="macroLiveTableBody">
+          <div style="padding:40px;text-align:center;">
+            <span class="spinner"></span><br><br>
+            <strong style="font-size:14px;">Loading live FRED indicators...</strong><br>
+            <span style="font-size:12px;color:var(--text-sec);">Pulling 24 indicators across 6 categories from the Federal Reserve...</span>
           </div>
-          <button class="btn" onclick="ycLoad()">Refresh Curve</button>
         </div>
-        <div id="ycStats" class="chart-stats" style="margin-bottom:12px;"></div>
-        <div class="chart-wrap" style="height:340px;"><canvas id="ycChart"></canvas></div>
-        <p style="font-size:12px;color:var(--text-sec);margin:14px 0 6px;font-weight:600;">Key Yield Spreads &mdash; Historical</p>
-        <div class="chart-wrap" style="height:220px;"><canvas id="ycSpreadsChart"></canvas></div>
-      </div>
-      <div class="card-sources">
-        <strong>Sources:</strong> FRED&reg; Federal Reserve Bank of St. Louis &mdash; series DGS1MO, DGS3MO, DGS6MO, DGS1, DGS2, DGS3, DGS5, DGS7, DGS10, DGS20, DGS30 (constant-maturity Treasury) &bull; Spreads: T10Y2Y, T10Y3M, DGS30-DGS2
+        <div class="card-sources"><strong>Sources:</strong><br>&#8226; Data provided by FRED&reg;, Federal Reserve Bank of St. Louis &mdash; <a href="https://fred.stlouisfed.org" target="_blank" style="color:var(--navy);">fred.stlouisfed.org</a></div>
       </div>
     </div>
-    <div id="macroResults"></div>
 
-    <!-- PROPRIETARY LEADING INDICATOR COMPOSITE -->
-    <div class="card">
-      <div class="card-title">Proprietary Leading Indicator Composite (Tiered Framework) <span class="help-icon" title="Indicators ranked by how far in advance they signal economic turns. Tier 1 (6–12 month lead): yield curve, building permits, JOLTS openings. Tier 2 (4–6 month lead): claims, consumer expectations. Tier 3 (2–3 month lead): ISM, retail sales, IP. Divergence between tiers is where macro alpha is generated.">?</span></div>
-      <div class="card-body">
-        <p style="font-size:12px;color:var(--text-sec);margin-bottom:12px;">Based on your framework's Section 5.2 tiered structure. <strong>Alpha insight:</strong> When Tier 1 (6-12 month lead) deteriorates while Tier 3 still looks solid → early de-risk. When Tier 1 recovers while Tier 3 still looks weak → early re-risk. This lag structure is where macro alpha is generated.</p>
-        <div id="licContent" style="text-align:center;color:var(--text-sec);padding:16px;"><span class="spinner"></span> Loading FRED data for composite...</div>
-        <div class="chart-wrap" style="height:220px;margin-top:14px;display:none;" id="licChartWrap"><canvas id="licChart"></canvas></div>
+    <!-- ── TAB: Business Cycle ── -->
+    <div class="pf-tab-content" id="macrotab-biz">
+      <!-- CFA Business Cycle Guide — populated by loadMacroLiveTable -->
+      <div id="macroCycleGuide" style="display:none;"></div>
+      <div class="card" id="businessCycleCard">
+        <div class="card-title">Business Cycle Curve <span class="help-icon" title="The 4-phase business cycle from CFA economics curriculum: Early Expansion → Mid Expansion → Late Expansion / Peak → Contraction. Each phase favors different sectors and asset classes; the dot shows the model's current placement.">?</span></div>
+        <div class="card-body">
+          <div style="position:relative;height:420px;"><canvas id="businessCycleChart"></canvas></div>
+        </div>
+        <div class="card-sources"><strong>Sources:</strong><br>&#8226; FRED&reg; Macro Regime Scorecard &bull; CFA Business Cycle Framework</div>
       </div>
-      <div class="card-sources"><strong>Sources:</strong> FRED&reg; Federal Reserve Bank of St. Louis &bull; Tier structure from Perry Macro HF Framework v1.0 Section 5.2 &bull; CFA L3 Capital Market Expectations</div>
+    </div>
+
+    <!-- ── TAB: Economic Cycle Breakdown ── -->
+    <div class="pf-tab-content" id="macrotab-breakdown">
+      <div class="card">
+        <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
+          <span>Economic Cycle Breakdown — Where is the Pressure?
+            <span class="help-icon" title="Shows where in the economy cycle pressure is currently building or receding across Consumer, Business, Real Estate, Supply Chain, and Labor Breadth categories. Each indicator is scored from FRED data into one of 5 cycle phases: Recovery, Expansion, Neutral, Slowdown, or Contraction. Green = healthy. Amber = slowing. Red = contracting.">?</span>
+          </span>
+          <button class="btn btn-sm" onclick="regimeLoadBreakdown(true)" style="background:rgba(255,255,255,0.2);color:#fff;border:1px solid rgba(255,255,255,0.3);padding:4px 10px;border-radius:3px;cursor:pointer;font-size:11px;">Refresh</button>
+        </div>
+        <div class="card-body" style="padding:0;">
+          <div id="cycleBreakdownResult" style="padding:32px;text-align:center;color:var(--text-sec);">
+            <span class="spinner"></span> Loading cycle breakdown data...
+          </div>
+        </div>
+        <div class="card-sources">
+          <strong>Sources:</strong> Federal Reserve Bank of St. Louis (FRED API) — data provided by FRED&reg;.
+          Consumer: UMich Sentiment, Savings Rate, PCE, Retail Sales, Real Disposable Income.
+          Business: ISM Mfg PMI, ISM Services PMI, New Mfg Orders, Corporate Profits, Mfg Employment.
+          Real Estate: Housing Starts, Building Permits, New Home Sales, Existing Home Sales, Case-Shiller.
+          Supply Chain: Unfilled Orders, Inventory/Sales Ratio, Durable Goods Orders, Industrial Production.
+          Labor Breadth: Prime-Age EPOP 25–54, Avg Weekly Hours Mfg, Overtime Hours Mfg.
+        </div>
+      </div>
+    </div>
+
+    <!-- ── TAB: Yield Curve ── -->
+    <div class="pf-tab-content" id="macrotab-yieldcurve">
+      <div class="card">
+        <div class="card-title">Full Treasury Yield Curve &mdash; Live + Historical Snapshots <span class="help-icon" title="The yield on US Treasuries at every maturity from 1 month to 30 years. Normally upward-sloping (longer = higher yield). When inverted (short rates above long rates), it has historically preceded every US recession in the past 50 years.">?</span></div>
+        <div class="card-body">
+          <p style="font-size:12px;color:var(--text-sec);margin-bottom:10px;">All 11 constant-maturity Treasury points from 1M to 30Y. Overlay historical snapshots to see how the curve has re-shaped. <strong>Bull steepening</strong> (short rates falling fast, long rates stable) signals expected Fed cuts. <strong>Bear flattening</strong> (short rates rising to long rates) signals Fed hiking pressure. Inversion signals recession expectation.</p>
+          <div class="form-row" style="margin-bottom:10px;">
+            <div class="form-group"><label>Compare Periods</label>
+              <select id="ycOverlay" onchange="ycRender()">
+                <option value="current">Current Only</option>
+                <option value="1m">+ 1 Month Ago</option>
+                <option value="3m" selected>+ 3 Months Ago</option>
+                <option value="6m">+ 6 Months Ago</option>
+                <option value="1y">+ 1 Year Ago</option>
+                <option value="all">+ All Snapshots</option>
+              </select>
+            </div>
+            <button class="btn" onclick="ycLoad()">Refresh Curve</button>
+          </div>
+          <div id="ycStats" class="chart-stats" style="margin-bottom:12px;"></div>
+          <div class="chart-wrap" style="height:340px;"><canvas id="ycChart"></canvas></div>
+          <p style="font-size:12px;color:var(--text-sec);margin:14px 0 6px;font-weight:600;">Key Yield Spreads &mdash; Historical</p>
+          <div class="chart-wrap" style="height:220px;"><canvas id="ycSpreadsChart"></canvas></div>
+        </div>
+        <div class="card-sources">
+          <strong>Sources:</strong> FRED&reg; Federal Reserve Bank of St. Louis &mdash; DGS1MO, DGS3MO, DGS6MO, DGS1, DGS2, DGS3, DGS5, DGS7, DGS10, DGS20, DGS30 &bull; Spreads: T10Y2Y, T10Y3M, DGS30-DGS2
+        </div>
+      </div>
+    </div>
+
+    <!-- ── TAB: Leading Indicator Composite ── -->
+    <div class="pf-tab-content" id="macrotab-lic">
+      <div id="macroResults"></div>
+      <div class="card">
+        <div class="card-title">Proprietary Leading Indicator Composite (Tiered Framework) <span class="help-icon" title="Indicators ranked by how far in advance they signal economic turns. Tier 1 (6–12 month lead): yield curve, building permits, JOLTS openings. Tier 2 (4–6 month lead): claims, consumer expectations. Tier 3 (2–3 month lead): ISM, retail sales, IP. Divergence between tiers is where macro alpha is generated.">?</span></div>
+        <div class="card-body">
+          <p style="font-size:12px;color:var(--text-sec);margin-bottom:12px;">Based on your framework's Section 5.2 tiered structure. <strong>Alpha insight:</strong> When Tier 1 (6-12 month lead) deteriorates while Tier 3 still looks solid → early de-risk. When Tier 1 recovers while Tier 3 still looks weak → early re-risk. This lag structure is where macro alpha is generated.</p>
+          <div id="licContent" style="text-align:center;color:var(--text-sec);padding:16px;"><span class="spinner"></span> Loading FRED data for composite...</div>
+          <div class="chart-wrap" style="height:220px;margin-top:14px;display:none;" id="licChartWrap"><canvas id="licChart"></canvas></div>
+        </div>
+        <div class="card-sources"><strong>Sources:</strong> FRED&reg; Federal Reserve Bank of St. Louis &bull; Tier structure from Perry Macro HF Framework v1.0 Section 5.2 &bull; CFA L3 Capital Market Expectations</div>
+      </div>
     </div>
   </div>
 </div>
@@ -3534,58 +3578,6 @@ body.view-mobile .logo-icon { width: 22px !important; height: 22px !important; f
       </div>
     </div>
       </div>
-      <div class="card">
-      <div class="card-title">Cross-Asset Regime Distance &amp; RMT Correlation Analysis
-        <span class="help-icon" title="Three-layer regime analysis: (1) Wasserstein-1 distance between rolling return distributions and historical regimes — the actual metric from Horvath, Issa & Muguruza (2021). (2) Frobenius distance on correlation matrices — classical approach for comparison. (3) RMT eigenvalue decomposition: the Marchenko-Pastur noise floor separates true cross-asset structure from noise. The 'informative content ratio' (ICR) measures how much of the correlation matrix is genuine signal vs. noise — high ICR = structured regime, low ICR = random market. Molero-González et al. (2024).">?</span>
-      </div>
-      <div class="card-body">
-        <p style="font-size:12px;color:var(--text-sec);margin-bottom:10px;">
-          <strong>Wasserstein-1 distance</strong> (Horvath et al. 2021) between rolling return distributions and stylized historical regimes. Unlike Frobenius distance on correlations, Wasserstein measures the full distributional shift — capturing changes in tail behavior, skewness, and kurtosis that correlation matrices miss. Also computes <strong>RMT Informative Content Ratio</strong> (Molero-González et al. 2024): fraction of eigenvalue variance above the Marchenko-Pastur noise ceiling — a direct measure of how much genuine cross-asset structure exists vs. random noise.
-        </p>
-        <div class="form-row" style="margin-bottom:10px;">
-          <div class="form-group"><label>Rolling Window</label>
-            <select id="regDistWin" onchange="regimeDistanceRun()">
-              <option value="30">30 Days</option>
-              <option value="60" selected>60 Days</option>
-              <option value="90">90 Days</option>
-            </select>
-          </div>
-          <button class="btn btn-sm" onclick="regimeDistanceRun()">Compute Regime Distance + RMT</button>
-        </div>
-        <div id="regDistResults" style="text-align:center;padding:18px;color:var(--text-sec);font-size:13px;">Click <strong>Compute Regime Distance + RMT</strong> to run analysis.</div>
-      </div>
-      <div class="card-sources">
-        <strong>Methods:</strong>
-        <strong>Wasserstein-1:</strong> W₁(P,Q) = ∫|F_P(x) − F_Q(x)|dx — earth-mover distance between empirical CDFs of rolling returns. Measures distributional shift, not just correlation structure. Horvath, B., Issa, A. &amp; Muguruza, A. (2021) "Clustering Market Regimes using the Wasserstein Distance." &middot;
-        <strong>Frobenius:</strong> ‖C_t − C_ref‖_F shown for comparison. &middot;
-        <strong>RMT / Marchenko-Pastur:</strong> λ_max = σ²(1 + 1/√q)² where q = T/N. Eigenvalues above λ_max are informative; below are noise. ICR = Σ(λ_i − λ̄_noise)·1[λ_i > λ_max] / Σλ_i. Molero-González, L. et al. (2024) "The random matrix-based informative content of correlation matrices in stock markets." &middot;
-        Universe: SPY, TLT, GLD, UUP, USO, HYG. Price data via Cloudflare Worker / Yahoo Finance.
-      </div>
-    </div>
-
-    <!-- ═══ CYCLE BREAKDOWN TABLE ═══ -->
-    <div class="card" style="margin-top:14px;">
-      <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
-        <span>Economic Cycle Breakdown — Consumer · Business · Real Estate · Supply Chain
-          <span class="help-icon" title="Mirrors the classic business cycle indicator matrix. Each indicator is sourced from FRED and scored into one of 5 cycle phases based on its level vs. historical thresholds and 3-month trend. Green = Expansion/Recovery. Amber = Neutral/Slowing. Red = Contraction. Use this to identify where cycle pressure is building or receding across different sectors of the economy — not captured by the 6-pillar macro scorecard above.">?</span>
-        </span>
-        <button class="btn btn-sm" onclick="regimeLoadBreakdown(true)" style="background:rgba(255,255,255,0.2);color:#fff;border:1px solid rgba(255,255,255,0.3);padding:4px 10px;border-radius:3px;cursor:pointer;font-size:11px;">Refresh</button>
-      </div>
-      <div class="card-body" style="padding:0;">
-        <div id="cycleBreakdownResult" style="padding:32px;text-align:center;color:var(--text-sec);">
-          <span class="spinner"></span> Loading cycle breakdown data...
-        </div>
-      </div>
-      <div class="card-sources">
-        <strong>Sources:</strong> Federal Reserve Bank of St. Louis (FRED API). Data provided by FRED®.
-        Consumer: UMCSENT, PSAVERT, PCE, RETAILSMSA, DSPIC96.
-        Business: NAPM (ISM Mfg PMI), NMFBAI (ISM Services PMI), AMTMNO, CPFALLS, MANEMP.
-        Real Estate: HOUST, PERMIT, HSN1F, EXHOSLUSM495S, CSUSHPINSA.
-        Supply Chain: AMTMUO, ISRATIO, DGORDER, IPB50001N.
-        Labor Breadth: LNS12300060 (Prime-Age EPOP), AWHMAN, AWOTMAN.
-        Phase classification: level-based thresholds where available, otherwise 3-month trend (>±1.5%).
-      </div>
-    </div>
     </div><!-- /catab-regime -->
 
     <!-- ═══ TAB: BREADTH & SIGNALS ═══ -->
@@ -3950,7 +3942,38 @@ body.view-mobile .logo-icon { width: 22px !important; height: 22px !important; f
           <div class="card-sources"><strong>Source:</strong> Yahoo Finance via Cloudflare Worker. 6-month daily prices, rebased to 100 at start.</div>
         </div>
       </div>
-    </div><!-- /catab-momentum -->
+    
+      <!-- Wasserstein Regime Distance + RMT — moved from Market Regime tab -->
+      <div class="card">
+      <div class="card-title">Cross-Asset Regime Distance &amp; RMT Correlation Analysis
+        <span class="help-icon" title="Three-layer regime analysis: (1) Wasserstein-1 distance between rolling return distributions and historical regimes — the actual metric from Horvath, Issa & Muguruza (2021). (2) Frobenius distance on correlation matrices — classical approach for comparison. (3) RMT eigenvalue decomposition: the Marchenko-Pastur noise floor separates true cross-asset structure from noise. The 'informative content ratio' (ICR) measures how much of the correlation matrix is genuine signal vs. noise — high ICR = structured regime, low ICR = random market. Molero-González et al. (2024).">?</span>
+      </div>
+      <div class="card-body">
+        <p style="font-size:12px;color:var(--text-sec);margin-bottom:10px;">
+          <strong>Wasserstein-1 distance</strong> (Horvath et al. 2021) between rolling return distributions and stylized historical regimes. Unlike Frobenius distance on correlations, Wasserstein measures the full distributional shift — capturing changes in tail behavior, skewness, and kurtosis that correlation matrices miss. Also computes <strong>RMT Informative Content Ratio</strong> (Molero-González et al. 2024): fraction of eigenvalue variance above the Marchenko-Pastur noise ceiling — a direct measure of how much genuine cross-asset structure exists vs. random noise.
+        </p>
+        <div class="form-row" style="margin-bottom:10px;">
+          <div class="form-group"><label>Rolling Window</label>
+            <select id="regDistWin" onchange="regimeDistanceRun()">
+              <option value="30">30 Days</option>
+              <option value="60" selected>60 Days</option>
+              <option value="90">90 Days</option>
+            </select>
+          </div>
+          <button class="btn btn-sm" onclick="regimeDistanceRun()">Compute Regime Distance + RMT</button>
+        </div>
+        <div id="regDistResults" style="text-align:center;padding:18px;color:var(--text-sec);font-size:13px;">Click <strong>Compute Regime Distance + RMT</strong> to run analysis.</div>
+      </div>
+      <div class="card-sources">
+        <strong>Methods:</strong>
+        <strong>Wasserstein-1:</strong> W₁(P,Q) = ∫|F_P(x) − F_Q(x)|dx — earth-mover distance between empirical CDFs of rolling returns. Measures distributional shift, not just correlation structure. Horvath, B., Issa, A. &amp; Muguruza, A. (2021) "Clustering Market Regimes using the Wasserstein Distance." &middot;
+        <strong>Frobenius:</strong> ‖C_t − C_ref‖_F shown for comparison. &middot;
+        <strong>RMT / Marchenko-Pastur:</strong> λ_max = σ²(1 + 1/√q)² where q = T/N. Eigenvalues above λ_max are informative; below are noise. ICR = Σ(λ_i − λ̄_noise)·1[λ_i > λ_max] / Σλ_i. Molero-González, L. et al. (2024) "The random matrix-based informative content of correlation matrices in stock markets." &middot;
+        Universe: SPY, TLT, GLD, UUP, USO, HYG. Price data via Cloudflare Worker / Yahoo Finance.
+      </div>
+    </div>
+
+</div><!-- /catab-momentum -->
 
     <!-- ═══ TAB 7: SECTOR ROTATION ═══ -->
     <div class="pf-tab-content" id="catab-sectors">
@@ -5372,9 +5395,10 @@ function navigateTo(p) {
   if (p === 'themes' && typeof themesPopulateDropdown === 'function') {
     themesPopulateDropdown();
   }
-  if (p === 'macro') { 
-    loadMacroLiveTable(); 
-    if (typeof ycLoad === 'function' && !window._ycLoaded) { ycLoad(); window._ycLoaded = true; } 
+  if (p === 'macro') {
+    // Always land on the dashboard tab; macroShowTab handles lazy loading per tab
+    if (typeof macroShowTab === 'function') macroShowTab('dashboard');
+    else loadMacroLiveTable();
   }
   if (p === 'home') {
     // Re-run briefing every time home is visited
@@ -5398,9 +5422,6 @@ function navigateTo(p) {
         setTimeout(function() { caAutoLoad('movers'); },    2000);
         setTimeout(function() { caAutoLoad('bizycle'); },   3000);
         setTimeout(function() { caAutoLoad('regime'); },    5000);
-        setTimeout(function() {
-          if (typeof regimeLoadBreakdown === 'function') regimeLoadBreakdown();
-        }, 6500);
         setTimeout(function() { caAutoLoad('credit'); },    7000);
         setTimeout(function() { caAutoLoad('yieldcurve'); },9000);
         setTimeout(function() { caAutoLoad('breadth'); },  11000);
@@ -8369,6 +8390,50 @@ window.runResearch = async function() {
 // ════════════════════════════════════════════════════
 // MACRO LIVE INDICATOR TABLE — lazy-load on first Macro visit
 // ════════════════════════════════════════════════════
+// ═══ MACRO PAGE TAB NAVIGATION ════════════════════════════════════
+// Mirrors the Cross-Asset tab system but scoped to page-macro.
+// Each tab auto-loads its content on first visit.
+var _macroTabInit = {};
+
+function macroShowTab(name) {
+  // Toggle buttons
+  document.querySelectorAll('[data-macrotab]').forEach(function(b) {
+    b.classList.toggle('active', b.dataset.macrotab === name);
+  });
+  // Toggle content panes
+  document.querySelectorAll('.pf-tab-content[id^="macrotab-"]').forEach(function(c) {
+    c.classList.toggle('active', c.id === 'macrotab-' + name);
+  });
+  // Auto-load content on first visit
+  if (!_macroTabInit[name]) {
+    _macroTabInit[name] = true;
+    if (name === 'dashboard') {
+      loadMacroLiveTable();
+    }
+    if (name === 'biz') {
+      // Business cycle guide and curve are populated by loadMacroLiveTable
+      if (!window._lastMacroData) loadMacroLiveTable();
+      // Ensure guide is shown in the biz tab (it renders into macroCycleGuide)
+      var guide = document.getElementById('macroCycleGuide');
+      if (guide) guide.style.display = 'block';
+    }
+    if (name === 'breakdown') {
+      if (typeof regimeLoadBreakdown === 'function') regimeLoadBreakdown();
+    }
+    if (name === 'yieldcurve') {
+      if (typeof ycLoad === 'function') ycLoad();
+    }
+    if (name === 'lic') {
+      // LIC renders from macro data; ensure macro is loaded first
+      if (!window._lastMacroData) {
+        loadMacroLiveTable();
+      } else if (typeof licRender === 'function') {
+        licRender(window._lastMacroData);
+      }
+    }
+  }
+}
+
 var _macroLoaded = false;
 var _macroLoadedAt = null;
 function loadMacroLiveTable(force) {
@@ -8522,10 +8587,23 @@ function loadMacroLiveTable(force) {
     if (typeof renderBusinessCycleChart === 'function') renderBusinessCycleChart(d.phase, d.totalScore, d.maxScore);
     // Cache for briefing page and LIC
     window._lastMacroData = d;
-    // Render Leading Indicator Composite
-    if (typeof licRender === 'function') licRender(d);
+    // Render Leading Indicator Composite only if LIC tab is currently active
+    if (typeof licRender === 'function') {
+      var licTab = document.getElementById('macrotab-lic');
+      if (!licTab || licTab.classList.contains('active')) licRender(d);
+    }
+    // Show biz cycle guide if biz tab is active
+    var bizTab = document.getElementById('macrotab-biz');
+    if (bizTab && bizTab.classList.contains('active')) {
+      var guide = document.getElementById('macroCycleGuide');
+      if (guide) guide.style.display = 'block';
+    }
     _macroLoadedAt = new Date();
     mktUpdateStatusBar();
+    // Pre-load cycle breakdown in background (cached 12h — cheap after first load)
+    if (typeof regimeLoadBreakdown === 'function') {
+      setTimeout(function() { regimeLoadBreakdown(); }, 400);
+    }
 
   }).catch(function(e) {
     var el = document.getElementById('macroLiveTableBody');
@@ -20089,11 +20167,8 @@ function caAutoLoad(name) {
       caMarkLoaded('regime_dist');
       setTimeout(function() { regimeDistanceRun(); }, 800);
     }
-    // Cycle breakdown table — stale after 12h (FRED data)
-    if (typeof regimeLoadBreakdown === 'function' && caIsStale('regime_breakdown', CA_STALE_MACRO)) {
-      caMarkLoaded('regime_breakdown');
-      setTimeout(function() { regimeLoadBreakdown(); }, 1200);
-    }
+    // Cycle breakdown table — auto-loads on macro page; not needed here
+    // (regimeLoadBreakdown is called from loadMacroLiveTable instead)
   }
 
   if (name === 'breadth') {
