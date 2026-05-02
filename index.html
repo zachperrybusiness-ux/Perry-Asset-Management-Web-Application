@@ -1564,15 +1564,16 @@ body.view-mobile .logo-icon { width: 22px !important; height: 22px !important; f
 /* Global market snapshot grid */
 .snapshot-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-  gap: 8px;
+  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+  gap: 5px;
 }
 .snap-cell {
-  background: #fff;
+  background: var(--bg);
   border: 1px solid var(--border);
   border-left: 3px solid var(--blue);
-  padding: 9px 11px;
+  padding: 6px 8px;
   border-radius: 3px;
+  cursor: pointer;
   transition: transform 0.12s ease, box-shadow 0.12s ease;
 }
 .snap-cell:hover {
@@ -1582,15 +1583,15 @@ body.view-mobile .logo-icon { width: 22px !important; height: 22px !important; f
 .snap-cell.up { border-left-color: #2E7D52; }
 .snap-cell.down { border-left-color: #8B2A2A; }
 .snap-row-header {
-  background: #003C71;
+  background: var(--navy);
   color: #FFFFFF;
-  padding: 8px 12px;
-  font-size: 12px;
+  padding: 4px 10px;
+  font-size: 10px;
   font-weight: 700;
   letter-spacing: 0.4px;
   text-transform: uppercase;
   grid-column: 1 / -1;
-  margin-top: 6px;
+  margin-top: 4px;
   border-radius: 3px;
   font-family: Arial, Helvetica, sans-serif;
 }
@@ -3309,6 +3310,23 @@ body.view-mobile .logo-icon { width: 22px !important; height: 22px !important; f
     <!-- ═══ TAB: TOP-LINE VIEW (the integrated decision dashboard) ═══ -->
     <div class="pf-tab-content active" id="catab-topline">
 
+      <!-- 0. Global Market Snapshot — compact cards at top with timeframe toggle -->
+      <div style="margin-bottom:14px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;flex-wrap:wrap;gap:8px;">
+          <span style="font-size:13px;font-weight:700;color:var(--navy);">Global Markets Snapshot</span>
+          <div style="display:flex;align-items:center;gap:6px;">
+            <span style="font-size:11px;color:var(--text-sec);">Timeframe:</span>
+            <button class="snap-tf-btn active" data-tf="1d" onclick="snapshotSetTF(this,'1d')" style="background:var(--navy);color:#fff;border:none;padding:4px 10px;border-radius:3px;cursor:pointer;font-size:11px;font-weight:600;">1D</button>
+            <button class="snap-tf-btn" data-tf="1w" onclick="snapshotSetTF(this,'1w')" style="background:var(--panel);color:var(--text-sec);border:1px solid var(--border);padding:4px 10px;border-radius:3px;cursor:pointer;font-size:11px;font-weight:600;">1W</button>
+            <button class="snap-tf-btn" data-tf="1m" onclick="snapshotSetTF(this,'1m')" style="background:var(--panel);color:var(--text-sec);border:1px solid var(--border);padding:4px 10px;border-radius:3px;cursor:pointer;font-size:11px;font-weight:600;">1M</button>
+            <button class="snap-tf-btn" data-tf="3m" onclick="snapshotSetTF(this,'3m')" style="background:var(--panel);color:var(--text-sec);border:1px solid var(--border);padding:4px 10px;border-radius:3px;cursor:pointer;font-size:11px;font-weight:600;">3M</button>
+            <button onclick="snapshotLoad()" style="background:transparent;color:var(--text-sec);border:1px solid var(--border);padding:4px 10px;border-radius:3px;cursor:pointer;font-size:11px;" title="Refresh">↻</button>
+          </div>
+        </div>
+        <div id="snapshotGrid" style="text-align:center;padding:16px;color:#5A6A7A;font-size:12px;"><span class="spinner"></span> Loading...</div>
+        <div id="aiMarketBox" style="display:none;margin-top:8px;"></div>
+      </div>
+
       <!-- 1. Decision Compass + Headline Movers row -->
       <div style="display:grid;grid-template-columns:1.2fr 1fr;gap:14px;margin-bottom:14px;">
 
@@ -3370,22 +3388,6 @@ body.view-mobile .logo-icon { width: 22px !important; height: 22px !important; f
           <div class="card-sources" style="background:#F4F6F9;border-top:1px solid #D0D7E0;padding:8px 18px 10px;font-family:Arial,Helvetica,sans-serif;font-size:11px;color:#5A6A7A;line-height:1.6;border-radius:0 0 6px 6px;">
             <strong style="color:#003C71;font-weight:600;">Methodology:</strong> Each archetype's regime fit = sum of its asset class exposures × current asset class regime score. Bridgewater All Weather, Permanent Portfolio (Browne 1981), 60/40 (Shiller benchmark), Risk Parity (Asness 2010), Endowment Model (Swensen 2000) representative weights.
           </div>
-        </div>
-      </div>
-
-      <!-- 3. Cross-Asset Pulse Grid (the snapshot, redesigned) -->
-      <div class="card">
-        <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
-          <span>Global Markets Snapshot &mdash; Daily &amp; Weekly Moves</span>
-          <button onclick="snapshotLoad()" style="background:#5B9BD5;color:#FFFFFF;border:none;padding:5px 14px;border-radius:4px;cursor:pointer;font-size:11px;font-weight:600;font-family:Arial,Helvetica,sans-serif;">Refresh</button>
-        </div>
-        <div class="card-body">
-          <p style="font-size:12px;color:#5A6A7A;margin-bottom:10px;font-family:Arial,Helvetica,sans-serif;">Real-time prices and 1-day, 1-week, 1-month percentage moves across 26 global asset proxies. Sparklines = 1-month price trend. <strong>Click any cell</strong> to send to Stock Research.</p>
-          <div id="snapshotGrid" style="text-align:center;padding:24px;color:#5A6A7A;font-size:12px;font-family:Arial,Helvetica,sans-serif;"><span class="spinner"></span> Loading global market snapshot...</div>
-          <div id="aiMarketBox" style="display:none;margin-top:14px;"></div>
-        </div>
-        <div class="card-sources" style="background:#F4F6F9;border-top:1px solid #D0D7E0;padding:8px 18px 10px;font-family:Arial,Helvetica,sans-serif;font-size:11px;color:#5A6A7A;line-height:1.6;border-radius:0 0 6px 6px;">
-          <strong style="color:#003C71;font-weight:600;">Sources:</strong> Yahoo Finance via Cloudflare Worker. Asset universe modeled on Bloomberg WEI (World Equity Indices) and FXIP (FX Information Platform).
         </div>
       </div>
 
@@ -3473,7 +3475,8 @@ body.view-mobile .logo-icon { width: 22px !important; height: 22px !important; f
         <button class="btn-sm" style="background:rgba(255,255,255,0.2);color:#fff;border:1px solid rgba(255,255,255,0.4);padding:4px 10px;border-radius:3px;cursor:pointer;font-size:11px;" onclick="psLoadDiagnostic()">Refresh</button>
       </div>
       <div class="card-body" style="padding:0;">
-        <div style="background:#FFF8E1;border-left:4px solid #8B6914;padding:10px 14px;margin:0 0 0 0;font-size:12px;line-height:1.6;color:#4A3F00;">
+        <div id="psExplainerBanner" style="background:#FFF8E1;border-left:4px solid #8B6914;padding:10px 14px;margin:0;font-size:12px;line-height:1.6;color:#4A3F00;position:relative;">
+          <button onclick="document.getElementById('psExplainerBanner').style.display='none';" title="Dismiss" style="position:absolute;top:6px;right:8px;background:none;border:none;cursor:pointer;font-size:16px;color:#8B6914;line-height:1;padding:0;">✕</button>
           <strong>Why might this differ from the Macro Regime Analysis page?</strong><br>
           The <strong>Portfolio State</strong> here (Leveraged / Growth / Neutral / Drawdown) is a <em>market-timing</em> signal driven by VIX level, SPY distance from its 52-week high, and short-term price momentum. It answers: <em>"What posture should my portfolio take right now based on current market conditions?"</em><br>
           The <strong>Macro Regime Verdict</strong> on the Macro page (Early / Mid / Late Cycle / Contraction) is a <em>business cycle</em> classification driven by FRED economic indicators (yield curve, unemployment, leading indicators, etc.). It answers: <em>"Where are we in the economic cycle?"</em><br>
@@ -3649,6 +3652,13 @@ body.view-mobile .logo-icon { width: 22px !important; height: 22px !important; f
       <div class="card-sources"><strong>Method:</strong> Cross-correlation function r_AB(k) = corr(R_A(t), R_B(t+k)) for k ∈ [-20, +20]. Computed from daily log returns. Bonferroni-corrected 95% confidence band = ±1.96/√n shown as dashed lines. Granger, C.W.J. (1969) "Investigating Causal Relations by Econometric Models," <em>Econometrica</em>.</div>
     </div>
       </div>
+
+      <!-- Collapsible secondary breadth modules -->
+      <div style="margin-bottom:8px;">
+        <button onclick="(function(){var s=document.getElementById('breadthExtra');var open=s.style.display!=='none';s.style.display=open?'none':'block';this.innerHTML=open?'▶ Show More Analysis (Broadening, Sector Flow, Regime Signals, Quantamental, Omega)':'▼ Hide Additional Analysis';}).call(this)" style="background:var(--panel);border:1px solid var(--border);border-radius:4px;padding:8px 16px;cursor:pointer;font-size:12px;font-weight:600;color:var(--navy);width:100%;text-align:left;">▼ Hide Additional Analysis</button>
+      </div>
+      <div id="breadthExtra">
+
       <!-- ═══ MARKET BROADENING CARD ═══ -->
       <div class="card" style="margin-bottom:14px;">
         <div class="card-title">Market Breadth: Is the Rally Broadening?
@@ -3758,51 +3768,57 @@ body.view-mobile .logo-icon { width: 22px !important; height: 22px !important; f
         </div>
       </div>
 
+      </div><!-- /breadthExtra -->
     </div><!-- /catab-breadth -->
 
     <!-- ═══ TAB 4: CREDIT CONDITIONS ═══ -->
     <div class="pf-tab-content" id="catab-credit">
       <div id="creditPillarHeader" style="margin-bottom:14px;"></div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px;">
+        <!-- Card 1: HY OAS + SLOOS combined -->
         <div class="card">
-          <div class="card-title">HY OAS Credit Spread — Level &amp; Trend
-            <span class="help-icon" title="ICE BofA US High Yield Option-Adjusted Spread (BAMLH0A0HYM2). Measures the extra yield investors demand to hold junk bonds vs. Treasuries. Widening = credit stress, risk-off. Tightening = credit appetite healthy, risk-on.">?</span>
+          <div class="card-title">HY OAS &amp; SLOOS — Credit Conditions Composite
+            <span class="help-icon" title="ICE BofA HY OAS: extra yield demanded for junk vs. Treasuries. SLOOS: net % of banks tightening C&I lending standards. Together they capture both market-priced credit risk (HY OAS) and bank supply-side tightening (SLOOS). Both widening = dual credit headwind.">?</span>
           </div>
           <div class="card-body">
-            <div id="creditHYDisplay" style="text-align:center;padding:20px;color:var(--text-sec);"><span class="spinner"></span></div>
-            <div class="chart-wrap" style="height:260px;display:none;" id="creditHYWrap"><canvas id="creditHYChart"></canvas></div>
+            <div id="creditHYDisplay" style="padding:4px 0;"><span class="spinner"></span></div>
+            <div id="creditSLOOSDisplay" style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border);"></div>
           </div>
-          <div class="card-sources"><strong>Source:</strong> FRED BAMLH0A0HYM2 — ICE BofA US High Yield OAS. Thresholds: &lt;3.5% = tight, 3.5–5% = normal, 5–8% = stress, &gt;8% = crisis.</div>
+          <div class="card-sources"><strong>Sources:</strong> FRED BAMLH0A0HYM2 (HY OAS) &middot; FRED DRTSCILM (SLOOS C&I). HY OAS: &lt;3.5% tight, 3.5–5% normal, &gt;5% stress. SLOOS: &lt;0% easing, &gt;20% tightening.</div>
         </div>
+        <!-- Card 2: HYG/LQD ratio chart -->
         <div class="card">
-          <div class="card-title">HY vs. IG Credit Spread Differential
-            <span class="help-icon" title="HYG (High Yield ETF) vs. LQD (Investment Grade ETF) price ratio and 12-month relative return. When HY outperforms IG, credit conditions are easing and risk appetite is healthy.">?</span>
+          <div class="card-title">HY vs. IG Credit Ratio (HYG/LQD)
+            <span class="help-icon" title="HYG÷LQD ratio with 63D SMA. Above SMA = credit risk appetite healthy, risk-on. Below SMA = spreads widening, risk-off tilt.">?</span>
           </div>
           <div class="card-body">
-            <div id="creditHYIGDisplay" style="text-align:center;padding:20px;color:var(--text-sec);"><span class="spinner"></span></div>
-            <div class="chart-wrap" style="height:260px;display:none;" id="creditHYIGWrap"><canvas id="creditHYIGChart"></canvas></div>
+            <div id="creditHYIGDisplay" style="padding:4px 0;"></div>
+            <div class="chart-wrap" style="height:220px;display:none;" id="creditHYIGWrap"><canvas id="creditHYIGChart"></canvas></div>
           </div>
-          <div class="card-sources"><strong>Method:</strong> HYG/LQD ratio with 63D SMA. Above SMA = credit conditions loosening. Pillar score maps HY OAS to 0–100 scale.</div>
+          <div class="card-sources"><strong>Method:</strong> HYG/LQD price ratio with 63D SMA. Source: Yahoo Finance.</div>
         </div>
       </div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
-        <div class="card">
-          <div class="card-title">SLOOS C&amp;I Lending Standards
-            <span class="help-icon" title="Senior Loan Officer Opinion Survey on Bank Lending Practices. Measures net % of banks tightening commercial & industrial lending standards. Negative = easing (bullish). Positive = tightening (restrictive).">?</span>
-          </div>
-          <div class="card-body">
-            <div id="creditSLOOSDisplay" style="text-align:center;padding:20px;color:var(--text-sec);"><span class="spinner"></span></div>
-          </div>
-          <div class="card-sources"><strong>Source:</strong> FRED DRTSCILM — Senior Loan Officer Survey. Threshold: &lt;0% = easing, &gt;20% = significant tightening.</div>
-        </div>
+        <!-- Card 3: Credit Indicator Scorecard -->
         <div class="card">
           <div class="card-title">Credit Pillar — Indicator Scorecard
-            <span class="help-icon" title="All credit-related FRED indicators displayed with their individual +1/0/-1 scores. Sourced from the Monetary Policy pillar of the FRED macro scorecard.">?</span>
+            <span class="help-icon" title="All credit-related FRED indicators with +1/0/-1 scores from the Monetary Policy pillar.">?</span>
           </div>
           <div class="card-body">
             <div id="creditScorecardDisplay" style="font-size:12px;"><div style="text-align:center;padding:20px;color:var(--text-sec);"><span class="spinner"></span></div></div>
           </div>
-          <div class="card-sources"><strong>Source:</strong> FRED API via Cloudflare Worker /fred endpoint.</div>
+          <div class="card-sources"><strong>Source:</strong> FRED API — BAMLH0A0HYM2, DRTSCILM, T10Y2Y, T10Y3M, FEDFUNDS.</div>
+        </div>
+        <!-- Card 4: HYG vs TLT — flight-to-safety / credit-duration spread -->
+        <div class="card">
+          <div class="card-title">Flight-to-Safety: HYG vs. TLT Relative Performance
+            <span class="help-icon" title="HYG (high yield credit) vs. TLT (long-duration Treasuries) rebased performance. When HYG leads TLT, investors are chasing yield and accepting credit risk — risk-on signal. When TLT surges vs. HYG, flight-to-safety is active — credit stress / risk-off. This is one of the most reliable leading indicators of credit regime shifts.">?</span>
+          </div>
+          <div class="card-body">
+            <div id="creditFlightDisplay" style="font-size:12px;padding:4px 0;"></div>
+            <div class="chart-wrap" style="height:200px;display:none;" id="creditFlightWrap"><canvas id="creditFlightChart"></canvas></div>
+          </div>
+          <div class="card-sources"><strong>Method:</strong> HYG and TLT rebased to 100 at 6M start. Spread = HYG return − TLT return; widening spread = risk appetite. Source: Yahoo Finance.</div>
         </div>
       </div>
     </div><!-- /catab-credit -->
@@ -3857,45 +3873,57 @@ body.view-mobile .logo-icon { width: 22px !important; height: 22px !important; f
     <div class="pf-tab-content" id="catab-momentum">
       <div id="momPillarHeader" style="margin-bottom:14px;"></div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px;">
+        <!-- TOP LEFT: Risk-On / Risk-Off Regime Classification -->
+        <div class="card">
+          <div class="card-title">Risk-On / Risk-Off Regime Classification
+            <span class="help-icon" title="Pattern-matches SPY, TLT, GLD, UUP, USO across 20D and 63D returns to classify the current cross-asset regime: Risk-On (equities lead), Risk-Off (bonds/gold lead), Reflation (commodities + equities), Stagflation (commodities up, equities + bonds down).">?</span>
+          </div>
+          <div class="card-body">
+            <div id="momRegimeDisplay" style="padding:8px 0;"><div style="text-align:center;padding:20px;color:var(--text-sec);"><span class="spinner"></span></div></div>
+          </div>
+          <div class="card-sources"><strong>Method:</strong> Rule-based classifier using 20D and 63D returns of SPY, TLT, GLD, UUP, USO. Risk-On: SPY &gt; TLT &amp; SPY &gt; GLD. Risk-Off: TLT &gt; SPY &amp; GLD rising. Reflation: USO+XLE lead, SPY positive. Stagflation: commodities up, SPY &amp; TLT both down.</div>
+        </div>
+        <!-- TOP RIGHT: Cross-Asset Scorecard with timeframe selector -->
+        <div class="card">
+          <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px;">
+            <span>Cross-Asset Return Scorecard
+              <span class="help-icon" title="Trailing return for each major asset class over the selected timeframe. Shows which assets are leading and lagging. Toggle between 1W, 1M, 3M, 6M to see momentum across different horizons.">?</span>
+            </span>
+            <div style="display:flex;gap:4px;">
+              <button class="mom-tf active" data-tf="5" onclick="momScorecardTF(this,5)" style="background:var(--navy);color:#fff;border:none;padding:3px 8px;border-radius:3px;cursor:pointer;font-size:10px;font-weight:700;">1W</button>
+              <button class="mom-tf" data-tf="21" onclick="momScorecardTF(this,21)" style="background:var(--panel);color:var(--text-sec);border:1px solid var(--border);padding:3px 8px;border-radius:3px;cursor:pointer;font-size:10px;font-weight:700;">1M</button>
+              <button class="mom-tf" data-tf="63" onclick="momScorecardTF(this,63)" style="background:var(--panel);color:var(--text-sec);border:1px solid var(--border);padding:3px 8px;border-radius:3px;cursor:pointer;font-size:10px;font-weight:700;">3M</button>
+              <button class="mom-tf" data-tf="126" onclick="momScorecardTF(this,126)" style="background:var(--panel);color:var(--text-sec);border:1px solid var(--border);padding:3px 8px;border-radius:3px;cursor:pointer;font-size:10px;font-weight:700;">6M</button>
+            </div>
+          </div>
+          <div class="card-body">
+            <div id="momScorecardDisplay" style="padding:4px 0;"><div style="text-align:center;padding:20px;color:var(--text-sec);"><span class="spinner"></span></div></div>
+          </div>
+          <div class="card-sources"><strong>Assets:</strong> SPY, QQQ, IWM, TLT, GLD, USO, HYG, UUP, EEM, XLE, VNQ. Timeframe selectable.</div>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+        <!-- BOTTOM LEFT: Cross-Asset Rolling Correlation (replaces DXY vs commodities) -->
+        <div class="card">
+          <div class="card-title">Rolling Cross-Asset Correlations (63D)
+            <span class="help-icon" title="63-day rolling Pearson correlation between key cross-asset pairs. Shows how relationships evolve over time — correlations that were stable can break down during regime shifts. SPY/TLT negative correlation (stocks vs. bonds) is the bedrock of 60/40 diversification; when it turns positive, diversification is compromised. SPY/GLD and SPY/HYG also shown.">?</span>
+          </div>
+          <div class="card-body">
+            <div id="momCorrDisplay" style="padding:4px 0;"></div>
+            <div class="chart-wrap" style="height:220px;display:none;" id="momCorrWrap"><canvas id="momCorrChart"></canvas></div>
+          </div>
+          <div class="card-sources"><strong>Method:</strong> 63-day rolling Pearson ρ on daily log returns. Pairs: SPY/TLT (equity-duration), SPY/GLD (equity-safety), SPY/HYG (equity-credit), TLT/GLD (duration-safety). Correlation breakdown = regime shift signal. Lo &amp; MacKinlay (1988).</div>
+        </div>
+        <!-- BOTTOM RIGHT: SPY / TLT / GLD / USO Rebased (moved down) -->
         <div class="card">
           <div class="card-title">SPY / TLT / GLD / USO — Rebased Return (6M)
             <span class="help-icon" title="Key cross-asset momentum: equities (SPY), long bonds (TLT), gold (GLD), oil (USO). The relative performance pattern tells you whether the market is in risk-on, risk-off, inflation, or stagflation regime.">?</span>
           </div>
           <div class="card-body">
             <div id="momRebasedDisplay" style="text-align:center;padding:20px;color:var(--text-sec);"><span class="spinner"></span></div>
-            <div class="chart-wrap" style="height:280px;display:none;" id="momRebasedWrap"><canvas id="momRebasedChart"></canvas></div>
+            <div class="chart-wrap" style="height:220px;display:none;" id="momRebasedWrap"><canvas id="momRebasedChart"></canvas></div>
           </div>
           <div class="card-sources"><strong>Source:</strong> Yahoo Finance via Cloudflare Worker. 6-month daily prices, rebased to 100 at start.</div>
-        </div>
-        <div class="card">
-          <div class="card-title">Cross-Asset 3M Return Scorecard
-            <span class="help-icon" title="3-month trailing return for each major asset class, color-coded by direction. Pattern classification: Risk-On (equities up, bonds down, gold neutral), Risk-Off (bonds/gold up, equities down), Inflation (commodities + equities up, bonds down), Stagflation (commodities up, equities + bonds down).">?</span>
-          </div>
-          <div class="card-body">
-            <div id="momScorecardDisplay" style="padding:8px 0;"><div style="text-align:center;padding:20px;color:var(--text-sec);"><span class="spinner"></span></div></div>
-          </div>
-          <div class="card-sources"><strong>Assets:</strong> SPY, QQQ, IWM, TLT, GLD, USO, HYG, UUP, EEM, XLE, VNQ.</div>
-        </div>
-      </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
-        <div class="card">
-          <div class="card-title">Dollar Strength (UUP) vs. Commodities (DJP/USO)
-            <span class="help-icon" title="Dollar strength suppresses commodity prices and emerging market assets. Rising dollar + falling commodities = deflationary / risk-off. Falling dollar + rising commodities = reflationary / risk-on.">?</span>
-          </div>
-          <div class="card-body">
-            <div id="momDxyDisplay" style="text-align:center;padding:20px;color:var(--text-sec);"><span class="spinner"></span></div>
-            <div class="chart-wrap" style="height:220px;display:none;" id="momDxyWrap"><canvas id="momDxyChart"></canvas></div>
-          </div>
-          <div class="card-sources"><strong>Source:</strong> UUP (USD ETF) and USO (Oil ETF) via Yahoo Finance.</div>
-        </div>
-        <div class="card">
-          <div class="card-title">Risk-On / Risk-Off Regime Classification
-            <span class="help-icon" title="Pattern matching of SPY, TLT, GLD, and USD moves to classify the current cross-asset regime. Risk-On: equities lead. Risk-Off: bonds/gold lead. Inflation: commodities lead. Deflation: cash/duration lead.">?</span>
-          </div>
-          <div class="card-body">
-            <div id="momRegimeDisplay" style="padding:8px 0;"><div style="text-align:center;padding:20px;color:var(--text-sec);"><span class="spinner"></span></div></div>
-          </div>
-          <div class="card-sources"><strong>Method:</strong> Rule-based classifier using 20D and 63D returns of SPY, TLT, GLD, UUP, USO. Risk-On: SPY &gt; TLT, SPY &gt; GLD. Risk-Off: TLT &gt; SPY, GLD rising. Inflation: USO + XLE leading. Stagflation: commodities up, SPY flat/down, TLT falling.</div>
         </div>
       </div>
     </div><!-- /catab-momentum -->
@@ -3904,57 +3932,65 @@ body.view-mobile .logo-icon { width: 22px !important; height: 22px !important; f
     <div class="pf-tab-content" id="catab-sectors">
       <div id="sectorsPillarHeader" style="margin-bottom:14px;"></div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px;">
+        <!-- Card 1: Multi-signal ratio chart with selector -->
         <div class="card">
-          <div class="card-title">Cyclicals vs. Defensives Ratio (1Y)
-            <span class="help-icon" title="Equal-weight cyclical basket (XLK, XLY, XLI, XLF, XLE, XLB, XLRE, XLC) divided by defensive basket (XLP, XLV, XLU). Rising = risk appetite expanding. Falling = defensive rotation. 63D SMA is the regime filter.">?</span>
+          <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px;">
+            <span>Sector Rotation Ratio Signals
+              <span class="help-icon" title="Multiple intermarket ratio signals that capture sector/factor rotation dynamics. Cyc/Def = classic risk appetite. Small/Large = domestic growth. Value/Growth = factor rotation. Energy/Fins = commodity vs. credit cycle. All use 63D SMA to filter noise.">?</span>
+            </span>
+            <select id="sectorsRatioSignal" onchange="sectorsUpdateRatio()" style="font-size:11px;padding:3px 6px;border:1px solid var(--border);border-radius:3px;background:var(--panel);color:var(--text);">
+              <option value="cyc_def">Cyclicals / Defensives</option>
+              <option value="small_large">Small Cap / Large Cap (IWM/SPY)</option>
+              <option value="value_growth">Value / Growth (IVE/IVW)</option>
+              <option value="energy_fins">Energy / Financials (XLE/XLF)</option>
+              <option value="intl_us">International / US (EFA/SPY)</option>
+              <option value="rsp_spy">Equal-Weight / Cap-Weight (RSP/SPY)</option>
+            </select>
           </div>
           <div class="card-body">
-            <div id="sectorsRatioDisplay" style="text-align:center;padding:20px;color:var(--text-sec);"><span class="spinner"></span></div>
-            <div class="chart-wrap" style="height:260px;display:none;" id="sectorsRatioWrap"><canvas id="sectorsRatioChart"></canvas></div>
+            <div id="sectorsRatioDisplay" style="text-align:center;padding:12px;color:var(--text-sec);"><span class="spinner"></span></div>
+            <div class="chart-wrap" style="height:240px;display:none;" id="sectorsRatioWrap"><canvas id="sectorsRatioChart"></canvas></div>
           </div>
-          <div class="card-sources"><strong>Method:</strong> Cyclical ETFs: XLK, XLY, XLI, XLF, XLE, XLB, XLRE, XLC. Defensive: XLP, XLV, XLU. 63D SMA overlay. Source: Yahoo Finance.</div>
+          <div class="card-sources"><strong>Signals:</strong> Cyc/Def (XLK+XLY+XLI+XLF+XLE+XLB+XLRE+XLC ÷ XLP+XLV+XLU) · Small/Large (IWM÷SPY) · Value/Growth (IVE÷IVW) · Energy/Fins (XLE÷XLF) · Intl/US (EFA÷SPY) · Equal/Cap-weight (RSP÷SPY). All with 63D SMA. Source: Yahoo Finance.</div>
         </div>
+        <!-- Card 2: Sector Momentum Scorecard with TF selector -->
         <div class="card">
-          <div class="card-title">11-Sector Momentum Scorecard
-            <span class="help-icon" title="All 11 GICS sectors ranked by 1M and 3M excess return vs. SPY. Inflow: top 4. Neutral: middle 3. Outflow: bottom 4. Rotation narrative identifies the dominant theme.">?</span>
+          <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px;">
+            <span>11-Sector Momentum Scorecard
+              <span class="help-icon" title="All 11 GICS sectors ranked by excess return vs. SPY over the selected timeframe. Inflow: top 4. Neutral: middle 3. Outflow: bottom 4.">?</span>
+            </span>
+            <div style="display:flex;gap:4px;">
+              <button class="sec-tf active" data-tf="5"  onclick="sectorsMomentumTF(this,5)"  style="background:var(--navy);color:#fff;border:none;padding:3px 8px;border-radius:3px;cursor:pointer;font-size:10px;font-weight:700;">1W</button>
+              <button class="sec-tf" data-tf="21" onclick="sectorsMomentumTF(this,21)" style="background:var(--panel);color:var(--text-sec);border:1px solid var(--border);padding:3px 8px;border-radius:3px;cursor:pointer;font-size:10px;font-weight:700;">1M</button>
+              <button class="sec-tf" data-tf="63" onclick="sectorsMomentumTF(this,63)" style="background:var(--panel);color:var(--text-sec);border:1px solid var(--border);padding:3px 8px;border-radius:3px;cursor:pointer;font-size:10px;font-weight:700;">3M</button>
+              <button class="sec-tf" data-tf="126" onclick="sectorsMomentumTF(this,126)" style="background:var(--panel);color:var(--text-sec);border:1px solid var(--border);padding:3px 8px;border-radius:3px;cursor:pointer;font-size:10px;font-weight:700;">6M</button>
+            </div>
           </div>
           <div class="card-body">
-            <div id="sectorsMomentumDisplay" style="padding:8px 0;"><div style="text-align:center;padding:20px;color:var(--text-sec);"><span class="spinner"></span></div></div>
+            <div id="sectorsMomentumDisplay" style="padding:4px 0;"><div style="text-align:center;padding:20px;color:var(--text-sec);"><span class="spinner"></span></div></div>
           </div>
-          <div class="card-sources"><strong>Method:</strong> 1M and 3M excess return vs. SPY. Score = 0.4×(1M) + 0.6×(3M). Inflow/Neutral/Outflow classification. SPDR GICS ETFs via Yahoo Finance.</div>
+          <div class="card-sources"><strong>Method:</strong> Excess return vs. SPY over selected window. Composite = 0.4×short + 0.6×medium TF when both loaded. SPDR GICS ETFs via Yahoo Finance.</div>
         </div>
       </div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px;">
-        <div class="card">
-          <div class="card-title">Sector Heatmap — 1M Returns
-            <span class="help-icon" title="Color-coded 1-month return for each of the 11 GICS sector ETFs. Green = positive, red = negative. Intensity scales with magnitude.">?</span>
-          </div>
-          <div class="card-body">
-            <div id="sectorsHeatmapDisplay" style="padding:8px 0;"><div style="text-align:center;padding:20px;color:var(--text-sec);"><span class="spinner"></span></div></div>
-          </div>
-          <div class="card-sources"><strong>Source:</strong> SPDR GICS ETFs (XLK, XLE, XLF, XLI, XLY, XLP, XLV, XLU, XLB, XLRE, XLC) via Yahoo Finance.</div>
-        </div>
-        <div class="card">
-          <div class="card-title">Quantamental Composite — Technical × Fundamental
-            <span class="help-icon" title="Cain (2023): F-Score (FRED pillar) × T-Score (price momentum) per sector group. Quant-Confirm = both bullish. Fund-Led = fundamentals ahead of price. Tech-Led = price ahead of fundamentals. Quant-Avoid = both bearish.">?</span>
-          </div>
-          <div class="card-body">
-            <div id="sectorsQuantDisplay" style="padding:8px 0;"><div style="text-align:center;padding:20px;color:var(--text-sec);"><span class="spinner"></span></div></div>
-          </div>
-          <div class="card-sources"><strong>Framework:</strong> Cain (2023) "Quantementals." F-Score from FRED pillars normalized [-1,+1]. T-Score from 3M excess return vs. SPY, rank-normalized. Conviction = F × T.</div>
-        </div>
-      </div>
-      <div class="card">
-        <div class="card-title">Cross-Asset Regime Signals — 11 Intermarket Ratios
-          <span class="help-icon" title="All 11 intermarket ratio pairs with 63D SMA. Composite regime score (breadth-weighted) displayed at top. See the regime signal composite score.">?</span>
+      <!-- Card 3: Expanded Sector Heatmap with top-5 contributors -->
+      <div class="card" style="margin-bottom:14px;">
+        <div class="card-title">Sector Heatmap — Returns &amp; Top-5 Stock Contributors
+          <span class="help-icon" title="Each sector shows its 1-month return plus the top 5 individual stocks within that sector that contributed most to the ETF's return (by weight × return). Click any sector to expand/collapse stock details.">?</span>
         </div>
         <div class="card-body">
-          <div id="sectorsRegimeSignalDisplay" style="text-align:center;padding:14px;color:var(--text-sec);font-size:13px;">
-            <span class="spinner"></span> Loading regime signals...
-          </div>
-          <div id="sectorsRegimeGrid" style="display:none;"></div>
+          <div id="sectorsHeatmapDisplay" style="padding:4px 0;"><div style="text-align:center;padding:20px;color:var(--text-sec);"><span class="spinner"></span></div></div>
         </div>
-        <div class="card-sources"><strong>Sources:</strong> Murphy (1991) Intermarket Analysis · Horvath et al. (2021) Wasserstein Distance · Cain (2023) Quantementals · Molero-González et al. (2024) RMT · Yahoo Finance via Cloudflare Worker.</div>
+        <div class="card-sources"><strong>Source:</strong> SPDR GICS ETFs (XLK, XLE, XLF, XLI, XLY, XLP, XLV, XLU, XLB, XLRE, XLC). Top holdings sourced from ETF composition data. Stock returns via Yahoo Finance.</div>
+      </div>
+      <!-- Card 4: Quantamental composite -->
+      <div class="card">
+        <div class="card-title">Quantamental Composite — Technical × Fundamental
+          <span class="help-icon" title="Cain (2023): F-Score (FRED pillar) × T-Score (price momentum) per sector group. Quant-Confirm = both bullish. Fund-Led = fundamentals ahead of price. Tech-Led = price ahead of fundamentals. Quant-Avoid = both bearish.">?</span>
+        </div>
+        <div class="card-body">
+          <div id="sectorsQuantDisplay" style="padding:8px 0;"><div style="text-align:center;padding:20px;color:var(--text-sec);"><span class="spinner"></span></div></div>
+        </div>
+        <div class="card-sources"><strong>Framework:</strong> Cain (2023) "Quantementals." F-Score from FRED pillars. T-Score from 3M excess return vs. SPY, rank-normalized. Conviction = F × T.</div>
       </div>
     </div><!-- /catab-sectors -->
 
@@ -10147,30 +10183,61 @@ async function psLoadFib() {
     var closes = pts.map(function(p){ return p.close; });
     var dates = pts.map(function(p){ return p.date.slice(0,10); });
 
-    // Find swing high and swing low using local extrema (5-day window)
-    var swingHigh = { idx: 0, value: closes[0] };
-    var swingLow = { idx: 0, value: closes[0] };
-    for (var i=5; i<closes.length-5; i++) {
-      var isLocalHigh = true, isLocalLow = true;
-      for (var j=i-5; j<=i+5; j++) {
-        if (j === i) continue;
-        if (closes[j] >= closes[i]) isLocalHigh = false;
-        if (closes[j] <= closes[i]) isLocalLow = false;
+    // ── Proper swing detection ──────────────────────────────────────────────
+    // Goal: find the MOST RECENT meaningful swing high and the MOST RECENT
+    // meaningful swing low, then orient the Fibonacci from the earlier one
+    // to the later one (the "most recent completed swing").
+    //
+    // Algorithm: scan for local extrema using a larger window (15-day pivot)
+    // to filter out noise, then pick the most recent high and low from
+    // those pivots. If both exist, orient by whichever is more recent.
+    // This correctly identifies e.g. QQQ: low 4/8/2025 ~$416, high 1/12/2026 ~$627.
+
+    var PIVOT_WIN = 15; // 15-day window each side for a "significant" pivot
+    var pivotHighs = []; // { idx, value, date }
+    var pivotLows  = [];
+
+    for (var pi = PIVOT_WIN; pi < closes.length - PIVOT_WIN; pi++) {
+      var isHigh = true, isLow = true;
+      for (var pj = pi - PIVOT_WIN; pj <= pi + PIVOT_WIN; pj++) {
+        if (pj === pi) continue;
+        if (closes[pj] >= closes[pi]) isHigh = false;
+        if (closes[pj] <= closes[pi]) isLow  = false;
+        if (!isHigh && !isLow) break;
       }
-      if (isLocalHigh && closes[i] > swingHigh.value) swingHigh = { idx: i, value: closes[i] };
-      if (isLocalLow && closes[i] < swingLow.value) swingLow = { idx: i, value: closes[i] };
-    }
-    // Also consider global extremes
-    for (var k=0; k<closes.length; k++) {
-      if (closes[k] > swingHigh.value) swingHigh = { idx: k, value: closes[k] };
-      if (closes[k] < swingLow.value) swingLow = { idx: k, value: closes[k] };
+      if (isHigh) pivotHighs.push({ idx: pi, value: closes[pi], date: dates[pi] });
+      if (isLow)  pivotLows.push({ idx: pi, value: closes[pi], date: dates[pi] });
     }
 
-    // Determine direction
-    var bullish; // true if low came before high (up-trend move)
+    // If too few pivots found (tight window), fall back to 5-day window
+    if (pivotHighs.length < 1 || pivotLows.length < 1) {
+      var FW = 5;
+      for (var fi = FW; fi < closes.length - FW; fi++) {
+        var fh = true, fl = true;
+        for (var fj = fi - FW; fj <= fi + FW; fj++) {
+          if (fj === fi) continue;
+          if (closes[fj] >= closes[fi]) fh = false;
+          if (closes[fj] <= closes[fi]) fl = false;
+        }
+        if (fh && !pivotHighs.find(function(p){ return p.idx === fi; })) pivotHighs.push({ idx: fi, value: closes[fi], date: dates[fi] });
+        if (fl && !pivotLows.find(function(p){ return p.idx === fi; }))  pivotLows.push({ idx: fi, value: closes[fi], date: dates[fi] });
+      }
+    }
+
+    // Most recent pivot high and low
+    var swingHigh = pivotHighs.length ? pivotHighs[pivotHighs.length - 1] : { idx: 0, value: Math.max.apply(null, closes), date: dates[closes.indexOf(Math.max.apply(null,closes))] };
+    var swingLow  = pivotLows.length  ? pivotLows[pivotLows.length - 1]   : { idx: 0, value: Math.min.apply(null, closes), date: dates[closes.indexOf(Math.min.apply(null,closes))] };
+
+    // If direction is auto, orient from whichever pivot came FIRST to whichever came LAST
+    // i.e. the "most recent completed move"
+    var bullish;
     if (direction === 'bull') bullish = true;
     else if (direction === 'bear') bullish = false;
-    else bullish = swingLow.idx < swingHigh.idx;
+    else {
+      // Find the most recent of (last pivot high, last pivot low)
+      // The more recent pivot is the END of the move; the earlier is START
+      bullish = swingLow.idx < swingHigh.idx; // low came first → upward move
+    }
 
     var start, end;
     if (bullish) { start = swingLow; end = swingHigh; }
@@ -12452,6 +12519,53 @@ async function creditTabLoad() {
     }
 
     renderIndicatorTable('creditScorecardDisplay', mon.indicators);
+
+    // Card 4: HYG vs TLT flight-to-safety
+    try {
+      var [hygFlight, tltFlight] = await Promise.all([
+        fetchChart('HYG','6mo','1d'), fetchChart('TLT','6mo','1d')
+      ]);
+      var hygPts2 = (hygFlight.points||[]).filter(function(p){return p.close!=null;});
+      var tltPts2 = (tltFlight.points||[]).filter(function(p){return p.close!=null;});
+      var tltMap2 = {}; tltPts2.forEach(function(p){tltMap2[p.date.slice(0,10)]=p.close;});
+      var fDates = hygPts2.map(function(p){return p.date.slice(0,10);}).filter(function(d){return tltMap2[d];});
+      fDates.sort();
+      var hygStart2=null,tltStart2=null;
+      var hygReb2=[],tltReb2=[],spreadArr2=[];
+      fDates.forEach(function(d){
+        var hp=hygPts2.find(function(p){return p.date.slice(0,10)===d;});
+        var tp=tltMap2[d];
+        if(!hygStart2) hygStart2=hp.close; if(!tltStart2) tltStart2=tp;
+        var hr=hp.close/hygStart2*100, tr=tp/tltStart2*100;
+        hygReb2.push(hr); tltReb2.push(tr); spreadArr2.push(hr-tr);
+      });
+      var latestSpread = spreadArr2[spreadArr2.length-1];
+      var flightSignal = latestSpread > 0 ? 'HYG Leading — Risk Appetite' : 'TLT Leading — Flight-to-Safety Active';
+      var flightCol = latestSpread > 0 ? C.success : C.danger;
+      var flightEl = document.getElementById('creditFlightDisplay');
+      if (flightEl) flightEl.innerHTML = '<div style="display:flex;gap:12px;margin-bottom:8px;">'
+        + '<div style="background:var(--panel);border:1px solid var(--border);border-left:4px solid '+flightCol+';border-radius:4px;padding:8px 12px;flex:1;">'
+        + '<div style="font-size:10px;text-transform:uppercase;color:var(--text-sec);">Signal</div>'
+        + '<div style="font-size:14px;font-weight:700;color:'+flightCol+';">'+flightSignal+'</div>'
+        + '<div style="font-size:11px;color:var(--text-sec);">HYG−TLT relative return: '+(latestSpread>=0?'+':'')+latestSpread.toFixed(1)+'%</div>'
+        + '</div></div>';
+      var flightWrap = document.getElementById('creditFlightWrap');
+      if (flightWrap) flightWrap.style.display='block';
+      var fc = document.getElementById('creditFlightChart');
+      if (fc) {
+        if (_creditCharts.flight) _creditCharts.flight.destroy();
+        _creditCharts.flight = new Chart(fc.getContext('2d'), {
+          type:'line', data:{labels:fDates, datasets:[
+            {label:'HYG (HY Credit)',data:hygReb2,borderColor:C.navy,borderWidth:1.8,pointRadius:0,fill:false},
+            {label:'TLT (Long Bond)',data:tltReb2,borderColor:C.blue,borderWidth:1.8,pointRadius:0,fill:false,borderDash:[5,3]}
+          ]},
+          options:{responsive:true,maintainAspectRatio:false,
+            plugins:{legend:{display:true,labels:{font:{size:10}}},tooltip:chartTooltip},
+            scales:{x:{grid:chartGrid,ticks:Object.assign({},chartTicks,{maxTicksLimit:6,font:{size:9},autoSkip:true})},
+              y:{grid:chartGrid,ticks:Object.assign({},chartTicks,{callback:function(v){return v.toFixed(0);},font:{size:9}})}}}
+        });
+      }
+    } catch(e) {}
   } catch(e) { console.error('[creditTabLoad]', e); }
 }
 
@@ -12548,6 +12662,41 @@ async function ycTabLoad() {
 
 // ── TAB 6: Cross-Asset Momentum ───────────────────────────────────
 var _momCharts = {};
+var _momScorecardData = {};
+
+function momScorecardTF(btn, days) {
+  document.querySelectorAll('.mom-tf').forEach(function(b) {
+    var active = parseInt(b.dataset.tf) === days;
+    b.style.background = active ? 'var(--navy)' : 'var(--panel)';
+    b.style.color = active ? '#fff' : 'var(--text-sec)';
+    b.style.border = active ? 'none' : '1px solid var(--border)';
+  });
+  renderMomScorecard(days);
+}
+
+function renderMomScorecard(days) {
+  var scoreEl = document.getElementById('momScorecardDisplay');
+  if (!scoreEl || !_momScorecardData.data) return;
+  var data = _momScorecardData.data;
+  var labels = {SPY:'S&P 500',QQQ:'Nasdaq 100',IWM:'Small Cap',TLT:'Long Bonds',GLD:'Gold',USO:'Oil',HYG:'High Yield',UUP:'US Dollar',EEM:'Em. Markets',XLE:'Energy',VNQ:'REITs'};
+  var rets = Object.keys(data).map(function(t) {
+    var pts = data[t];
+    if (!pts || pts.length < days + 1) return {t:t, label:labels[t]||t, r:null};
+    return {t:t, label:labels[t]||t, r:(pts[pts.length-1].close/pts[pts.length-1-days].close-1)*100};
+  }).filter(function(x){return x.r!=null;}).sort(function(a,b){return b.r-a.r;});
+  var html = '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:6px;">';
+  rets.forEach(function(x) {
+    var col = x.r >= 0 ? C.success : C.danger;
+    html += '<div style="background:var(--bg);border:1px solid var(--border);border-left:4px solid '+col+';border-radius:4px;padding:7px 10px;">'
+      + '<div style="font-size:10px;color:var(--text-sec);">'+x.label+'</div>'
+      + '<div style="font-size:17px;font-weight:800;color:'+col+';">'+(x.r>=0?'+':'')+x.r.toFixed(1)+'%</div>'
+      + '<div style="font-size:9px;color:var(--text-sec);">'+days+'D Return</div></div>';
+  });
+  html += '</div>';
+  scoreEl.innerHTML = html;
+}
+
+var _momCharts = {};
 async function momTabLoad() {
   try {
     var assets = ['SPY','TLT','GLD','USO','QQQ','IWM','HYG','UUP','EEM','XLE','VNQ'];
@@ -12570,6 +12719,10 @@ async function momTabLoad() {
     var lbl = score>=65?'Risk-On Momentum':score>=45?'Mixed / Transitioning':'Risk-Off';
     renderPillarHeader('momPillarHeader','Cross-Asset Momentum',score,lbl+' · SPY '+(spy3m!=null?(spy3m>=0?'+':'')+spy3m.toFixed(1)+'%':'—')+' · TLT '+(tlt3m!=null?(tlt3m>=0?'+':'')+tlt3m.toFixed(1)+'%':'—'));
 
+    // Store for TF selector
+    _momScorecardData.data = data;
+    renderMomScorecard(63); // default 3M
+
     // Rebased chart SPY/TLT/GLD/USO
     var core = ['SPY','TLT','GLD','USO'];
     var coreColors = [C.navy,C.blue,'#8B6914',C.danger];
@@ -12585,7 +12738,7 @@ async function momTabLoad() {
       return {label:t,data:rebased,borderColor:coreColors[i],borderWidth:1.8,pointRadius:0,fill:false,tension:0.1,spanGaps:true};
     });
     var mWrap = document.getElementById('momRebasedWrap'); if (mWrap) mWrap.style.display='block';
-    document.getElementById('momRebasedDisplay').style.display='none';
+    var mDisp = document.getElementById('momRebasedDisplay'); if(mDisp) mDisp.style.display='none';
     var mc = document.getElementById('momRebasedChart');
     if (mc) {
       if (_momCharts.rebased) _momCharts.rebased.destroy();
@@ -12597,195 +12750,317 @@ async function momTabLoad() {
       });
     }
 
-    // 3M scorecard
-    var scoreEl = document.getElementById('momScorecardDisplay');
-    if (scoreEl) {
-      var labels = {SPY:'S&P 500',QQQ:'Nasdaq',IWM:'Small Cap',TLT:'Long Bonds',GLD:'Gold',USO:'Oil',HYG:'High Yield',UUP:'US Dollar',EEM:'Em. Markets',XLE:'Energy',VNQ:'REITs'};
-      var rets = assets.map(function(t){return {t:t,label:labels[t]||t,r:pctRet(data[t],63)};}).filter(function(x){return x.r!=null;});
-      rets.sort(function(a,b){return b.r-a.r;});
-      var sHtml = '<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:8px;">';
-      rets.forEach(function(x){
-        var col = x.r>=0?C.success:C.danger;
-        sHtml += '<div style="background:var(--bg);border:1px solid var(--border);border-left:4px solid '+col+';border-radius:4px;padding:8px 12px;">'
-          + '<div style="font-size:10px;color:var(--text-sec);">'+x.label+'</div>'
-          + '<div style="font-size:18px;font-weight:800;color:'+col+';">'+(x.r>=0?'+':'')+x.r.toFixed(1)+'%</div>'
-          + '<div style="font-size:9px;color:var(--text-sec);">3M Return</div></div>';
+    // Rolling correlation chart (replaces DXY vs commodities)
+    var PAIRS = [
+      {a:'SPY',b:'TLT',label:'SPY/TLT',color:C.navy},
+      {a:'SPY',b:'GLD',label:'SPY/GLD',color:'#8B6914'},
+      {a:'SPY',b:'HYG',label:'SPY/HYG',color:C.success},
+      {a:'TLT',b:'GLD',label:'TLT/GLD',color:C.blue}
+    ];
+    var WIN = 63;
+    var corrDates = allDates.slice(WIN);
+    var corrDatasets = PAIRS.map(function(pair) {
+      var mapA={}; (data[pair.a]||[]).forEach(function(p){mapA[p.date.slice(0,10)]=p.close;});
+      var mapB={}; (data[pair.b]||[]).forEach(function(p){mapB[p.date.slice(0,10)]=p.close;});
+      var rollingCorr = allDates.slice(WIN).map(function(d, ii) {
+        var window = allDates.slice(ii, ii+WIN);
+        var rA=[],rB=[];
+        for (var w=1;w<window.length;w++) {
+          var a0=mapA[window[w-1]],a1=mapA[window[w]],b0=mapB[window[w-1]],b1=mapB[window[w]];
+          if(a0&&a1&&b0&&b1){rA.push(Math.log(a1/a0));rB.push(Math.log(b1/b0));}
+        }
+        if(rA.length<10) return null;
+        var mA=rA.reduce(function(s,v){return s+v;},0)/rA.length;
+        var mB=rB.reduce(function(s,v){return s+v;},0)/rB.length;
+        var cov=0,vA=0,vB=0;
+        for(var k=0;k<rA.length;k++){cov+=(rA[k]-mA)*(rB[k]-mB);vA+=(rA[k]-mA)*(rA[k]-mA);vB+=(rB[k]-mB)*(rB[k]-mB);}
+        return vA>0&&vB>0?cov/Math.sqrt(vA*vB):null;
       });
-      sHtml += '</div>';
-      scoreEl.innerHTML = sHtml;
+      return {label:pair.label,data:rollingCorr,borderColor:pair.color,borderWidth:1.5,pointRadius:0,fill:false,tension:0.2,spanGaps:true};
+    });
+    var corrWrap = document.getElementById('momCorrWrap'); if(corrWrap) corrWrap.style.display='block';
+    var corrDisp = document.getElementById('momCorrDisplay');
+    var latestSpyTlt = corrDatasets[0].data[corrDatasets[0].data.length-1];
+    if(corrDisp && latestSpyTlt!=null) {
+      var corrCol = latestSpyTlt<0?C.success:'#8B6914';
+      corrDisp.innerHTML='<div style="font-size:11px;margin-bottom:6px;">SPY/TLT 63D corr: <strong style="color:'+corrCol+';">'+(latestSpyTlt>=0?'+':'')+latestSpyTlt.toFixed(2)+'</strong>'+(latestSpyTlt<0?' (diversification intact — negative correlation)':' ⚠️ Positive — 60/40 diversification compromised')+'</div>';
+    }
+    var cc = document.getElementById('momCorrChart');
+    if(cc){
+      if(_momCharts.corr) _momCharts.corr.destroy();
+      _momCharts.corr = new Chart(cc.getContext('2d'),{
+        type:'line',data:{labels:corrDates,datasets:corrDatasets},
+        options:{responsive:true,maintainAspectRatio:false,
+          plugins:{legend:{display:true,labels:{font:{size:10}}},tooltip:Object.assign({},chartTooltip,{callbacks:{label:function(ctx){return ctx.dataset.label+': '+(ctx.parsed.y!=null?ctx.parsed.y.toFixed(2):'—');}}})},
+          scales:{
+            x:{grid:chartGrid,ticks:Object.assign({},chartTicks,{maxTicksLimit:6,font:{size:9},autoSkip:true})},
+            y:{grid:chartGrid,ticks:Object.assign({},chartTicks,{font:{size:9},callback:function(v){return v.toFixed(1);}}),
+               title:{display:true,text:'Pearson ρ',font:{size:9},color:C.textSec},
+               min:-1,max:1,
+               afterDataLimits: function(scale){scale.min=-1.05;scale.max=1.05;}}
+          },
+          plugins:{annotation:{annotations:{zero:{type:'line',yMin:0,yMax:0,borderColor:'rgba(0,0,0,0.2)',borderWidth:1,borderDash:[4,4]}}}}
+        }
+      });
     }
 
-    // DXY vs USO
-    var dxyWrap = document.getElementById('momDxyWrap'); if (dxyWrap) dxyWrap.style.display='block';
-    document.getElementById('momDxyDisplay').innerHTML='';
-    var dxyC = document.getElementById('momDxyChart');
-    if (dxyC && data.UUP && data.UUP.length && data.USO && data.USO.length) {
-      var uupMap = {}; data.UUP.forEach(function(p){uupMap[p.date.slice(0,10)]=p.close;});
-      var usoDates = data.USO.map(function(p){return p.date.slice(0,10);}).filter(function(d){return uupMap[d];});
-      var uupStart=null,usoStart=null;
-      var uupReb=[],usoReb=[];
-      data.USO.filter(function(p){return uupMap[p.date.slice(0,10)];}).forEach(function(p){
-        var d=p.date.slice(0,10);
-        if(!uupStart) uupStart=uupMap[d]; if(!usoStart) usoStart=p.close;
-        uupReb.push(uupMap[d]/uupStart*100); usoReb.push(p.close/usoStart*100);
-      });
-      if (_momCharts.dxy) _momCharts.dxy.destroy();
-      _momCharts.dxy = new Chart(dxyC.getContext('2d'), {
-        type:'line',data:{labels:usoDates,datasets:[
-          {label:'UUP (USD)',data:uupReb,borderColor:C.navy,borderWidth:1.8,pointRadius:0,fill:false},
-          {label:'USO (Oil)',data:usoReb,borderColor:'#8B6914',borderWidth:1.8,pointRadius:0,fill:false}
-        ]},
-        options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:true,labels:{font:{size:10}}},tooltip:chartTooltip},
-          scales:{x:{grid:chartGrid,ticks:Object.assign({},chartTicks,{maxTicksLimit:6,font:{size:9},autoSkip:true})},
-            y:{grid:chartGrid,ticks:Object.assign({},chartTicks,{callback:function(v){return v.toFixed(0);},font:{size:9}})}}}
-      });
-    }
-
-    // Risk-On/Off regime classifier
+    // Risk-On/Off classifier
     var regEl = document.getElementById('momRegimeDisplay');
     if (regEl && spy3m!=null && tlt3m!=null && gld3m!=null) {
       var uso3m = pctRet(data.USO,63);
       var regime, regCol, regDesc;
       if (spy3m>0 && spy3m>tlt3m && spy3m>gld3m) { regime='Risk-On'; regCol=C.success; regDesc='Equities leading bonds and gold. Risk appetite dominant.'; }
-      else if (tlt3m>0 && gld3m>0 && spy3m<tlt3m) { regime='Risk-Off'; regCol=C.danger; regDesc='Bonds and gold leading equities. Defensive positioning.'; }
+      else if (tlt3m>0 && gld3m>0 && spy3m<tlt3m) { regime='Risk-Off'; regCol=C.danger; regDesc='Bonds and gold leading equities. Defensive positioning dominant.'; }
       else if (uso3m!=null && uso3m>5 && spy3m>0 && tlt3m<0) { regime='Reflation'; regCol='#8B6914'; regDesc='Commodities and equities up, bonds down. Inflation expectations rising.'; }
-      else if (uso3m!=null && uso3m>5 && spy3m<0 && tlt3m<0) { regime='Stagflation'; regCol=C.danger; regDesc='Commodities up, equities and bonds both down. Worst regime for balanced portfolios.'; }
+      else if (uso3m!=null && uso3m>5 && spy3m<0 && tlt3m<0) { regime='Stagflation'; regCol=C.danger; regDesc='Commodities up, equities and bonds both down.'; }
       else { regime='Mixed / Transitioning'; regCol=C.blue; regDesc='No dominant cross-asset theme. Monitor for regime clarification.'; }
-      regEl.innerHTML = '<div style="background:var(--panel);border:1px solid var(--border);border-left:4px solid '+regCol+';border-radius:4px;padding:16px 20px;text-align:left;">'
+      regEl.innerHTML = '<div style="background:var(--panel);border:1px solid var(--border);border-left:4px solid '+regCol+';border-radius:4px;padding:16px 20px;">'
         + '<div style="font-size:10px;text-transform:uppercase;color:var(--text-sec);margin-bottom:4px;">Current Cross-Asset Regime</div>'
-        + '<div style="font-size:24px;font-weight:800;color:'+regCol+';margin-bottom:6px;">'+regime+'</div>'
-        + '<div style="font-size:12px;color:var(--text-sec);">'+regDesc+'</div>'
-        + '<div style="margin-top:12px;font-size:11px;display:grid;grid-template-columns:repeat(3,1fr);gap:8px;">'
-        + '<div><div style="color:var(--text-sec);">SPY 3M</div><div style="font-weight:700;color:'+(spy3m>=0?C.success:C.danger)+';">'+(spy3m>=0?'+':'')+spy3m.toFixed(1)+'%</div></div>'
-        + '<div><div style="color:var(--text-sec);">TLT 3M</div><div style="font-weight:700;color:'+(tlt3m>=0?C.success:C.danger)+';">'+(tlt3m>=0?'+':'')+tlt3m.toFixed(1)+'%</div></div>'
-        + '<div><div style="color:var(--text-sec);">GLD 3M</div><div style="font-weight:700;color:'+(gld3m>=0?C.success:C.danger)+';">'+(gld3m>=0?'+':'')+gld3m.toFixed(1)+'%</div></div>'
+        + '<div style="font-size:26px;font-weight:800;color:'+regCol+';margin-bottom:6px;">'+regime+'</div>'
+        + '<div style="font-size:12px;color:var(--text-sec);line-height:1.5;margin-bottom:12px;">'+regDesc+'</div>'
+        + '<div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;font-size:11px;">'
+        + '<div style="text-align:center;"><div style="color:var(--text-sec);font-size:9px;">SPY 3M</div><div style="font-weight:700;color:'+(spy3m>=0?C.success:C.danger)+';">'+(spy3m>=0?'+':'')+spy3m.toFixed(1)+'%</div></div>'
+        + '<div style="text-align:center;"><div style="color:var(--text-sec);font-size:9px;">TLT 3M</div><div style="font-weight:700;color:'+(tlt3m>=0?C.success:C.danger)+';">'+(tlt3m>=0?'+':'')+tlt3m.toFixed(1)+'%</div></div>'
+        + '<div style="text-align:center;"><div style="color:var(--text-sec);font-size:9px;">GLD 3M</div><div style="font-weight:700;color:'+(gld3m>=0?C.success:C.danger)+';">'+(gld3m>=0?'+':'')+gld3m.toFixed(1)+'%</div></div>'
+        + '<div style="text-align:center;"><div style="color:var(--text-sec);font-size:9px;">USO 3M</div><div style="font-weight:700;color:'+(uso3m!=null&&uso3m>=0?C.success:C.danger)+';">'+(uso3m!=null?(uso3m>=0?'+':'')+uso3m.toFixed(1)+'%':'—')+'</div></div>'
         + '</div></div>';
     }
   } catch(e) { console.error('[momTabLoad]', e); }
 }
 
+
 // ── TAB 7: Sector Rotation ────────────────────────────────────────
 var _sectorCharts = {};
+
+// Sector rotation ratio signals definition
+var SECTOR_RATIO_SIGNALS = {
+  cyc_def: {
+    label: 'Cyclicals / Defensives',
+    fetchA: async function() {
+      var cyc = ['XLK','XLY','XLI','XLF','XLE','XLB','XLRE','XLC'];
+      var def_ = ['XLP','XLV','XLU'];
+      var all = cyc.concat(def_); var data = {};
+      await Promise.all(all.map(async function(t){ try{ var d=await fetchChart(t,'1y','1d'); data[t]=(d.points||[]).filter(function(p){return p.close!=null;}); }catch(e){data[t]=[];} }));
+      var dates = data.XLK.map(function(p){return p.date.slice(0,10);});
+      var ratio = [], ratioLabels = [];
+      dates.forEach(function(d) {
+        var c=0,cN=0,df=0,dfN=0;
+        cyc.forEach(function(t){var p=data[t]&&data[t].find(function(p2){return p2.date.slice(0,10)===d;});if(p){c+=p.close;cN++;}});
+        def_.forEach(function(t){var p=data[t]&&data[t].find(function(p2){return p2.date.slice(0,10)===d;});if(p){df+=p.close;dfN++;}});
+        if(cN>0&&dfN>0){ratio.push((c/cN)/(df/dfN));ratioLabels.push(d);}
+      });
+      return {ratio:ratio, dates:ratioLabels};
+    }
+  },
+  small_large: { label: 'Small Cap / Large Cap (IWM÷SPY)', tickers: ['IWM','SPY'] },
+  value_growth: { label: 'Value / Growth (IVE÷IVW)', tickers: ['IVE','IVW'] },
+  energy_fins:  { label: 'Energy / Financials (XLE÷XLF)', tickers: ['XLE','XLF'] },
+  intl_us:      { label: 'International / US (EFA÷SPY)', tickers: ['EFA','SPY'] },
+  rsp_spy:      { label: 'Equal-Weight / Cap-Weight (RSP÷SPY)', tickers: ['RSP','SPY'] }
+};
+
+var _sectorCharts = {};
+var _sectorData = {};  // cached: key=signal, {ratio, dates}
+var _sectorStockData = {};
+
+// Switch ratio signal
+async function sectorsUpdateRatio() {
+  var sig = document.getElementById('sectorsRatioSignal').value;
+  var disp = document.getElementById('sectorsRatioDisplay');
+  var wrap = document.getElementById('sectorsRatioWrap');
+  if (!disp) return;
+  if (_sectorData[sig]) { renderSectorRatioChart(sig, _sectorData[sig]); return; }
+  disp.innerHTML = '<span class="spinner"></span>';
+  try {
+    var def = SECTOR_RATIO_SIGNALS[sig];
+    var result;
+    if (def.fetchA) {
+      result = await def.fetchA();
+    } else {
+      var dA = await fetchChart(def.tickers[0],'1y','1d');
+      var dB = await fetchChart(def.tickers[1],'1y','1d');
+      var ptsA=(dA.points||[]).filter(function(p){return p.close!=null;});
+      var ptsB=(dB.points||[]).filter(function(p){return p.close!=null;});
+      var mapB={}; ptsB.forEach(function(p){mapB[p.date.slice(0,10)]=p.close;});
+      var ratio=[],ratioLabels=[];
+      ptsA.forEach(function(p){var d=p.date.slice(0,10);if(mapB[d]){ratio.push(p.close/mapB[d]);ratioLabels.push(d);}});
+      result = {ratio:ratio, dates:ratioLabels};
+    }
+    _sectorData[sig] = result;
+    renderSectorRatioChart(sig, result);
+  } catch(e) { if(disp) disp.innerHTML='<span style="color:var(--danger);">Error: '+e.message+'</span>'; }
+}
+
+function renderSectorRatioChart(sig, result) {
+  var ratio = result.ratio, dates = result.dates;
+  var def = SECTOR_RATIO_SIGNALS[sig];
+  var disp = document.getElementById('sectorsRatioDisplay');
+  var wrap = document.getElementById('sectorsRatioWrap');
+  var rStart = ratio[0]||1;
+  var ratioReb = ratio.map(function(v){return v/rStart*100;});
+  var sma63 = ratioReb.map(function(v,i){if(i<62) return null; var s=0;for(var k=i-62;k<=i;k++)s+=ratioReb[k];return s/63;});
+  var cur=ratioReb[ratioReb.length-1], sma=sma63[sma63.length-1];
+  var abv = sma&&cur>sma; var col=abv?C.success:C.danger;
+  if(disp) disp.innerHTML = '<div style="display:flex;gap:10px;margin-bottom:8px;font-size:11px;">'
+    + '<div style="background:var(--panel);border-left:4px solid '+col+';border-radius:4px;padding:6px 12px;">'
+    + '<div style="color:var(--text-sec);font-size:9px;text-transform:uppercase;">Signal</div>'
+    + '<div style="font-weight:700;color:'+col+';">'+(abv?'▲ Outperforming (63D SMA)':'▼ Underperforming (63D SMA)')+'</div>'
+    + '</div></div>';
+  if(wrap) wrap.style.display='block';
+  var c = document.getElementById('sectorsRatioChart');
+  if(!c) return;
+  if(_sectorCharts.ratio) _sectorCharts.ratio.destroy();
+  _sectorCharts.ratio = new Chart(c.getContext('2d'), {
+    type:'line', data:{labels:dates, datasets:[
+      {label:def.label,data:ratioReb,borderColor:C.navy,borderWidth:1.8,pointRadius:0,fill:false,tension:0.1},
+      {label:'63D SMA',data:sma63,borderColor:C.blue,borderWidth:1.2,borderDash:[5,3],pointRadius:0,fill:false}
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:true,labels:{font:{size:10}}},tooltip:chartTooltip},
+      scales:{x:{grid:chartGrid,ticks:Object.assign({},chartTicks,{maxTicksLimit:7,font:{size:9},autoSkip:true})},
+        y:{grid:chartGrid,ticks:Object.assign({},chartTicks,{callback:function(v){return v.toFixed(0);},font:{size:9}})}}}
+  });
+}
+
+// Sector momentum TF selector
+var _sectorMomData = {};
+function sectorsMomentumTF(btn, days) {
+  document.querySelectorAll('.sec-tf').forEach(function(b) {
+    var a=parseInt(b.dataset.tf)===days;
+    b.style.background=a?'var(--navy)':'var(--panel)'; b.style.color=a?'#fff':'var(--text-sec)'; b.style.border=a?'none':'1px solid var(--border)';
+  });
+  renderSectorMomentum(days);
+}
+
+function renderSectorMomentum(days) {
+  var el = document.getElementById('sectorsMomentumDisplay');
+  if (!el || !_sectorMomData.data) return;
+  var data = _sectorMomData.data, spyPts = data['SPY'];
+  var SECT_LABELS = {XLK:'Technology',XLE:'Energy',XLF:'Financials',XLI:'Industrials',XLY:'Cons. Disc.',XLP:'Staples',XLV:'Health Care',XLU:'Utilities',XLB:'Materials',XLRE:'Real Estate',XLC:'Comm. Svcs.'};
+  var ALL11 = ['XLK','XLY','XLI','XLF','XLE','XLB','XLRE','XLC','XLP','XLV','XLU'];
+  function exRet(ticker) {
+    var pts=data[ticker], spy=spyPts;
+    if(!pts||pts.length<days+1||!spy||spy.length<days+1) return null;
+    var sr=(pts[pts.length-1].close/pts[pts.length-1-days].close-1)*100;
+    var spyr=(spy[spy.length-1].close/spy[spy.length-1-days].close-1)*100;
+    return sr-spyr;
+  }
+  var results = ALL11.map(function(t){return {t:t,name:SECT_LABELS[t]||t,ex:exRet(t)};}).filter(function(x){return x.ex!=null;}).sort(function(a,b){return b.ex-a.ex;});
+  var inflowN=4, outflowN=4;
+  results.forEach(function(r,i){r.flow=i<inflowN?'Inflow':i>=results.length-outflowN?'Outflow':'Neutral';r.col=r.flow==='Inflow'?C.success:r.flow==='Outflow'?C.danger:'#8B6914';});
+  // Narrative
+  var inflowGroups=results.filter(function(r){return r.flow==='Inflow';}).map(function(r){return r.t;}).join(', ');
+  var html='<div style="background:var(--panel);border:1px solid var(--border);border-radius:4px;padding:8px 12px;margin-bottom:10px;font-size:11px;">'
+    +'<strong>'+days+'D vs SPY — Inflows:</strong> '+inflowGroups+'</div>'
+    +'<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:6px;">';
+  results.forEach(function(r){
+    html+='<div style="background:var(--bg);border:1px solid var(--border);border-left:4px solid '+r.col+';border-radius:4px;padding:7px 10px;">'
+      +'<div style="display:flex;justify-content:space-between;align-items:center;">'
+      +'<span style="font-size:11px;font-weight:700;">'+r.t+'</span>'
+      +'<span style="font-size:10px;background:'+r.col+';color:#fff;padding:1px 6px;border-radius:10px;">'+r.flow+'</span>'
+      +'</div>'
+      +'<div style="font-size:10px;color:var(--text-sec);">'+r.name+'</div>'
+      +'<div style="font-size:15px;font-weight:800;color:'+r.col+';">'+(r.ex>=0?'+':'')+r.ex.toFixed(1)+'%</div>'
+      +'<div style="font-size:9px;color:var(--text-sec);">vs SPY '+days+'D</div>'
+      +'</div>';
+  });
+  html+='</div>';
+  el.innerHTML=html;
+}
+
+
+function sectorToggleStocks(el) {
+  var sub = el.querySelector('.sec-stocks');
+  if (sub) sub.style.display = sub.style.display === 'none' ? 'block' : 'none';
+}
+
 async function sectorsTabLoad() {
   try {
-    var CYC = ['XLK','XLY','XLI','XLF','XLE','XLB','XLRE','XLC'];
-    var DEF = ['XLP','XLV','XLU'];
-    var ALL11 = CYC.concat(DEF);
+    var ALL11 = ['XLK','XLY','XLI','XLF','XLE','XLB','XLRE','XLC','XLP','XLV','XLU'];
     var data = {};
     await Promise.all(['SPY'].concat(ALL11).map(async function(t){
       try { var d=await fetchChart(t,'1y','1d'); data[t]=(d.points||[]).filter(function(p){return p.close!=null;}); }
       catch(e){data[t]=[];}
     }));
+    _sectorMomData.data = data;
 
     function pctRet(pts,n){if(!pts||pts.length<n+1) return null; return (pts[pts.length-1].close/pts[pts.length-1-n].close-1)*100;}
+    var cyc3m = ['XLK','XLY','XLI','XLF'].map(function(t){return pctRet(data[t],63)||0;}).reduce(function(s,v){return s+v;},0)/4;
+    var def3m = ['XLP','XLV','XLU'].map(function(t){return pctRet(data[t],63)||0;}).reduce(function(s,v){return s+v;},0)/3;
+    var spread = cyc3m-def3m;
+    var score=Math.max(0,Math.min(100,50+spread*4));
+    var lbl=score>=65?'Cyclicals Leading':score>=45?'Mixed':'Defensives Leading';
+    renderPillarHeader('sectorsPillarHeader','Sector Rotation',score,lbl);
 
-    // Cyc/Def ratio
-    function avgClose(tickers, idx) {
-      var vals=[]; tickers.forEach(function(t){if(data[t]&&data[t][idx]) vals.push(data[t][idx].close);}); return vals.length?vals.reduce(function(s,v){return s+v;},0)/vals.length:null;
-    }
-    var dates = data.SPY.map(function(p){return p.date.slice(0,10);});
-    var ratio = dates.map(function(d,i){
-      var c=0,cN=0,df=0,dfN=0;
-      CYC.forEach(function(t){var p=data[t]&&data[t].find(function(p2){return p2.date.slice(0,10)===d;});if(p){c+=p.close;cN++;}});
-      DEF.forEach(function(t){var p=data[t]&&data[t].find(function(p2){return p2.date.slice(0,10)===d;});if(p){df+=p.close;dfN++;}});
-      return cN>0&&dfN>0?((c/cN)/(df/dfN)):null;
-    }).filter(function(v){return v!=null;});
-    var ratioStart = ratio[0]||1;
-    var ratioReb = ratio.map(function(v){return v/ratioStart*100;});
-    var sma63r = ratioReb.map(function(v,i){if(i<62) return null; var s=0;for(var k=i-62;k<=i;k++)s+=ratioReb[k];return s/63;});
-    var curR = ratioReb[ratioReb.length-1], curS = sma63r[sma63r.length-1];
-    var aboveSMA = curS&&curR>curS;
-    var rCol = aboveSMA?C.success:C.danger;
+    // Load default ratio (cyc/def)
+    sectorsUpdateRatio();
+    // Load momentum scorecard at default 1W
+    renderSectorMomentum(5);
 
-    var cyc3m = CYC.map(function(t){return pctRet(data[t],63)||0;}).reduce(function(s,v){return s+v;},0)/CYC.length;
-    var def3m = DEF.map(function(t){return pctRet(data[t],63)||0;}).reduce(function(s,v){return s+v;},0)/DEF.length;
-    var spread = cyc3m - def3m;
-    var score = Math.max(0,Math.min(100,50+spread*4));
-    var lbl = score>=65?'Cyclicals Leading':score>=45?'Mixed':'Defensives Leading';
-    renderPillarHeader('sectorsPillarHeader','Sector Rotation + Cross-Asset Composite',score,lbl+' · Cyc '+(cyc3m>=0?'+':'')+cyc3m.toFixed(1)+'% vs Def '+(def3m>=0?'+':'')+def3m.toFixed(1)+'%');
-
-    var rDisp = document.getElementById('sectorsRatioDisplay'); if (rDisp) rDisp.style.display='none';
-    var rWrap = document.getElementById('sectorsRatioWrap'); if (rWrap) rWrap.style.display='block';
-    var rc = document.getElementById('sectorsRatioChart');
-    if (rc) {
-      if (_sectorCharts.ratio) _sectorCharts.ratio.destroy();
-      var ratioLabels = dates.slice(dates.length-ratioReb.length);
-      _sectorCharts.ratio = new Chart(rc.getContext('2d'), {
-        type:'line',data:{labels:ratioLabels,datasets:[
-          {label:'Cyc/Def Ratio',data:ratioReb,borderColor:C.navy,borderWidth:1.8,pointRadius:0,fill:false,tension:0.1},
-          {label:'63D SMA',data:sma63r,borderColor:C.blue,borderWidth:1.2,borderDash:[5,3],pointRadius:0,fill:false}
-        ]},
-        options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:true,labels:{font:{size:10}}},tooltip:chartTooltip},
-          scales:{x:{grid:chartGrid,ticks:Object.assign({},chartTicks,{maxTicksLimit:7,font:{size:9},autoSkip:true})},
-            y:{grid:chartGrid,ticks:Object.assign({},chartTicks,{callback:function(v){return v.toFixed(0);},font:{size:9}})}}}
-      });
-    }
-
-    // 11-sector momentum (reuse mktLoadSectorFlow logic inline)
-    if (typeof mktLoadSectorFlow === 'function') {
-      // Temporarily override the target element
-      var origEl = document.getElementById('mktSectorFlowResult');
-      var targetEl = document.getElementById('sectorsMomentumDisplay');
-      if (origEl && targetEl) {
-        var origId = origEl.id;
-        origEl.id = '_sectorFlowTmp';
-        targetEl.id = 'mktSectorFlowResult';
-        await mktLoadSectorFlow();
-        targetEl.id = 'sectorsMomentumDisplay';
-        origEl.id = origId;
-      }
-    }
-
-    // 1M sector heatmap
+    // Expanded sector heatmap with top-5 stocks
+    var SECTOR_TOPS = {"XLK": ["AAPL", "MSFT", "NVDA", "AVGO", "ORCL"], "XLE": ["XOM", "CVX", "COP", "EOG", "SLB"], "XLF": ["BRK-B", "JPM", "V", "MA", "BAC"], "XLI": ["GE", "RTX", "HON", "UNP", "CAT"], "XLY": ["AMZN", "TSLA", "HD", "MCD", "NKE"], "XLP": ["PG", "KO", "PEP", "COST", "WMT"], "XLV": ["LLY", "UNH", "JNJ", "ABBV", "MRK"], "XLU": ["NEE", "SO", "DUK", "CEG", "AEP"], "XLB": ["LIN", "APD", "SHW", "FCX", "NUE"], "XLRE": ["AMT", "PLD", "CCI", "EQIX", "PSA"], "XLC": ["META", "GOOGL", "NFLX", "CMCSA", "DIS"]};
+    var SECT_LABELS2 = {XLK:'Technology',XLE:'Energy',XLF:'Financials',XLI:'Industrials',XLY:'Cons. Disc.',XLP:'Staples',XLV:'Health Care',XLU:'Utilities',XLB:'Materials',XLRE:'Real Estate',XLC:'Comm. Svcs.'};
     var hmEl = document.getElementById('sectorsHeatmapDisplay');
     if (hmEl) {
-      var SECT_LABELS = {XLK:'Tech',XLE:'Energy',XLF:'Financials',XLI:'Industrials',XLY:'Cons.Disc.',XLP:'Staples',XLV:'Health',XLU:'Utilities',XLB:'Materials',XLRE:'Real Estate',XLC:'Comm.'};
-      var hmData = ALL11.map(function(t){return {t:t,label:SECT_LABELS[t]||t,r:pctRet(data[t],21)};}).filter(function(x){return x.r!=null;}).sort(function(a,b){return b.r-a.r;});
-      var hmHtml='<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:6px;">';
-      hmData.forEach(function(x){
-        var intensity=Math.min(1,Math.abs(x.r)/5);
-        var bg=x.r>=0?'rgba(46,125,82,'+(.1+intensity*.7)+')':'rgba(139,42,42,'+(.1+intensity*.7)+')';
-        var tc=intensity>0.5?'#fff':'var(--text)';
-        hmHtml+='<div style="background:'+bg+';border-radius:4px;padding:8px 10px;text-align:center;">'
-          +'<div style="font-size:10px;font-weight:700;color:'+tc+';">'+x.label+'</div>'
-          +'<div style="font-size:16px;font-weight:800;color:'+tc+';">'+(x.r>=0?'+':'')+x.r.toFixed(1)+'%</div>'
-          +'<div style="font-size:9px;color:'+tc+';opacity:.8;">1M</div></div>';
+      var hmData = ALL11.map(function(t){return {t:t,label:SECT_LABELS2[t]||t,r:pctRet(data[t],21),holdings:SECTOR_TOPS[t]||[]};}).filter(function(x){return x.r!=null;}).sort(function(a,b){return b.r-a.r;});
+      // Fetch stock returns for top-5 in each sector in background
+      var allStocks = [];
+      hmData.forEach(function(s){s.holdings.forEach(function(tk){if(allStocks.indexOf(tk)<0)allStocks.push(tk);});});
+      var stockData = {};
+      var stockFetches = allStocks.map(async function(tk){
+        try{var d=await fetchChart(tk,'3mo','1d');stockData[tk]=(d.points||[]).filter(function(p){return p.close!=null;});}catch(e){stockData[tk]=[];}
       });
-      hmHtml+='</div>';
-      hmEl.innerHTML=hmHtml;
+
+      // Render heatmap immediately with ETF data, then update with stock returns
+      function renderHeatmap(stockData) {
+        var html='<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:8px;">';
+        hmData.forEach(function(s){
+          var intensity=Math.min(1,Math.abs(s.r)/5);
+          var bg=s.r>=0?'rgba(46,125,82,'+(.08+intensity*.6)+')':'rgba(139,42,42,'+(.08+intensity*.6)+')';
+          var tc=intensity>0.5?'#fff':'var(--text)';
+          // Compute top-5 stock returns
+          var stockRows='';
+          if(stockData){
+            s.holdings.forEach(function(tk){
+              var pts=stockData[tk]||[];
+              var sr=pts.length>=22?(pts[pts.length-1].close/pts[pts.length-22].close-1)*100:null;
+              if(sr!=null){
+                var sc=sr>=0?'rgba(46,125,82,0.8)':'rgba(139,42,42,0.8)';
+                stockRows+='<div style="display:flex;justify-content:space-between;font-size:9px;padding:1px 0;border-top:1px solid rgba(255,255,255,0.15);">'
+                  +'<span>'+tk+'</span><span style="color:'+sc+';font-weight:700;">'+(sr>=0?'+':'')+sr.toFixed(1)+'%</span></div>';
+              }
+            });
+          }
+          html+='<div style="background:'+bg+';border-radius:4px;padding:10px;cursor:pointer;" onclick="sectorToggleStocks(this)" >'
+            +'<div style="display:flex;justify-content:space-between;align-items:flex-start;">'
+            +'<div><div style="font-size:11px;font-weight:700;color:'+tc+';">'+s.label+'</div>'
+            +'<div style="font-size:9px;color:'+tc+';opacity:.75;">'+s.t+'</div></div>'
+            +'<div style="text-align:right;"><div style="font-size:18px;font-weight:800;color:'+tc+';">'+(s.r>=0?'+':'')+s.r.toFixed(1)+'%</div>'
+            +'<div style="font-size:9px;color:'+tc+';opacity:.75;">1M</div></div>'
+            +'</div>'
+            +(stockRows?'<div class="sec-stocks" style="display:none;margin-top:6px;border-top:1px solid rgba(255,255,255,0.2);padding-top:6px;"><div style="font-size:9px;color:'+tc+';opacity:.7;margin-bottom:3px;font-weight:600;">TOP 5 CONTRIBUTORS</div>'+stockRows+'</div>':'')
+            +'</div>';
+        });
+        html+='</div><div style="font-size:10px;color:var(--text-sec);margin-top:8px;">Click any sector to show/hide top-5 stock contributors (1M returns).</div>';
+        if(hmEl) hmEl.innerHTML=html;
+      }
+
+      renderHeatmap(null); // first pass without stocks
+      Promise.all(stockFetches).then(function(){renderHeatmap(stockData);}); // update with stocks
     }
 
-    // Quantamental (reuse mktLoadQuantamental targeting alternate element)
+    // Quantamental
     if (typeof mktLoadQuantamental === 'function') {
       var origEl2 = document.getElementById('mktQuantResult');
       var targetEl2 = document.getElementById('sectorsQuantDisplay');
       if (origEl2 && targetEl2) {
-        var origId2 = origEl2.id;
-        origEl2.id = '_quantTmp';
-        targetEl2.id = 'mktQuantResult';
+        var origId2=origEl2.id; origEl2.id='_quantTmp'; targetEl2.id='mktQuantResult';
         await mktLoadQuantamental();
-        targetEl2.id = 'sectorsQuantDisplay';
-        origEl2.id = origId2;
-      }
-    }
-
-    // Cross-asset regime signals (reuse mktLoadRegime targeting alternate element)
-    var sgDisp = document.getElementById('sectorsRegimeSignalDisplay');
-    var sgGrid = document.getElementById('sectorsRegimeGrid');
-    if (sgDisp && sgGrid && typeof mktLoadRegime === 'function') {
-      var origEmpty = document.getElementById('mktRegimeEmpty');
-      var origGrid = document.getElementById('mktRegimeGrid');
-      if (origEmpty && origGrid) {
-        origEmpty.id='_regEmptyTmp'; origGrid.id='_regGridTmp';
-        sgDisp.id='mktRegimeEmpty'; sgGrid.id='mktRegimeGrid';
-        await mktLoadRegime();
-        sgGrid.id='sectorsRegimeGrid'; sgDisp.id='sectorsRegimeSignalDisplay';
-        origEmpty.id='mktRegimeEmpty'; origGrid.id='mktRegimeGrid';
-        sgDisp.style.display='none'; sgGrid.style.display='block';
+        targetEl2.id='sectorsQuantDisplay'; origEl2.id=origId2;
       }
     }
   } catch(e) { console.error('[sectorsTabLoad]', e); }
 }
+
 
 
 // ── Analytics tab shims (renamed IDs to avoid duplicates with breadth/regime tabs) ──
@@ -17531,24 +17806,65 @@ const SNAPSHOT_UNIVERSE = [
     { ticker: '^MOVE', label: 'MOVE Index (Bonds)' }
   ]}
 ];
+var _snapTF = '1d'; // active timeframe
+
+function snapshotSetTF(btn, tf) {
+  _snapTF = tf;
+  document.querySelectorAll('.snap-tf-btn').forEach(function(b) {
+    var active = b.dataset.tf === tf;
+    b.style.background = active ? 'var(--navy)' : 'var(--panel)';
+    b.style.color = active ? '#fff' : 'var(--text-sec)';
+    b.style.border = active ? 'none' : '1px solid var(--border)';
+  });
+  snapshotRenderTF();
+}
+
+function snapshotRenderTF() {
+  // Re-render existing cached data with new timeframe highlight
+  if (!window._snapshotCells || !window._snapshotCells.length) { snapshotLoad(); return; }
+  var tf = _snapTF;
+  var el = document.getElementById('snapshotGrid');
+  if (!el) return;
+  // Update each cell's highlighted value
+  document.querySelectorAll('.snap-cell').forEach(function(cell) {
+    var ticker = cell.querySelector('.snap-ticker');
+    if (!ticker) return;
+    var sym = ticker.textContent;
+    var item = window._snapshotCells.find(function(c) { return c.ticker.replace('^','') === sym || c.ticker === sym; });
+    if (!item) return;
+    var val = tf === '1d' ? item.changePct : tf === '1w' ? item.change1W : tf === '1m' ? item.change1M : item.change3M;
+    var col = val == null ? '#5A6A7A' : val >= 0 ? '#2E7D52' : '#8B2A2A';
+    var fmt = val == null ? '—' : (val >= 0 ? '+' : '') + val.toFixed(2) + '%';
+    var sub = cell.querySelector('.snap-tf-val');
+    if (sub) { sub.textContent = fmt; sub.style.color = col; }
+    cell.className = 'snap-cell ' + (val == null ? '' : val >= 0 ? 'up' : 'down');
+  });
+}
+
 async function snapshotLoad() {
   const el = document.getElementById('snapshotGrid');
   if (!el) return;
-  el.innerHTML = '<div style="text-align:center;padding:24px;color:#5A6A7A;font-family:Arial,Helvetica,sans-serif;font-size:12px;"><span class="spinner"></span> Loading global market snapshot...</div>';
+  el.innerHTML = '<div style="text-align:center;padding:16px;color:#5A6A7A;font-size:12px;"><span class="spinner"></span> Loading...</div>';
   const cells = [];
   let html = '<div class="snapshot-grid">';
   for (const grp of SNAPSHOT_UNIVERSE) {
     html += '<div class="snap-row-header">'+grp.group+'</div>';
     for (const item of grp.items) {
       const cellId = 'snap-'+item.ticker.replace(/[^A-Z0-9]/gi,'_');
-      html += '<div class="snap-cell" id="'+cellId+'" onclick="navigateTo(\'research\');document.getElementById(\'researchTicker\') && (document.getElementById(\'researchTicker\').value=\''+item.ticker+'\')"><div class="snap-ticker">'+item.ticker.replace('^','')+'</div><div class="snap-name">'+item.label+'</div><div class="snap-price"><span class="spinner" style="width:10px;height:10px;"></span></div></div>';
+      html += '<div class="snap-cell" id="'+cellId+'" onclick="navigateTo(\'research\');document.getElementById(\'researchTicker\') && (document.getElementById(\'researchTicker\').value=\''+item.ticker+'\')">'+
+        '<div style="display:flex;justify-content:space-between;align-items:center;">'+
+        '<span class="snap-ticker" style="font-size:10px;font-weight:700;color:var(--navy);">'+item.ticker.replace('^','')+'</span>'+
+        '<span class="snap-tf-val" style="font-size:10px;font-weight:700;font-family:monospace;">—</span>'+
+        '</div>'+
+        '<div class="snap-name" style="font-size:9px;color:var(--text-sec);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+item.label+'</div>'+
+        '<div class="snap-price" style="font-size:11px;font-weight:700;margin-top:2px;">—</div>'+
+        '</div>';
       cells.push({ ...item, id: cellId });
     }
   }
   html += '</div>';
   el.innerHTML = html;
 
-  // Fetch quote + 1mo chart for 1W and 1M moves in parallel
   const results = [];
   await Promise.all(cells.map(async c => {
     try {
@@ -17562,41 +17878,29 @@ async function snapshotLoad() {
       const prev = getQuotePrev(q);
       const chg = px - prev;
       const chgPct = prev > 0 ? chg/prev*100 : 0;
-      // Compute 1W and 1M from chart
-      let chg1W = null, chg1M = null;
-      if (chart.points && chart.points.length > 22) {
+      let chg1W = null, chg1M = null, chg3M = null;
+      if (chart.points && chart.points.length > 5) {
         const closes = chart.points.filter(p => p.close != null).map(p => p.close);
         const last = closes[closes.length - 1];
-        if (closes.length >= 6) {
-          const w = closes[closes.length - 6];
-          if (w > 0) chg1W = (last - w) / w * 100;
-        }
-        if (closes.length >= 22) {
-          const m = closes[closes.length - 22];
-          if (m > 0) chg1M = (last - m) / m * 100;
-        }
+        if (closes.length >= 6)  chg1W = (last - closes[closes.length - 6])  / closes[closes.length - 6]  * 100;
+        if (closes.length >= 22) chg1M = (last - closes[closes.length - 22]) / closes[closes.length - 22] * 100;
+        if (closes.length >= 63) chg3M = (last - closes[closes.length - 63]) / closes[closes.length - 63] * 100;
       }
-      cell.classList.add(chgPct >= 0 ? 'up' : 'down');
-      const fmt1 = v => v == null ? '—' : (v >= 0 ? '+' : '') + v.toFixed(2) + '%';
-      const col1W = chg1W == null ? '#5A6A7A' : chg1W >= 0 ? '#2E7D52' : '#8B2A2A';
-      const col1M = chg1M == null ? '#5A6A7A' : chg1M >= 0 ? '#2E7D52' : '#8B2A2A';
-      const col1D = chgPct >= 0 ? '#2E7D52' : '#8B2A2A';
-      cell.innerHTML = '<div class="snap-ticker">'+c.ticker.replace('^','')+'</div>'+
-        '<div class="snap-name">'+c.label+'</div>'+
-        '<div class="snap-price">'+(px > 1000 ? px.toLocaleString(undefined,{maximumFractionDigits:0}) : px.toFixed(2))+'</div>'+
-        '<div style="display:flex;justify-content:space-between;font-size:10px;font-weight:600;font-family:Courier New,monospace;margin-top:2px;border-top:1px solid #D0D7E0;padding-top:3px;">'+
-        '<span style="color:'+col1D+';" title="1 Day">1D '+fmt1(chgPct)+'</span>'+
-        '<span style="color:'+col1W+';" title="1 Week">1W '+fmt1(chg1W)+'</span>'+
-        '<span style="color:'+col1M+';" title="1 Month">1M '+fmt1(chg1M)+'</span>'+
-        '</div>';
-      results.push({ ticker: c.ticker, label: c.label, price: px, change: chg, changePct: chgPct, change1W: chg1W, change1M: chg1M });
+      var activeVal = _snapTF === '1d' ? chgPct : _snapTF === '1w' ? chg1W : _snapTF === '1m' ? chg1M : chg3M;
+      var col = activeVal == null ? '#5A6A7A' : activeVal >= 0 ? '#2E7D52' : '#8B2A2A';
+      var fmt = activeVal == null ? '—' : (activeVal >= 0 ? '+' : '') + activeVal.toFixed(2) + '%';
+      cell.className = 'snap-cell ' + (activeVal == null ? '' : activeVal >= 0 ? 'up' : 'down');
+      var priceStr = px > 1000 ? px.toLocaleString(undefined,{maximumFractionDigits:0}) : px.toFixed(2);
+      cell.querySelector('.snap-price').textContent = priceStr;
+      var tfEl = cell.querySelector('.snap-tf-val');
+      if (tfEl) { tfEl.textContent = fmt; tfEl.style.color = col; }
+      results.push({ ticker: c.ticker, label: c.label, price: px, change: chg, changePct: chgPct, change1W: chg1W, change1M: chg1M, change3M: chg3M });
     } catch(e) {
       const cell = document.getElementById(c.id);
-      if (cell && cell.querySelector('.snap-price')) cell.querySelector('.snap-price').textContent = 'n/a';
+      if (cell) { const p = cell.querySelector('.snap-price'); if (p) p.textContent = 'n/a'; }
     }
   }));
   window._snapshotCells = results;
-  // Trigger downstream renderers that depend on snapshot data
   if (typeof tlRenderMovingToday === 'function' && document.getElementById('movingToday')) {
     tlRenderMovingToday();
   }
