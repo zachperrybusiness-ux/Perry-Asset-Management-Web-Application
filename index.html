@@ -4152,15 +4152,15 @@ body.view-mobile .logo-icon { width: 22px !important; height: 22px !important; f
         <div class="card-body">
           <div class="form-row" style="margin-bottom:10px;">
             <div class="form-group"><label>Window</label>
-              <select id="regDistWin" onchange="regimeDistanceRun()">
+              <select id="aRegDistWin" onchange="aRegimeDistanceRun()">
                 <option value="30">30D</option>
                 <option value="60" selected>60D</option>
                 <option value="90">90D</option>
               </select>
             </div>
-            <button class="btn btn-sm" onclick="regimeDistanceRun()">Compute Regime Distance + RMT</button>
+            <button class="btn btn-sm" onclick="aRegimeDistanceRun()">Compute Regime Distance + RMT</button>
           </div>
-          <div id="regDistResults" style="text-align:center;padding:18px;color:var(--text-sec);font-size:13px;">Click to run Wasserstein + eigenvalue analysis.</div>
+          <div id="aRegDistResults" style="text-align:center;padding:18px;color:var(--text-sec);font-size:13px;">Click to run Wasserstein + eigenvalue analysis.</div>
         </div>
         <div class="card-sources"><strong>Sources:</strong> Horvath, Issa &amp; Muguruza (2021) Wasserstein Distance · Molero-González et al. (2024) RMT ICR.</div>
       </div>
@@ -4172,16 +4172,16 @@ body.view-mobile .logo-icon { width: 22px !important; height: 22px !important; f
           <div class="card-body">
             <div class="form-row" style="margin-bottom:10px;">
               <div class="form-group"><label>Threshold τ</label>
-                <select id="omegaTau" style="font-size:11px;">
+                <select id="aOmegaTau" style="font-size:11px;">
                   <option value="0">0% (breakeven)</option>
                   <option value="0.0002" selected>0.02%/day (~5%/yr)</option>
                   <option value="0.0004">0.04%/day (~10%/yr)</option>
                   <option value="-0.0002">-0.02%/day (cap pres.)</option>
                 </select>
               </div>
-              <button class="btn btn-sm" onclick="mktLoadOmega()">Compute Omega</button>
+              <button class="btn btn-sm" onclick="aLoadOmega()">Compute Omega</button>
             </div>
-            <div id="mktOmegaResult" style="padding:8px 0;"></div>
+            <div id="aMktOmegaResult" style="padding:8px 0;"></div>
           </div>
           <div class="card-sources"><strong>Source:</strong> Lyu et al. (2023) Omega Portfolio Optimization.</div>
         </div>
@@ -4190,7 +4190,7 @@ body.view-mobile .logo-icon { width: 22px !important; height: 22px !important; f
           <div class="card-body">
             <div class="form-row" style="margin-bottom:10px;">
               <div class="form-group"><label>Asset A</label>
-                <select id="lagAssetA" style="font-size:11px;">
+                <select id="aLagAssetA" style="font-size:11px;">
                   <option value="CPER">CPER (Copper)</option>
                   <option value="TLT" selected>TLT (Long Rates)</option>
                   <option value="GLD">GLD (Gold)</option>
@@ -4200,7 +4200,7 @@ body.view-mobile .logo-icon { width: 22px !important; height: 22px !important; f
                 </select>
               </div>
               <div class="form-group"><label>Asset B</label>
-                <select id="lagAssetB" style="font-size:11px;">
+                <select id="aLagAssetB" style="font-size:11px;">
                   <option value="SPY" selected>SPY (US Equity)</option>
                   <option value="XLE">XLE (Energy)</option>
                   <option value="XLF">XLF (Financials)</option>
@@ -4210,16 +4210,16 @@ body.view-mobile .logo-icon { width: 22px !important; height: 22px !important; f
                 </select>
               </div>
               <div class="form-group"><label>Lookback</label>
-                <select id="lagLookback" style="font-size:11px;">
+                <select id="aLagLookback" style="font-size:11px;">
                   <option value="126">6M</option>
                   <option value="252" selected>1Y</option>
                   <option value="504">2Y</option>
                 </select>
               </div>
-              <button class="btn btn-sm" onclick="mktRunLeadLag()">Compute</button>
+              <button class="btn btn-sm" onclick="aRunLeadLag()">Compute</button>
             </div>
-            <div id="mktLeadLagResult" style="text-align:center;padding:20px;color:var(--text-sec);">Select assets and compute.</div>
-            <div class="chart-wrap" style="height:220px;display:none;" id="mktLeadLagWrap"><canvas id="mktLeadLagChart"></canvas></div>
+            <div id="aMktLeadLagResult" style="text-align:center;padding:20px;color:var(--text-sec);">Select assets and compute.</div>
+            <div class="chart-wrap" style="height:220px;display:none;" id="aMktLeadLagWrap"><canvas id="aMktLeadLagChart"></canvas></div>
           </div>
           <div class="card-sources"><strong>Method:</strong> CCF r_AB(k) = corr(R_A(t), R_B(t+k)) for k ∈ [-20,+20]. Granger (1969).</div>
         </div>
@@ -12787,6 +12787,64 @@ async function sectorsTabLoad() {
   } catch(e) { console.error('[sectorsTabLoad]', e); }
 }
 
+
+// ── Analytics tab shims (renamed IDs to avoid duplicates with breadth/regime tabs) ──
+function aRegimeDistanceRun() {
+  // Temporarily swap IDs so regimeDistanceRun reads/writes to analytics elements
+  var winEl = document.getElementById('aRegDistWin');
+  var resEl = document.getElementById('aRegDistResults');
+  var origWin = document.getElementById('regDistWin');
+  var origRes = document.getElementById('regDistResults');
+  if (!winEl || !resEl) return;
+  if (origWin) origWin.id = '_rdwTmp';
+  if (origRes) origRes.id = '_rdrTmp';
+  winEl.id = 'regDistWin'; resEl.id = 'regDistResults';
+  regimeDistanceRun().finally(function() {
+    winEl.id = 'aRegDistWin'; resEl.id = 'aRegDistResults';
+    if (origWin) origWin.id = 'regDistWin';
+    if (origRes) origRes.id = 'regDistResults';
+  });
+}
+function aLoadOmega() {
+  var tauEl = document.getElementById('aOmegaTau');
+  var resEl = document.getElementById('aMktOmegaResult');
+  var origTau = document.getElementById('omegaTau');
+  var origRes = document.getElementById('mktOmegaResult');
+  if (!tauEl || !resEl) return;
+  if (origTau) origTau.id = '_otTmp';
+  if (origRes) origRes.id = '_orTmp';
+  tauEl.id = 'omegaTau'; resEl.id = 'mktOmegaResult';
+  mktLoadOmega().finally(function() {
+    tauEl.id = 'aOmegaTau'; resEl.id = 'aMktOmegaResult';
+    if (origTau) origTau.id = 'omegaTau';
+    if (origRes) origRes.id = 'mktOmegaResult';
+  });
+}
+function aRunLeadLag() {
+  var aEl = document.getElementById('aLagAssetA');
+  var bEl = document.getElementById('aLagAssetB');
+  var lbEl = document.getElementById('aLagLookback');
+  var resEl = document.getElementById('aMktLeadLagResult');
+  var wrapEl = document.getElementById('aMktLeadLagWrap');
+  var cEl = document.getElementById('aMktLeadLagChart');
+  var oA = document.getElementById('lagAssetA');
+  var oB = document.getElementById('lagAssetB');
+  var oLb = document.getElementById('lagLookback');
+  var oRes = document.getElementById('mktLeadLagResult');
+  var oWrap = document.getElementById('mktLeadLagWrap');
+  var oC = document.getElementById('mktLeadLagChart');
+  if (!aEl) return;
+  if (oA) oA.id='_laaTmp'; if (oB) oB.id='_labTmp'; if (oLb) oLb.id='_llbTmp';
+  if (oRes) oRes.id='_lrTmp'; if (oWrap) oWrap.id='_lwTmp'; if (oC) oC.id='_lcTmp';
+  if (aEl) aEl.id='lagAssetA'; if (bEl) bEl.id='lagAssetB'; if (lbEl) lbEl.id='lagLookback';
+  if (resEl) resEl.id='mktLeadLagResult'; if (wrapEl) wrapEl.id='mktLeadLagWrap'; if (cEl) cEl.id='mktLeadLagChart';
+  Promise.resolve(mktRunLeadLag()).finally(function() {
+    if (aEl) aEl.id='aLagAssetA'; if (bEl) bEl.id='aLagAssetB'; if (lbEl) lbEl.id='aLagLookback';
+    if (resEl) resEl.id='aMktLeadLagResult'; if (wrapEl) wrapEl.id='aMktLeadLagWrap'; if (cEl) cEl.id='aMktLeadLagChart';
+    if (oA) oA.id='lagAssetA'; if (oB) oB.id='lagAssetB'; if (oLb) oLb.id='lagLookback';
+    if (oRes) oRes.id='mktLeadLagResult'; if (oWrap) oWrap.id='mktLeadLagWrap'; if (oC) oC.id='mktLeadLagChart';
+  });
+}
 // ═══════════ END MARKETS PAGE ═══════════
 
 // ═══════════════════════════════════════════════════════════════════
@@ -17868,14 +17926,6 @@ function frobeniusDistance(m1, m2, tickers) {
     sum+=(a-b)*(a-b); count++;
   }
   return Math.sqrt(sum/Math.max(count,1));
-}
-      const a = m1[tickers[i]][tickers[j]] || 0;
-      const b = m2[tickers[i]][tickers[j]] || 0;
-      sum += (a-b)*(a-b);
-      count++;
-    }
-  }
-  return Math.sqrt(sum / Math.max(count, 1));
 }
 
 // ═══════════════════════════════════════════════════════════════════
