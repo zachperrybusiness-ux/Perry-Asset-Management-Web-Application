@@ -2952,7 +2952,7 @@ body.view-mobile .logo-icon { width: 22px !important; height: 22px !important; f
   <div class="content-wrap">
     <div class="hero" style="padding:32px 40px;">
       <h1>Stock Research &amp; Quantitative Models</h1>
-      <p>Single-ticker workspace: live financials and chart on the <strong>Research</strong> tab; multivariate regression, regime backtest, walk-forward validation, and Monte Carlo on the <strong>Quant Models</strong> tab. Enter a ticker once and use both lenses head-to-head.</p>
+      <p>Single-ticker workspace with five lenses: <strong>Overview</strong> (chart + regime performance), <strong>Financial Statements &amp; Forecasts</strong> (SEC EDGAR + analyst estimates), <strong>Valuation</strong> (DCF, Forward P/E, DDM, IV, options), <strong>Peer Comparison</strong> (sector benchmarking), and <strong>Quant Models</strong> (MLR, regime backtest, Monte Carlo).</p>
     </div>
 
     <!-- Shared ticker bar — drives both tabs -->
@@ -2964,110 +2964,213 @@ body.view-mobile .logo-icon { width: 22px !important; height: 22px !important; f
             <label>Ticker</label>
             <input type="text" id="researchTicker" placeholder="AAPL, SPY, BTC-USD" style="text-transform:uppercase;" onkeydown="if(event.key==='Enter')runResearch()">
           </div>
-          <button class="btn" onclick="runResearch()">Analyze (Research)</button>
-          <button class="btn-outline btn-sm" onclick="rqSyncQuantTickerAndRun()" style="margin-left:6px;">Run Quant Models</button>
+          <button class="btn" onclick="rqShowTab('research');runResearch()">Analyze</button>
+          <button class="btn-outline btn-sm" onclick="rqSyncQuantTickerAndRun()" style="margin-left:6px;">Quant Models</button>
         </div>
       </div>
     </div>
 
-    <!-- PORT-style sub-tabs: Research / Quant Models -->
+    <!-- Outer tabs: Research sub-tabs / Quant Models -->
     <div class="pf-tabs" role="tablist" aria-label="Research workspace">
-      <button class="pf-tab active" data-rqtab="research" onclick="rqShowTab('research')">Research</button>
+      <button class="pf-tab active" data-rqtab="research" onclick="rqShowTab('research')">Overview</button>
+      <button class="pf-tab" data-rqtab="financials" onclick="rqShowTab('financials')">Financial Statements &amp; Forecasts</button>
+      <button class="pf-tab" data-rqtab="valuation" onclick="rqShowTab('valuation')">Valuation</button>
+      <button class="pf-tab" data-rqtab="peers" onclick="rqShowTab('peers')">Peer Comparison</button>
       <button class="pf-tab" data-rqtab="quant" onclick="rqShowTab('quant')">Quant Models</button>
     </div>
 
-    <!-- TAB: RESEARCH -->
+    <!-- ── TAB: OVERVIEW ── -->
     <div class="pf-tab-content active" id="rqtab-research">
-    <!-- Company Header + Metrics (shown above chart) -->
-    <div id="researchHeaderResults"></div>
-    <!-- Interactive Chart -->
-    <div class="card" id="researchChartCard" style="display:none;">
-      <div class="card-title" id="researchChartTitle">Price Chart</div>
-      <div class="card-body">
-        <div class="form-row" style="margin-bottom:8px;">
-          <div class="form-group">
-            <label>Benchmark 1</label>
-            <input type="text" id="researchBench1" placeholder="SPY" value="SPY" style="width:80px;text-transform:uppercase;">
+      <!-- Company Header + Metrics -->
+      <div id="researchHeaderResults"></div>
+      <!-- Interactive Chart -->
+      <div class="card" id="researchChartCard" style="display:none;">
+        <div class="card-title" id="researchChartTitle">Price Chart</div>
+        <div class="card-body">
+          <div class="form-row" style="margin-bottom:8px;">
+            <div class="form-group">
+              <label>Benchmark 1</label>
+              <input type="text" id="researchBench1" placeholder="SPY" value="SPY" style="width:80px;text-transform:uppercase;">
+            </div>
+            <div class="form-group">
+              <label>Benchmark 2</label>
+              <input type="text" id="researchBench2" placeholder="QQQ" value="QQQ" style="width:80px;text-transform:uppercase;">
+            </div>
+            <button class="btn btn-sm" onclick="updateResearchChart()">Update Chart</button>
+            <button class="btn-outline btn-sm active" id="btnResearchPct" onclick="toggleResearchChartMode('pct')" style="margin-left:12px;">% Change</button>
+            <button class="btn-outline btn-sm" id="btnResearchPrice" onclick="toggleResearchChartMode('price')">Last Price</button>
+            <button class="btn-outline btn-sm" id="btnResearchDividends" onclick="toggleResearchDividends()" style="margin-left:8px;">With Dividends</button>
           </div>
-          <div class="form-group">
-            <label>Benchmark 2</label>
-            <input type="text" id="researchBench2" placeholder="QQQ" value="QQQ" style="width:80px;text-transform:uppercase;">
+          <div class="chart-stats" id="researchChartStats"></div>
+          <div id="researchChartLoading" style="text-align:center;padding:40px;color:var(--text-sec);display:none;">
+            <span class="spinner"></span> Loading chart data...
           </div>
-          <button class="btn btn-sm" onclick="updateResearchChart()">Update Chart</button>
-          <button class="btn-outline btn-sm active" id="btnResearchPct" onclick="toggleResearchChartMode('pct')" style="margin-left:12px;">% Change</button>
-          <button class="btn-outline btn-sm" id="btnResearchPrice" onclick="toggleResearchChartMode('price')">Last Price</button>
-          <button class="btn-outline btn-sm" id="btnResearchDividends" onclick="toggleResearchDividends()" style="margin-left:8px;">With Dividends</button>
-        </div>
-        <div class="chart-stats" id="researchChartStats"></div>
-        <div id="researchChartLoading" style="text-align:center;padding:40px;color:var(--text-sec);display:none;">
-          <span class="spinner"></span> Loading chart data...
-        </div>
-        <div class="chart-wrap">
-          <canvas id="researchChart"></canvas>
-        </div>
-        <div class="zoom-hint">Click and drag to zoom. Double-click to reset.</div>
-        <div class="btn-group" id="researchTimeframeBtns" style="margin-top:12px;margin-bottom:0;justify-content:center;">
-          <button class="btn-outline" data-range="1mo">1M</button>
-          <button class="btn-outline" data-range="3mo">3M</button>
-          <button class="btn-outline" data-range="6mo">6M</button>
-          <button class="btn-outline" data-range="ytd">YTD</button>
-          <button class="btn-outline active" data-range="1y">1Y</button>
-          <button class="btn-outline" data-range="3y">3Y</button>
-          <button class="btn-outline" data-range="5y">5Y</button>
-          <button class="btn-outline" data-range="10y">10Y</button>
-        </div>
-      </div>
-      <div class="card-sources">
-        <strong>Sources:</strong><br>&#8226; Yahoo Finance via Cloudflare Worker
-      </div>
-    </div>
-    <!-- Analysis Results -->
-    <div id="researchResults"></div>
-    <!-- Regime-Conditioned Return Distributions -->
-    <div class="card" id="rcrCard" style="display:none;">
-      <div class="card-title">Regime-Conditioned Return Distributions <span class="help-icon" title="Splits the past 5 years of daily returns into the 4 portfolio regimes and shows the median, 10th–90th percentile band, and hit rate for each. Lets you see whether this stock has historically performed well or badly in conditions like today.">?</span></div>
-      <div class="card-body">
-        <p style="font-size:12px;color:var(--text-sec);margin-bottom:12px;">How has <strong id="rcrTicker"></strong> historically performed in each of the four Perry portfolio states? States are proxied using trailing 12-month SPY return and VIX level from historical data. Results show median, P10–P90 range, and hit rate (% of periods with positive return) in each regime.</p>
-        <div id="rcrContent"></div>
-        <div class="chart-wrap" style="height:280px;margin-top:14px;" id="rcrChartWrap"><canvas id="rcrChart"></canvas></div>
-      </div>
-      <div class="card-sources"><strong>Method:</strong> Historical 5-year daily returns segmented by regime proxies (VIX level &amp; SPY 12M trailing return) &bull; Perry 4-state classifier applied historically &bull; Returns via Yahoo Finance / Cloudflare Worker</div>
-    </div>
-    <!-- INTRINSIC VALUE — Multi-Method Valuation -->
-    <div class="card" id="ivvCard" style="display:none;">
-      <div class="card-title">Intrinsic Value Estimate &mdash; Multi-Method Valuation <span class="help-icon" title="Combines three independent valuation approaches into a single fair-value range. When all three agree, conviction is high. When they disagree, it usually means the stock is hard to value with one lens — read the details to see which assumption is doing the heavy lifting.">?</span></div>
-      <div class="card-body">
-        <p style="font-size:12px;color:var(--text-sec);margin-bottom:12px;">Three valuation methods run simultaneously: <strong>Forward P/E</strong> (analyst consensus &times; sector multiple), <strong>Simplified DCF</strong> (free cash flow discounted at the 10Y Treasury + risk premium), and <strong>Dividend Discount</strong> (Gordon Growth, dividend-paying stocks only). Each produces an implied fair value; the consensus band shows where they agree.</p>
-        <div id="ivvResults" style="text-align:center;color:var(--text-sec);padding:16px;font-size:13px;"><span class="spinner"></span> Computing intrinsic value...</div>
-      </div>
-      <div class="card-sources"><strong>Sources:</strong> SEC EDGAR XBRL fundamentals via Cloudflare Worker &bull; Analyst targets via FMP &bull; 10Y Treasury via FRED &bull; Sector P/E benchmarks: S&amp;P 500 GICS sector medians (rolling 5-year). <strong>Disclaimer:</strong> Intrinsic value estimates depend heavily on input assumptions; treat ranges as guidance, not guarantees.</div>
-    </div>
-    <!-- OPTIONS IV ANALYSIS -->
-    <div class="card" id="ivCard" style="display:none;">
-      <div class="card-title">Options Implied Volatility &amp; IV Percentile <span class="help-icon" title="Implied Volatility (IV) is the market's expectation of how much this stock will move, baked into option prices. IV Percentile compares today's IV to the past year's distribution — a high reading means options are expensive (good for sellers), a low reading means cheap (good for buyers).">?</span></div>
-      <div class="card-body">
-        <p style="font-size:12px;color:var(--text-sec);margin-bottom:12px;">Live options market analysis for <strong id="ivTicker"></strong>. IV Percentile shows where current at-the-money implied volatility ranks vs. the past year's realized volatility distribution &mdash; a gauge of whether options are pricing in cheap or expensive expected moves.</p>
-        <div class="form-row" id="ivExpiryRow" style="margin-bottom:10px;display:none;">
-          <div class="form-group" style="min-width:240px;">
-            <label>Expiration <span class="help-icon" title="Pick a different expiration date to see how IV varies across the term structure. Near-term expirations are typically more volatile around earnings and events.">?</span></label>
-            <select id="ivExpirySelect" onchange="ivLoad(document.getElementById('ivTicker').textContent, this.value)"></select>
+          <div class="chart-wrap"><canvas id="researchChart"></canvas></div>
+          <div class="zoom-hint">Click and drag to zoom. Double-click to reset.</div>
+          <div class="btn-group" id="researchTimeframeBtns" style="margin-top:12px;margin-bottom:0;justify-content:center;">
+            <button class="btn-outline" data-range="1mo">1M</button>
+            <button class="btn-outline" data-range="3mo">3M</button>
+            <button class="btn-outline" data-range="6mo">6M</button>
+            <button class="btn-outline" data-range="ytd">YTD</button>
+            <button class="btn-outline active" data-range="1y">1Y</button>
+            <button class="btn-outline" data-range="3y">3Y</button>
+            <button class="btn-outline" data-range="5y">5Y</button>
+            <button class="btn-outline" data-range="10y">10Y</button>
           </div>
         </div>
-        <div id="ivStats" style="text-align:center;color:var(--text-sec);padding:16px;font-size:13px;">
-          <span class="spinner"></span> Loading options chain from Cloudflare Worker...
+        <div class="card-sources"><strong>Sources:</strong> Yahoo Finance via Cloudflare Worker</div>
+      </div>
+      <!-- Overview analysis (key metrics, ratios, analyst summary) -->
+      <div id="researchResults"></div>
+      <!-- Regime-Conditioned Return Distributions -->
+      <div class="card" id="rcrCard" style="display:none;">
+        <div class="card-title">Regime-Conditioned Return Distributions <span class="help-icon" title="Splits the past 5 years of daily returns into the 4 portfolio regimes and shows the median, 10th–90th percentile band, and hit rate for each.">?</span></div>
+        <div class="card-body">
+          <p style="font-size:12px;color:var(--text-sec);margin-bottom:12px;">How has <strong id="rcrTicker"></strong> historically performed in each of the four Perry portfolio states?</p>
+          <div id="rcrContent"></div>
+          <div class="chart-wrap" style="height:280px;margin-top:14px;" id="rcrChartWrap"><canvas id="rcrChart"></canvas></div>
         </div>
-        <div class="chart-wrap" style="height:340px;display:none;margin-top:14px;" id="ivChartWrap"><canvas id="ivChart"></canvas></div>
-        <div id="ivStrikeTable" style="margin-top:14px;display:none;"></div>
+        <div class="card-sources"><strong>Method:</strong> Historical 5-year daily returns segmented by regime proxies &bull; Perry 4-state classifier &bull; Yahoo Finance / Cloudflare Worker</div>
       </div>
-      <div class="card-sources">
-        <strong>Sources:</strong> Yahoo Finance options chain via Cloudflare Worker &bull; IV Percentile computed vs. 1-year 20-day realized volatility distribution &bull; Max Pain = strike price where total option writer losses are minimized at expiry &bull; Put/Call OI Ratio = contrarian sentiment indicator
-      </div>
-    </div>
-    <!-- Hidden compat elements — data still available via window._lastSecData and DOM but not displayed -->
-    <div id="researchRawCard" style="display:none;"><div id="researchOutput"></div></div>
+      <!-- Hidden compat -->
+      <div id="researchRawCard" style="display:none;"><div id="researchOutput"></div></div>
     </div><!-- /rqtab-research -->
 
-    <!-- TAB: QUANT MODELS — content lifted at boot from #page-quant -->
+    <!-- ── TAB: FINANCIAL STATEMENTS & FORECASTS ── -->
+    <div class="pf-tab-content" id="rqtab-financials">
+      <div id="resFinancialsEmpty" style="text-align:center;padding:40px;color:var(--text-sec);">
+        <span style="font-size:24px;">📊</span><br><br>
+        <strong>Enter a ticker and click Analyze</strong> to load financial statements.
+      </div>
+      <div id="resFinancialsContent" style="display:none;">
+        <!-- Income Statement -->
+        <div class="card" style="margin-bottom:14px;">
+          <div class="card-title">Income Statement — Annual (Last 5 Years)
+            <span class="help-icon" title="Revenue, gross profit, operating income, net income, and EPS from SEC EDGAR 10-K filings. Year-over-year growth rates shown. All figures in USD millions.">?</span>
+          </div>
+          <div class="card-body" style="padding:0;">
+            <div id="resIncomeStatement" style="overflow-x:auto;"></div>
+          </div>
+          <div class="card-sources"><strong>Source:</strong> SEC EDGAR XBRL companyfacts via Cloudflare Worker.</div>
+        </div>
+        <!-- Balance Sheet -->
+        <div class="card" style="margin-bottom:14px;">
+          <div class="card-title">Balance Sheet — Annual (Last 5 Years)
+            <span class="help-icon" title="Assets, liabilities, equity, cash, debt from SEC 10-K filings. Includes current ratio, debt/equity, and net cash position.">?</span>
+          </div>
+          <div class="card-body" style="padding:0;">
+            <div id="resBalanceSheet" style="overflow-x:auto;"></div>
+          </div>
+          <div class="card-sources"><strong>Source:</strong> SEC EDGAR XBRL companyfacts via Cloudflare Worker.</div>
+        </div>
+        <!-- Cash Flow -->
+        <div class="card" style="margin-bottom:14px;">
+          <div class="card-title">Cash Flow Statement — Annual (Last 5 Years)
+            <span class="help-icon" title="Operating cash flow, capital expenditures, free cash flow, share buybacks, dividends paid.">?</span>
+          </div>
+          <div class="card-body" style="padding:0;">
+            <div id="resCashFlow" style="overflow-x:auto;"></div>
+          </div>
+          <div class="card-sources"><strong>Source:</strong> SEC EDGAR XBRL companyfacts via Cloudflare Worker.</div>
+        </div>
+        <!-- Analyst Forecasts -->
+        <div class="card">
+          <div class="card-title">Analyst Estimates &amp; Forecasts
+            <span class="help-icon" title="Wall Street consensus price targets (high/mean/median/low), analyst rating distribution (Strong Buy → Strong Sell), and forward EPS/revenue estimates where available.">?</span>
+          </div>
+          <div class="card-body">
+            <div id="resAnalystForecasts"></div>
+          </div>
+          <div class="card-sources"><strong>Source:</strong> Financial Modeling Prep (FMP) analyst consensus via Cloudflare Worker.</div>
+        </div>
+      </div>
+    </div><!-- /rqtab-financials -->
+
+    <!-- ── TAB: VALUATION ── -->
+    <div class="pf-tab-content" id="rqtab-valuation">
+      <div id="resValuationEmpty" style="text-align:center;padding:40px;color:var(--text-sec);">
+        <span style="font-size:24px;">💰</span><br><br>
+        <strong>Enter a ticker and click Analyze</strong> to load valuation analysis.
+      </div>
+      <div id="resValuationContent" style="display:none;">
+        <!-- Valuation summary header -->
+        <div id="resValuationHeader" style="margin-bottom:14px;"></div>
+        <!-- Multi-method intrinsic value -->
+        <div class="card" id="ivvCard" style="margin-bottom:14px;">
+          <div class="card-title">Intrinsic Value Estimate — Multi-Method Valuation
+            <span class="help-icon" title="Three independent valuation methods: Forward P/E (analyst consensus × sector multiple), Simplified DCF (free cash flow discounted at 10Y + risk premium), Dividend Discount (Gordon Growth). Consensus band shows where they agree.">?</span>
+          </div>
+          <div class="card-body">
+            <p style="font-size:12px;color:var(--text-sec);margin-bottom:12px;">Three methods run simultaneously. When all agree, conviction is high. When they disagree, the stock is hard to value with one lens — read the detail lines to see which assumption is driving the result.</p>
+            <div id="ivvResults" style="text-align:center;color:var(--text-sec);padding:16px;font-size:13px;"><span class="spinner"></span> Computing intrinsic value...</div>
+          </div>
+          <div class="card-sources"><strong>Sources:</strong> SEC EDGAR fundamentals &bull; FMP analyst targets &bull; FRED 10Y Treasury &bull; Sector P/E benchmarks (GICS medians). <em>Disclaimer: estimates depend heavily on inputs; treat as guidance, not guarantees.</em></div>
+        </div>
+        <!-- Valuation ratios vs sector -->
+        <div class="card" style="margin-bottom:14px;">
+          <div class="card-title">Valuation Ratios vs. Sector &amp; Market
+            <span class="help-icon" title="Key valuation multiples compared to sector median and S&P 500 median. Premium = stock trades above sector median. Discount = below. Context: sector context matters — a tech stock at 30x P/E may be cheap; a utility at 30x may be very expensive.">?</span>
+          </div>
+          <div class="card-body">
+            <div id="resValuationRatios"></div>
+          </div>
+          <div class="card-sources"><strong>Source:</strong> SEC EDGAR fundamentals. Sector medians: GICS S&amp;P 500 historical ranges.</div>
+        </div>
+        <!-- Options IV Analysis -->
+        <div class="card" id="ivCard">
+          <div class="card-title">Options Implied Volatility &amp; IV Percentile
+            <span class="help-icon" title="Implied Volatility (IV) is the market's expectation of price movement baked into options. IV Percentile shows where current IV ranks vs. past year — high = options expensive (good for sellers), low = cheap (good for buyers).">?</span>
+          </div>
+          <div class="card-body">
+            <p style="font-size:12px;color:var(--text-sec);margin-bottom:12px;">Live options analysis for <strong id="ivTicker"></strong>.</p>
+            <div class="form-row" id="ivExpiryRow" style="margin-bottom:10px;display:none;">
+              <div class="form-group" style="min-width:240px;">
+                <label>Expiration</label>
+                <select id="ivExpirySelect" onchange="ivLoad(document.getElementById('ivTicker').textContent, this.value)"></select>
+              </div>
+            </div>
+            <div id="ivStats" style="text-align:center;color:var(--text-sec);padding:16px;font-size:13px;"><span class="spinner"></span> Loading options chain...</div>
+            <div class="chart-wrap" style="height:340px;display:none;margin-top:14px;" id="ivChartWrap"><canvas id="ivChart"></canvas></div>
+            <div id="ivStrikeTable" style="margin-top:14px;display:none;"></div>
+          </div>
+          <div class="card-sources"><strong>Sources:</strong> Yahoo Finance options chain via Cloudflare Worker &bull; IV Percentile vs. 1-year realized vol distribution &bull; Max Pain &bull; Put/Call OI Ratio</div>
+        </div>
+      </div>
+    </div><!-- /rqtab-valuation -->
+
+    <!-- ── TAB: PEER COMPARISON ── -->
+    <div class="pf-tab-content" id="rqtab-peers">
+      <div id="resPeersEmpty" style="text-align:center;padding:40px;color:var(--text-sec);">
+        <span style="font-size:24px;">🔬</span><br><br>
+        <strong>Enter a ticker and click Analyze</strong> to load peer comparison.
+      </div>
+      <div id="resPeersContent" style="display:none;">
+        <div id="resPeersHeader" style="margin-bottom:14px;"></div>
+        <!-- Peer selection -->
+        <div class="card" style="margin-bottom:14px;">
+          <div class="card-title">Peer Group Selection
+            <span class="help-icon" title="Default peers are pre-mapped by GICS sector and industry. You can override by typing custom tickers. Comparison pulls key financial metrics, valuation ratios, and returns for each peer from SEC EDGAR and Yahoo Finance.">?</span>
+          </div>
+          <div class="card-body">
+            <div class="form-row" style="margin-bottom:10px;">
+              <div class="form-group" style="flex:1;min-width:240px;">
+                <label>Peer Tickers (comma-separated, max 8)</label>
+                <input type="text" id="resPeerTickers" placeholder="e.g. MSFT, GOOGL, META, AMZN" style="text-transform:uppercase;width:100%;">
+              </div>
+              <button class="btn" onclick="resPeerRun()">Compare Peers</button>
+              <button class="btn-outline btn-sm" onclick="resPeerAutoDetect()" style="margin-left:6px;" title="Auto-detect peers from sector/industry">Auto-Detect</button>
+            </div>
+            <div id="resPeerAutoMsg" style="font-size:11px;color:var(--text-sec);margin-top:4px;"></div>
+          </div>
+        </div>
+        <!-- Comparison table -->
+        <div id="resPeersResult" style="text-align:center;padding:20px;color:var(--text-sec);">
+          Click <strong>Compare Peers</strong> or <strong>Auto-Detect</strong> to run comparison.
+        </div>
+      </div>
+    </div><!-- /rqtab-peers -->
+
+    <!-- ── TAB: QUANT MODELS ── -->
     <div class="pf-tab-content" id="rqtab-quant">
       <div id="rqQuantContainer">
         <p style="text-align:center;color:var(--text-sec);padding:18px;font-size:13px;">Quant Models will load here…</p>
@@ -8288,6 +8391,19 @@ window.runResearch = async function() {
   var ivExp = document.getElementById('ivExpirySelect'); if (ivExp) ivExp.removeAttribute('data-ticker');
   var rcrC = document.getElementById('rcrCard'); if (rcrC) rcrC.style.display = 'none';
   var ivvC = document.getElementById('ivvCard'); if (ivvC) ivvC.style.display = 'none';
+  // Reset new tabs to empty state
+  var finContent = document.getElementById('resFinancialsContent');
+  var finEmpty   = document.getElementById('resFinancialsEmpty');
+  if (finContent) { finContent.style.display = 'none'; }
+  if (finEmpty)   { finEmpty.style.display = 'block'; }
+  var valContent = document.getElementById('resValuationContent');
+  var valEmpty   = document.getElementById('resValuationEmpty');
+  if (valContent) { valContent.style.display = 'none'; }
+  if (valEmpty)   { valEmpty.style.display = 'block'; }
+  var peersContent = document.getElementById('resPeersContent');
+  var peersEmpty   = document.getElementById('resPeersEmpty');
+  if (peersContent) { peersContent.style.display = 'none'; }
+  if (peersEmpty)   { peersEmpty.style.display = 'block'; }
 
   try {
     if (isCrypto(ticker)) {
@@ -8367,6 +8483,21 @@ window.runResearch = async function() {
         var html = renderSECAnalysis(ticker, secData);
       }
       document.getElementById('researchResults').innerHTML = html;
+      // ── Populate new tabs ──────────────────────────────────────────
+      // Financial Statements & Forecasts
+      resRenderFinancials(ticker, secData);
+      // Valuation tab header (IV + IVV loaded lazily on tab click)
+      resRenderValuationHeader(ticker, secData);
+      // Peer header (peers loaded lazily on tab click)
+      var peersH = document.getElementById('resPeersHeader');
+      if (peersH) {
+        var prof = secData.profile || {};
+        peersH.innerHTML = '<div style="background:var(--panel);border:1px solid var(--border);border-radius:4px;padding:10px 16px;font-size:12px;margin-bottom:4px;">'
+          + '<strong>' + (prof.name || ticker) + '</strong>'
+          + (prof.sector ? ' &nbsp;·&nbsp; <span style="color:var(--text-sec);">' + prof.sector + ' / ' + (prof.industry||'') + '</span>' : '')
+          + '</div>';
+      }
+      // ──────────────────────────────────────────────────────────────
       // Trigger regime-conditioned return distributions (non-blocking)
       if (typeof rcrLoad === 'function') rcrLoad(ticker);
       // Trigger options IV + IV percentile analysis (non-blocking)
@@ -13378,6 +13509,515 @@ function renderCycleBreakdown(data) {
   el.innerHTML = summaryHtml + legendHtml + tablesHtml + footer;
 }
 
+// ═══════════════════════════════════════════════════════════════════
+// RESEARCH PAGE — NEW TAB RENDERERS
+// Financial Statements · Valuation · Peer Comparison
+// ═══════════════════════════════════════════════════════════════════
+
+// ── Shared helpers ──────────────────────────────────────────────────
+function resN(v) { // format number
+  if (v == null) return '—';
+  var a = Math.abs(v);
+  if (a >= 1e12) return '$'+(v/1e12).toFixed(2)+'T';
+  if (a >= 1e9)  return '$'+(v/1e9).toFixed(2)+'B';
+  if (a >= 1e6)  return '$'+(v/1e6).toFixed(1)+'M';
+  return '$'+v.toLocaleString(undefined,{maximumFractionDigits:0});
+}
+function resP(v) { return v!=null ? (v>=0?'+':'')+v.toFixed(1)+'%' : '—'; }
+function resX(v) { return v!=null ? v.toFixed(1)+'x' : '—'; }
+function resPct(cur, prev) { return (cur!=null&&prev!=null&&prev!==0) ? (cur-prev)/Math.abs(prev)*100 : null; }
+
+function resFinTable(rows, years) {
+  // rows: [{label, data:[{year,value},...]}]
+  // Returns an HTML table string
+  var h = '<table style="width:100%;font-size:12px;border-collapse:collapse;">';
+  h += '<thead><tr style="background:var(--navy);color:#fff;">';
+  h += '<th style="padding:8px 14px;text-align:left;min-width:180px;">Metric</th>';
+  years.forEach(function(y){ h += '<th style="padding:8px 12px;text-align:right;">'+y+'</th>'; });
+  h += '<th style="padding:8px 12px;text-align:right;color:rgba(255,255,255,0.7);">YoY</th>';
+  h += '</tr></thead><tbody>';
+  rows.forEach(function(row, ri) {
+    if (row.separator) {
+      h += '<tr><td colspan="'+(years.length+2)+'" style="padding:4px 14px;background:var(--panel);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;color:var(--text-sec);">'+row.label+'</td></tr>';
+      return;
+    }
+    var vals = {};
+    (row.data||[]).forEach(function(d){ vals[d.year]=d.value; });
+    var bg = ri%2===0?'':'background:rgba(0,0,0,0.02);';
+    h += '<tr style="'+bg+'border-bottom:1px solid var(--border);">';
+    h += '<td style="padding:7px 14px;font-weight:600;">'+row.label+'</td>';
+    var prevVal = null;
+    years.forEach(function(y, yi) {
+      var v = vals[y];
+      var fmtFn = row.fmt || resN;
+      var txt = fmtFn(v);
+      // Color direction vs prev year
+      var col = '';
+      if (v!=null && prevVal!=null) {
+        var better = row.higherBetter !== false ? v > prevVal : v < prevVal;
+        col = 'color:'+(better?C.success:C.danger)+';';
+      }
+      h += '<td style="padding:7px 12px;text-align:right;font-family:monospace;'+col+'">'+txt+'</td>';
+      prevVal = v;
+    });
+    // YoY (last 2 years)
+    var lastYr = years[years.length-1], prevYr = years[years.length-2];
+    var yoy = resPct(vals[lastYr], vals[prevYr]);
+    var yoyCol = yoy==null?C.textSec:(yoy>=0?C.success:C.danger);
+    h += '<td style="padding:7px 12px;text-align:right;font-weight:700;color:'+yoyCol+';font-size:11px;">'+(yoy!=null?resP(yoy):'—')+'</td>';
+    h += '</tr>';
+  });
+  h += '</tbody></table>';
+  return h;
+}
+
+// ── Financial Statements & Forecasts ────────────────────────────────
+function resRenderFinancials(ticker, d) {
+  var finContent = document.getElementById('resFinancialsContent');
+  var finEmpty   = document.getElementById('resFinancialsEmpty');
+  if (!finContent) return;
+  finContent.style.display = '';
+  if (finEmpty) finEmpty.style.display = 'none';
+
+  var inc = d.incomeStatement || {};
+  var bs  = d.balanceSheet    || {};
+  var cf  = d.cashFlowStatement || {};
+  var at  = d.analystTargets  || {};
+  var ar  = d.analystRatings  || {};
+
+  function getYears(arr) {
+    return arr && arr.length ? arr.map(function(r){return r.year||r.period?.slice(0,4)||'';}) : [];
+  }
+  function matchYears(baseArr, otherArr) {
+    var years = getYears(baseArr);
+    return years;
+  }
+
+  // Use revenue as the year anchor
+  var revArr = inc.revenue || [];
+  var years = getYears(revArr);
+  if (!years.length) {
+    // Try EPS or operating income as fallback
+    years = getYears(inc.eps || inc.operatingIncome || []);
+  }
+
+  // ── Income Statement ──
+  var incRows = [
+    { label:'Revenue',              data: inc.revenue,              higherBetter: true  },
+    { label:'Cost of Revenue',      data: inc.costOfRevenue,        higherBetter: false },
+    { label:'Gross Profit',         data: inc.grossProfit,          higherBetter: true  },
+    { label:'Gross Margin',         data: (inc.grossProfit||[]).map(function(r,i){
+        var rev = (inc.revenue||[])[i]; return rev&&rev.value&&r.value ? {year:r.year,value:(r.value/rev.value)*100} : {year:r.year,value:null};
+      }), fmt: function(v){return v!=null?v.toFixed(1)+'%':'—';}, higherBetter: true },
+    { label:'separator', separator: true },
+    { label:'Operating Income',     data: inc.operatingIncome,      higherBetter: true  },
+    { label:'Operating Margin',     data: (inc.operatingIncome||[]).map(function(r,i){
+        var rev = (inc.revenue||[])[i]; return rev&&rev.value&&r.value ? {year:r.year,value:(r.value/rev.value)*100} : {year:r.year,value:null};
+      }), fmt: function(v){return v!=null?v.toFixed(1)+'%':'—';}, higherBetter: true },
+    { label:'separator', separator: true },
+    { label:'Net Income',           data: inc.netIncome,            higherBetter: true  },
+    { label:'Net Margin',           data: (inc.netIncome||[]).map(function(r,i){
+        var rev = (inc.revenue||[])[i]; return rev&&rev.value&&r.value ? {year:r.year,value:(r.value/rev.value)*100} : {year:r.year,value:null};
+      }), fmt: function(v){return v!=null?v.toFixed(1)+'%':'—';}, higherBetter: true },
+    { label:'EPS (Diluted)',        data: inc.eps,                  fmt: function(v){return v!=null?'$'+v.toFixed(2):'—';}, higherBetter: true },
+    { label:'separator', separator: true },
+    { label:'R&D Expense',          data: inc.researchAndDev,       higherBetter: null  },
+    { label:'SG&A Expense',         data: inc.sgAndA,               higherBetter: false },
+    { label:'Interest Expense',     data: inc.interestExpense,      higherBetter: false },
+  ];
+  var incEl = document.getElementById('resIncomeStatement');
+  if (incEl) incEl.innerHTML = years.length ? resFinTable(incRows, years) : '<p style="padding:16px;color:var(--text-sec);">No income statement data available (SEC EDGAR).</p>';
+
+  // ── Balance Sheet ──
+  var bsRows = [
+    { label:'Total Assets',         data: bs.totalAssets,           higherBetter: true  },
+    { label:'Current Assets',       data: bs.currentAssets,         higherBetter: true  },
+    { label:'Cash & Equivalents',   data: bs.cash,                  higherBetter: true  },
+    { label:'Short-Term Investments',data:bs.shortTermInvestments,  higherBetter: true  },
+    { label:'Receivables',          data: bs.receivables,           higherBetter: null  },
+    { label:'Inventory',            data: bs.inventory,             higherBetter: null  },
+    { label:'separator', separator: true },
+    { label:'Total Liabilities',    data: bs.totalLiabilities,      higherBetter: false },
+    { label:'Current Liabilities',  data: bs.currentLiabilities,    higherBetter: false },
+    { label:'Long-Term Debt',       data: bs.longTermDebt,          higherBetter: false },
+    { label:'separator', separator: true },
+    { label:'Stockholders\' Equity', data: bs.stockholdersEquity,   higherBetter: true  },
+    { label:'Retained Earnings',    data: bs.retainedEarnings,      higherBetter: true  },
+    { label:'Current Ratio',        data: (bs.currentAssets||[]).map(function(r,i){
+        var cl = (bs.currentLiabilities||[])[i]; return cl&&cl.value&&r.value ? {year:r.year,value:r.value/cl.value} : {year:r.year,value:null};
+      }), fmt: resX, higherBetter: true },
+    { label:'Debt/Equity',          data: (bs.longTermDebt||[]).map(function(r,i){
+        var eq = (bs.stockholdersEquity||[])[i]; return eq&&eq.value&&r.value&&eq.value>0 ? {year:r.year,value:r.value/eq.value} : {year:r.year,value:null};
+      }), fmt: resX, higherBetter: false },
+  ];
+  var bsYears = getYears(bs.totalAssets || bs.currentAssets || []);
+  var bsEl = document.getElementById('resBalanceSheet');
+  if (bsEl) bsEl.innerHTML = bsYears.length ? resFinTable(bsRows, bsYears) : '<p style="padding:16px;color:var(--text-sec);">No balance sheet data available (SEC EDGAR).</p>';
+
+  // ── Cash Flow ──
+  var ocf = cf.operatingCashFlow || [];
+  var capex = cf.capitalExpenditures || [];
+  var fcfArr = ocf.map(function(r,i){
+    var cx = capex[i]; var cxv = cx&&cx.value?Math.abs(cx.value):0;
+    return {year:r.year, value: r.value!=null ? r.value - cxv : null};
+  });
+  var cfRows = [
+    { label:'Operating Cash Flow',  data: ocf,                      higherBetter: true  },
+    { label:'Capital Expenditures', data: capex.map(function(r){return {year:r.year,value:r.value!=null?Math.abs(r.value):null};}), higherBetter: false },
+    { label:'Free Cash Flow',       data: fcfArr,                   higherBetter: true  },
+    { label:'FCF Margin',           data: fcfArr.map(function(r,i){
+        var rev = (inc.revenue||[])[i]; return rev&&rev.value&&r.value ? {year:r.year,value:(r.value/rev.value)*100} : {year:r.year,value:null};
+      }), fmt: function(v){return v!=null?v.toFixed(1)+'%':'—';}, higherBetter: true },
+    { label:'separator', separator: true },
+    { label:'Stock Repurchases',    data: (cf.stockRepurchases||[]).map(function(r){return {year:r.year,value:r.value!=null?Math.abs(r.value):null};}), higherBetter: null },
+    { label:'Dividends Paid',       data: (cf.dividendsPaid||[]).map(function(r){return {year:r.year,value:r.value!=null?Math.abs(r.value):null};}), higherBetter: null },
+    { label:'Stock-Based Comp',     data: cf.stockBasedComp,        higherBetter: false },
+  ];
+  var cfYears = getYears(ocf);
+  var cfEl = document.getElementById('resCashFlow');
+  if (cfEl) cfEl.innerHTML = cfYears.length ? resFinTable(cfRows, cfYears) : '<p style="padding:16px;color:var(--text-sec);">No cash flow data available (SEC EDGAR).</p>';
+
+  // ── Analyst Forecasts ──
+  var afEl = document.getElementById('resAnalystForecasts');
+  if (afEl) {
+    var totalA = (ar.strongBuy||0)+(ar.buy||0)+(ar.hold||0)+(ar.sell||0)+(ar.strongSell||0);
+    var buyPct = totalA ? ((ar.strongBuy||0)+(ar.buy||0))/totalA*100 : null;
+    var sellPct = totalA ? ((ar.sell||0)+(ar.strongSell||0))/totalA*100 : null;
+    var px = d.price&&d.price.current?d.price.current:null;
+    var upside = at.mean&&px ? (at.mean-px)/px*100 : null;
+    var afHtml = '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;margin-bottom:16px;">';
+    function metricBox(label,val,sub,col) {
+      return '<div style="background:var(--panel);border:1px solid var(--border);border-left:4px solid '+(col||C.navy)+';border-radius:4px;padding:10px 14px;">'
+        +'<div style="font-size:10px;text-transform:uppercase;color:var(--text-sec);margin-bottom:2px;">'+label+'</div>'
+        +'<div style="font-size:22px;font-weight:800;color:'+(col||C.navy)+';">'+val+'</div>'
+        +(sub?'<div style="font-size:11px;color:var(--text-sec);">'+sub+'</div>':'')
+        +'</div>';
+    }
+    if (at.mean) afHtml += metricBox('Analyst Target (Mean)', '$'+at.mean.toFixed(2), upside!=null?resP(upside)+' upside':(px?'':''), upside>0?C.success:C.danger);
+    if (at.high) afHtml += metricBox('Target High', '$'+at.high.toFixed(2), 'Bull case', C.success);
+    if (at.low)  afHtml += metricBox('Target Low', '$'+at.low.toFixed(2), 'Bear case', C.danger);
+    if (at.median) afHtml += metricBox('Target Median', '$'+at.median.toFixed(2), 'Median consensus', C.navy);
+    afHtml += '</div>';
+    if (totalA > 0) {
+      afHtml += '<div style="margin-bottom:12px;"><div style="font-size:11px;font-weight:700;color:var(--text-sec);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;">Analyst Rating Distribution ('+totalA+' analysts)</div>';
+      afHtml += '<div style="display:flex;gap:8px;flex-wrap:wrap;">';
+      var ratings = [
+        {label:'Strong Buy', count:ar.strongBuy||0, col:C.success},
+        {label:'Buy', count:ar.buy||0, col:'#5CB85C'},
+        {label:'Hold', count:ar.hold||0, col:'#8B6914'},
+        {label:'Sell', count:ar.sell||0, col:'#D9534F'},
+        {label:'Strong Sell', count:ar.strongSell||0, col:C.danger}
+      ];
+      ratings.forEach(function(r) {
+        if (!r.count) return;
+        var pct = (r.count/totalA*100).toFixed(0);
+        afHtml += '<div style="background:var(--panel);border:1px solid var(--border);border-radius:4px;padding:8px 12px;text-align:center;min-width:90px;">'
+          +'<div style="font-size:11px;color:var(--text-sec);">'+r.label+'</div>'
+          +'<div style="font-size:20px;font-weight:800;color:'+r.col+';">'+r.count+'</div>'
+          +'<div style="font-size:10px;color:var(--text-sec);">'+pct+'%</div></div>';
+      });
+      afHtml += '</div>';
+      if (buyPct!=null) {
+        afHtml += '<div style="margin-top:10px;font-size:12px;color:var(--text-sec);">'
+          +'Buy/Overweight: <strong style="color:'+C.success+';">'+buyPct.toFixed(0)+'%</strong>'
+          +'&nbsp;·&nbsp;Sell/Underweight: <strong style="color:'+C.danger+';">'+sellPct.toFixed(0)+'%</strong>'
+          +'</div>';
+      }
+      afHtml += '</div>';
+    }
+    if (!totalA && !at.mean) {
+      afHtml += '<p style="color:var(--text-sec);font-size:12px;">No analyst estimates available (FMP).</p>';
+    }
+    afEl.innerHTML = afHtml;
+  }
+}
+
+// ── Valuation Header + Ratios ────────────────────────────────────────
+var SECTOR_PE = { 'Technology':28,'Healthcare':22,'Financials':14,'Consumer Discretionary':22,'Consumer Staples':20,'Energy':12,'Industrials':18,'Materials':16,'Real Estate':20,'Utilities':18,'Communication Services':20 };
+
+function resRenderValuationHeader(ticker, d) {
+  var valContent = document.getElementById('resValuationContent');
+  var valEmpty   = document.getElementById('resValuationEmpty');
+  if (!valContent) return;
+  // Always show content when data is loaded — lazy load ensures ratios render
+  valContent.style.display = '';
+  if (valEmpty) valEmpty.style.display = 'none';
+  resRenderValuationRatios(ticker, d);
+}
+
+function resRenderValuationRatios(ticker, d) {
+  var el = document.getElementById('resValuationRatios');
+  if (!el) return;
+  var inc = d.incomeStatement||{}, bs = d.balanceSheet||{}, cf = d.cashFlowStatement||{};
+  var px = d.price&&d.price.current?d.price.current:null;
+  var prof = d.profile||{};
+  function L(arr){return arr&&arr.length?arr[arr.length-1].value:null;}
+
+  var rev   = L(inc.revenue);
+  var ni    = L(inc.netIncome);
+  var eps   = L(inc.eps);
+  var ocf   = L(cf.operatingCashFlow);
+  var capex = cf.capitalExpenditures&&cf.capitalExpenditures.length ? Math.abs(cf.capitalExpenditures[cf.capitalExpenditures.length-1].value) : 0;
+  var fcf   = ocf!=null ? ocf-capex : null;
+  var eq    = L(bs.stockholdersEquity);
+  var ta    = L(bs.totalAssets);
+  var ltd   = L(bs.longTermDebt)||0;
+  var cash  = (L(bs.cash)||0)+(L(bs.shortTermInvestments)||0);
+  var shares= L(bs.sharesOutstanding);
+  var mktCap= prof.marketCap || (px&&shares?px*shares:null);
+  var ev    = mktCap!=null ? mktCap+ltd-cash : null;
+  var sector = prof.sector||'';
+  var sectorPE = SECTOR_PE[sector]||20;
+
+  var metrics = [
+    { label:'P/E Ratio (Trailing)',   val: eps&&eps>0&&px?px/eps:null,        fmt: resX, bench: sectorPE,     unit:'x', note:'Sector median: '+sectorPE+'x' },
+    { label:'Price / Sales',          val: rev&&mktCap?mktCap/rev:null,        fmt: resX, bench: 3,           unit:'x', note:'S&P 500 median ~3x' },
+    { label:'Price / Book',           val: eq&&eq>0&&mktCap?mktCap/eq:null,    fmt: resX, bench: 3.5,         unit:'x', note:'Book value per share' },
+    { label:'Price / FCF',            val: fcf&&fcf>0&&mktCap?mktCap/fcf:null, fmt: resX, bench: 20,          unit:'x', note:'Market cap / free cash flow' },
+    { label:'EV / Revenue',           val: ev&&rev?ev/rev:null,                fmt: resX, bench: 4,           unit:'x', note:'Enterprise value vs. revenue' },
+    { label:'EV / EBITDA (proxy)',     val: ev&&ni&&ni>0?ev/ni:null,           fmt: resX, bench: 15,          unit:'x', note:'Approximate (uses net income)' },
+    { label:'Return on Equity (ROE)', val: ni&&eq&&eq>0?ni/eq*100:null,        fmt: function(v){return v!=null?v.toFixed(1)+'%':'—';}, bench: 15, benchDir:'higher', unit:'%', note:'Sector median ~15%' },
+    { label:'Return on Assets (ROA)', val: ni&&ta&&ta>0?ni/ta*100:null,        fmt: function(v){return v!=null?v.toFixed(1)+'%':'—';}, bench: 5,  benchDir:'higher', unit:'%', note:'S&P 500 median ~5%' },
+    { label:'Net Profit Margin',      val: rev&&ni?ni/rev*100:null,            fmt: function(v){return v!=null?v.toFixed(1)+'%':'—';}, bench: 12, benchDir:'higher', unit:'%', note:'S&P 500 median ~12%' },
+    { label:'FCF Yield',              val: fcf&&mktCap&&mktCap>0?fcf/mktCap*100:null, fmt:function(v){return v!=null?v.toFixed(1)+'%':'—';}, bench:4, benchDir:'higher', unit:'%', note:'FCF / Market Cap — higher is better' },
+    { label:'Debt / Equity',          val: ltd&&eq&&eq>0?ltd/eq:null,          fmt: resX, bench: 1.5,         benchDir:'lower', unit:'x', note:'Net leverage — lower is better' },
+    { label:'Market Cap',             val: mktCap,                             fmt: resN, bench:null, unit:'', note:'' },
+    { label:'Enterprise Value',       val: ev,                                 fmt: resN, bench:null, unit:'', note:'' },
+  ];
+
+  var html = '<div style="overflow-x:auto;"><table style="width:100%;font-size:12px;border-collapse:collapse;">';
+  html += '<thead><tr style="background:var(--navy);color:#fff;">'
+    + '<th style="padding:8px 14px;text-align:left;">Metric</th>'
+    + '<th style="padding:8px 12px;text-align:right;">Value</th>'
+    + '<th style="padding:8px 12px;text-align:right;">Benchmark</th>'
+    + '<th style="padding:8px 12px;text-align:center;">Signal</th>'
+    + '<th style="padding:8px 14px;text-align:left;">Note</th>'
+    + '</tr></thead><tbody>';
+  metrics.forEach(function(m, i) {
+    var v = m.val;
+    var fmtd = m.fmt ? m.fmt(v) : (v!=null?v.toFixed(2):' — ');
+    var signal = '', sigCol = C.textSec;
+    if (v!=null && m.bench!=null) {
+      var cheaper = m.benchDir==='higher' ? v>m.bench : v<m.bench;
+      if (cheaper) { signal='✓ Favorable'; sigCol=C.success; }
+      else          { signal='↑ Above Bench'; sigCol='#8B6914'; }
+    }
+    var bg = i%2===0?'':'background:rgba(0,0,0,0.02);';
+    html += '<tr style="'+bg+'border-bottom:1px solid var(--border);">'
+      + '<td style="padding:7px 14px;font-weight:600;">'+m.label+'</td>'
+      + '<td style="padding:7px 12px;text-align:right;font-family:monospace;font-weight:700;">'+fmtd+'</td>'
+      + '<td style="padding:7px 12px;text-align:right;font-size:11px;color:var(--text-sec);">'+(m.bench!=null?m.bench+m.unit:'—')+'</td>'
+      + '<td style="padding:7px 12px;text-align:center;font-size:11px;font-weight:600;color:'+sigCol+';">'+signal+'</td>'
+      + '<td style="padding:7px 14px;font-size:11px;color:var(--text-sec);">'+m.note+'</td>'
+      + '</tr>';
+  });
+  html += '</tbody></table></div>';
+  el.innerHTML = html;
+}
+
+// ── Peer Comparison ──────────────────────────────────────────────────
+// Pre-mapped sector peers — top 6-8 by market cap within sector/industry
+var SECTOR_PEERS = {
+  'Technology': {
+    'Semiconductors & Semiconductor Equipment': ['NVDA','AMD','AVGO','QCOM','TXN','MU','INTC','AMAT'],
+    'Software': ['MSFT','ADBE','CRM','ORCL','SAP','NOW','INTU','WDAY'],
+    'Internet': ['GOOGL','META','AMZN','SNAP','PINS','TWTR','SPOT'],
+    'Hardware': ['AAPL','DELL','HPQ','STX','WDC'],
+    'default': ['AAPL','MSFT','NVDA','GOOGL','META','AVGO','ORCL','CRM']
+  },
+  'Healthcare': {
+    'Pharmaceuticals': ['JNJ','LLY','PFE','MRK','AZN','BMY','ABBV','AMGN'],
+    'Biotechnology': ['GILD','REGN','VRTX','BIIB','MRNA','ILMN'],
+    'Medical Devices': ['MDT','ABT','SYK','BSX','EW','ISRG'],
+    'Health Care Providers': ['UNH','CVS','CI','HUM','CNC'],
+    'default': ['LLY','UNH','JNJ','ABBV','MRK','PFE','TMO','ABT']
+  },
+  'Financials': {
+    'Banks': ['JPM','BAC','WFC','C','GS','MS','USB','TFC'],
+    'Insurance': ['BRK-B','MET','PRU','AFL','ALL','AIG'],
+    'Asset Management': ['BLK','SCHW','STT','BEN'],
+    'default': ['JPM','BAC','GS','MS','WFC','BLK','AXP','V']
+  },
+  'Consumer Discretionary': {
+    'Retail': ['AMZN','HD','TGT','COST','WMT','LOW','TJX'],
+    'Automotive': ['TSLA','GM','F','STLA','TM','HMC'],
+    'Hotels & Entertainment': ['MAR','HLT','DIS','NFLX','CMCSA'],
+    'default': ['AMZN','TSLA','HD','MCD','NKE','SBUX','BKNG','GM']
+  },
+  'Consumer Staples': {
+    'default': ['PG','KO','PEP','COST','WMT','PM','MO','CL']
+  },
+  'Energy': {
+    'Integrated Oil': ['XOM','CVX','BP','SHEL','TTE'],
+    'E&P': ['COP','EOG','PXD','DVN','HES','MRO'],
+    'default': ['XOM','CVX','COP','EOG','SLB','MPC','PSX','VLO']
+  },
+  'Industrials': {
+    'Aerospace': ['RTX','LMT','NOC','GD','BA'],
+    'Industrial Machinery': ['HON','GE','EMR','ROK','ETN','PH'],
+    'Transportation': ['UNP','CSX','NSC','UPS','FDX'],
+    'default': ['GE','HON','RTX','CAT','UNP','UPS','BA','LMT']
+  },
+  'Materials': {
+    'default': ['LIN','APD','SHW','FCX','NUE','NEM','AA','CF']
+  },
+  'Real Estate': {
+    'default': ['AMT','PLD','CCI','EQIX','PSA','O','SPG','AVB']
+  },
+  'Utilities': {
+    'default': ['NEE','SO','DUK','CEG','AEP','EXC','PCG','XEL']
+  },
+  'Communication Services': {
+    'Telecom': ['VZ','T','TMUS','CHTR','CMCSA'],
+    'Media & Entertainment': ['META','GOOGL','NFLX','DIS','SPOT'],
+    'default': ['META','GOOGL','NFLX','CMCSA','T','VZ','DIS','TMUS']
+  }
+};
+
+function resPeerAutoDetect() {
+  var d = window._lastSecData;
+  if (!d) return;
+  var sector = (d.profile||{}).sector||'';
+  var industry = (d.profile||{}).industry||'';
+  var ticker = window._lastSecTicker||'';
+  var peerMap = SECTOR_PEERS[sector]||{};
+  // Try to match industry
+  var peers = null;
+  Object.keys(peerMap).forEach(function(key) {
+    if (key !== 'default' && industry.toLowerCase().indexOf(key.toLowerCase()) >= 0) peers = peerMap[key];
+  });
+  if (!peers) peers = peerMap['default'] || ['SPY','QQQ','IWM'];
+  // Remove the current ticker from peer list
+  peers = peers.filter(function(p){return p.toUpperCase()!==ticker.toUpperCase();}).slice(0,7);
+  var inputEl = document.getElementById('resPeerTickers');
+  if (inputEl) inputEl.value = peers.join(', ');
+  var msgEl = document.getElementById('resPeerAutoMsg');
+  if (msgEl) msgEl.innerHTML = 'Auto-detected '+peers.length+' peers from <strong>'+sector+'</strong>'+(industry?' / '+industry:'')+'&nbsp;·&nbsp; Edit list then click <strong>Compare Peers</strong>.';
+  resPeerRun();
+}
+
+async function resPeerRun() {
+  var resultEl = document.getElementById('resPeersResult');
+  if (!resultEl) return;
+  var inputEl = document.getElementById('resPeerTickers');
+  var peerStr = inputEl ? inputEl.value.trim() : '';
+  var peers = peerStr.split(',').map(function(p){return p.trim().toUpperCase();}).filter(Boolean).slice(0,8);
+  var anchor = (window._lastSecTicker||'').toUpperCase();
+  if (!anchor) { resultEl.innerHTML = '<p style="color:var(--text-sec);">Analyze a stock first.</p>'; return; }
+  resultEl.innerHTML = '<div style="text-align:center;padding:24px;"><span class="spinner"></span> Loading peer data for '+([anchor].concat(peers)).join(', ')+'...</div>';
+
+  var all = [anchor].concat(peers);
+  var peerData = {};
+  await Promise.all(all.map(async function(tk) {
+    try {
+      var WORKER = 'https://perry-finance-proxy.zachperrybusiness.workers.dev';
+      var [fund, quote, chart] = await Promise.all([
+        fetch(WORKER+'/fundamentals?symbol='+tk).then(function(r){return r.json();}),
+        fetch(WORKER+'/quote?symbol='+tk).then(function(r){return r.json();}),
+        fetch(WORKER+'/chart?symbol='+tk+'&range=1y&interval=1d').then(function(r){return r.json();})
+      ]);
+      peerData[tk] = { fund, quote, chart };
+    } catch(e) { peerData[tk] = { error: e.message }; }
+  }));
+
+  function getMetrics(tk) {
+    var pd = peerData[tk];
+    if (!pd||pd.error) return null;
+    var d = pd.fund; var q = pd.quote; var ch = pd.chart;
+    var inc = d.incomeStatement||{}, bs = d.balanceSheet||{}, cf = d.cashFlowStatement||{};
+    function L(arr){return arr&&arr.length?arr[arr.length-1].value:null;}
+    var px  = q.current || (d.price&&d.price.current);
+    var rev = L(inc.revenue);
+    var ni  = L(inc.netIncome);
+    var eps = L(inc.eps);
+    var ocf = L(cf.operatingCashFlow);
+    var capex = cf.capitalExpenditures&&cf.capitalExpenditures.length?Math.abs(cf.capitalExpenditures[cf.capitalExpenditures.length-1].value):0;
+    var fcf = ocf!=null?ocf-capex:null;
+    var eq  = L(bs.stockholdersEquity);
+    var ltd = L(bs.longTermDebt)||0;
+    var cash = (L(bs.cash)||0)+(L(bs.shortTermInvestments)||0);
+    var shares = L(bs.sharesOutstanding);
+    var mktCap = (d.profile&&d.profile.marketCap)||(px&&shares?px*shares:null);
+    var ev = mktCap!=null?mktCap+ltd-cash:null;
+    // 1Y and 3M returns from chart
+    var pts = (ch.points||[]).filter(function(p){return p.close!=null;});
+    var ret1y = pts.length>=252 ? (pts[pts.length-1].close/pts[pts.length-252].close-1)*100 : (pts.length>1?(pts[pts.length-1].close/pts[0].close-1)*100:null);
+    var ret3m = pts.length>=63  ? (pts[pts.length-1].close/pts[pts.length-63].close-1)*100  : null;
+    var pe = eps&&eps>0&&px?px/eps:null;
+    var ps = rev&&mktCap?mktCap/rev:null;
+    var pb = eq&&eq>0&&mktCap?mktCap/eq:null;
+    var roe= ni&&eq&&eq>0?ni/eq*100:null;
+    var npm= rev&&ni?ni/rev*100:null;
+    var pfcf=fcf&&fcf>0&&mktCap?mktCap/fcf:null;
+    var profile = d.profile||{};
+    return { ticker:tk, name:profile.name||tk, sector:profile.sector||'', px, mktCap, ev, rev, ni, eps, fcf, pe, ps, pb, roe, npm, pfcf, ret1y, ret3m, ltd, cash };
+  }
+
+  var metrics = all.map(getMetrics);
+  var valid = metrics.filter(Boolean);
+  if (!valid.length) { resultEl.innerHTML = '<p style="color:var(--danger);">Failed to load peer data.</p>'; return; }
+
+  // ── Return performance chart data ──
+  // Fetch returns for sparkline comparison — just use ret1y/ret3m already loaded
+
+  var cols = [
+    { label:'Company',      key:'name',   fmt:function(v,m){return '<span style="font-weight:700;">'+m.ticker+'</span><br><span style="font-size:10px;color:var(--text-sec);">'+v.slice(0,22)+'</span>';}, raw:false },
+    { label:'Price',        key:'px',     fmt:function(v){return v!=null?'$'+v.toFixed(2):'—';}, color:false },
+    { label:'Mkt Cap',      key:'mktCap', fmt:resN, color:false },
+    { label:'P/E',          key:'pe',     fmt:resX, higher:false },
+    { label:'P/S',          key:'ps',     fmt:resX, higher:false },
+    { label:'P/Book',       key:'pb',     fmt:resX, higher:false },
+    { label:'P/FCF',        key:'pfcf',   fmt:resX, higher:false },
+    { label:'ROE',          key:'roe',    fmt:function(v){return v!=null?v.toFixed(1)+'%':'—';}, higher:true },
+    { label:'Net Margin',   key:'npm',    fmt:function(v){return v!=null?v.toFixed(1)+'%':'—';}, higher:true },
+    { label:'1Y Return',    key:'ret1y',  fmt:function(v){return v!=null?(v>=0?'+':'')+v.toFixed(1)+'%':'—';}, higher:true },
+    { label:'3M Return',    key:'ret3m',  fmt:function(v){return v!=null?(v>=0?'+':'')+v.toFixed(1)+'%':'—';}, higher:true },
+  ];
+
+  // Compute best/worst for coloring each column
+  function colRank(col, vals) {
+    var nums = vals.map(function(v){return typeof v==='number'?v:null;}).filter(function(v){return v!=null;});
+    if (!nums.length) return {};
+    var sorted = nums.slice().sort(function(a,b){return a-b;});
+    var best = col.higher ? sorted[sorted.length-1] : sorted[0];
+    var worst = col.higher ? sorted[0] : sorted[sorted.length-1];
+    return { best, worst };
+  }
+
+  var html = '<div style="overflow-x:auto;"><table style="width:100%;font-size:12px;border-collapse:collapse;">';
+  html += '<thead><tr style="background:var(--navy);color:#fff;">';
+  cols.forEach(function(c){ html += '<th style="padding:8px 12px;text-align:'+(c.key==='name'?'left':'right')+';">'+c.label+'</th>'; });
+  html += '</tr></thead><tbody>';
+
+  var colVals = {};
+  cols.forEach(function(c){ colVals[c.key] = valid.map(function(m){return m[c.key];}); });
+  var colRanks = {};
+  cols.forEach(function(c){ if (c.higher!==undefined) colRanks[c.key] = colRank(c, colVals[c.key]); });
+
+  valid.forEach(function(m, i) {
+    var isAnchor = m.ticker === anchor;
+    var bg = isAnchor ? 'background:rgba(0,60,113,0.08);' : (i%2===0?'':'background:rgba(0,0,0,0.02);');
+    html += '<tr style="'+bg+'border-bottom:1px solid var(--border);'+(isAnchor?'border-left:3px solid var(--navy);':'border-left:3px solid transparent;')+'">';
+    cols.forEach(function(c) {
+      var v = m[c.key];
+      var fmtd = c.fmt ? c.fmt(v, m) : (v!=null?String(v):'—');
+      var col = '';
+      if (c.higher!==undefined && typeof v==='number') {
+        var rk = colRanks[c.key]||{};
+        if (v===rk.best) col='color:'+C.success+';';
+        else if (v===rk.worst) col='color:'+C.danger+';';
+      }
+      var align = c.key==='name'?'left':'right';
+      var mono = c.key!=='name'?'font-family:monospace;':'';
+      html += '<td style="padding:7px 12px;text-align:'+align+';'+col+mono+'">'+fmtd+'</td>';
+    });
+    html += '</tr>';
+  });
+  html += '</tbody></table></div>';
+  html += '<div style="font-size:10.5px;color:var(--text-sec);margin-top:8px;padding:0 4px;">Green = best in group · Red = worst. Anchor ticker highlighted in blue. Sources: SEC EDGAR, Yahoo Finance, FMP via Cloudflare Worker.</div>';
+  resultEl.innerHTML = html;
+}
+
 // ═══════════ END MARKETS PAGE ═══════════
 
 // ═══════════════════════════════════════════════════════════════════
@@ -15701,6 +16341,29 @@ function rqShowTab(name) {
   document.querySelectorAll('#page-research .pf-tab-content').forEach(function(c){
     c.classList.toggle('active', c.id === 'rqtab-' + name);
   });
+  // Lazy-load tab content when first visited (if data already loaded)
+  if (name === 'financials' && window._lastSecData && window._lastSecTicker) {
+    var el = document.getElementById('resFinancialsContent');
+    if (el && el.style.display === 'none') resRenderFinancials(window._lastSecTicker, window._lastSecData);
+  }
+  if (name === 'valuation' && window._lastSecData && window._lastSecTicker) {
+    var el2 = document.getElementById('resValuationContent');
+    if (el2 && el2.style.display === 'none') {
+      el2.style.display = '';
+      document.getElementById('resValuationEmpty').style.display = 'none';
+      resRenderValuationRatios(window._lastSecTicker, window._lastSecData);
+      if (typeof ivvLoad === 'function') ivvLoad(window._lastSecTicker, window._lastSecData);
+      if (typeof ivLoad === 'function') ivLoad(window._lastSecTicker);
+    }
+  }
+  if (name === 'peers' && window._lastSecData && window._lastSecTicker) {
+    var el3 = document.getElementById('resPeersContent');
+    if (el3 && el3.style.display === 'none') {
+      el3.style.display = '';
+      document.getElementById('resPeersEmpty').style.display = 'none';
+      resPeerAutoDetect();
+    }
+  }
 }
 // Lift quant page contents into research's quant tab on first navigation
 window._rqQuantLifted = false;
