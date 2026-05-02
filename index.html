@@ -3562,6 +3562,30 @@ body.view-mobile .logo-icon { width: 22px !important; height: 22px !important; f
         Universe: SPY, TLT, GLD, UUP, USO, HYG. Price data via Cloudflare Worker / Yahoo Finance.
       </div>
     </div>
+
+    <!-- ═══ CYCLE BREAKDOWN TABLE ═══ -->
+    <div class="card" style="margin-top:14px;">
+      <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
+        <span>Economic Cycle Breakdown — Consumer · Business · Real Estate · Supply Chain
+          <span class="help-icon" title="Mirrors the classic business cycle indicator matrix. Each indicator is sourced from FRED and scored into one of 5 cycle phases based on its level vs. historical thresholds and 3-month trend. Green = Expansion/Recovery. Amber = Neutral/Slowing. Red = Contraction. Use this to identify where cycle pressure is building or receding across different sectors of the economy — not captured by the 6-pillar macro scorecard above.">?</span>
+        </span>
+        <button class="btn btn-sm" onclick="regimeLoadBreakdown(true)" style="background:rgba(255,255,255,0.2);color:#fff;border:1px solid rgba(255,255,255,0.3);padding:4px 10px;border-radius:3px;cursor:pointer;font-size:11px;">Refresh</button>
+      </div>
+      <div class="card-body" style="padding:0;">
+        <div id="cycleBreakdownResult" style="padding:32px;text-align:center;color:var(--text-sec);">
+          <span class="spinner"></span> Loading cycle breakdown data...
+        </div>
+      </div>
+      <div class="card-sources">
+        <strong>Sources:</strong> Federal Reserve Bank of St. Louis (FRED API). Data provided by FRED®.
+        Consumer: UMCSENT, PSAVERT, PCE, RETAILSMSA, DSPIC96.
+        Business: NAPM (ISM Mfg PMI), NMFBAI (ISM Services PMI), AMTMNO, CPFALLS, MANEMP.
+        Real Estate: HOUST, PERMIT, HSN1F, EXHOSLUSM495S, CSUSHPINSA.
+        Supply Chain: AMTMUO, ISRATIO, DGORDER, IPB50001N.
+        Labor Breadth: LNS12300060 (Prime-Age EPOP), AWHMAN, AWOTMAN.
+        Phase classification: level-based thresholds where available, otherwise 3-month trend (>±1.5%).
+      </div>
+    </div>
     </div><!-- /catab-regime -->
 
     <!-- ═══ TAB: BREADTH & SIGNALS ═══ -->
@@ -5374,6 +5398,9 @@ function navigateTo(p) {
         setTimeout(function() { caAutoLoad('movers'); },    2000);
         setTimeout(function() { caAutoLoad('bizycle'); },   3000);
         setTimeout(function() { caAutoLoad('regime'); },    5000);
+        setTimeout(function() {
+          if (typeof regimeLoadBreakdown === 'function') regimeLoadBreakdown();
+        }, 6500);
         setTimeout(function() { caAutoLoad('credit'); },    7000);
         setTimeout(function() { caAutoLoad('yieldcurve'); },9000);
         setTimeout(function() { caAutoLoad('breadth'); },  11000);
@@ -13120,6 +13147,159 @@ function aRunLeadLag() {
     if (oRes) oRes.id='mktLeadLagResult'; if (oWrap) oWrap.id='mktLeadLagWrap'; if (oC) oC.id='mktLeadLagChart';
   });
 }
+// ═══════════════════════════════════════════════════════════════════
+// CYCLE BREAKDOWN TABLE — Consumer, Business, Real Estate, Supply Chain
+// Calls /fred-breakdown endpoint and renders the phase matrix.
+// ═══════════════════════════════════════════════════════════════════
+
+var _breakdownLoaded = false;
+var _breakdownData = null;
+
+async function regimeLoadBreakdown(force) {
+  if (_breakdownLoaded && !force && _breakdownData) { renderCycleBreakdown(_breakdownData); return; }
+  var el = document.getElementById('cycleBreakdownResult');
+  if (!el) return;
+  el.innerHTML = '<div style="padding:32px;text-align:center;color:var(--text-sec);"><span class="spinner"></span> Fetching ' +
+    'consumer, business, real estate, and supply chain indicators from FRED...</div>';
+  try {
+    var WORKER = window.WORKER_URL || 'https://perry-finance-proxy.zachperrybusiness.workers.dev';
+    var res = await fetch(WORKER + '/fred-breakdown');
+    var data = await res.json();
+    if (data.error) throw new Error(data.error);
+    _breakdownLoaded = true;
+    _breakdownData = data;
+    renderCycleBreakdown(data);
+  } catch(e) {
+    var el2 = document.getElementById('cycleBreakdownResult');
+    if (el2) el2.innerHTML = '<div style="padding:24px;text-align:center;color:var(--danger);">Failed to load breakdown data: ' + e.message +
+      ' <button class="btn btn-sm" onclick="regimeLoadBreakdown(true)" style="margin-left:8px;">Retry</button></div>';
+  }
+}
+
+function renderCycleBreakdown(data) {
+  var el = document.getElementById('cycleBreakdownResult');
+  if (!el) return;
+
+  var PHASE_CONFIG = {
+    'Expansion':   { bg: 'rgba(46,125,82,0.12)',  border: '#2E7D52', text: '#1A5C38',  badge: '#2E7D52',  label: 'Expansion'   },
+    'Recovery':    { bg: 'rgba(91,155,213,0.12)', border: '#5B9BD5', text: '#003C71',  badge: '#5B9BD5',  label: 'Recovery'    },
+    'Neutral':     { bg: 'rgba(90,106,122,0.07)', border: '#A0AABB', text: '#5A6A7A',  badge: '#A0AABB',  label: 'Neutral'     },
+    'Slowdown':    { bg: 'rgba(139,105,20,0.10)', border: '#8B6914', text: '#5C4500',  badge: '#8B6914',  label: 'Slowdown'    },
+    'Contraction': { bg: 'rgba(139,42,42,0.10)',  border: '#8B2A2A', text: '#5C0000',  badge: '#8B2A2A',  label: 'Contraction' },
+    'N/A':         { bg: 'rgba(0,0,0,0.03)',       border: '#D0D7E0', text: '#A0AABB',  badge: '#D0D7E0',  label: 'N/A'         }
+  };
+
+  function phaseColor(phase) { return PHASE_CONFIG[phase] || PHASE_CONFIG['Neutral']; }
+
+  // ── Category summary bar ──────────────────────────────────────────
+  var summaryHtml = '<div style="display:flex;gap:10px;flex-wrap:wrap;padding:14px 18px;border-bottom:2px solid var(--border);background:var(--panel);">';
+  (data.categories || []).forEach(function(cat) {
+    var s = cat.summary;
+    var dom = s.dominant;
+    var pc = phaseColor(dom);
+    // mini phase tally bar
+    var phases = ['Expansion','Recovery','Neutral','Slowdown','Contraction'];
+    var tallyHtml = '<div style="display:flex;gap:2px;margin-top:4px;">';
+    phases.forEach(function(ph) {
+      var cnt = s.counts[ph] || 0;
+      if (!cnt) return;
+      var ppc = phaseColor(ph);
+      tallyHtml += '<div title="' + ph + ': ' + cnt + '" style="height:6px;width:' + Math.round(cnt/s.total*60) + 'px;background:' + ppc.badge + ';border-radius:2px;"></div>';
+    });
+    tallyHtml += '</div>';
+    summaryHtml += '<div style="background:' + pc.bg + ';border:1px solid ' + pc.border + ';border-radius:6px;padding:8px 14px;min-width:140px;">'
+      + '<div style="font-size:10px;text-transform:uppercase;letter-spacing:.6px;font-weight:700;color:' + pc.text + ';">' + cat.name + '</div>'
+      + '<div style="font-size:16px;font-weight:800;color:' + pc.badge + ';margin:2px 0;">' + dom + '</div>'
+      + '<div style="font-size:10px;color:var(--text-sec);">' + s.total + ' indicators</div>'
+      + tallyHtml
+      + '</div>';
+  });
+  summaryHtml += '</div>';
+
+  // ── Phase legend ──────────────────────────────────────────────────
+  var legendHtml = '<div style="display:flex;gap:12px;flex-wrap:wrap;padding:10px 18px;border-bottom:1px solid var(--border);background:var(--panel);font-size:10.5px;">';
+  legendHtml += '<span style="font-weight:600;color:var(--text-sec);">Phase key:</span>';
+  ['Recovery','Expansion','Neutral','Slowdown','Contraction'].forEach(function(ph) {
+    var pc = phaseColor(ph);
+    legendHtml += '<span style="display:flex;align-items:center;gap:4px;">'
+      + '<span style="width:10px;height:10px;border-radius:2px;background:' + pc.badge + ';display:inline-block;"></span>'
+      + '<span style="color:' + pc.text + ';font-weight:600;">' + ph + '</span></span>';
+  });
+  legendHtml += '<span style="color:var(--text-sec);margin-left:6px;">· 3M Chg = trailing 3-month % change</span>';
+  legendHtml += '</div>';
+
+  // ── Per-category tables ───────────────────────────────────────────
+  var tablesHtml = '';
+  (data.categories || []).forEach(function(cat) {
+    var catSummary = cat.summary;
+    var catPc = phaseColor(catSummary.dominant);
+
+    tablesHtml += '<div style="margin-bottom:0;">';
+    // Category header row
+    tablesHtml += '<div style="background:var(--navy);color:#fff;padding:8px 18px;display:flex;align-items:center;justify-content:space-between;">';
+    tablesHtml += '<span style="font-size:12px;font-weight:700;letter-spacing:.3px;">' + cat.name + '</span>';
+    tablesHtml += '<span style="font-size:11px;background:' + catPc.badge + ';color:#fff;padding:2px 10px;border-radius:10px;font-weight:600;">' + catSummary.dominant + '</span>';
+    tablesHtml += '</div>';
+
+    tablesHtml += '<div style="overflow-x:auto;"><table style="width:100%;font-size:11.5px;border-collapse:collapse;">';
+    tablesHtml += '<thead><tr style="background:var(--panel);">';
+    tablesHtml += '<th style="padding:7px 14px;text-align:left;color:var(--text-sec);font-weight:600;min-width:200px;border-bottom:1px solid var(--border);">Indicator</th>';
+    tablesHtml += '<th style="padding:7px 14px;text-align:right;color:var(--text-sec);font-weight:600;min-width:90px;border-bottom:1px solid var(--border);">Value</th>';
+    tablesHtml += '<th style="padding:7px 14px;text-align:center;color:var(--text-sec);font-weight:600;min-width:50px;border-bottom:1px solid var(--border);">Dir</th>';
+    tablesHtml += '<th style="padding:7px 14px;text-align:right;color:var(--text-sec);font-weight:600;min-width:80px;border-bottom:1px solid var(--border);">3M Chg</th>';
+    tablesHtml += '<th style="padding:7px 14px;text-align:left;color:var(--text-sec);font-weight:600;min-width:90px;border-bottom:1px solid var(--border);">As Of</th>';
+    tablesHtml += '<th style="padding:7px 14px;text-align:center;color:var(--text-sec);font-weight:600;min-width:120px;border-bottom:1px solid var(--border);">Cycle Phase</th>';
+    tablesHtml += '<th style="padding:7px 14px;text-align:left;color:var(--text-sec);font-weight:600;min-width:140px;border-bottom:1px solid var(--border);">Recovery &nbsp; Expansion &nbsp; Slowdown &nbsp; Contraction</th>';
+    tablesHtml += '</tr></thead><tbody>';
+
+    cat.indicators.forEach(function(ind, i) {
+      var pc = phaseColor(ind.phase);
+      var dirColor = ind.direction === '▲' ? C.success : ind.direction === '▼' ? C.danger : C.textSec;
+      var pctFmt = ind.pctChange != null ? (ind.pctChange >= 0 ? '+' : '') + ind.pctChange.toFixed(1) + '%' : '—';
+      var pctColor = ind.pctChange != null ? (ind.pctChange >= 0 ? C.success : C.danger) : C.textSec;
+      var valFmt = ind.value != null ? (ind.value > 1000 ? ind.value.toLocaleString(undefined, {maximumFractionDigits:0}) : ind.value.toFixed(ind.value < 10 ? 2 : 1)) : '—';
+      var rowBg = i % 2 === 0 ? '' : 'background:rgba(0,0,0,0.02);';
+
+      // Phase bar — 5 phase slots, filled for current phase
+      var phases = ['Recovery','Expansion','Neutral','Slowdown','Contraction'];
+      var phaseBarHtml = '<div style="display:flex;gap:3px;align-items:center;">';
+      phases.forEach(function(ph) {
+        var active = ind.phase === ph;
+        var ppc = phaseColor(ph);
+        phaseBarHtml += '<div title="' + ph + '" style="width:18px;height:18px;border-radius:3px;background:' + (active ? ppc.badge : 'var(--border)') + ';'
+          + 'border:1px solid ' + (active ? ppc.border : 'var(--border)') + ';'
+          + 'display:flex;align-items:center;justify-content:center;font-size:8px;color:' + (active ? '#fff' : 'transparent') + ';font-weight:700;" >'
+          + (active ? ph.slice(0,1) : '') + '</div>';
+      });
+      phaseBarHtml += '</div>';
+
+      tablesHtml += '<tr style="' + rowBg + 'border-bottom:1px solid var(--border);">';
+      tablesHtml += '<td style="padding:7px 14px;font-weight:600;">' + ind.name + '</td>';
+      tablesHtml += '<td style="padding:7px 14px;text-align:right;font-weight:700;font-family:monospace;">' + valFmt + '</td>';
+      tablesHtml += '<td style="padding:7px 14px;text-align:center;font-size:13px;font-weight:700;color:' + dirColor + ';">' + ind.direction + '</td>';
+      tablesHtml += '<td style="padding:7px 14px;text-align:right;font-weight:700;color:' + pctColor + ';font-family:monospace;">' + pctFmt + '</td>';
+      tablesHtml += '<td style="padding:7px 14px;font-size:10.5px;color:var(--text-sec);">' + (ind.date || '—') + '</td>';
+      tablesHtml += '<td style="padding:7px 14px;text-align:center;">'
+        + '<span style="background:' + pc.badge + ';color:#fff;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:600;">' + ind.phase + '</span>'
+        + '</td>';
+      tablesHtml += '<td style="padding:7px 14px;">' + phaseBarHtml + '</td>';
+      tablesHtml += '</tr>';
+    });
+
+    tablesHtml += '</tbody></table></div>';
+    tablesHtml += '</div>';
+  });
+
+  // ── Timestamp ─────────────────────────────────────────────────────
+  var footer = '<div style="padding:10px 18px;font-size:10.5px;color:var(--text-sec);border-top:1px solid var(--border);background:var(--panel);">'
+    + 'FRED data as of: ' + new Date(data.timestamp).toLocaleString()
+    + ' &nbsp;·&nbsp; Phase = level threshold (where defined) or 3M trend (>±1.5%). N/A = series unavailable for this account.'
+    + ' &nbsp;·&nbsp; <a href="https://fred.stlouisfed.org" target="_blank" style="color:var(--navy);">fred.stlouisfed.org</a>'
+    + '</div>';
+
+  el.innerHTML = summaryHtml + legendHtml + tablesHtml + footer;
+}
+
 // ═══════════ END MARKETS PAGE ═══════════
 
 // ═══════════════════════════════════════════════════════════════════
@@ -19908,6 +20088,11 @@ function caAutoLoad(name) {
     if (typeof regimeDistanceRun === 'function' && caIsStale('regime_dist')) {
       caMarkLoaded('regime_dist');
       setTimeout(function() { regimeDistanceRun(); }, 800);
+    }
+    // Cycle breakdown table — stale after 12h (FRED data)
+    if (typeof regimeLoadBreakdown === 'function' && caIsStale('regime_breakdown', CA_STALE_MACRO)) {
+      caMarkLoaded('regime_breakdown');
+      setTimeout(function() { regimeLoadBreakdown(); }, 1200);
     }
   }
 
