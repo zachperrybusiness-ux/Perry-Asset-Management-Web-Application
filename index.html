@@ -15195,6 +15195,13 @@ async function btRunLVM() {
     var EQUAL_WT = 1 / LEV.length;  // 0.20 each
 
     // ── Fetch price data ─────────────────────────────────────────────
+    // We fetch MORE history than the requested period for ATH warm-up.
+    // Strategy period = user's selection. ATH warm-up = extra 2 years before.
+    // This ensures the ATH is properly established from before the backtest window
+    // so we never enter leverage just because the backtest starts mid-drawdown.
+    var periodToYahoo = { '5y':'10y', '10y':'15y', '15y':'max' };
+    var fetchPeriod   = periodToYahoo[period] || '10y';
+
     var fetchList = ['QQQ', '^VIX', 'SPY'].concat(LEV);
     if (benchTicker !== 'QQQ' && benchTicker !== 'SPY' && LEV.indexOf(benchTicker) < 0) {
       fetchList.push(benchTicker);
@@ -15205,9 +15212,19 @@ async function btRunLVM() {
     for (var fi = 0; fi < fetchList.length; fi++) {
       var t = fetchList[fi];
       status.textContent = 'Fetching ' + t + ' (' + (fi+1) + '/' + fetchList.length + ')…';
-      try { rawSeries[t] = await btFetchPrices(t, period); }
+      try { rawSeries[t] = await btFetchPrices(t, fetchPeriod); }
       catch(e) { rawSeries[t] = []; console.warn('Price fetch failed for', t, e.message); }
     }
+
+    // ── Determine backtest start date ────────────────────────────────
+    // User-selected period counted back from the last available date
+    var allQQQ = rawSeries['QQQ'] || [];
+    if (!allQQQ.length) throw new Error('No QQQ price data returned');
+    var lastDate   = allQQQ[allQQQ.length - 1].date;
+    var lastDateMs = new Date(lastDate).getTime();
+    var periodDays = { '5y': 5*365, '10y': 10*365, '15y': 15*365 };
+    var backtestStartMs = lastDateMs - (periodDays[period] || 5*365) * 86400000;
+    var backtestStartDate = new Date(backtestStartMs).toISOString().slice(0, 10);
 
     // ── Build price maps (date → {open, close}) ──────────────────────
     var px = {};
@@ -15216,29 +15233,50 @@ async function btRunLVM() {
       (rawSeries[t]||[]).forEach(function(p){ px[t][p.date] = { open: p.open||p.close, close: p.close }; });
     });
 
-    // ── Forward-fill: for days when a lev ETF has no data (e.g. before inception),
-    //    use prior close. FNGU launched Dec 2017, SOXL has long history, etc.
-    var dates = (rawSeries['QQQ']||[]).map(function(p){return p.date;});
-    var lastKnown = {};
-    fetchList.forEach(function(t){ lastKnown[t] = null; });
+    // All dates from the extended fetch (used for ATH warm-up)
+    var allDates = (rawSeries['QQQ']||[]).map(function(p){return p.date;});
+
+    // ── Phase 1: ATH warm-up — scan all history BEFORE backtest start ─
+    // No trades, just build qqqATH from the full dataset so entry signals
+    // are based on the true historical ATH, not the backtest-window ATH.
+    var qqqATH = -Infinity;
+    for (var wi = 0; wi < allDates.length; wi++) {
+      var wd = allDates[wi];
+      if (wd >= backtestStartDate) break;    // stop at backtest window start
+      var wClose = (px['QQQ'][wd]||{}).close;
+      if (wClose) qqqATH = Math.max(qqqATH, wClose);
+    }
+    // qqqATH is now the true peak BEFORE the backtest window opens
+    // Safety: if Yahoo didn't return enough history for warm-up (rare), use first backtest price
+    if (qqqATH === -Infinity) {
+      var firstQQQ = (rawSeries['QQQ']||[]).find(function(p){ return p.date >= backtestStartDate; });
+      qqqATH = firstQQQ ? firstQQQ.close : 0;
+      console.warn('[LVM] No warm-up data — ATH initialized to first backtest price:', qqqATH);
+    }
+
+    // ── Phase 2: Backtest dates (user's selected period) ─────────────
+    var dates = allDates.filter(function(d){ return d >= backtestStartDate; });
+    if (!dates.length) throw new Error('No backtest dates found for selected period');
+
+    status.textContent = 'Running simulation (' + dates.length + ' trading days, ATH warm-up through ' + allDates[allDates.indexOf(backtestStartDate)-1] + ')…';
 
     // ── Portfolio state ──────────────────────────────────────────────
-    // shares[t] = number of shares held in ticker t
     var shares = {};
     fetchList.forEach(function(t){ shares[t] = 0; });
     var cash = capital;
 
-    // Strategy state machine
     var STATES = { CASH: 0, LEVERAGED: 1, DELEVERAGING: 2 };
-    var state = STATES.CASH;
-    var entryATH = null;          // QQQ ATH at the time of entry (de-lever reference)
-    var qqqATH   = -Infinity;     // running QQQ ATH (always updated)
-    var deleverFired = {};        // { multiplier: true } — which steps have already fired
+    var state       = STATES.CASH;
+    var entryATH    = null;
+    var deleverFired = {};
 
-    // Benchmark: buy & hold entire capital at first available price
+    // Benchmark: buy & hold from first backtest date
     var benchSharesHeld = null;
 
-    // Output arrays
+    // Last-known prices (forward-fill across gaps)
+    var lastKnown = {};
+    fetchList.forEach(function(t){ lastKnown[t] = null; });
+
     var equityCurve = [], benchCurve = [];
     var tradeLog    = [];
     var expLev = [], expUnlev = [], expCash = [];
@@ -15271,10 +15309,14 @@ async function btRunLVM() {
       });
 
       var qqqClose = lastKnown['QQQ'];
-      var vixClose = (px['^VIX'][d] || {}).close;
       if (!qqqClose) continue;
 
-      // Update running QQQ ATH
+      // Forward-fill VIX (VIX publishes on all NYSE trading days, but fill any gaps)
+      var vixRaw = (px['^VIX'][d] || {}).close;
+      if (vixRaw != null && !isNaN(vixRaw)) lastKnown['^VIX'] = vixRaw;
+      var vixClose = lastKnown['^VIX'] || null;
+
+      // Continue updating the ATH during the backtest window
       qqqATH = Math.max(qqqATH, qqqClose);
 
       // Benchmark initialise
@@ -15290,10 +15332,19 @@ async function btRunLVM() {
       fetchList.forEach(function(t){ closePx[t] = lastKnown[t]||0; });
 
       // ── ENTRY SIGNAL CHECK ──────────────────────────────────────────
-      // Only enter if currently in CASH state (or fully de-levered)
-      if (state === STATES.CASH && vixClose != null) {
-        var drawdown = (qqqClose - qqqATH) / qqqATH;
-        if (drawdown <= -ddThresh && vixClose >= vixThresh) {
+      // BOTH conditions required simultaneously:
+      //   1) QQQ is at least ddThresh% BELOW its rolling ATH
+      //   2) VIX is AT OR ABOVE vixThresh
+      // If either condition is not met → stay in cash, no leveraged buy
+      if (state === STATES.CASH) {
+        var drawdown = (qqqClose - qqqATH) / qqqATH;   // negative number e.g. -0.17
+
+        // Condition 1: drawdown must be AT LEAST ddThresh (e.g. -0.15 or worse)
+        var cond1_dd  = (drawdown <= -ddThresh);
+        // Condition 2: VIX must be available AND at or above vixThresh
+        var cond2_vix = (vixClose != null && !isNaN(vixClose) && vixClose >= vixThresh);
+
+        if (cond1_dd && cond2_vix) {
           // Signal fires today EOD → execute at TOMORROW's open
           var execD = di + 1 < dates.length ? dates[di+1] : d;
 
@@ -15314,7 +15365,7 @@ async function btRunLVM() {
               price:     openPx,
               value:     dollars,
               portfolio: investTotal,
-              notes:     'Entry signal: QQQ DD=' + (drawdown*100).toFixed(1) + '% · VIX=' + (vixClose||0).toFixed(1)
+              notes:     'ENTRY — QQQ DD=' + (drawdown*100).toFixed(1) + '% (≤-' + (ddThresh*100).toFixed(0) + '% ✓) · VIX=' + vixClose.toFixed(1) + ' (≥' + vixThresh + ' ✓)'
             });
           });
 
@@ -15460,7 +15511,8 @@ async function btRunLVM() {
 
     btRenderTradeLog(tradeLog);
 
-    status.textContent = 'Backtest complete — ' + tradeLog.length + ' trades over ' + stats.years + ' years.';
+    status.textContent = 'Backtest complete — ' + tradeLog.length + ' trades over ' + stats.years + ' years. '
+      + '(ATH warm-up established $' + qqqATH.toFixed(2) + ' pre-' + backtestStartDate + ')';
 
   } catch(e) {
     status.textContent = 'Error: ' + e.message;
