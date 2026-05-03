@@ -14717,24 +14717,32 @@ var BT_STRATEGIES = {
     ⚡ Leveraged Volatility Management — Full Configuration
     <div style="display:flex;gap:6px;">
       <button onclick="btLVMPreset('conservative')" style="font-size:10px;padding:3px 10px;border-radius:3px;border:1px solid var(--border);background:var(--panel);cursor:pointer;">Conservative</button>
-      <button onclick="btLVMPreset('moderate')" style="font-size:10px;padding:3px 10px;border-radius:3px;border:1px solid var(--navy);background:var(--navy);color:#fff;cursor:pointer;">Moderate ★</button>
-      <button onclick="btLVMPreset('aggressive')" style="font-size:10px;padding:3px 10px;border-radius:3px;border:1px solid var(--danger);background:var(--danger);color:#fff;cursor:pointer;">Aggressive</button>
+      <button onclick="btLVMPreset('moderate')"     style="font-size:10px;padding:3px 10px;border-radius:3px;border:1px solid var(--navy);background:var(--navy);color:#fff;cursor:pointer;">Moderate ★</button>
+      <button onclick="btLVMPreset('aggressive')"   style="font-size:10px;padding:3px 10px;border-radius:3px;border:1px solid var(--danger);background:var(--danger);color:#fff;cursor:pointer;">Aggressive</button>
     </div>
   </div>
   <div class="card-body">
 
-    <!-- ── SECTION 1: BACKTEST WINDOW ── -->
+    <div style="background:#E8F4FD;border-left:4px solid #5B9BD5;border-radius:4px;padding:10px 14px;margin-bottom:16px;font-size:11.5px;line-height:1.7;">
+      <strong>Strategy logic:</strong> Always invested — starts 50/50 QQQ+SPY.
+      When QQQ drops ≥X% from ATH AND VIX ≥Y → rotate into TQQQ (3 tranches).
+      <strong>Three exit mechanisms work together:</strong>
+      (1) <strong>Trailing stop</strong> — exits TQQQ to QQQ+SPY if it falls Z% from its peak since entry. Protects against riding a bear all the way down.
+      (2) <strong>VIX-gated de-lever</strong> — only de-levers when VIX is calm (below gate). Prevents selling your recovery while the market is still fearful.
+      (3) <strong>ATH stepwise de-lever</strong> — as QQQ sets new highs above the entry ATH, progressively rotates TQQQ → QQQ+SPY.
+      Re-entry fires when entry signal triggers again (sells QQQ+SPY → 100% TQQQ).
+    </div>
+
+    <!-- BACKTEST WINDOW -->
     <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--navy);border-bottom:2px solid var(--navy);padding-bottom:3px;margin-bottom:10px;">Backtest Window</div>
-    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px;margin-bottom:18px;">
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px;margin-bottom:18px;">
       <div class="form-group">
         <label>Start Date</label>
         <input type="date" id="bt_start_date" value="2019-01-01" style="width:100%;">
-        <div style="font-size:10px;color:var(--text-sec);">Data fetched from this date forward.</div>
       </div>
       <div class="form-group">
-        <label>End Date</label>
-        <input type="date" id="bt_end_date" value="" placeholder="Today" style="width:100%;">
-        <div style="font-size:10px;color:var(--text-sec);">Leave blank for today.</div>
+        <label>End Date (blank = today)</label>
+        <input type="date" id="bt_end_date" value="" style="width:100%;">
       </div>
       <div class="form-group">
         <label>Starting Capital ($)</label>
@@ -14743,132 +14751,139 @@ var BT_STRATEGIES = {
       <div class="form-group">
         <label>Benchmark</label>
         <select id="bt_benchmark" style="width:100%;">
-          <option value="QQQ" selected>QQQ (Nasdaq 100)</option>
-          <option value="SPY">SPY (S&P 500)</option>
-          <option value="TQQQ">TQQQ (3× QQQ B&H)</option>
+          <option value="QQQ" selected>QQQ</option>
+          <option value="SPY">SPY</option>
+          <option value="TQQQ">TQQQ B&H</option>
         </select>
       </div>
-      <div class="form-group">
-        <label>Cash Yield (% annual, uninvested)</label>
-        <input type="number" id="bt_cash_yield" value="4.5" step="0.25" min="0" max="15" style="width:100%;">
-        <div style="font-size:10px;color:var(--text-sec);">Money market / SGOV equivalent.</div>
-      </div>
     </div>
 
-    <!-- ── SECTION 2: ENTRY CONDITIONS ── -->
-    <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--navy);border-bottom:2px solid var(--navy);padding-bottom:3px;margin-bottom:10px;">Entry Conditions (BOTH required to trigger)</div>
-    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px;margin-bottom:18px;">
+    <!-- ENTRY -->
+    <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--navy);border-bottom:2px solid var(--navy);padding-bottom:3px;margin-bottom:10px;">Entry Conditions (BOTH required)</div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px;margin-bottom:18px;">
       <div class="form-group">
-        <label>QQQ Drawdown from ATH to trigger <span id="bt_dd_val" style="font-weight:800;color:var(--danger);">-20%</span></label>
-        <input type="range" id="bt_dd_thresh" min="5" max="40" value="20" step="1"
+        <label>QQQ Drawdown from ATH &nbsp;<span id="bt_dd_val" style="font-weight:800;color:var(--danger);">-25%</span></label>
+        <input type="range" id="bt_dd_thresh" min="5" max="40" value="25" step="1"
           oninput="document.getElementById('bt_dd_val').textContent='-'+this.value+'%'" style="width:100%;">
-        <div style="font-size:10px;color:var(--text-sec);">Must be this far below all-time-high.</div>
       </div>
       <div class="form-group">
-        <label>VIX must be at or above <span id="bt_vix_val" style="font-weight:800;">30</span></label>
+        <label>VIX must be ≥ &nbsp;<span id="bt_vix_val" style="font-weight:800;">30</span></label>
         <input type="range" id="bt_vix_thresh" min="15" max="60" value="30" step="1"
           oninput="document.getElementById('bt_vix_val').textContent=this.value" style="width:100%;">
-        <div style="font-size:10px;color:var(--text-sec);">Elevated fear required alongside drawdown.</div>
       </div>
       <div class="form-group">
-        <label>Require BOTH conditions for N consecutive days</label>
+        <label>Confirmation (consecutive days)</label>
         <input type="number" id="bt_confirm_days" value="1" min="1" max="10" step="1" style="width:100%;">
-        <div style="font-size:10px;color:var(--text-sec);">1 = trigger same day. 2+ = confirmation filter.</div>
+        <div style="font-size:10px;color:var(--text-sec);">1 = same-day. 2+ = filter noise.</div>
       </div>
     </div>
 
-    <!-- ── SECTION 3: POSITION SIZING / SCALE-IN ── -->
-    <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--navy);border-bottom:2px solid var(--navy);padding-bottom:3px;margin-bottom:10px;">Position Sizing &amp; Scale-In</div>
-    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px;margin-bottom:18px;">
+    <!-- SCALE-IN TRANCHES -->
+    <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--navy);border-bottom:2px solid var(--navy);padding-bottom:3px;margin-bottom:10px;">Scale-In Tranches</div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px;margin-bottom:18px;">
       <div class="form-group">
-        <label>Tranche 1 — % of portfolio at first signal <span id="bt_t1_val" style="font-weight:800;">50%</span></label>
+        <label>T1 at first signal &nbsp;<span id="bt_t1_val" style="font-weight:800;">50%</span></label>
         <input type="range" id="bt_tranche1" min="10" max="100" value="50" step="5"
-          oninput="document.getElementById('bt_t1_val').textContent=this.value+'%'; btLVMUpdateTranches()" style="width:100%;">
+          oninput="document.getElementById('bt_t1_val').textContent=this.value+'%';btLVMUpdateTranches()" style="width:100%;">
       </div>
       <div class="form-group">
-        <label>Tranche 2 — % of portfolio if QQQ falls another <span id="bt_t2_dd_val" style="font-weight:800;">5%</span></label>
+        <label>T2 size &nbsp;<span id="bt_t2_val" style="font-weight:800;">30%</span></label>
+        <input type="range" id="bt_tranche2" min="0" max="90" value="30" step="5"
+          oninput="document.getElementById('bt_t2_val').textContent=this.value+'%';btLVMUpdateTranches()" style="width:100%;">
+      </div>
+      <div class="form-group">
+        <label>T2 triggers if QQQ falls another &nbsp;<span id="bt_t2_dd_val" style="font-weight:800;">5%</span></label>
         <input type="range" id="bt_tranche2_dd" min="1" max="20" value="5" step="1"
           oninput="document.getElementById('bt_t2_dd_val').textContent=this.value+'%'" style="width:100%;">
       </div>
       <div class="form-group">
-        <label>Tranche 2 — size (<span id="bt_t2_val" style="font-weight:800;">50%</span> of portfolio)</label>
-        <input type="range" id="bt_tranche2" min="0" max="90" value="50" step="5"
-          oninput="document.getElementById('bt_t2_val').textContent=this.value+'%'; btLVMUpdateTranches()" style="width:100%;">
-        <div style="font-size:10px;color:var(--text-sec);">Set to 0 to disable scale-in (100% at T1).</div>
+        <label>T3 size &nbsp;<span id="bt_t3_val" style="font-weight:800;">20%</span></label>
+        <input type="range" id="bt_tranche3" min="0" max="80" value="20" step="5"
+          oninput="document.getElementById('bt_t3_val').textContent=this.value+'%';btLVMUpdateTranches()" style="width:100%;">
       </div>
       <div class="form-group">
-        <label>Tranche 3 — if QQQ falls another <span id="bt_t3_dd_val" style="font-weight:800;">5%</span> more</label>
+        <label>T3 triggers if QQQ falls another &nbsp;<span id="bt_t3_dd_val" style="font-weight:800;">5%</span></label>
         <input type="range" id="bt_tranche3_dd" min="1" max="20" value="5" step="1"
           oninput="document.getElementById('bt_t3_dd_val').textContent=this.value+'%'" style="width:100%;">
       </div>
-      <div class="form-group">
-        <label>Tranche 3 — size (<span id="bt_t3_val" style="font-weight:800;">0%</span> of portfolio)</label>
-        <input type="range" id="bt_tranche3" min="0" max="80" value="0" step="5"
-          oninput="document.getElementById('bt_t3_val').textContent=this.value+'%'; btLVMUpdateTranches()" style="width:100%;">
-        <div style="font-size:10px;color:var(--text-sec);">Set to 0 to use only 2 tranches.</div>
+      <div class="form-group" style="display:flex;align-items:center;">
+        <div id="bt_tranche_msg" style="font-size:12px;font-weight:600;padding:8px 12px;background:var(--panel);border:1px solid var(--border);border-radius:4px;width:100%;">T1+T2+T3 = 100% ✓</div>
       </div>
-      <div class="form-group" style="display:flex;align-items:center;padding-top:18px;">
-        <div id="bt_tranche_msg" style="font-size:12px;font-weight:600;padding:8px 12px;background:var(--panel);border:1px solid var(--border);border-radius:4px;width:100%;">
-          T1: 50% + T2: 50% + T3: 0% = <strong style="color:var(--success);">100%</strong>
+    </div>
+
+    <!-- EXIT MECHANISMS -->
+    <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--navy);border-bottom:2px solid var(--navy);padding-bottom:3px;margin-bottom:10px;">Exit Mechanisms</div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px;margin-bottom:8px;">
+
+      <!-- Mechanism 1: Trailing Stop -->
+      <div style="background:rgba(139,42,42,0.06);border:1px solid rgba(139,42,42,0.3);border-radius:6px;padding:12px;">
+        <div style="font-size:11px;font-weight:700;color:var(--danger);margin-bottom:8px;">① TRAILING STOP (Downside protection)</div>
+        <div class="form-group" style="margin-bottom:6px;">
+          <label>TQQQ drops this % from its peak since entry &nbsp;<span id="bt_trail_val" style="font-weight:800;color:var(--danger);">-35%</span></label>
+          <input type="range" id="bt_trailing_stop" min="0" max="70" value="35" step="5"
+            oninput="document.getElementById('bt_trail_val').textContent=this.value==0?'OFF':'-'+this.value+'%'" style="width:100%;">
+          <div style="font-size:10px;color:var(--text-sec);margin-top:3px;">0 = disabled. Exits to QQQ+SPY (not cash). Re-entry re-engages if signal fires again.</div>
+        </div>
+      </div>
+
+      <!-- Mechanism 2: VIX-Gated De-Lever -->
+      <div style="background:rgba(0,60,113,0.06);border:1px solid rgba(0,60,113,0.3);border-radius:6px;padding:12px;">
+        <div style="font-size:11px;font-weight:700;color:var(--navy);margin-bottom:8px;">② VIX GATE (Hold TQQQ while market still fearful)</div>
+        <div class="form-group" style="margin-bottom:6px;">
+          <label>Only de-lever when VIX is below &nbsp;<span id="bt_vix_gate_val" style="font-weight:800;">25</span></label>
+          <input type="range" id="bt_vix_gate" min="0" max="50" value="25" step="1"
+            oninput="document.getElementById('bt_vix_gate_val').textContent=this.value==0?'OFF (always de-lever)':this.value" style="width:100%;">
+          <div style="font-size:10px;color:var(--text-sec);margin-top:3px;">0 = de-lever regardless of VIX. Recommended: 25. Prevents selling during panics when TQQQ is undervalued.</div>
+        </div>
+      </div>
+
+      <!-- Mechanism 3: ATH De-Lever -->
+      <div style="background:rgba(46,125,82,0.06);border:1px solid rgba(46,125,82,0.3);border-radius:6px;padding:12px;">
+        <div style="font-size:11px;font-weight:700;color:var(--success,#2E7D52);margin-bottom:8px;">③ ATH STEPWISE DE-LEVER (Lock in gains)</div>
+        <div class="form-group" style="margin-bottom:6px;">
+          <label>QQQ % above entry ATH per step &nbsp;<span id="bt_delever_val" style="font-weight:800;">10%</span></label>
+          <input type="range" id="bt_delever_step" min="1" max="25" value="10" step="1"
+            oninput="document.getElementById('bt_delever_val').textContent=this.value+'%'" style="width:100%;">
+        </div>
+        <div class="form-group" style="margin-bottom:6px;">
+          <label>Sell this % of TQQQ per step &nbsp;<span id="bt_delever_pct_val" style="font-weight:800;">10%</span></label>
+          <input type="range" id="bt_delever_pct" min="5" max="100" value="10" step="5"
+            oninput="document.getElementById('bt_delever_pct_val').textContent=this.value+'%'" style="width:100%;">
+        </div>
+        <div class="form-group" style="margin-bottom:0;">
+          <label>Hard ceiling — sell ALL TQQQ when QQQ exceeds ATH by &nbsp;<span id="bt_full_exit_val" style="font-weight:800;">Never</span></label>
+          <input type="range" id="bt_full_exit" min="0" max="100" value="0" step="5"
+            oninput="document.getElementById('bt_full_exit_val').textContent=this.value==0?'Never':'+'+this.value+'%'" style="width:100%;">
+        </div>
+      </div>
+
+      <!-- Re-entry -->
+      <div style="background:rgba(139,105,20,0.06);border:1px solid rgba(139,105,20,0.3);border-radius:6px;padding:12px;">
+        <div style="font-size:11px;font-weight:700;color:#8B6914;margin-bottom:8px;">④ RE-ENTRY</div>
+        <div class="form-group" style="margin-bottom:6px;">
+          <label style="display:flex;align-items:flex-start;gap:8px;">
+            <input type="checkbox" id="bt_re_entry_on_signal" checked style="margin-top:2px;">
+            <span>Sell QQQ+SPY → 100% TQQQ if entry signal fires again while de-leveraging</span>
+          </label>
+          <div style="font-size:10px;color:var(--text-sec);margin-top:4px;">Strongly recommended ON — captures second-leg crashes.</div>
+        </div>
+        <div class="form-group" style="margin-bottom:0;">
+          <label>Slippage per trade (%)<span id="bt_slip_val" style="font-weight:700;"> 0.05%</span></label>
+          <input type="range" id="bt_slippage" min="0" max="0.5" value="0.05" step="0.05"
+            oninput="document.getElementById('bt_slip_val').textContent=' '+parseFloat(this.value).toFixed(2)+'%'" style="width:100%;">
         </div>
       </div>
     </div>
 
-    <!-- ── SECTION 4: EXIT CONDITIONS ── -->
-    <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--navy);border-bottom:2px solid var(--navy);padding-bottom:3px;margin-bottom:10px;">Exit Conditions</div>
-    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px;margin-bottom:18px;">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:10px;">
       <div class="form-group">
-        <label>Stop-Loss: TQQQ drop from entry close <span id="bt_stop_val" style="font-weight:800;color:var(--danger);">-40%</span></label>
-        <input type="range" id="bt_stop_loss" min="0" max="80" value="40" step="5"
-          oninput="document.getElementById('bt_stop_val').textContent=this.value==0?'OFF':'-'+this.value+'%'" style="width:100%;">
-        <div style="font-size:10px;color:var(--text-sec);">0 = disabled. Exits to cash if TQQQ drops this much from entry.</div>
-      </div>
-      <div class="form-group">
-        <label>Stop-Loss basis</label>
-        <select id="bt_stop_basis" style="width:100%;">
-          <option value="entry_close" selected>Entry-day close price</option>
-          <option value="avg_cost">Average cost basis (all tranches)</option>
-          <option value="trailing">Trailing high from entry</option>
-        </select>
-      </div>
-      <div class="form-group">
-        <label>De-lever step: QQQ % above entry ATH <span id="bt_delever_val" style="font-weight:800;">5%</span></label>
-        <input type="range" id="bt_delever_step" min="1" max="20" value="5" step="1"
-          oninput="document.getElementById('bt_delever_val').textContent=this.value+'%'" style="width:100%;">
-      </div>
-      <div class="form-group">
-        <label>Sell % of TQQQ per de-lever step <span id="bt_delever_pct_val" style="font-weight:800;">15%</span></label>
-        <input type="range" id="bt_delever_pct" min="5" max="100" value="15" step="5"
-          oninput="document.getElementById('bt_delever_pct_val').textContent=this.value+'%'" style="width:100%;">
-        <div style="font-size:10px;color:var(--text-sec);">100% = sell everything at first ATH touch.</div>
-      </div>
-      <div class="form-group">
-        <label>Full exit: sell remaining TQQQ when QQQ exceeds ATH by <span id="bt_full_exit_val" style="font-weight:800;">25%</span></label>
-        <input type="range" id="bt_full_exit" min="0" max="100" value="25" step="5"
-          oninput="document.getElementById('bt_full_exit_val').textContent=this.value==0?'Never':this.value+'%'" style="width:100%;">
-        <div style="font-size:10px;color:var(--text-sec);">Hard ceiling: sell all remaining TQQQ at this gain above ATH. 0 = never force-exit.</div>
-      </div>
-      <div class="form-group">
-        <label style="display:flex;align-items:center;gap:8px;">
-          <input type="checkbox" id="bt_re_entry_on_signal"> Re-enter 100% TQQQ if entry signal fires while de-leveraging
-        </label>
-        <div style="font-size:10px;color:var(--text-sec);margin-top:3px;">Sells QQQ+SPY and goes back 100% TQQQ if drawdown+VIX signal fires again.</div>
-      </div>
-    </div>
-
-    <!-- ── SECTION 5: TRANSACTION COSTS ── -->
-    <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--navy);border-bottom:2px solid var(--navy);padding-bottom:3px;margin-bottom:10px;">Transaction Costs &amp; Slippage</div>
-    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px;margin-bottom:10px;">
-      <div class="form-group">
-        <label>Slippage per trade (% of trade value) <span id="bt_slip_val" style="font-weight:800;">0.05%</span></label>
-        <input type="range" id="bt_slippage" min="0" max="1" value="0.05" step="0.05"
-          oninput="document.getElementById('bt_slip_val').textContent=parseFloat(this.value).toFixed(2)+'%'" style="width:100%;">
-        <div style="font-size:10px;color:var(--text-sec);">Bid-ask spread + market impact. 0.05% is realistic for liquid ETFs.</div>
+        <label>Starting Capital ($)</label>
+        <input type="number" id="bt_capital2" value="100000" step="1000" style="width:100%;" oninput="document.getElementById('bt_capital').value=this.value">
+        <div style="font-size:10px;color:var(--text-sec);">Same as above — synced.</div>
       </div>
       <div class="form-group">
         <label>Commission per trade ($)</label>
-        <input type="number" id="bt_commission" value="0" step="0.50" min="0" max="20" style="width:100%;">
-        <div style="font-size:10px;color:var(--text-sec);">Most brokers = $0 for ETFs. Add if using options or futures.</div>
+        <input type="number" id="bt_commission" value="0" step="0.5" min="0" style="width:100%;">
       </div>
     </div>
   </div>
@@ -15228,446 +15243,353 @@ function btStats(equity, benchEquity, capital) {
 }
 
 // ── STRATEGY 1: Leveraged Volatility Management ────────────────────────────
-// RULES — NO CASH EVER:
-//   DEFAULT STATE: 50/50 QQQ+SPY (not cash — always invested)
-//   ENTRY: QQQ >= ddThresh% below ATH AND VIX >= vixThresh (both required, N-day confirm)
-//          → sell ALL QQQ+SPY → buy 100% TQQQ (or T1% at first signal)
-//   SCALE-IN T2: QQQ drops tranche2DD% below T1 entry → buy T2% more TQQQ (sell QQQ/SPY)
-//   SCALE-IN T3: QQQ drops tranche3DD% below T2 entry → buy T3% more TQQQ (sell QQQ/SPY)
-//   DE-LEVER: QQQ >= entryATH + deleverStep → sell deleverPct% of TQQQ → buy QQQ+SPY (50/50)
-//   FULL EXIT: QQQ >= entryATH + fullExitPct → sell ALL remaining TQQQ → buy QQQ+SPY
-//   STOP-LOSS: TQQQ drops stopLossPct% from ref → sell ALL TQQQ → buy QQQ+SPY (50/50)
-//   RE-ENTRY: if signal fires while holding QQQ/SPY → sell all QQQ/SPY → buy 100% TQQQ
+// THREE EXIT MECHANISMS:
+//   ① Trailing stop (TQQQ drops X% from its peak since entry → shift to QQQ+SPY)
+//   ② VIX gate (only de-lever when VIX < gate — hold during panics)
+//   ③ ATH stepwise de-lever (sell TQQQ % at each QQQ ATH milestone)
+// Always invested: QQQ+SPY when not in TQQQ. Never cash.
 // ─────────────────────────────────────────────────────────────────────────────
 
 function btLVMPreset(mode) {
-  var presets = {
-    conservative: { dd:15, vix:35, t1:100, t2:0,  t2dd:5, t3:0, t3dd:5, stop:30, basis:'entry_close', ds:5, dp:20, fe:20, re:false, slip:0.10, conf:1 },
-    moderate:     { dd:20, vix:30, t1:50,  t2:50,  t2dd:5, t3:0, t3dd:5, stop:40, basis:'entry_close', ds:5, dp:15, fe:25, re:true,  slip:0.05, conf:1 },
-    aggressive:   { dd:25, vix:25, t1:34,  t2:33,  t2dd:5, t3:33,t3dd:5, stop:55, basis:'avg_cost',    ds:5, dp:10, fe:0,  re:true,  slip:0.05, conf:1 },
-  };
-  var p = presets[mode]; if (!p) return;
-  function sv(id,v){ var el=document.getElementById(id); if(el){el.value=v; el.dispatchEvent(new Event('input'));} }
-  sv('bt_dd_thresh',p.dd); sv('bt_vix_thresh',p.vix); sv('bt_confirm_days',p.conf);
-  sv('bt_tranche1',p.t1); sv('bt_tranche2',p.t2); sv('bt_tranche2_dd',p.t2dd);
-  sv('bt_tranche3',p.t3); sv('bt_tranche3_dd',p.t3dd);
-  sv('bt_stop_loss',p.stop); sv('bt_delever_step',p.ds); sv('bt_delever_pct',p.dp);
-  sv('bt_full_exit',p.fe); sv('bt_slippage',p.slip);
-  var reEl = document.getElementById('bt_re_entry_on_signal'); if(reEl) reEl.checked=p.re;
-  var bEl  = document.getElementById('bt_stop_basis'); if(bEl) bEl.value=p.basis;
+  var p = {
+    conservative: {dd:20,vix:35,conf:1,t1:100,t2:0,t2dd:5,t3:0,t3dd:5, trail:25,gate:20,ds:10,dp:15,fe:30, re:false,slip:0.10},
+    moderate:     {dd:25,vix:30,conf:1,t1:50, t2:30,t2dd:5,t3:20,t3dd:5,trail:35,gate:25,ds:10,dp:10,fe:0,  re:true, slip:0.05},
+    aggressive:   {dd:30,vix:25,conf:1,t1:34, t2:33,t2dd:5,t3:33,t3dd:5,trail:45,gate:30,ds:15,dp:10,fe:0,  re:true, slip:0.05},
+  }[mode];
+  if (!p) return;
+  function sv(id,v){var el=document.getElementById(id);if(el){el.value=v;el.dispatchEvent(new Event('input'));}}
+  sv('bt_dd_thresh',p.dd);sv('bt_vix_thresh',p.vix);sv('bt_confirm_days',p.conf);
+  sv('bt_tranche1',p.t1);sv('bt_tranche2',p.t2);sv('bt_tranche2_dd',p.t2dd);
+  sv('bt_tranche3',p.t3);sv('bt_tranche3_dd',p.t3dd);
+  sv('bt_trailing_stop',p.trail);sv('bt_vix_gate',p.gate);
+  sv('bt_delever_step',p.ds);sv('bt_delever_pct',p.dp);sv('bt_full_exit',p.fe);
+  sv('bt_slippage',p.slip);
+  var re=document.getElementById('bt_re_entry_on_signal');if(re)re.checked=p.re;
   btLVMUpdateTranches();
 }
 
-function btLVMUpdateTranches() {
-  var t1 = parseInt(document.getElementById('bt_tranche1')?.value||100);
-  var t2 = parseInt(document.getElementById('bt_tranche2')?.value||0);
-  var t3 = parseInt(document.getElementById('bt_tranche3')?.value||0);
-  var total = t1+t2+t3;
-  var msg = document.getElementById('bt_tranche_msg');
-  if (!msg) return;
-  var col = total===100?'var(--success)':total>100?'var(--danger)':'var(--warning,#8B6914)';
-  msg.innerHTML = 'T1: <strong>'+t1+'%</strong> + T2: <strong>'+t2+'%</strong> + T3: <strong>'+t3+'%</strong> = <strong style="color:'+col+';">'+total+'%</strong>'+(total!==100?' ⚠ must equal 100%':' ✓');
+function btLVMUpdateTranches(){
+  var t1=parseInt(document.getElementById('bt_tranche1')?.value||100);
+  var t2=parseInt(document.getElementById('bt_tranche2')?.value||0);
+  var t3=parseInt(document.getElementById('bt_tranche3')?.value||0);
+  var tot=t1+t2+t3;
+  var msg=document.getElementById('bt_tranche_msg');
+  if(!msg)return;
+  var col=tot===100?'var(--success,#2E7D52)':tot>100?'var(--danger)':'#8B6914';
+  msg.innerHTML='T1 <strong>'+t1+'%</strong> + T2 <strong>'+t2+'%</strong> + T3 <strong>'+t3+'%</strong> = <strong style="color:'+col+';">'+tot+'%</strong>'+(tot!==100?' ⚠ must = 100%':' ✓');
 }
 
 async function btRunLVM() {
-  var status = document.getElementById('btRunStatus');
-  var btn    = document.getElementById('btRunBtn');
-  btn.disabled = true;
-  status.textContent = 'Reading configuration…';
-
+  var status=document.getElementById('btRunStatus');
+  var btn=document.getElementById('btRunBtn');
+  btn.disabled=true; status.textContent='Reading configuration…';
   try {
-    // ── Read all user parameters ────────────────────────────────────
-    var ddThresh    = parseFloat(document.getElementById('bt_dd_thresh').value)    / 100;
-    var vixThresh   = parseFloat(document.getElementById('bt_vix_thresh').value);
-    var confirmDays = parseInt(document.getElementById('bt_confirm_days').value)   || 1;
-    var t1Pct       = parseFloat(document.getElementById('bt_tranche1').value)     / 100;
-    var t2Pct       = parseFloat(document.getElementById('bt_tranche2').value)     / 100;
-    var t2DD        = parseFloat(document.getElementById('bt_tranche2_dd').value)  / 100;
-    var t3Pct       = parseFloat(document.getElementById('bt_tranche3').value)     / 100;
-    var t3DD        = parseFloat(document.getElementById('bt_tranche3_dd').value)  / 100;
-    var stopPct     = parseFloat(document.getElementById('bt_stop_loss').value)    / 100;
-    var stopBasis   = document.getElementById('bt_stop_basis').value;
-    var deleverStep = parseFloat(document.getElementById('bt_delever_step').value) / 100;
-    var deleverPct  = parseFloat(document.getElementById('bt_delever_pct').value)  / 100;
-    var fullExitPct = parseFloat(document.getElementById('bt_full_exit').value)    / 100;
+    // ── Read params ────────────────────────────────────────────────
+    var ddThresh    = parseFloat(document.getElementById('bt_dd_thresh').value)/100;
+    var vixEntry    = parseFloat(document.getElementById('bt_vix_thresh').value);
+    var confirmDays = parseInt(document.getElementById('bt_confirm_days').value)||1;
+    var t1Pct       = parseFloat(document.getElementById('bt_tranche1').value)/100;
+    var t2Pct       = parseFloat(document.getElementById('bt_tranche2').value)/100;
+    var t2DD        = parseFloat(document.getElementById('bt_tranche2_dd').value)/100;
+    var t3Pct       = parseFloat(document.getElementById('bt_tranche3').value)/100;
+    var t3DD        = parseFloat(document.getElementById('bt_tranche3_dd').value)/100;
+    var trailStop   = parseFloat(document.getElementById('bt_trailing_stop').value)/100; // 0=off
+    var vixGate     = parseFloat(document.getElementById('bt_vix_gate').value);           // 0=off
+    var deleverStep = parseFloat(document.getElementById('bt_delever_step').value)/100;
+    var deleverPct  = parseFloat(document.getElementById('bt_delever_pct').value)/100;
+    var fullExitPct = parseFloat(document.getElementById('bt_full_exit').value)/100;     // 0=never
     var reEntryOn   = document.getElementById('bt_re_entry_on_signal').checked;
-    var capital     = parseFloat(document.getElementById('bt_capital').value)      || 100000;
-    var slippage    = parseFloat(document.getElementById('bt_slippage').value)     / 100;
-    var commission  = parseFloat(document.getElementById('bt_commission').value)   || 0;
+    var capital     = parseFloat(document.getElementById('bt_capital').value)||100000;
+    var slippage    = parseFloat(document.getElementById('bt_slippage').value)/100;
+    var commission  = parseFloat(document.getElementById('bt_commission').value)||0;
     var benchTicker = document.getElementById('bt_benchmark').value;
-    var startDate   = document.getElementById('bt_start_date').value   || '2019-01-01';
-    var endDate     = document.getElementById('bt_end_date').value     || '';
+    var startDate   = document.getElementById('bt_start_date').value||'2019-01-01';
+    var endDate     = document.getElementById('bt_end_date').value||'';
 
-    var totalT = Math.round((t1Pct+t2Pct+t3Pct)*100);
-    if (totalT !== 100) {
-      status.textContent = 'Tranches must sum to 100% (currently '+totalT+'%)';
-      btn.disabled = false; return;
+    var totT=Math.round((t1Pct+t2Pct+t3Pct)*100);
+    if(totT!==100){status.textContent='Tranches must sum to 100% (currently '+totT+'%)';btn.disabled=false;return;}
+
+    // ── Fetch max history ─────────────────────────────────────────
+    var fetchList=['QQQ','^VIX','TQQQ','SPY'];
+    if(['QQQ','SPY','TQQQ'].indexOf(benchTicker)<0)fetchList.push(benchTicker);
+    fetchList=fetchList.filter(function(t,i,a){return a.indexOf(t)===i;});
+    var raw={};
+    for(var fi=0;fi<fetchList.length;fi++){
+      var ft=fetchList[fi];
+      status.textContent='Fetching '+ft+' ('+(fi+1)+'/'+fetchList.length+')…';
+      try{raw[ft]=await btFetchPrices(ft,'max');}
+      catch(e){try{raw[ft]=await btFetchPrices(ft,'15y');}catch(e2){raw[ft]=[];}}
     }
-
-    // ── Fetch max history for accurate ATH warm-up ──────────────────
-    var fetchList = ['QQQ','^VIX','TQQQ','SPY'];
-    if (['QQQ','SPY','TQQQ'].indexOf(benchTicker)<0) fetchList.push(benchTicker);
-    fetchList = fetchList.filter(function(t,i,a){return a.indexOf(t)===i;});
-
-    var raw = {};
-    for (var fi=0; fi<fetchList.length; fi++) {
-      var ft = fetchList[fi];
-      status.textContent = 'Fetching '+ft+' ('+( fi+1)+'/'+fetchList.length+')…';
-      try { raw[ft] = await btFetchPrices(ft,'max'); }
-      catch(e) {
-        try { raw[ft] = await btFetchPrices(ft,'15y'); }
-        catch(e2) { raw[ft]=[]; }
-      }
-    }
-
-    // ── Price maps ──────────────────────────────────────────────────
-    var px = {};
+    var px={};
     fetchList.forEach(function(t){
       px[t]={};
-      (raw[t]||[]).forEach(function(p){ px[t][p.date]={open:p.open||p.close, close:p.close}; });
+      (raw[t]||[]).forEach(function(p){px[t][p.date]={open:p.open||p.close,close:p.close};});
     });
+    var allDates=(raw['QQQ']||[]).map(function(p){return p.date;}).sort();
+    if(!allDates.length)throw new Error('No QQQ data');
 
-    var allDates = (raw['QQQ']||[]).map(function(p){return p.date;}).sort();
-    if (!allDates.length) throw new Error('No QQQ price data');
+    var simDates=allDates.filter(function(d){return d>=startDate&&(!endDate||d<=endDate);});
+    if(!simDates.length)throw new Error('No dates in range '+startDate+' – '+(endDate||'today'));
 
-    // Filter to user date range
-    var simDates = allDates.filter(function(d){
-      return d >= startDate && (!endDate || d <= endDate);
-    });
-    if (!simDates.length) throw new Error('No dates in selected range ('+startDate+' to '+(endDate||'today')+')');
-
-    // ── ATH warm-up: scan ALL history before start date ─────────────
-    var qqqATH = -Infinity;
-    for (var wi=0; wi<allDates.length; wi++) {
-      if (allDates[wi] >= simDates[0]) break;
-      var wc = (px['QQQ'][allDates[wi]]||{}).close;
-      if (wc>0) qqqATH = Math.max(qqqATH, wc);
+    // ── ATH warm-up ──────────────────────────────────────────────
+    var qqqATH=-Infinity, warmCt=0;
+    for(var wi=0;wi<allDates.length;wi++){
+      if(allDates[wi]>=simDates[0])break;
+      var wc=(px['QQQ'][allDates[wi]]||{}).close;
+      if(wc>0){qqqATH=Math.max(qqqATH,wc);warmCt++;}
     }
-    if (!isFinite(qqqATH) || qqqATH<=0) {
-      qqqATH = (px['QQQ'][simDates[0]]||{}).close || 1;
-      console.warn('[LVM] No warm-up data; ATH initialized to first sim price');
+    if(!isFinite(qqqATH)||qqqATH<=0){
+      qqqATH=(px['QQQ'][simDates[0]]||{}).close||1;
+      console.warn('[LVM] No warm-up; ATH=first price');
     }
 
-    // ── Holdings — NO CASH STATE ────────────────────────────────────
-    // Portfolio is ALWAYS in TQQQ, or QQQ+SPY (50/50), never idle cash
-    // Start: 50/50 QQQ+SPY on day 1 open
-    var sharesTQQQ = 0, sharesQQQ = 0, sharesSPY = 0;
+    // ── State ────────────────────────────────────────────────────
+    var sharesTQQQ=0,sharesQQQ=0,sharesSPY=0;
+    var IN_UNLEV=0,IN_TQQQ=1;
+    var state=IN_UNLEV;
+    var entryATH=null,entryTQQQPx=null,trailHigh=null;
+    var deleverFired={},fullExitFired=false;
+    var scalePhase=0,t1QQQPx=null,t2QQQPx=null;
+    var confirmCt=0;
+    var benchShares=null;
+    var lastPx={}; fetchList.forEach(function(t){lastPx[t]=0;});
+    var equityCurve=[],benchCurve=[],tradeLog=[];
+    var expTQQQ=[],expUnlev=[];
 
-    // Track state
-    var IN_UNLEVERED = 0;   // holding QQQ+SPY
-    var IN_TQQQ      = 1;   // holding TQQQ (possibly partially)
-    var state        = IN_UNLEVERED;
+    // ── Helpers ──────────────────────────────────────────────────
+    function portVal(){
+      return sharesTQQQ*(lastPx['TQQQ']||0)+sharesQQQ*(lastPx['QQQ']||0)+sharesSPY*(lastPx['SPY']||0);
+    }
+    function slip(dollars){return dollars*slippage+commission;}
+    function log(date,action,ticker,shrs,price,note){
+      tradeLog.push({date:date,action:action,ticker:ticker,shares:Math.abs(shrs),
+        price:price,value:Math.abs(shrs)*price,portfolio:portVal(),notes:note});
+    }
+    function getOpen(t,d){return(px[t][d]||{}).open||lastPx[t]||0;}
 
-    var entryATH      = null;   // QQQ ATH at entry (de-lever ref)
-    var entryTQQQPx   = null;   // TQQQ close at entry (stop-loss ref)
-    var trailingHigh  = null;   // for trailing stop
-    var avgCost       = 0;      // weighted avg TQQQ cost
-    var tqqqDollarsIn = 0;      // for avg cost tracking
-    var deleverFired  = {};
-    var fullExitFired = false;
-    var confirmCount  = 0;
-    var scalePhase    = 0;      // 0=none, 1=T1 in, 2=T2 in, 3=T3 in
-    var t1QQQPx       = null;   // QQQ price when T1 fired (T2 reference)
-    var t2QQQPx       = null;   // QQQ price when T2 fired (T3 reference)
-    var benchShares   = null;
-
-    var equityCurve=[], benchCurve=[], tradeLog=[];
-    var expTQQQ=[], expUnlev=[];
-    var lastPx = {}; fetchList.forEach(function(t){lastPx[t]=0;});
-
-    // ── Apply slippage/commission to a trade ─────────────────────────
-    function cost(dollars) { return dollars*slippage + commission; }
-
-    // ── Execute BUY of given ticker with dollar amount ────────────────
-    // dollars come from selling other assets (handled by caller)
-    function execBuy(execDate, ticker, dollars, note) {
-      if (dollars < 1) return 0;
-      var ep = (px[ticker][execDate]||{}).open || lastPx[ticker] || 0;
-      if (ep <= 0) return 0;
-      var net = dollars - cost(dollars);
-      var shrs = net / ep;
-      if (ticker==='TQQQ') {
-        sharesTQQQ    += shrs;
-        tqqqDollarsIn += net;
-        avgCost        = sharesTQQQ>0 ? tqqqDollarsIn/sharesTQQQ : 0;
-        if (!entryTQQQPx) entryTQQQPx = lastPx['TQQQ']||ep;
-      } else if (ticker==='QQQ') { sharesQQQ += shrs; }
-      else if (ticker==='SPY')   { sharesSPY += shrs; }
-      tradeLog.push({date:execDate, action:'BUY '+ticker, ticker:ticker,
-        shares:shrs, price:ep, value:net, portfolio:portVal(), notes:note});
-      return net;
+    function buyWith(execD,ticker,dollars,note){
+      if(dollars<1)return;
+      var ep=getOpen(ticker,execD);if(ep<=0)return;
+      var net=dollars-slip(dollars);
+      var shrs=net/ep;
+      if(ticker==='TQQQ')sharesTQQQ+=shrs;
+      else if(ticker==='QQQ')sharesQQQ+=shrs;
+      else if(ticker==='SPY')sharesSPY+=shrs;
+      log(execD,'BUY '+ticker,ticker,shrs,ep,note);
+    }
+    function sellAll(execD,ticker,note){
+      var shrs,ep,proc;
+      if(ticker==='TQQQ'){if(sharesTQQQ<0.0001)return 0;shrs=sharesTQQQ;ep=getOpen('TQQQ',execD);proc=shrs*ep-slip(shrs*ep);sharesTQQQ=0;}
+      else if(ticker==='QQQ'){if(sharesQQQ<0.0001)return 0;shrs=sharesQQQ;ep=getOpen('QQQ',execD);proc=shrs*ep-slip(shrs*ep);sharesQQQ=0;}
+      else if(ticker==='SPY'){if(sharesSPY<0.0001)return 0;shrs=sharesSPY;ep=getOpen('SPY',execD);proc=shrs*ep-slip(shrs*ep);sharesSPY=0;}
+      else return 0;
+      if(ep<=0)return 0;
+      log(execD,'SELL '+ticker,ticker,shrs,ep,note);
+      return proc;
+    }
+    function sellFrac(execD,ticker,frac,note){
+      var shrs,ep,proc;
+      frac=Math.min(1,frac);
+      if(ticker==='TQQQ'){if(sharesTQQQ<0.0001)return 0;shrs=sharesTQQQ*frac;ep=getOpen('TQQQ',execD);proc=shrs*ep-slip(shrs*ep);sharesTQQQ-=shrs;}
+      else return 0;
+      if(ep<=0)return 0;
+      log(execD,'SELL '+ticker+' ('+Math.round(frac*100)+'%)',ticker,shrs,ep,note);
+      return proc;
+    }
+    // Shift dollars of QQQ+SPY → TQQQ (sells proportionally from each)
+    function shiftQQQSPYtoTQQQ(execD,dollars,note){
+      var qv=sharesQQQ*(lastPx['QQQ']||0),sv=sharesSPY*(lastPx['SPY']||0),uv=qv+sv;
+      if(uv<1||dollars<1)return;
+      var frac=Math.min(1,dollars/uv);
+      var p1=sellFrac2(execD,'QQQ',frac,note);
+      var p2=sellFrac2(execD,'SPY',frac,note);
+      buyWith(execD,'TQQQ',p1+p2,note);
+    }
+    function sellFrac2(execD,ticker,frac,note){
+      var shrs,ep,proc;
+      frac=Math.min(1,Math.max(0,frac));
+      if(ticker==='QQQ'){if(sharesQQQ<0.0001)return 0;shrs=sharesQQQ*frac;ep=getOpen('QQQ',execD);if(ep<=0)return 0;proc=shrs*ep-slip(shrs*ep);sharesQQQ-=shrs;}
+      else if(ticker==='SPY'){if(sharesSPY<0.0001)return 0;shrs=sharesSPY*frac;ep=getOpen('SPY',execD);if(ep<=0)return 0;proc=shrs*ep-slip(shrs*ep);sharesSPY-=shrs;}
+      else return 0;
+      log(execD,'SELL '+ticker,ticker,shrs,ep,note);
+      return proc;
+    }
+    // Shift TQQQ proceeds → QQQ+SPY 50/50
+    function shiftTQQQtoUnlev(execD,tqqqFrac,note){
+      var proc=sellFrac(execD,'TQQQ',tqqqFrac,note);
+      if(proc<1)return;
+      buyWith(execD,'QQQ',proc/2,note+' → QQQ');
+      buyWith(execD,'SPY',proc/2,note+' → SPY');
+    }
+    function resetLevState(){
+      state=IN_UNLEV;entryATH=null;entryTQQQPx=null;trailHigh=null;
+      deleverFired={};fullExitFired=false;scalePhase=0;
+      t1QQQPx=null;t2QQQPx=null;confirmCt=0;
     }
 
-    // ── Execute SELL of given ticker — all shares or a fraction ──────
-    function execSell(execDate, ticker, fraction, note) {
-      var shrs, ep, proceeds;
-      fraction = Math.min(1, fraction||1);
-      if (ticker==='TQQQ') {
-        if (sharesTQQQ<0.0001) return 0;
-        shrs = sharesTQQQ*fraction;
-        ep = (px['TQQQ'][execDate]||{}).open || lastPx['TQQQ'] || 0;
-        proceeds = shrs*ep - cost(shrs*ep);
-        sharesTQQQ -= shrs;
-        tqqqDollarsIn *= (sharesTQQQ/(sharesTQQQ+shrs));
-        avgCost = sharesTQQQ>0 ? tqqqDollarsIn/sharesTQQQ : 0;
-      } else if (ticker==='QQQ') {
-        if (sharesQQQ<0.0001) return 0;
-        shrs = sharesQQQ*fraction;
-        ep = (px['QQQ'][execDate]||{}).open || lastPx['QQQ'] || 0;
-        proceeds = shrs*ep - cost(shrs*ep);
-        sharesQQQ -= shrs;
-      } else if (ticker==='SPY') {
-        if (sharesSPY<0.0001) return 0;
-        shrs = sharesSPY*fraction;
-        ep = (px['SPY'][execDate]||{}).open || lastPx['SPY'] || 0;
-        proceeds = shrs*ep - cost(shrs*ep);
-        sharesSPY -= shrs;
-      } else return 0;
-      if (ep<=0) return 0;
-      tradeLog.push({date:execDate, action:'SELL '+ticker, ticker:ticker,
-        shares:shrs, price:ep, value:proceeds, portfolio:portVal(), notes:note});
-      return proceeds;
-    }
+    // ── Simulation ───────────────────────────────────────────────
+    for(var di=0;di<simDates.length;di++){
+      var d=simDates[di];
+      var execD=di+1<simDates.length?simDates[di+1]:d;
 
-    // ── Move dollar amount from QQQ+SPY → TQQQ ───────────────────────
-    function shiftToTQQQ(execDate, portfolioPct, note) {
-      // Sell proportionally from QQQ and SPY, buy TQQQ
-      var pv = portVal();
-      var dollars = pv * portfolioPct;
-      var qqqVal  = sharesQQQ*(lastPx['QQQ']||0);
-      var spyVal  = sharesSPY*(lastPx['SPY']||0);
-      var unlevTotal = qqqVal + spyVal;
-      if (unlevTotal < 1) return;
-      // Sell from each in proportion to current holdings
-      var qqqFrac = unlevTotal>0 ? Math.min(1, dollars*(qqqVal/unlevTotal) / Math.max(1,qqqVal)) : 0;
-      var spyFrac = unlevTotal>0 ? Math.min(1, dollars*(spyVal/unlevTotal) / Math.max(1,spyVal)) : 0;
-      var p1 = execSell(execDate,'QQQ',qqqFrac,note+' (sell QQQ)');
-      var p2 = execSell(execDate,'SPY',spyFrac,note+' (sell SPY)');
-      execBuy(execDate,'TQQQ',p1+p2,note+' → buy TQQQ');
-    }
+      // Update last-known prices
+      fetchList.forEach(function(t){var c=(px[t][d]||{}).close;if(c&&c>0)lastPx[t]=c;});
+      var vRaw=(px['^VIX'][d]||{}).close;if(vRaw&&vRaw>0)lastPx['^VIX']=vRaw;
 
-    // ── Move all TQQQ → QQQ+SPY 50/50 ───────────────────────────────
-    function shiftToUnlev(execDate, tqqqFraction, note) {
-      var proceeds = execSell(execDate,'TQQQ',tqqqFraction,note);
-      if (proceeds<1) return;
-      var half = proceeds/2;
-      execBuy(execDate,'QQQ',half,note+' → 50% QQQ');
-      execBuy(execDate,'SPY',half,note+' → 50% SPY');
-    }
+      var qqqC=lastPx['QQQ'],tqqqC=lastPx['TQQQ'],spyC=lastPx['SPY']||0;
+      var vixC=lastPx['^VIX']||null;
+      if(!qqqC||!tqqqC)continue;
+      qqqATH=Math.max(qqqATH,qqqC);
+      if(benchShares===null&&lastPx[benchTicker]>0)benchShares=capital/lastPx[benchTicker];
 
-    function portVal() {
-      return sharesTQQQ*(lastPx['TQQQ']||0)
-           + sharesQQQ*(lastPx['QQQ']||0)
-           + sharesSPY*(lastPx['SPY']||0);
-    }
-
-    // ── Simulation loop ──────────────────────────────────────────────
-    for (var di=0; di<simDates.length; di++) {
-      var d     = simDates[di];
-      var execD = di+1<simDates.length ? simDates[di+1] : d;
-
-      // Update last-known prices (forward-fill)
-      fetchList.forEach(function(t){
-        var c=(px[t][d]||{}).close;
-        if(c&&c>0) lastPx[t]=c;
-      });
-      var vixRaw=(px['^VIX'][d]||{}).close;
-      if(vixRaw&&vixRaw>0) lastPx['^VIX']=vixRaw;
-
-      var qqqClose  = lastPx['QQQ'];   if(!qqqClose)  continue;
-      var tqqqClose = lastPx['TQQQ'];  if(!tqqqClose) continue;
-      var spyClose  = lastPx['SPY']  ||0;
-      var vixClose  = lastPx['^VIX'] ||null;
-
-      // Update QQQ ATH
-      qqqATH = Math.max(qqqATH, qqqClose);
-
-      // Benchmark init on first day
-      if (benchShares===null && lastPx[benchTicker]>0) {
-        benchShares = capital / lastPx[benchTicker];
+      // Day 1: deploy capital 50/50 QQQ+SPY
+      if(di===0){
+        var h0=capital/2;
+        var q0=(px['QQQ'][d]||{}).close||qqqC,s0=(px['SPY'][d]||{}).close||spyC;
+        if(q0>0)sharesQQQ=(h0-slip(h0))/q0;
+        if(s0>0)sharesSPY=(h0-slip(h0))/s0;
+        log(d,'INIT','QQQ+SPY',sharesQQQ+sharesSPY,q0,'Day 1: 50/50 QQQ+SPY');
       }
 
-      // FIRST DAY: invest capital 50/50 QQQ+SPY
-      if (di===0) {
-        var half0 = capital/2;
-        var qep0=(px['QQQ'][d]||{}).close||qqqClose;
-        var sep0=(px['SPY'][d]||{}).close||spyClose;
-        if(qep0>0) sharesQQQ = (half0-cost(half0))/qep0;
-        if(sep0>0) sharesSPY = (half0-cost(half0))/sep0;
-        state = IN_UNLEVERED;
-        tradeLog.push({date:d, action:'INIT 50/50 QQQ+SPY', ticker:'QQQ+SPY',
-          shares:sharesQQQ+sharesSPY, price:qep0, value:capital,
-          portfolio:portVal(), notes:'Day 1: deploy capital 50/50 QQQ+SPY'});
-      }
+      // Update trailing high
+      if(state===IN_TQQQ&&tqqqC>0){if(!trailHigh||tqqqC>trailHigh)trailHigh=tqqqC;}
 
-      // Update trailing high for TQQQ
-      if (state===IN_TQQQ && tqqqClose>0) {
-        if (!trailingHigh||tqqqClose>trailingHigh) trailingHigh=tqqqClose;
-      }
-
-      // ══ STOP-LOSS ════════════════════════════════════════════════
-      if (stopPct>0 && state===IN_TQQQ && entryTQQQPx && sharesTQQQ>0.001) {
-        var ref = stopBasis==='trailing'  ? (trailingHigh||entryTQQQPx)
-                : stopBasis==='avg_cost'  ? (avgCost||entryTQQQPx)
-                : entryTQQQPx;
-        var tDD = (tqqqClose-ref)/ref;
-        if (tDD<=-stopPct) {
-          var sNote='STOP-LOSS: TQQQ '+(tDD*100).toFixed(1)+'% from '+stopBasis.replace(/_/g,' ')+' $'+ref.toFixed(2);
-          shiftToUnlev(execD, 1.0, sNote);
-          state=IN_UNLEVERED; entryATH=null; entryTQQQPx=null;
-          trailingHigh=null; avgCost=0; tqqqDollarsIn=0;
-          deleverFired={}; fullExitFired=false;
-          scalePhase=0; t1QQQPx=null; t2QQQPx=null; confirmCount=0;
+      // ══ ① TRAILING STOP ══════════════════════════════════════
+      // Fires when TQQQ falls trailStop% below its peak since entry
+      if(trailStop>0&&state===IN_TQQQ&&trailHigh&&entryTQQQPx){
+        var tDD=(tqqqC-trailHigh)/trailHigh;
+        if(tDD<=-trailStop){
+          var tNote='TRAILING STOP: TQQQ '+(tDD*100).toFixed(1)+'% from peak $'+trailHigh.toFixed(2)+' → QQQ+SPY';
+          shiftTQQQtoUnlev(execD,1.0,tNote);
+          resetLevState();
         }
       }
 
-      // ══ ENTRY SIGNAL ════════════════════════════════════════════
-      var ddFromATH = (qqqClose-qqqATH)/qqqATH;
-      var sigToday  = ddFromATH<=-ddThresh && vixClose!=null && vixClose>=vixThresh;
-      if (sigToday) confirmCount=Math.min(confirmCount+1,confirmDays);
-      else          confirmCount=0;
-      var confirmed = (confirmCount>=confirmDays);
+      // ══ ENTRY SIGNAL ═════════════════════════════════════════
+      var dd=(qqqC-qqqATH)/qqqATH;
+      var sig=dd<=-ddThresh&&vixC!=null&&vixC>=vixEntry;
+      if(sig)confirmCt=Math.min(confirmCt+1,confirmDays);else confirmCt=0;
+      var confirmed=confirmCt>=confirmDays;
 
-      // ── TRANCHE 1 (first entry from unleveraged state) ────────────
-      if (confirmed && state===IN_UNLEVERED && scalePhase===0) {
-        var t1Note='T1 ('+Math.round(t1Pct*100)+'%): QQQ DD='+(ddFromATH*100).toFixed(1)
-          +'% VIX='+(vixClose||0).toFixed(1);
-        // Sell t1Pct of QQQ+SPY proportionally → buy TQQQ
-        var qv=sharesQQQ*qqqClose, sv2=sharesSPY*(spyClose||0), uvTot=qv+sv2;
-        if (uvTot>0) {
-          var qFrac=uvTot>0?Math.min(1,t1Pct*qv/Math.max(1,qv)):0;
-          var sFrac=uvTot>0?Math.min(1,t1Pct*sv2/Math.max(1,sv2)):0;
-          var p1a=execSell(execD,'QQQ',qFrac,t1Note); 
-          var p1b=execSell(execD,'SPY',sFrac,t1Note);
-          execBuy(execD,'TQQQ',p1a+p1b,t1Note);
+      // T1: first entry from unleveraged state
+      if(confirmed&&state===IN_UNLEV&&scalePhase===0){
+        var t1Note='T1 ('+Math.round(t1Pct*100)+'%): QQQ DD='+(dd*100).toFixed(1)+'% VIX='+(vixC||0).toFixed(0);
+        var uv0=sharesQQQ*qqqC+sharesSPY*spyC;
+        if(uv0>0){
+          var f1=Math.min(1,(portVal()*t1Pct)/uv0);
+          var p1a=sellFrac2(execD,'QQQ',f1,t1Note);
+          var p1b=sellFrac2(execD,'SPY',f1,t1Note);
+          buyWith(execD,'TQQQ',p1a+p1b,t1Note);
         }
-        state=IN_TQQQ; entryATH=qqqATH; entryTQQQPx=tqqqClose;
-        deleverFired={}; fullExitFired=false;
-        scalePhase=1; t1QQQPx=qqqClose; trailingHigh=tqqqClose;
-        confirmCount=0;
+        state=IN_TQQQ;entryATH=qqqATH;entryTQQQPx=tqqqC;trailHigh=tqqqC;
+        deleverFired={};fullExitFired=false;scalePhase=1;t1QQQPx=qqqC;confirmCt=0;
       }
 
-      // ── RE-ENTRY: signal fires while in TQQQ (fully or partially) ──
-      if (confirmed && reEntryOn && state===IN_TQQQ
-          && (sharesQQQ>0.001||sharesSPY>0.001)) {
-        // We have some QQQ/SPY from prior de-lever — sell all → TQQQ
-        var reNote='RE-ENTRY: QQQ DD='+(ddFromATH*100).toFixed(1)+'% VIX='+(vixClose||0).toFixed(1);
-        var rp1=execSell(execD,'QQQ',1.0,reNote+' (liquidate QQQ)');
-        var rp2=execSell(execD,'SPY',1.0,reNote+' (liquidate SPY)');
-        if (rp1+rp2>1) execBuy(execD,'TQQQ',rp1+rp2,reNote+' → 100% TQQQ');
-        entryATH=qqqATH; entryTQQQPx=tqqqClose;
-        deleverFired={}; fullExitFired=false;
-        scalePhase=1; t1QQQPx=qqqClose; trailingHigh=tqqqClose;
-        confirmCount=0;
+      // Re-entry: signal fires while holding QQQ/SPY from de-lever
+      if(confirmed&&reEntryOn&&state===IN_TQQQ&&(sharesQQQ>0.001||sharesSPY>0.001)){
+        var reNote='RE-ENTRY: QQQ DD='+(dd*100).toFixed(1)+'% VIX='+(vixC||0).toFixed(0);
+        var rp1=sellAll(execD,'QQQ',reNote);
+        var rp2=sellAll(execD,'SPY',reNote);
+        if(rp1+rp2>1)buyWith(execD,'TQQQ',rp1+rp2,reNote+' → 100% TQQQ');
+        entryATH=qqqATH;entryTQQQPx=tqqqC;trailHigh=tqqqC;
+        deleverFired={};fullExitFired=false;scalePhase=1;t1QQQPx=qqqC;confirmCt=0;
       }
 
-      // ── TRANCHE 2: QQQ drops t2DD% below T1 entry ─────────────────
-      if (state===IN_TQQQ && scalePhase===1 && t2Pct>0.001 && t1QQQPx) {
-        if ((qqqClose-t1QQQPx)/t1QQQPx<=-t2DD) {
-          var t2Note='T2 ('+Math.round(t2Pct*100)+'%): QQQ '
-            +((qqqClose-t1QQQPx)/t1QQQPx*100).toFixed(1)+'% from T1';
-          var qv2=sharesQQQ*qqqClose, sv2b=sharesSPY*(spyClose||0), uv2=qv2+sv2b;
-          if (uv2>0) {
-            var tPct2 = Math.min(1, (portVal()*t2Pct) / Math.max(1,uv2));
-            var p2a=execSell(execD,'QQQ',tPct2*qv2/Math.max(1,qv2),t2Note);
-            var p2b=execSell(execD,'SPY',tPct2*sv2b/Math.max(1,sv2b),t2Note);
-            execBuy(execD,'TQQQ',p2a+p2b,t2Note);
+      // T2
+      if(state===IN_TQQQ&&scalePhase===1&&t2Pct>0.001&&t1QQQPx){
+        if((qqqC-t1QQQPx)/t1QQQPx<=-t2DD){
+          var t2Note='T2 ('+Math.round(t2Pct*100)+'%): QQQ '+(((qqqC-t1QQQPx)/t1QQQPx)*100).toFixed(1)+'% from T1';
+          var uv2=sharesQQQ*qqqC+sharesSPY*spyC;
+          if(uv2>0){
+            var f2=Math.min(1,(portVal()*t2Pct)/uv2);
+            var p2a=sellFrac2(execD,'QQQ',f2,t2Note);
+            var p2b=sellFrac2(execD,'SPY',f2,t2Note);
+            buyWith(execD,'TQQQ',p2a+p2b,t2Note);
           }
-          scalePhase=2; t2QQQPx=qqqClose;
+          scalePhase=2;t2QQQPx=qqqC;
         }
       }
 
-      // ── TRANCHE 3: QQQ drops t3DD% below T2 entry ─────────────────
-      if (state===IN_TQQQ && scalePhase===2 && t3Pct>0.001 && t2QQQPx) {
-        if ((qqqClose-t2QQQPx)/t2QQQPx<=-t3DD) {
-          var t3Note='T3 ('+Math.round(t3Pct*100)+'%): QQQ '
-            +((qqqClose-t2QQQPx)/t2QQQPx*100).toFixed(1)+'% from T2';
-          var qv3=sharesQQQ*qqqClose, sv3=sharesSPY*(spyClose||0), uv3=qv3+sv3;
-          if (uv3>0) {
-            var p3a=execSell(execD,'QQQ',1.0,t3Note);
-            var p3b=execSell(execD,'SPY',1.0,t3Note);
-            execBuy(execD,'TQQQ',p3a+p3b,t3Note);
-          }
+      // T3
+      if(state===IN_TQQQ&&scalePhase===2&&t3Pct>0.001&&t2QQQPx){
+        if((qqqC-t2QQQPx)/t2QQQPx<=-t3DD){
+          var t3Note='T3 ('+Math.round(t3Pct*100)+'%): QQQ '+(((qqqC-t2QQQPx)/t2QQQPx)*100).toFixed(1)+'% from T2';
+          var p3a=sellAll(execD,'QQQ',t3Note);
+          var p3b=sellAll(execD,'SPY',t3Note);
+          if(p3a+p3b>1)buyWith(execD,'TQQQ',p3a+p3b,t3Note);
           scalePhase=3;
         }
       }
 
-      // ══ DE-LEVER ════════════════════════════════════════════════
-      if (state===IN_TQQQ && entryATH && entryATH>0 && sharesTQQQ>0.001) {
-        var aboveATH=(qqqClose-entryATH)/entryATH;
+      // ══ ③ ATH DE-LEVER (only when VIX < gate) ════════════════
+      if(state===IN_TQQQ&&entryATH&&entryATH>0&&sharesTQQQ>0.001){
+        // VIX gate: skip de-lever if market still fearful
+        var vixOK=vixGate<=0||(vixC!=null&&vixC<vixGate);
+        var aboveATH=(qqqC-entryATH)/entryATH;
 
-        // Full-exit ceiling
-        if (fullExitPct>0 && aboveATH>=fullExitPct && !fullExitFired) {
+        // Full-exit ceiling (ignores VIX gate — it's a hard cap)
+        if(fullExitPct>0&&aboveATH>=fullExitPct&&!fullExitFired){
           fullExitFired=true;
-          shiftToUnlev(execD,1.0,'FULL EXIT: QQQ +'+(aboveATH*100).toFixed(1)
-            +'% above entry ATH (ceiling: +'+(fullExitPct*100).toFixed(0)+'%)');
-          state=IN_UNLEVERED; entryATH=null; entryTQQQPx=null;
-          trailingHigh=null; deleverFired={}; scalePhase=0;
-        } else {
+          shiftTQQQtoUnlev(execD,1.0,'FULL EXIT: QQQ +'+(aboveATH*100).toFixed(1)+'% above ATH');
+          resetLevState();
+        } else if(vixOK){
           // Stepwise de-lever
-          var steps = aboveATH>0 ? Math.floor(aboveATH/deleverStep) : 0;
-          for (var step=1; step<=steps; step++) {
-            if (deleverFired[step]) continue;
+          var steps=aboveATH>0?Math.floor(aboveATH/deleverStep):0;
+          for(var step=1;step<=steps;step++){
+            if(deleverFired[step])continue;
             deleverFired[step]=true;
-            shiftToUnlev(execD, deleverPct,
-              'DE-LEVER step '+step+': QQQ +'+(aboveATH*100).toFixed(1)
-              +'% above ATH → sell '+(deleverPct*100).toFixed(0)+'% TQQQ → QQQ+SPY');
-            if (state===IN_TQQQ) state=IN_TQQQ; // still in tqqq (partially)
+            shiftTQQQtoUnlev(execD,deleverPct,
+              'DE-LEVER step '+step+' [VIX='+(vixC||0).toFixed(0)+'<'+vixGate+']: QQQ +'
+              +(aboveATH*100).toFixed(1)+'% above ATH → sell '+(deleverPct*100).toFixed(0)+'% TQQQ');
           }
-          // If TQQQ fully gone from de-levering
-          if (sharesTQQQ<0.0001) {
-            state=IN_UNLEVERED; entryATH=null; entryTQQQPx=null;
-            trailingHigh=null; deleverFired={}; scalePhase=0;
-          }
+        } else if(!vixOK&&aboveATH>0){
+          // VIX too high — pause de-lever, log it once per new step
         }
+
+        if(sharesTQQQ<0.0001)resetLevState();
       }
 
-      // ── Mark-to-market ────────────────────────────────────────────
-      var pv = portVal();
+      // Mark-to-market
+      var pv=portVal();
       equityCurve.push(pv);
-      benchCurve.push(benchShares ? benchShares*(lastPx[benchTicker]||0) : capital);
-
+      benchCurve.push(benchShares?benchShares*(lastPx[benchTicker]||0):capital);
       var pvS=pv>0?pv:1;
-      expTQQQ.push(parseFloat((sharesTQQQ*tqqqClose/pvS*100).toFixed(1)));
-      expUnlev.push(parseFloat(((sharesQQQ*qqqClose+sharesSPY*(spyClose||0))/pvS*100).toFixed(1)));
+      expTQQQ.push(parseFloat((sharesTQQQ*tqqqC/pvS*100).toFixed(1)));
+      expUnlev.push(parseFloat(((sharesQQQ*qqqC+sharesSPY*spyC)/pvS*100).toFixed(1)));
     }
 
-    // ── Stats & render ────────────────────────────────────────────────
-    var stats = btStats(equityCurve, benchCurve, capital);
+    var stats=btStats(equityCurve,benchCurve,capital);
 
     btRenderKPI([
-      {label:'Total Return', value:stats.totalReturn+'%', color:parseFloat(stats.totalReturn)>=0?C.success:C.danger},
-      {label:'CAGR',         value:stats.cagr+'%',        color:parseFloat(stats.cagr)>=0?C.success:C.danger},
-      {label:'Max Drawdown', value:stats.maxDD+'%',       color:C.danger},
-      {label:'Sharpe',       value:stats.sharpe,          color:parseFloat(stats.sharpe)>=1?C.success:'#8B6914'},
-      {label:'Sortino',      value:stats.sortino,         color:parseFloat(stats.sortino)>=1.5?C.success:'#8B6914'},
-      {label:'Calmar',       value:stats.calmar,          color:parseFloat(stats.calmar)>=0.5?C.success:'#8B6914'},
+      {label:'Total Return',  value:stats.totalReturn+'%', color:parseFloat(stats.totalReturn)>=0?C.success:C.danger},
+      {label:'CAGR',          value:stats.cagr+'%',        color:parseFloat(stats.cagr)>=0?C.success:C.danger},
+      {label:'Max Drawdown',  value:stats.maxDD+'%',       color:C.danger},
+      {label:'Sharpe',        value:stats.sharpe,          color:parseFloat(stats.sharpe)>=1?C.success:'#8B6914'},
+      {label:'Sortino',       value:stats.sortino,         color:parseFloat(stats.sortino)>=1.5?C.success:'#8B6914'},
+      {label:'Calmar',        value:stats.calmar,          color:parseFloat(stats.calmar)>=0.5?C.success:'#8B6914'},
       {label:'vs. '+benchTicker, value:(parseFloat(stats.alpha)>=0?'+':'')+stats.alpha+'%',
         color:parseFloat(stats.alpha)>=0?C.success:C.danger, sub:benchTicker+' B&H: '+stats.benchReturn+'%'},
-      {label:'Win Rate',     value:stats.winRate+'%',     color:parseFloat(stats.winRate)>=55?C.success:'#8B6914'},
-      {label:'Period',       value:stats.years+' yrs',    color:C.navy},
-      {label:'Trades',       value:tradeLog.length,       color:C.navy},
+      {label:'Win Rate',      value:stats.winRate+'%',     color:parseFloat(stats.winRate)>=55?C.success:'#8B6914'},
+      {label:'Period',        value:stats.years+' yrs',    color:C.navy},
+      {label:'Trades',        value:tradeLog.length,       color:C.navy},
     ]);
 
-    btRenderCharts(simDates, equityCurve, benchCurve, {
+    btRenderCharts(simDates,equityCurve,benchCurve,{
       datasets:[
-        {label:'TQQQ',    data:expTQQQ,  borderColor:C.danger, backgroundColor:'rgba(139,42,42,0.22)', borderWidth:1.5,fill:true,pointRadius:0,tension:0.1},
-        {label:'QQQ+SPY', data:expUnlev, borderColor:C.navy,   backgroundColor:'rgba(0,60,113,0.14)',  borderWidth:1.5,fill:true,pointRadius:0,tension:0.1},
+        {label:'TQQQ',    data:expTQQQ,  borderColor:C.danger, backgroundColor:'rgba(139,42,42,0.22)',borderWidth:1.5,fill:true,pointRadius:0,tension:0.1},
+        {label:'QQQ+SPY', data:expUnlev, borderColor:C.navy,   backgroundColor:'rgba(0,60,113,0.14)', borderWidth:1.5,fill:true,pointRadius:0,tension:0.1},
       ]
-    },'LVM (TQQQ)',benchTicker);
+    },'LVM',benchTicker);
 
     btRenderTradeLog(tradeLog);
 
-    status.textContent='Complete — '+tradeLog.length+' trades · '+simDates[0]+' → '
-      +simDates[simDates.length-1]+' · ATH warm-up: $'+qqqATH.toFixed(2)
-      +' | Entry QQQ ≤-'+(ddThresh*100).toFixed(0)+'% & VIX≥'+vixThresh
-      +(stopPct>0?' | Stop-loss: -'+(stopPct*100).toFixed(0)+'% ('+stopBasis.replace(/_/g,' ')+')'
-                :' | Stop-loss: OFF');
+    status.textContent='Complete — '+tradeLog.length+' trades · '+simDates[0]+' → '+simDates[simDates.length-1]
+      +' | ATH warm-up: $'+qqqATH.toFixed(2)+' ('+warmCt+' days)'
+      +' | Entry: -'+(ddThresh*100).toFixed(0)+'% & VIX≥'+vixEntry
+      +(trailStop>0?' | Trail: -'+(trailStop*100).toFixed(0)+'%':'')
+      +(vixGate>0?' | VIX gate: <'+vixGate:'');
 
-  } catch(e) {
-    status.textContent='Error: '+e.message;
-    console.error('[btRunLVM]',e);
-  }
+  }catch(e){status.textContent='Error: '+e.message;console.error('[btRunLVM]',e);}
   btn.disabled=false;
 }
 
