@@ -14407,36 +14407,53 @@ async function resInsiderLoad(ticker) {
 
     // ── Transaction table ──
     if (!transactions.length) {
-      tableEl.innerHTML = '<p style="padding:16px;color:var(--text-sec);">No parsed transactions found. <a href="https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK='+data.cik+'&type=4&dateb=&owner=include&count=40" target="_blank" style="color:var(--navy);">View on SEC EDGAR</a>.</p>';
+      tableEl.innerHTML = '<p style="padding:16px;color:var(--text-sec);">No parsed transactions found in the last 24 months. <a href="https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK='+data.cik+'&type=4&dateb=&owner=include&count=40" target="_blank" style="color:var(--navy);">View on SEC EDGAR</a>.</p>';
       return;
     }
+
+    var TX_LABELS = {
+      'P':'Open Mkt Purchase','S':'Open Mkt Sale','A':'Award/Grant',
+      'M':'Option Exercise','D':'Disposition','F':'Tax Withholding',
+      'G':'Gift','J':'Other','C':'Conversion','W':'Inheritance','X':'Option Expire'
+    };
+
     var tHtml = '<div style="overflow-x:auto;"><table style="width:100%;font-size:11.5px;border-collapse:collapse;white-space:nowrap;">';
     tHtml += '<thead><tr style="background:var(--navy);color:#fff;">';
-    ['Date','Insider','Role','Security','Code','Acquired/Disp','Shares','Price/Share','Est. Value','Owned After','Filing'].forEach(function(h){
-      tHtml += '<th style="padding:7px 10px;text-align:left;">'+h+'</th>';
+    ['Tx Date','Insider Name','Role','Action','Acq / Disp','Shares Transacted','Shares Before','Shares After','Price / Share','Est. Value','Filing'].forEach(function(h){
+      tHtml += '<th style="padding:7px 10px;text-align:left;font-size:11px;">'+h+'</th>';
     });
     tHtml += '</tr></thead><tbody>';
     transactions.forEach(function(tx, i) {
-      var isOpen = tx.txType==='P'||tx.txType==='S';
       var isBuy  = tx.txType==='P';
-      var codeCol = isBuy?C.success:(tx.txType==='S'?C.danger:'#8B6914');
+      var isSell = tx.txType==='S';
+      var isOpen = isBuy||isSell;
+      var acqDisp = tx.acquiredDisposed==='A'||isBuy;
+      var codeCol = isBuy?C.success:isSell?C.danger:'#8B6914';
       var bg = i%2===0?'':'background:rgba(0,0,0,0.02);';
-      var fmt = function(v,m){if(v==null)return'—';if(v>=1e6)return'$'+(v/1e6).toFixed(2)+'M';if(v>=1e3)return'$'+(v/1e3).toFixed(1)+'K';return'$'+v.toFixed(2);}
-      tHtml += '<tr style="'+bg+'border-bottom:1px solid var(--border);">';
-      tHtml += '<td style="padding:6px 10px;">'+tx.reportDate+'</td>';
-      tHtml += '<td style="padding:6px 10px;font-weight:600;">'+tx.filerName+'</td>';
-      tHtml += '<td style="padding:6px 10px;color:var(--text-sec);font-size:10px;">'+tx.role+'</td>';
-      tHtml += '<td style="padding:6px 10px;color:var(--text-sec);font-size:10px;">'+(tx.securityTitle||'—')+'</td>';
-      tHtml += '<td style="padding:6px 10px;font-weight:700;color:'+codeCol+';">'+tx.txType+'</td>';
-      tHtml += '<td style="padding:6px 10px;font-size:10px;color:'+(tx.acquiredDisposed==='A'?C.success:C.danger)+';">'+(tx.acquiredDisposed==='A'?'Acquired':'Disposed')+'</td>';
-      tHtml += '<td style="padding:6px 10px;font-family:monospace;text-align:right;">'+(tx.shares!=null?Number(tx.shares).toLocaleString(undefined,{maximumFractionDigits:0}):'—')+'</td>';
+      var borderLeft = isOpen?'border-left:3px solid '+codeCol+';':'border-left:3px solid transparent;';
+      var actionLabel = TX_LABELS[tx.txType]||tx.txType||'—';
+      var adLabel = acqDisp?'▲ Acquired':'▼ Disposed';
+      var adCol   = acqDisp?C.success:C.danger;
+      function fs(v){return v!=null&&!isNaN(v)?Number(v).toLocaleString(undefined,{maximumFractionDigits:0}):'—';}
+      function fm(v){if(v==null||isNaN(v))return'—';if(v>=1e6)return'$'+(v/1e6).toFixed(2)+'M';if(v>=1e3)return'$'+(v/1e3).toFixed(1)+'K';return'$'+v.toFixed(2);}
+      tHtml += '<tr style="'+bg+borderLeft+'border-bottom:1px solid var(--border);">';
+      tHtml += '<td style="padding:6px 10px;font-family:monospace;font-size:11px;">'+(tx.reportDate||'—')+'</td>';
+      tHtml += '<td style="padding:6px 10px;font-weight:700;">'+(tx.filerName||'—')+'</td>';
+      tHtml += '<td style="padding:6px 10px;color:var(--text-sec);font-size:10px;">'+(tx.role||'—')+'</td>';
+      tHtml += '<td style="padding:6px 10px;font-weight:600;color:'+codeCol+';">'+actionLabel+'</td>';
+      tHtml += '<td style="padding:6px 10px;font-weight:600;color:'+adCol+';">'+adLabel+'</td>';
+      tHtml += '<td style="padding:6px 10px;font-family:monospace;text-align:right;font-weight:700;color:'+codeCol+';">'+fs(tx.shares)+'</td>';
+      tHtml += '<td style="padding:6px 10px;font-family:monospace;text-align:right;color:var(--text-sec);">'+fs(tx.sharesBefore)+'</td>';
+      tHtml += '<td style="padding:6px 10px;font-family:monospace;text-align:right;color:var(--text-sec);">'+fs(tx.sharesOwnedAfter)+'</td>';
       tHtml += '<td style="padding:6px 10px;font-family:monospace;text-align:right;">'+(tx.pricePerShare!=null?'$'+tx.pricePerShare.toFixed(2):'—')+'</td>';
-      tHtml += '<td style="padding:6px 10px;font-family:monospace;text-align:right;font-weight:600;color:'+(isOpen?codeCol:C.textSec)+';">'+(tx.value!=null?fmt(tx.value):'—')+'</td>';
-      tHtml += '<td style="padding:6px 10px;font-family:monospace;text-align:right;color:var(--text-sec);">'+(tx.sharesOwnedAfter!=null?Number(tx.sharesOwnedAfter).toLocaleString(undefined,{maximumFractionDigits:0}):'—')+'</td>';
-      tHtml += '<td style="padding:6px 10px;"><a href="'+tx.filingUrl+'" target="_blank" style="color:var(--navy);font-size:10px;">SEC ↗</a></td>';
+      tHtml += '<td style="padding:6px 10px;font-family:monospace;text-align:right;font-weight:600;color:'+(isOpen?codeCol:C.textSec)+';">'+fm(tx.value)+'</td>';
+      tHtml += '<td style="padding:6px 10px;"><a href="'+tx.filingUrl+'" target="_blank" style="color:var(--navy);font-size:10px;text-decoration:none;">SEC ↗</a></td>';
       tHtml += '</tr>';
     });
     tHtml += '</tbody></table></div>';
+    tHtml += '<div style="font-size:10.5px;color:var(--text-sec);padding:8px 12px;margin-top:6px;background:var(--panel);border-radius:4px;">'
+      +'<strong>P</strong>=Open Mkt Purchase &nbsp;·&nbsp; <strong>S</strong>=Open Mkt Sale &nbsp;·&nbsp; <strong>A</strong>=Award/Grant &nbsp;·&nbsp; <strong>M</strong>=Option Exercise &nbsp;·&nbsp; <strong>F</strong>=Tax Withholding &nbsp;·&nbsp; <strong>D</strong>=Disposition &nbsp;·&nbsp; <strong>G</strong>=Gift &nbsp;|&nbsp; '
+      +'Shares Before = Shares After ∓ Transaction Shares. Green border = open market purchase. Red border = open market sale.</div>';
     tableEl.innerHTML = tHtml;
   } catch(e) {
     summaryEl.innerHTML = '<div style="color:var(--danger);padding:12px;">Error loading insider data: '+e.message+'.<br><a href="https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=0&type=4&dateb=&owner=include&count=40&search_text=" target="_blank" style="color:var(--navy);">Search EDGAR directly →</a></div>';
