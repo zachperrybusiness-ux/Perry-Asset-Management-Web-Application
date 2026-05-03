@@ -3180,7 +3180,7 @@ body.view-mobile .logo-icon { width: 22px !important; height: 22px !important; f
       </div>
       <div id="resMoatContent" style="display:none;">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px;">
-          <span style="font-size:12px;color:var(--text-sec);">AI-powered analysis using Claude Sonnet — covers revenue streams, supply chain risks, competitive positioning, management quality, leverage, and innovation.</span>
+          <span style="font-size:12px;color:var(--text-sec);">Data-driven moat analysis using SEC EDGAR fundamentals — covers business model, revenue quality, competitive moat signals, balance sheet strength, leverage vs. peers, and analyst consensus.</span>
           <button class="btn" onclick="resMoatRun()">🔄 Refresh Analysis</button>
         </div>
         <div id="resMoatResult" style="padding:20px;text-align:center;color:var(--text-sec);"><span class="spinner"></span> Generating moat analysis...</div>
@@ -8560,11 +8560,9 @@ window.runResearch = async function() {
       window._lastSecData = secData;
       window._lastSecTicker = ticker;
 
-      // Detect if ETF/Fund
-      var isETF = secData.profile?.type === 'ETF' || secData.profile?.type === 'FUND';
-      if (!isETF && (!secData.incomeStatement?.revenue?.length || secData.incomeStatement.revenue.length === 0)) {
-        isETF = true;
-      }
+      // Detect if ETF/Fund — only trust profile.type, not absence of revenue data
+      // Many stocks have SEC data gaps; don't treat missing revenue as ETF
+      var isETF = (secData.profile && (secData.profile.type === 'ETF' || secData.profile.type === 'FUND'));
 
       // Extract and cache dividend data for chart toggle
       _researchDividendData = extractDividendData(secData);
@@ -14162,88 +14160,200 @@ async function resPeerRun() {
 // ═══════════════════════════════════════════════════════════════════
 // COMPANY MOAT ANALYSIS — AI-powered via Claude API
 // ═══════════════════════════════════════════════════════════════════
-async function resMoatRun() {
+function resMoatRun() {
   var el = document.getElementById('resMoatResult');
   if (!el) return;
   var d = window._lastSecData;
   var tk = window._lastSecTicker;
   if (!d || !tk) { el.innerHTML = '<p style="color:var(--text-sec);">Load a ticker first.</p>'; return; }
-  el.innerHTML = '<div style="text-align:center;padding:32px;"><span class="spinner"></span><br><br><strong>Generating moat analysis via Claude Sonnet…</strong><br><span style="font-size:12px;color:var(--text-sec);">Analyzing revenue streams, supply chain, competition, management, and leverage vs. peers…</span></div>';
 
-  var profile = d.profile||{}, inc = d.incomeStatement||{}, bs = d.balanceSheet||{}, cf = d.cashFlowStatement||{};
+  var profile = d.profile||{};
+  var inc = d.incomeStatement||{};
+  var bs  = d.balanceSheet||{};
+  var cf  = d.cashFlowStatement||{};
+  var at  = d.analystTargets||{};
+  var ar  = d.analystRatings||{};
+
   function L(arr){return arr&&arr.length?arr[arr.length-1].value:null;}
+  function L2(arr){return arr&&arr.length>=2?arr[arr.length-2].value:null;}
   function Nm(v){if(v==null)return'N/A';var a=Math.abs(v);if(a>=1e12)return'$'+(v/1e12).toFixed(2)+'T';if(a>=1e9)return'$'+(v/1e9).toFixed(2)+'B';if(a>=1e6)return'$'+(v/1e6).toFixed(1)+'M';return'$'+v.toFixed(0);}
 
-  var rev=L(inc.revenue), ni=L(inc.netIncome), opCF=L(cf.operatingCashFlow), capex=L(cf.capitalExpenditures)||0;
-  var eq=L(bs.stockholdersEquity), ltd=L(bs.longTermDebt)||0;
-  var de=ltd&&eq&&eq>0?(ltd/eq).toFixed(2)+'x':'N/A';
+  var rev   = L(inc.revenue), prevRev = L2(inc.revenue);
+  var ni    = L(inc.netIncome), prevNI = L2(inc.netIncome);
+  var gp    = L(inc.grossProfit);
+  var oi    = L(inc.operatingIncome);
+  var rnd   = L(inc.researchAndDev)||0;
+  var ocf   = L(cf.operatingCashFlow);
+  var capex = Math.abs(L(cf.capitalExpenditures)||0);
+  var fcf   = ocf!=null?ocf-capex:null;
+  var sbc   = L(cf.stockBasedComp)||0;
+  var eq    = L(bs.stockholdersEquity);
+  var ta    = L(bs.totalAssets);
+  var ltd   = L(bs.longTermDebt)||0;
+  var cash  = (L(bs.cash)||0)+(L(bs.shortTermInvestments)||0);
+  var shares= L(bs.sharesOutstanding);
+  var mktCap= profile.marketCap||(shares&&(d.price&&d.price.current)?shares*d.price.current:null);
+  var px    = d.price&&d.price.current?d.price.current:null;
 
-  var systemPrompt = 'You are a buy-side equity analyst at Perry Asset Management. Provide a structured, quantitative moat analysis. Be specific and data-driven. Use markdown with clear section headers. Be direct — Perry clients are sophisticated investors.';
+  var grossMargin = rev&&gp?gp/rev:null;
+  var opMargin    = rev&&oi?oi/rev:null;
+  var netMargin   = rev&&ni?ni/rev:null;
+  var roe         = ni&&eq&&eq>0?ni/eq:null;
+  var roa         = ni&&ta&&ta>0?ni/ta:null;
+  var de          = ltd&&eq&&eq>0?ltd/eq:null;
+  var rndPct      = rev&&rnd?rnd/rev:null;
+  var revGrowth   = rev&&prevRev&&prevRev>0?(rev-prevRev)/Math.abs(prevRev):null;
+  var niGrowth    = ni&&prevNI&&prevNI>0?(ni-prevNI)/Math.abs(prevNI):null;
+  var fcfConv     = ni&&ni>0&&fcf!=null?fcf/ni:null;
+  var sbcPct      = rev&&sbc?sbc/rev:null;
+  var netCash     = cash-ltd;
+  var ev          = mktCap!=null?mktCap+ltd-cash:null;
 
-  var userPrompt = `Analyze the competitive moat and business quality of ${tk} (${profile.name||tk}).
+  var SECTOR_PE_MAP = {'Technology':28,'Healthcare':22,'Financials':14,'Consumer Discretionary':22,'Consumer Staples':20,'Energy':12,'Industrials':18,'Materials':16,'Real Estate':20,'Utilities':18,'Communication Services':20};
+  var sectorPE = SECTOR_PE_MAP[profile.sector]||20;
+  var pe = (d.incomeStatement&&d.incomeStatement.eps&&d.incomeStatement.eps.length&&px) ? px/d.incomeStatement.eps[d.incomeStatement.eps.length-1].value : null;
 
-Company data:
-- Sector: ${profile.sector||'N/A'} / Industry: ${profile.industry||'N/A'}
-- Revenue (LTM): ${Nm(rev)} | Net Income: ${Nm(ni)} | Operating CF: ${Nm(opCF)} | CapEx: ${Nm(Math.abs(capex))}
-- Debt/Equity: ${de} | Employees: ${profile.employees?Number(profile.employees).toLocaleString():'N/A'}
-- Description: ${(profile.description||'').substring(0,600)}
+  var totalA = (ar.strongBuy||0)+(ar.buy||0)+(ar.hold||0)+(ar.sell||0)+(ar.strongSell||0);
+  var buyPct = totalA?((ar.strongBuy||0)+(ar.buy||0))/totalA:null;
+  var upside = at.mean&&px?(at.mean-px)/px:null;
 
-Provide a structured analysis covering ALL of the following sections:
-
-## 1. Revenue Streams & Business Model
-How does the company make money? What are the major revenue segments? What % of revenue comes from each? What products/services are core vs. ancillary?
-
-## 2. Supply Chain & Input Dependencies  
-Key suppliers and raw material dependencies. Geographic concentration. Single-source risks. What global events (tariffs, geopolitics, commodity cycles) could disrupt supply chains?
-
-## 3. Competitive Moat Assessment
-Rate the moat strength (Wide / Narrow / None) and identify which moat sources apply: Network Effects, Switching Costs, Cost Advantage, Intangible Assets (Brands/Patents), Efficient Scale. What makes them defensible?
-
-## 4. Competitive Threats
-Who are the primary competitors? What new entrants or substitutes could disrupt market share? Regulatory or ESG risks?
-
-## 5. Management Quality
-Assess the C-suite track record. Capital allocation discipline (buybacks, M&A, dividends). Alignment with shareholders. Any notable red flags?
-
-## 6. Innovation & R&D
-What level of R&D investment? Are they a technological leader, fast follower, or commodity player? Any pipeline products, patents, or platforms that could expand TAM?
-
-## 7. Leverage Assessment vs. Peers
-At ${de} D/E, is this company over-leveraged or under-leveraged for its sector? Interest coverage comfort? Balance sheet flexibility for downturns or acquisitions?
-
-## 8. Perry Analyst Summary
-One paragraph synthesis: Overall moat rating, key risks to thesis, and what would make you more or less constructive on the name.`;
-
-  try {
-    var resp = await fetch('https://perry-finance-proxy.zachperrybusiness.workers.dev/analyze', {
-      method: 'POST',
-      headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
-        max_tokens: 4000,
-        messages: [{role:'user', content: userPrompt}],
-        system: systemPrompt
-      })
-    });
-    var data = await resp.json();
-    var text = data.content&&data.content[0]?data.content[0].text:'Error generating analysis.';
-    // Render markdown-ish text as HTML
-    var html = text
-      .replace(/^## (.+)$/gm, '<h3 style="color:var(--navy);font-size:14px;font-weight:700;margin:18px 0 8px;border-bottom:2px solid var(--border);padding-bottom:4px;">$1</h3>')
-      .replace(/^### (.+)$/gm, '<h4 style="color:var(--navy);font-size:13px;font-weight:700;margin:14px 0 6px;">$1</h4>')
-      .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-      .replace(/\*(.+?)\*/g, '<em>$1</em>')
-      .replace(/^- (.+)$/gm, '<li style="margin:3px 0;">$1</li>')
-      .replace(/(<li[^>]*>.*<\/li>\n?)+/g, '<ul style="margin:6px 0 10px 16px;">$&</ul>')
-      .replace(/\n\n/g, '</p><p style="margin:6px 0;font-size:12.5px;line-height:1.65;color:var(--text);">')
-      .replace(/\n/g, '<br>');
-    el.innerHTML = '<div style="font-size:12.5px;line-height:1.7;color:var(--text);">'
-      + '<p style="margin:0 0 6px;"><em style="color:var(--text-sec);font-size:11px;">Analysis generated by Claude Sonnet · '+ new Date().toLocaleString()+'</em></p>'
-      + '<p style="margin:6px 0;font-size:12.5px;line-height:1.65;">' + html + '</p>'
-      + '</div>';
-  } catch(e) {
-    el.innerHTML = '<p style="color:var(--danger);">Error: '+e.message+'</p>';
+  // ── Score functions ──────────────────────────────────────────────
+  function scoreGauge(val, thresholds, labels, colors) {
+    // thresholds: [bad_lo, ok_lo, good_lo] ascending
+    var idx = 0;
+    for (var i=0;i<thresholds.length;i++) if (val>=thresholds[i]) idx=i+1;
+    var cols = colors||[C.danger,'#8B6914',C.navy,C.success];
+    var lbls = labels||['Weak','Fair','Good','Strong'];
+    return {label:lbls[Math.min(idx,lbls.length-1)], color:cols[Math.min(idx,cols.length-1)]};
   }
+  function pill(label,color){return '<span style="background:'+color+';color:#fff;padding:2px 8px;border-radius:10px;font-size:10px;font-weight:700;">'+label+'</span>';}
+  function metric(label,val,fmt,bench,lowerBetter){
+    var fmtd=val!=null?fmt(val):'N/A';
+    var col=C.text;
+    if(val!=null&&bench!=null) col=lowerBetter?(val<=bench?C.success:C.danger):(val>=bench?C.success:C.danger);
+    return '<tr><td style="padding:5px 10px;color:var(--text-sec);font-size:11px;">'+label+'</td><td style="padding:5px 10px;font-weight:700;color:'+col+';font-family:monospace;">'+fmtd+'</td>'+(bench!=null?'<td style="padding:5px 10px;font-size:10px;color:var(--text-sec);">'+(lowerBetter?'<'+fmt(bench):'>'+fmt(bench))+'</td>':'<td></td>')+'</tr>';
+  }
+  function pct(v){return v!=null?(v*100).toFixed(1)+'%':'N/A';}
+  function x(v){return v!=null?v.toFixed(1)+'x':'N/A';}
+  function dp(v){return v!=null?v.toFixed(2):'N/A';}
+
+  // ── Section builder ──────────────────────────────────────────────
+  function section(title, icon, body) {
+    return '<div class="card" style="margin-bottom:14px;">'
+      +'<div class="card-title">'+icon+' '+title+'</div>'
+      +'<div class="card-body">'+body+'</div></div>';
+  }
+
+  var html = '';
+
+  // ── 1. Business Model Overview ────────────────────────────────
+  var moatScore = null;
+  var moatLabel = '—'; var moatColor = C.textSec;
+  // Estimate moat via proxy signals
+  var moatPoints = 0;
+  if (grossMargin!=null&&grossMargin>0.40) moatPoints++;
+  if (opMargin!=null&&opMargin>0.15) moatPoints++;
+  if (roe!=null&&roe>0.20) moatPoints++;
+  if (rndPct!=null&&rndPct>0.08) moatPoints++;
+  if (revGrowth!=null&&revGrowth>0.10) moatPoints++;
+  if (fcfConv!=null&&fcfConv>0.80) moatPoints++;
+  if (moatPoints>=5){moatLabel='Wide Moat';moatColor=C.success;}
+  else if(moatPoints>=3){moatLabel='Narrow Moat';moatColor=C.navy;}
+  else{moatLabel='No Clear Moat';moatColor=C.danger;}
+
+  var bizBody = '<div style="display:flex;align-items:center;gap:16px;margin-bottom:14px;">';
+  bizBody += '<div style="background:var(--panel);border:1px solid var(--border);border-left:4px solid '+moatColor+';border-radius:4px;padding:12px 18px;min-width:160px;">';
+  bizBody += '<div style="font-size:10px;color:var(--text-sec);text-transform:uppercase;letter-spacing:.6px;">Moat Estimate</div>';
+  bizBody += '<div style="font-size:20px;font-weight:800;color:'+moatColor+';">'+moatLabel+'</div>';
+  bizBody += '<div style="font-size:10px;color:var(--text-sec);margin-top:3px;">Based on '+moatPoints+'/6 proxy signals</div></div>';
+  if (profile.description) {
+    bizBody += '<div style="font-size:12px;color:var(--text-sec);line-height:1.65;flex:1;">'+profile.description.substring(0,500)+(profile.description.length>500?'…':'')+'</div>';
+  }
+  bizBody += '</div>';
+  bizBody += '<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;">';
+  [{label:'Sector',val:profile.sector||'—'},{label:'Industry',val:profile.industry||'—'},
+   {label:'Employees',val:profile.employees?Number(profile.employees).toLocaleString():'—'},
+   {label:'HQ',val:profile.city?(profile.city+(profile.state?', '+profile.state:'')):'—'},
+   {label:'CEO',val:profile.ceo||'—'},{label:'Website',val:profile.website?'<a href="'+profile.website+'" target="_blank" style="color:var(--navy);">'+profile.website.replace(/^https?:\/\//,'').substring(0,30)+'</a>':'—'}
+  ].forEach(function(item){
+    bizBody += '<div style="background:var(--panel);border:1px solid var(--border);border-radius:4px;padding:8px 12px;">'
+      +'<div style="font-size:10px;color:var(--text-sec);text-transform:uppercase;letter-spacing:.5px;">'+item.label+'</div>'
+      +'<div style="font-size:12px;font-weight:600;margin-top:2px;">'+item.val+'</div></div>';
+  });
+  bizBody += '</div>';
+  html += section('Business Model & Company Overview','🏢', bizBody);
+
+  // ── 2. Revenue Quality & Profitability ───────────────────────
+  var profBody = '<table style="width:100%;border-collapse:collapse;font-size:12px;"><thead><tr style="background:var(--panel);"><th style="padding:5px 10px;text-align:left;">Metric</th><th style="padding:5px 10px;text-align:left;">Value</th><th style="padding:5px 10px;text-align:left;">Signal</th></tr></thead><tbody>';
+  profBody += metric('Revenue (LTM)', rev, Nm, null, false);
+  profBody += metric('Revenue Growth YoY', revGrowth, pct, 0.08, false);
+  profBody += metric('Gross Margin', grossMargin, pct, 0.35, false);
+  profBody += metric('Operating Margin', opMargin, pct, 0.15, false);
+  profBody += metric('Net Margin', netMargin, pct, 0.10, false);
+  profBody += metric('FCF Conversion (FCF/NI)', fcfConv, x, 0.80, false);
+  profBody += metric('R&D as % of Revenue', rndPct, pct, null, false);
+  profBody += metric('Stock-Based Comp %', sbcPct, pct, 0.05, true);
+  profBody += '</tbody></table>';
+  profBody += '<div style="font-size:11px;color:var(--text-sec);margin-top:8px;">FCF Conversion >0.8x = high-quality earnings. SBC >5% = dilution risk. R&D intensity signals innovation investment.</div>';
+  html += section('Revenue Quality & Profitability Signals','📈', profBody);
+
+  // ── 3. Competitive Moat Signals ─────────────────────────────
+  var moatSignals = [
+    {name:'Gross Margin >40%',     pass:grossMargin!=null&&grossMargin>0.40,   val:grossMargin!=null?pct(grossMargin):'N/A', note:'High gross margin = pricing power / intangible asset moat'},
+    {name:'Operating Margin >15%', pass:opMargin!=null&&opMargin>0.15,          val:opMargin!=null?pct(opMargin):'N/A',       note:'Sustained op margin = cost advantage or scale'},
+    {name:'ROE >20%',              pass:roe!=null&&roe>0.20,                    val:roe!=null?pct(roe):'N/A',                 note:'High ROE = efficient capital deployment / moat returns'},
+    {name:'R&D >8% of Rev',        pass:rndPct!=null&&rndPct>0.08,             val:rndPct!=null?pct(rndPct):'None',          note:'R&D intensity = innovation moat (tech/pharma)'},
+    {name:'Revenue CAGR >10%',     pass:revGrowth!=null&&revGrowth>0.10,        val:revGrowth!=null?pct(revGrowth):'N/A',    note:'Consistent growth = demand/network moat'},
+    {name:'FCF Conversion >80%',   pass:fcfConv!=null&&fcfConv>0.80,           val:fcfConv!=null?x(fcfConv):'N/A',          note:'High FCF conversion = real cash earnings quality'},
+  ];
+  var moatBody = '<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;">';
+  moatSignals.forEach(function(s){
+    moatBody += '<div style="background:var(--panel);border:1px solid var(--border);border-left:4px solid '+(s.pass?C.success:C.danger)+';border-radius:4px;padding:8px 12px;">'
+      +'<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:3px;">'
+      +'<span style="font-size:11px;font-weight:600;">'+s.name+'</span>'
+      +pill(s.pass?'✓ Pass':'✗ Fail', s.pass?C.success:C.danger)
+      +'</div>'
+      +'<div style="font-size:12px;font-weight:700;font-family:monospace;">'+s.val+'</div>'
+      +'<div style="font-size:10px;color:var(--text-sec);margin-top:2px;">'+s.note+'</div>'
+      +'</div>';
+  });
+  moatBody += '</div>';
+  moatBody += '<div style="background:var(--panel);border:1px solid var(--border);border-radius:4px;padding:10px 14px;font-size:12px;">'
+    +'<strong>Moat Assessment:</strong> '+moatPoints+'/6 signals passing → '+pill(moatLabel,moatColor)
+    +'<span style="color:var(--text-sec);margin-left:8px;font-size:11px;">Wide Moat = 5-6 · Narrow = 3-4 · No Moat = 0-2</span></div>';
+  html += section('Competitive Moat Signals','🏰', moatBody);
+
+  // ── 4. Balance Sheet & Leverage ──────────────────────────────
+  var levBody = '<table style="width:100%;border-collapse:collapse;font-size:12px;"><thead><tr style="background:var(--panel);"><th style="padding:5px 10px;text-align:left;">Metric</th><th style="padding:5px 10px;text-align:left;">Value</th><th style="padding:5px 10px;text-align:left;">Signal</th></tr></thead><tbody>';
+  levBody += metric('Net Cash (Cash − Debt)', netCash, Nm, 0, false);
+  levBody += metric('Debt/Equity', de, x, 1.5, true);
+  levBody += metric('Total Long-Term Debt', ltd, Nm, null, false);
+  levBody += metric('Total Cash + Short-Term Inv.', cash, Nm, null, false);
+  levBody += metric('Return on Assets (ROA)', roa, pct, 0.05, false);
+  levBody += metric('Return on Equity (ROE)', roe, pct, 0.15, false);
+  var caL = L(bs.currentAssets), clL = L(bs.currentLiabilities);
+  var currRatio = caL&&clL&&clL>0?caL/clL:null;
+  levBody += metric('Current Ratio', currRatio, x, 1.5, false);
+  levBody += '</tbody></table>';
+  var levSignal = de!=null ? (de<0.5?'Under-leveraged (balance sheet room to deploy capital)':de<1.5?'Moderate leverage (sector-appropriate)':de<3.0?'Elevated leverage (monitor debt service)':'Over-leveraged (stress risk)') : 'Leverage N/A';
+  var levCol = de!=null ? (de<1.5?C.success:de<3.0?'#8B6914':C.danger) : C.textSec;
+  levBody += '<div style="margin-top:10px;background:var(--panel);border:1px solid var(--border);border-left:4px solid '+levCol+';border-radius:4px;padding:8px 12px;font-size:12px;">'
+    +'<strong>Leverage Assessment:</strong> D/E = '+(de!=null?de.toFixed(2)+'x':'N/A')+' → <span style="color:'+levCol+';font-weight:700;">'+levSignal+'</span></div>';
+  html += section('Balance Sheet & Leverage','💰', levBody);
+
+  // ── 5. Analyst Consensus & Market Positioning ────────────────
+  var analBody = '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:12px;">';
+  function aMetricBox(lbl,val,sub,col){return '<div style="background:var(--panel);border:1px solid var(--border);border-left:4px solid '+(col||C.navy)+';border-radius:4px;padding:10px 12px;"><div style="font-size:10px;color:var(--text-sec);">'+lbl+'</div><div style="font-size:18px;font-weight:800;color:'+(col||C.navy)+';">'+val+'</div>'+(sub?'<div style="font-size:10px;color:var(--text-sec);">'+sub+'</div>':'')+'</div>';}
+  analBody += aMetricBox('Price Target (Mean)', at.mean?'$'+at.mean.toFixed(2):'N/A', upside!=null?(upside>=0?'+':'')+pct(upside)+' upside':'', upside!=null&&upside>0?C.success:C.danger);
+  analBody += aMetricBox('Target High', at.high?'$'+at.high.toFixed(2):'N/A', 'Bull case', C.success);
+  analBody += aMetricBox('Target Low', at.low?'$'+at.low.toFixed(2):'N/A', 'Bear case', C.danger);
+  analBody += aMetricBox('Buy Ratings', totalA?((ar.strongBuy||0)+(ar.buy||0))+'/'+totalA:'N/A', buyPct!=null?pct(buyPct)+' of analysts':'', buyPct!=null&&buyPct>0.6?C.success:C.danger);
+  analBody += aMetricBox('P/E vs. Sector', pe?pe.toFixed(1)+'x':'N/A', 'Sector: '+sectorPE+'x', pe!=null?(pe<sectorPE?C.success:pe<sectorPE*1.5?'#8B6914':C.danger):C.textSec);
+  analBody += aMetricBox('Market Cap', mktCap?Nm(mktCap):'N/A', ev?'EV: '+Nm(ev):'', C.navy);
+  analBody += '</div>';
+  html += section('Analyst Consensus & Valuation Context','📊', analBody);
+
+  el.innerHTML = html;
 }
 
 // ═══════════════════════════════════════════════════════════════════
@@ -14253,131 +14363,83 @@ async function resInsiderLoad(ticker) {
   var summaryEl = document.getElementById('resInsiderSummary');
   var tableEl   = document.getElementById('resInsiderTable');
   if (!summaryEl || !tableEl) return;
-  summaryEl.innerHTML = '<span class="spinner"></span> Loading insider data from SEC EDGAR...';
+  summaryEl.innerHTML = '<span class="spinner"></span> Fetching insider transactions from SEC EDGAR via Cloudflare Worker...';
   tableEl.innerHTML = '';
-
   try {
-    // Step 1: Find CIK from SEC company tickers
-    var cik = null;
-    var d = window._lastSecData;
-    if (d && d.profile && d.profile.cik) {
-      cik = String(d.profile.cik).padStart(10,'0');
-    }
-    if (!cik) {
-      var tkRes = await fetch('https://www.sec.gov/files/company_tickers.json', {headers:{'User-Agent':'PerryAssetManagement support@perryam.com','Accept':'application/json'}});
-      var tkData = await tkRes.json();
-      for (var key in tkData) {
-        if (tkData[key].ticker.toUpperCase() === ticker.toUpperCase()) {
-          cik = String(tkData[key].cik_str).padStart(10,'0');
-          break;
-        }
-      }
-    }
-    if (!cik) { summaryEl.innerHTML='<p style="color:var(--danger);">Could not resolve CIK for '+ticker+'.</p>'; return; }
+    var WORKER = 'https://perry-finance-proxy.zachperrybusiness.workers.dev';
+    var cik = window._lastSecData && window._lastSecData.profile && window._lastSecData.profile.cik
+              ? window._lastSecData.profile.cik : null;
+    var url = WORKER + '/insider?symbol=' + encodeURIComponent(ticker);
+    if (cik) url += '&cik=' + encodeURIComponent(cik);
+    var res = await fetch(url);
+    var data = await res.json();
+    if (data.error) throw new Error(data.error);
 
-    // Step 2: Fetch Form 4 filings from EDGAR submissions
-    var subRes = await fetch('https://data.sec.gov/submissions/CIK'+cik+'.json', {headers:{'User-Agent':'PerryAssetManagement support@perryam.com','Accept':'application/json'}});
-    var subData = await subRes.json();
-    var filings = subData.filings&&subData.filings.recent ? subData.filings.recent : {};
-    var forms   = filings.form||[];
-    var dates   = filings.reportDate||filings.filingDate||[];
-    var accNums = filings.accessionNumber||[];
-    var prNames = filings.primaryDocument||[];
+    var s = data.summary || {};
+    var transactions = data.transactions || [];
+    var netCol = s.netSentiment==='Net Buying'?C.success:s.netSentiment==='Net Selling'?C.danger:'#8B6914';
 
-    // Filter to Form 4 filings in last 12 months
-    var cutoff = new Date(); cutoff.setFullYear(cutoff.getFullYear()-1);
-    var cutoffStr = cutoff.toISOString().slice(0,10);
-    var form4s = [];
-    for (var i=0;i<forms.length;i++) {
-      if ((forms[i]==='4'||forms[i]==='4/A') && dates[i]>=cutoffStr) {
-        form4s.push({date:dates[i], accNum:accNums[i], form:forms[i]});
-      }
-    }
-    form4s = form4s.slice(0,30); // cap at 30 most recent
+    // ── Summary header ──
+    var sHtml = '<div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px;">';
+    function sBubble(lbl,val,sub,col){return '<div style="background:var(--panel);border:1px solid var(--border);border-left:4px solid '+(col||C.navy)+';border-radius:4px;padding:10px 14px;min-width:120px;">'
+      +'<div style="font-size:10px;color:var(--text-sec);text-transform:uppercase;letter-spacing:.5px;">'+lbl+'</div>'
+      +'<div style="font-size:20px;font-weight:800;color:'+(col||C.navy)+';">'+val+'</div>'
+      +(sub?'<div style="font-size:10px;color:var(--text-sec);">'+sub+'</div>':'')+'</div>';}
+    sHtml += sBubble('Net Sentiment', s.netSentiment||'N/A', 'Last 24 months', netCol);
+    sHtml += sBubble('Open Mkt Buys', s.openMarketBuys||0, 'Form 4 Code P', C.success);
+    sHtml += sBubble('Open Mkt Sells', s.openMarketSells||0, 'Form 4 Code S', C.danger);
+    sHtml += sBubble('Awards/Grants', s.awards||0, 'Codes A/M', '#8B6914');
+    sHtml += sBubble('Form 4 Filings', data.totalForm4s||0, '24 months', C.navy);
+    sHtml += '</div>';
+    sHtml += '<div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:10px;">';
+    if(s.totalBuyValue) sHtml += sBubble('Total Buy Value', ('$'+(s.totalBuyValue/1e6>1?(s.totalBuyValue/1e6).toFixed(1)+'M':(s.totalBuyValue/1e3).toFixed(0)+'K')), 'Open market purchases', C.success);
+    if(s.totalSellValue) sHtml += sBubble('Total Sell Value', ('$'+(s.totalSellValue/1e6>1?(s.totalSellValue/1e6).toFixed(1)+'M':(s.totalSellValue/1e3).toFixed(0)+'K')), 'Open market sales', C.danger);
+    sHtml += '<div style="flex:1;background:var(--panel);border:1px solid var(--border);border-radius:4px;padding:8px 12px;">'
+      +'<div style="font-size:10px;color:var(--text-sec);">Company · CIK</div>'
+      +'<div style="font-size:12px;font-weight:700;">'+(data.companyName||ticker)+' &nbsp; <span style="font-weight:400;color:var(--text-sec);">CIK: '+data.cik+'</span></div>'
+      +'<a href="https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK='+data.cik+'&type=4&dateb=&owner=include&count=40" target="_blank" style="font-size:11px;color:var(--navy);">View All Form 4s on EDGAR →</a>'
+      +'</div>';
+    sHtml += '</div>';
+    sHtml += '<div style="font-size:11px;color:var(--text-sec);padding:8px 12px;background:var(--panel);border-radius:4px;margin-bottom:2px;">'
+      +'Form 4 = Statement of Changes in Beneficial Ownership. Filed by officers, directors, &gt;10% shareholders within 2 business days of any transaction. '
+      +'<strong>Transaction codes:</strong> P = Open Market Purchase (most bullish) · S = Open Market Sale · A = Award/Grant · M = Exercise · D = Disposition to company.</div>';
+    summaryEl.innerHTML = sHtml;
 
-    if (!form4s.length) {
-      summaryEl.innerHTML='<div style="background:var(--panel);border:1px solid var(--border);border-radius:4px;padding:12px 16px;font-size:12px;color:var(--text-sec);">No Form 4 insider filings found in the past 12 months for '+ticker+'.</div>';
-      tableEl.innerHTML='';
+    // ── Transaction table ──
+    if (!transactions.length) {
+      tableEl.innerHTML = '<p style="padding:16px;color:var(--text-sec);">No parsed transactions found. <a href="https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK='+data.cik+'&type=4&dateb=&owner=include&count=40" target="_blank" style="color:var(--navy);">View on SEC EDGAR</a>.</p>';
       return;
     }
-
-    // Step 3: Parse each Form 4 for transaction details via index page
-    var transactions = [];
-    var fetched = 0;
-    for (var fi=0; fi<Math.min(form4s.length, 20); fi++) {
-      try {
-        var acc = form4s[fi].accNum.replace(/-/g,'');
-        var cikShort = cik.replace(/^0+/,'');
-        var indexUrl = 'https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK='+cikShort+'&type=4&dateb=&owner=include&count=40&search_text=';
-        // Use the structured XML endpoint
-        var xmlUrl = 'https://www.sec.gov/Archives/edgar/data/'+cikShort+'/'+acc+'/';
-        // Get filing index
-        var idxRes = await fetch('https://data.sec.gov/submissions/CIK'+cik+'.json', {headers:{'User-Agent':'PerryAssetManagement support@perryam.com'}});
-        // Parse from EFTS full text search — more reliable for transaction data
-        // Use EDGAR company facts approach for Form 4 data
-        break; // break after confirming filings exist; use EFTS below
-      } catch(e) { continue; }
-    }
-
-    // Use EDGAR full text search for Form 4 data
-    var eftsUrl = 'https://efts.sec.gov/LATEST/search-index?q=%22'+encodeURIComponent(ticker)+'%22&dateRange=custom&startdt='+cutoffStr+'&enddt='+new Date().toISOString().slice(0,10)+'&forms=4';
-    try {
-      var eftsRes = await fetch(eftsUrl, {headers:{'User-Agent':'PerryAssetManagement support@perryam.com','Accept':'application/json'}});
-      var eftsData = await eftsRes.json();
-      var hits = (eftsData.hits&&eftsData.hits.hits)||[];
-
-      // Build transaction data from EFTS metadata
-      hits.slice(0,25).forEach(function(hit) {
-        var src = hit._source||{};
-        transactions.push({
-          date: src.period_of_report||src.file_date||'—',
-          filerName: src.display_names ? src.display_names.join(', ') : '—',
-          formType: src.form_type||'4',
-          fileUrl: src.file_date ? 'https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK='+cik+'&type=4&dateb=&owner=include&count=40' : '#'
-        });
-      });
-    } catch(e) {}
-
-    // Fallback: build table from submission index data
-    if (!transactions.length) {
-      form4s.forEach(function(f) {
-        transactions.push({date: f.date, filerName:'Insider', formType:f.form, txType:'—', shares:'—', price:'—', value:'—', fileUrl:'https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK='+cik+'&type=4&dateb=&owner=include&count=40'});
-      });
-    }
-
-    // Step 4: Render summary + table
-    var buyCount=0, sellCount=0, totalBuy=0, totalSell=0;
-    // We can't reliably get buy/sell amounts from EFTS metadata alone; show what we have
-    var summaryHtml = '<div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:10px;">';
-    summaryHtml += '<div style="background:var(--panel);border:1px solid var(--border);border-left:4px solid '+C.navy+';border-radius:4px;padding:10px 14px;"><div style="font-size:10px;color:var(--text-sec);">Form 4 Filings (12M)</div><div style="font-size:22px;font-weight:800;color:'+C.navy+';">'+form4s.length+'</div></div>';
-    summaryHtml += '<div style="background:var(--panel);border:1px solid var(--border);border-radius:4px;padding:10px 14px;"><div style="font-size:10px;color:var(--text-sec);">CIK</div><div style="font-size:14px;font-weight:700;">'+cik+'</div></div>';
-    summaryHtml += '<div style="background:var(--panel);border:1px solid var(--border);border-radius:4px;padding:10px 14px;flex:1;">';
-    summaryHtml += '<div style="font-size:10px;color:var(--text-sec);">View All on SEC EDGAR</div>';
-    summaryHtml += '<a href="https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK='+cik+'&type=4&dateb=&owner=include&count=40" target="_blank" style="color:var(--navy);font-size:12px;font-weight:600;">Open EDGAR →</a></div>';
-    summaryHtml += '</div>';
-    summaryHtml += '<div style="font-size:11px;color:var(--text-sec);margin-top:6px;padding:8px 12px;background:var(--panel);border-radius:4px;">';
-    summaryHtml += 'Form 4 = Statement of Changes in Beneficial Ownership · Filed by officers, directors, &gt;10% shareholders within 2 business days. ';
-    summaryHtml += 'Transaction codes: <strong>P</strong> = Open Market Purchase (bullish) · <strong>S</strong> = Open Market Sale · <strong>A</strong> = Award/Grant · <strong>D</strong> = Disposition.</div>';
-    summaryEl.innerHTML = summaryHtml;
-
-    var tHtml = '<table style="width:100%;font-size:12px;border-collapse:collapse;">';
+    var tHtml = '<div style="overflow-x:auto;"><table style="width:100%;font-size:11.5px;border-collapse:collapse;white-space:nowrap;">';
     tHtml += '<thead><tr style="background:var(--navy);color:#fff;">';
-    ['Date','Insider / Filer','Form','Link'].forEach(function(h){tHtml+='<th style="padding:7px 12px;text-align:left;">'+h+'</th>';});
+    ['Date','Insider','Role','Security','Code','Acquired/Disp','Shares','Price/Share','Est. Value','Owned After','Filing'].forEach(function(h){
+      tHtml += '<th style="padding:7px 10px;text-align:left;">'+h+'</th>';
+    });
     tHtml += '</tr></thead><tbody>';
     transactions.forEach(function(tx, i) {
+      var isOpen = tx.txType==='P'||tx.txType==='S';
+      var isBuy  = tx.txType==='P';
+      var codeCol = isBuy?C.success:(tx.txType==='S'?C.danger:'#8B6914');
       var bg = i%2===0?'':'background:rgba(0,0,0,0.02);';
+      var fmt = function(v,m){if(v==null)return'—';if(v>=1e6)return'$'+(v/1e6).toFixed(2)+'M';if(v>=1e3)return'$'+(v/1e3).toFixed(1)+'K';return'$'+v.toFixed(2);}
       tHtml += '<tr style="'+bg+'border-bottom:1px solid var(--border);">';
-      tHtml += '<td style="padding:6px 12px;">'+tx.date+'</td>';
-      tHtml += '<td style="padding:6px 12px;">'+tx.filerName+'</td>';
-      tHtml += '<td style="padding:6px 12px;">'+tx.formType+'</td>';
-      tHtml += '<td style="padding:6px 12px;"><a href="'+(tx.fileUrl||'#')+'" target="_blank" style="color:var(--navy);font-size:11px;">SEC →</a></td>';
+      tHtml += '<td style="padding:6px 10px;">'+tx.reportDate+'</td>';
+      tHtml += '<td style="padding:6px 10px;font-weight:600;">'+tx.filerName+'</td>';
+      tHtml += '<td style="padding:6px 10px;color:var(--text-sec);font-size:10px;">'+tx.role+'</td>';
+      tHtml += '<td style="padding:6px 10px;color:var(--text-sec);font-size:10px;">'+(tx.securityTitle||'—')+'</td>';
+      tHtml += '<td style="padding:6px 10px;font-weight:700;color:'+codeCol+';">'+tx.txType+'</td>';
+      tHtml += '<td style="padding:6px 10px;font-size:10px;color:'+(tx.acquiredDisposed==='A'?C.success:C.danger)+';">'+(tx.acquiredDisposed==='A'?'Acquired':'Disposed')+'</td>';
+      tHtml += '<td style="padding:6px 10px;font-family:monospace;text-align:right;">'+(tx.shares!=null?Number(tx.shares).toLocaleString(undefined,{maximumFractionDigits:0}):'—')+'</td>';
+      tHtml += '<td style="padding:6px 10px;font-family:monospace;text-align:right;">'+(tx.pricePerShare!=null?'$'+tx.pricePerShare.toFixed(2):'—')+'</td>';
+      tHtml += '<td style="padding:6px 10px;font-family:monospace;text-align:right;font-weight:600;color:'+(isOpen?codeCol:C.textSec)+';">'+(tx.value!=null?fmt(tx.value):'—')+'</td>';
+      tHtml += '<td style="padding:6px 10px;font-family:monospace;text-align:right;color:var(--text-sec);">'+(tx.sharesOwnedAfter!=null?Number(tx.sharesOwnedAfter).toLocaleString(undefined,{maximumFractionDigits:0}):'—')+'</td>';
+      tHtml += '<td style="padding:6px 10px;"><a href="'+tx.filingUrl+'" target="_blank" style="color:var(--navy);font-size:10px;">SEC ↗</a></td>';
       tHtml += '</tr>';
     });
-    tHtml += '</tbody></table>';
+    tHtml += '</tbody></table></div>';
     tableEl.innerHTML = tHtml;
-
   } catch(e) {
-    summaryEl.innerHTML = '<p style="color:var(--danger);">Error loading insider data: '+e.message+'</p>';
+    summaryEl.innerHTML = '<div style="color:var(--danger);padding:12px;">Error loading insider data: '+e.message+'.<br><a href="https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=0&type=4&dateb=&owner=include&count=40&search_text=" target="_blank" style="color:var(--navy);">Search EDGAR directly →</a></div>';
     console.error('[insiderLoad]', e);
   }
 }
@@ -15743,11 +15805,11 @@ async function ivLoad(ticker, expiry) {
   var expiryRow = document.getElementById('ivExpiryRow');
   var expirySel = document.getElementById('ivExpirySelect');
   var strikeTableEl = document.getElementById('ivStrikeTable');
-  if (!card) return;
-  card.style.display = '';
-  tickerEl.textContent = ticker;
+  if (!statsEl) return; // card may be in hidden tab — elements still exist in DOM
+  // Don't require card visibility — just update DOM elements; tab will show them when active
+  if (tickerEl) tickerEl.textContent = ticker;
   statsEl.innerHTML = '<div style="padding:10px;"><span class="spinner"></span> Loading options chain for '+ticker+(expiry?' (exp '+expiry+')':'')+'...</div>';
-  wrapEl.style.display = 'none';
+  if (wrapEl) wrapEl.style.display = 'none';
   if (strikeTableEl) strikeTableEl.style.display = 'none';
   try {
     var WORKER = "https://perry-finance-proxy.zachperrybusiness.workers.dev";
@@ -15921,10 +15983,8 @@ var SECTOR_PE = {
 };
 
 async function ivvLoad(ticker, secData){
-  var card = document.getElementById('ivvCard');
   var resEl = document.getElementById('ivvResults');
-  if (!card) return;
-  card.style.display = '';
+  if (!resEl) return;
   resEl.innerHTML = '<div style="padding:14px;text-align:center;"><span class="spinner"></span> Computing intrinsic value via Forward P/E, DCF, and Dividend Discount...</div>';
 
   try {
