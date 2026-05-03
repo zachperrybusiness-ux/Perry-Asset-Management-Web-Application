@@ -1900,7 +1900,6 @@ body.view-mobile .logo-icon { width: 22px !important; height: 22px !important; f
       </div>
       <div class="nav-dropdown">
         <div class="nav-child" data-page="holdings" onclick="navigateTo('holdings')">Manage Holdings</div>
-        <div class="nav-child" data-page="research" onclick="navigateTo('research')">Stock Research</div>
         <div class="nav-child" data-page="themes" onclick="navigateTo('themes')">Portfolio Themes</div>
       </div>
     </div>
@@ -1912,6 +1911,14 @@ body.view-mobile .logo-icon { width: 22px !important; height: 22px !important; f
         <div class="nav-child" data-page="macro" onclick="navigateTo('macro')">Macro Regime Analysis</div>
         <div class="nav-child" data-page="research" onclick="navigateTo('research')">Stock Research &amp; Quant Models</div>
         <div class="nav-child" data-page="markets" onclick="navigateTo('markets')">Cross-Asset Analysis</div>
+      </div>
+    </div>
+    <div class="nav-group">
+      <div class="nav-parent" data-page="backtest" onclick="navigateTo('backtest')">
+        Backtesting <span class="arrow">&#9660;</span>
+      </div>
+      <div class="nav-dropdown">
+        <div class="nav-child" data-page="backtest" onclick="navigateTo('backtest')">Strategy Backtesting</div>
       </div>
     </div>
   </div>
@@ -4462,6 +4469,80 @@ body.view-mobile .logo-icon { width: 22px !important; height: 22px !important; f
 </div>
 
 
+
+<!-- ═══════════ STRATEGY BACKTESTING ═══════════ -->
+<div class="page" id="page-backtest">
+  <div class="content-wrap">
+    <div class="hero" style="padding:32px 40px;">
+      <h1>Strategy Backtesting</h1>
+      <p>Test rule-based investment strategies against historical price data. Define entry/exit conditions, position sizing, and rebalancing rules — then run the simulation to see drawdowns, returns, Sharpe ratio, and a full trade log. Start with a built-in strategy or build your own.</p>
+    </div>
+
+    <!-- Strategy selector -->
+    <div class="card" style="margin-bottom:14px;">
+      <div class="card-title">Select Strategy</div>
+      <div class="card-body">
+        <div style="display:flex;gap:10px;flex-wrap:wrap;">
+          <button class="btn" onclick="btLoadStrategy('lvm')" id="btStratBtn_lvm">⚡ Leveraged Volatility Management</button>
+          <button class="btn-outline" onclick="btLoadStrategy('dca')" id="btStratBtn_dca">📅 Systematic DCA</button>
+          <button class="btn-outline" onclick="btLoadStrategy('momentum')" id="btStratBtn_momentum">📈 Dual Momentum</button>
+          <button class="btn-outline" onclick="btLoadStrategy('custom')" id="btStratBtn_custom">🔧 Custom Strategy</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Strategy configuration panel (populated by btLoadStrategy) -->
+    <div id="btConfigPanel"></div>
+
+    <!-- Run button row -->
+    <div id="btRunRow" style="display:none;margin-bottom:14px;">
+      <button class="btn" id="btRunBtn" onclick="btRun()" style="font-size:14px;padding:10px 28px;">▶ Run Backtest</button>
+      <span id="btRunStatus" style="font-size:12px;color:var(--text-sec);margin-left:12px;align-self:center;"></span>
+    </div>
+
+    <!-- Results -->
+    <div id="btResults" style="display:none;">
+      <!-- KPI row -->
+      <div id="btKPIRow" style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:14px;"></div>
+      <!-- Equity curve -->
+      <div class="card" style="margin-bottom:14px;">
+        <div class="card-title">Equity Curve</div>
+        <div class="card-body">
+          <div class="chart-wrap" style="height:380px;"><canvas id="btEquityChart"></canvas></div>
+        </div>
+      </div>
+      <!-- Drawdown chart -->
+      <div class="card" style="margin-bottom:14px;">
+        <div class="card-title">Drawdown (Underwater Chart)</div>
+        <div class="card-body">
+          <div class="chart-wrap" style="height:200px;"><canvas id="btDrawdownChart"></canvas></div>
+        </div>
+      </div>
+      <!-- Position / exposure over time -->
+      <div class="card" style="margin-bottom:14px;">
+        <div class="card-title">Portfolio Exposure Over Time</div>
+        <div class="card-body">
+          <div class="chart-wrap" style="height:220px;"><canvas id="btExposureChart"></canvas></div>
+        </div>
+      </div>
+      <!-- Trade log -->
+      <div class="card">
+        <div class="card-title">Trade Log</div>
+        <div class="card-body" style="padding:0;">
+          <div id="btTradeLog" style="overflow-x:auto;max-height:400px;overflow-y:auto;"></div>
+        </div>
+        <div class="card-sources">
+          <strong>Data:</strong> Daily OHLCV from Yahoo Finance via Cloudflare Worker.
+          <strong>Methodology:</strong> End-of-day signal evaluation; trades execute at next-day open price.
+          Dividends not included. Slippage/commissions not modeled (add 0.1% round-trip for realistic estimate).
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+
 <!-- ═══════════ COMMAND PALETTE ═══════════ -->
 <div class="cmdk-overlay" id="cmdkOverlay" onclick="if(event.target===this)closeCmdK()">
   <div class="cmdk-box">
@@ -5552,7 +5633,12 @@ function navigateTo(p) {
     // Re-run briefing every time home is visited
     setTimeout(function(){ if (typeof briefingLoad === 'function') briefingLoad(); }, 100);
   }
-  if (p === 'resources' && typeof resourcesInit === 'function') resourcesInit();
+  if (p === 'backtest') {
+    if (typeof btPageInit === 'function' && !window._btInited) {
+      window._btInited = true;
+      setTimeout(btPageInit, 100);
+    }
+  }
   if (p === 'markets') {
     // Show Top-Line tab as the default landing view
     if (typeof caShowTab === 'function') caShowTab('topline');
@@ -14602,7 +14688,963 @@ function resPeerAutoDetect() {
   resPeerRun();
 }
 
-// ═══════════ END MARKETS PAGE ═══════════
+// ═══════════════════════════════════════════════════════════════════════
+// STRATEGY BACKTESTING ENGINE
+// Supports rule-based strategies evaluated against daily historical prices.
+// Data: Yahoo Finance via Cloudflare Worker (/chart endpoint).
+// Signal evaluation: end-of-day. Execution: next-day open price.
+// ═══════════════════════════════════════════════════════════════════════
+
+var BT_STATE = {
+  strategyId: null,
+  config: {},
+  data: {},     // { ticker: [{date, open, high, low, close, volume},...] }
+  results: null
+};
+
+var BT_CHARTS = {};
+
+// ── Strategy registry ──────────────────────────────────────────────────────
+var BT_STRATEGIES = {
+
+  lvm: {
+    name: 'Leveraged Volatility Management',
+    description: 'Enters leveraged ETFs when QQQ draws down 15%+ from its ATH AND VIX > 30. Exits back into unleveraged positions progressively as QQQ recovers: rotates 20% of portfolio into QQQ/SPY each time QQQ rises 5% above its ATH.',
+    tickers: ['QQQ','VIX','TQQQ','SPXL','TECL','SOXL','SPY'],
+    configHTML: `
+      <div class="card" style="margin-bottom:14px;">
+        <div class="card-title">⚡ Leveraged Volatility Management — Configuration</div>
+        <div class="card-body">
+          <p style="font-size:12px;color:var(--text-sec);margin-bottom:14px;">
+            <strong>Entry signal:</strong> QQQ drops ≥ X% from rolling all-time-high AND VIX closes above Y.<br>
+            <strong>Position:</strong> Allocate portfolio across leveraged ETFs in specified weights.<br>
+            <strong>Exit/de-lever:</strong> Once QQQ reclaims ATH, rotate Z% of portfolio → QQQ + SPY every time QQQ goes another W% above ATH.
+          </p>
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin-bottom:14px;">
+            <div class="form-group">
+              <label>Entry: QQQ Drawdown Threshold</label>
+              <div style="display:flex;align-items:center;gap:6px;">
+                <input type="range" id="bt_dd_thresh" min="5" max="40" value="15" step="1" oninput="document.getElementById('bt_dd_val').textContent=this.value+'%'" style="flex:1;">
+                <span id="bt_dd_val" style="font-weight:700;min-width:36px;">15%</span>
+              </div>
+            </div>
+            <div class="form-group">
+              <label>Entry: VIX Threshold</label>
+              <div style="display:flex;align-items:center;gap:6px;">
+                <input type="range" id="bt_vix_thresh" min="18" max="50" value="30" step="1" oninput="document.getElementById('bt_vix_val').textContent=this.value" style="flex:1;">
+                <span id="bt_vix_val" style="font-weight:700;min-width:36px;">30</span>
+              </div>
+            </div>
+            <div class="form-group">
+              <label>Backtest Period</label>
+              <select id="bt_period">
+                <option value="5y" selected>5 Years</option>
+                <option value="10y">10 Years</option>
+                <option value="15y">15 Years (max)</option>
+              </select>
+            </div>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px;">
+            <div class="form-group">
+              <label>De-lever trigger: QQQ % above ATH</label>
+              <div style="display:flex;align-items:center;gap:6px;">
+                <input type="range" id="bt_delever_step" min="2" max="15" value="5" step="1" oninput="document.getElementById('bt_delever_val').textContent=this.value+'%'" style="flex:1;">
+                <span id="bt_delever_val" style="font-weight:700;min-width:36px;">5%</span>
+              </div>
+            </div>
+            <div class="form-group">
+              <label>De-lever amount per trigger</label>
+              <div style="display:flex;align-items:center;gap:6px;">
+                <input type="range" id="bt_delever_pct" min="5" max="50" value="20" step="5" oninput="document.getElementById('bt_delever_pct_val').textContent=this.value+'%'" style="flex:1;">
+                <span id="bt_delever_pct_val" style="font-weight:700;min-width:36px;">20%</span>
+              </div>
+            </div>
+          </div>
+          <div style="margin-bottom:14px;">
+            <label style="font-size:11px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:var(--text-sec);display:block;margin-bottom:8px;">Leveraged ETF Weights (must sum to 100%)</label>
+            <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:8px;" id="bt_lev_weights">
+              <div class="form-group" style="margin:0;">
+                <label>TQQQ (3× QQQ)</label>
+                <div style="display:flex;align-items:center;gap:6px;">
+                  <input type="range" id="bt_w_TQQQ" min="0" max="100" value="40" step="5" oninput="btUpdateWeightSum()" style="flex:1;">
+                  <span id="bt_wv_TQQQ" style="font-weight:700;min-width:36px;">40%</span>
+                </div>
+              </div>
+              <div class="form-group" style="margin:0;">
+                <label>SPXL (3× S&amp;P 500)</label>
+                <div style="display:flex;align-items:center;gap:6px;">
+                  <input type="range" id="bt_w_SPXL" min="0" max="100" value="25" step="5" oninput="btUpdateWeightSum()" style="flex:1;">
+                  <span id="bt_wv_SPXL" style="font-weight:700;min-width:36px;">25%</span>
+                </div>
+              </div>
+              <div class="form-group" style="margin:0;">
+                <label>TECL (3× Tech)</label>
+                <div style="display:flex;align-items:center;gap:6px;">
+                  <input type="range" id="bt_w_TECL" min="0" max="100" value="20" step="5" oninput="btUpdateWeightSum()" style="flex:1;">
+                  <span id="bt_wv_TECL" style="font-weight:700;min-width:36px;">20%</span>
+                </div>
+              </div>
+              <div class="form-group" style="margin:0;">
+                <label>SOXL (3× Semis)</label>
+                <div style="display:flex;align-items:center;gap:6px;">
+                  <input type="range" id="bt_w_SOXL" min="0" max="100" value="15" step="5" oninput="btUpdateWeightSum()" style="flex:1;">
+                  <span id="bt_wv_SOXL" style="font-weight:700;min-width:36px;">15%</span>
+                </div>
+              </div>
+            </div>
+            <div id="bt_weight_sum_msg" style="font-size:12px;margin-top:6px;font-weight:600;"></div>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;">
+            <div class="form-group">
+              <label>Starting Capital ($)</label>
+              <input type="number" id="bt_capital" value="100000" step="10000" min="1000">
+            </div>
+            <div class="form-group">
+              <label>Cash / Uninvested Yield (% annual)</label>
+              <input type="number" id="bt_cash_yield" value="4.5" step="0.1" min="0" max="10">
+            </div>
+            <div class="form-group">
+              <label>Benchmark</label>
+              <select id="bt_benchmark">
+                <option value="QQQ" selected>QQQ (Nasdaq 100)</option>
+                <option value="SPY">SPY (S&amp;P 500)</option>
+                <option value="TQQQ">TQQQ (3× QQQ B&amp;H)</option>
+              </select>
+            </div>
+          </div>
+        </div>
+        <div class="card-sources">
+          <strong>Strategy logic:</strong> Entry = QQQ closes at least X% below its rolling all-time-high (since backtest start) AND VIX closes above Y, both conditions must be true on the same day. Leveraged position held until QQQ reclaims ATH. De-leveraging: each time QQQ closes W% above ATH, rotate Z% of total portfolio value from leveraged ETFs → 50/50 QQQ+SPY. Cash earns configurable yield. Prices: Yahoo Finance daily OHLCV. VIX: ^VIX via Yahoo Finance.
+        </div>
+      </div>`,
+    run: btRunLVM
+  },
+
+  dca: {
+    name: 'Systematic Dollar-Cost Averaging',
+    description: 'Invest a fixed amount into selected tickers on a regular schedule (monthly/weekly), with optional VIX-based boost.',
+    tickers: ['SPY','QQQ'],
+    configHTML: `
+      <div class="card" style="margin-bottom:14px;">
+        <div class="card-title">📅 Systematic DCA — Configuration</div>
+        <div class="card-body">
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin-bottom:14px;">
+            <div class="form-group"><label>Ticker</label><input type="text" id="bt_dca_ticker" value="SPY" style="text-transform:uppercase;width:100%;"></div>
+            <div class="form-group"><label>Invest Amount ($ per period)</label><input type="number" id="bt_dca_amount" value="1000" min="100"></div>
+            <div class="form-group"><label>Frequency</label>
+              <select id="bt_dca_freq"><option value="monthly" selected>Monthly</option><option value="weekly">Weekly</option><option value="quarterly">Quarterly</option></select>
+            </div>
+            <div class="form-group"><label>Backtest Period</label>
+              <select id="bt_period"><option value="5y" selected>5 Years</option><option value="10y">10 Years</option><option value="15y">15 Years</option></select>
+            </div>
+            <div class="form-group"><label>Benchmark</label>
+              <select id="bt_benchmark"><option value="SPY" selected>SPY Lump Sum</option><option value="QQQ">QQQ Lump Sum</option></select>
+            </div>
+          </div>
+          <div class="form-group">
+            <label style="display:flex;align-items:center;gap:8px;">
+              <input type="checkbox" id="bt_dca_vix_boost"> VIX Boost: Double investment when VIX &gt; 30
+            </label>
+          </div>
+        </div>
+      </div>`,
+    run: btRunDCA
+  },
+
+  momentum: {
+    name: 'Dual Momentum (Gary Antonacci)',
+    description: 'Absolute + relative momentum. Each month: if SPY 12M return > T-Bill, hold SPY or QQQ (whichever has higher 12M return). Else hold AGG (bonds).',
+    tickers: ['SPY','QQQ','AGG','SHY'],
+    configHTML: `
+      <div class="card" style="margin-bottom:14px;">
+        <div class="card-title">📈 Dual Momentum — Configuration</div>
+        <div class="card-body">
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;">
+            <div class="form-group"><label>Lookback (months)</label>
+              <select id="bt_mom_lookback"><option value="6">6M</option><option value="12" selected>12M</option><option value="3">3M</option></select>
+            </div>
+            <div class="form-group"><label>Risk-Off Asset</label>
+              <select id="bt_mom_riskoff"><option value="AGG" selected>AGG (Bonds)</option><option value="SHY">SHY (Short Bonds)</option><option value="CASH">Cash</option></select>
+            </div>
+            <div class="form-group"><label>Starting Capital ($)</label>
+              <input type="number" id="bt_capital" value="100000" step="10000"></div>
+            <div class="form-group"><label>Backtest Period</label>
+              <select id="bt_period"><option value="5y" selected>5 Years</option><option value="10y">10 Years</option><option value="15y">15 Years</option></select>
+            </div>
+            <div class="form-group"><label>Benchmark</label>
+              <select id="bt_benchmark"><option value="SPY" selected>SPY Buy &amp; Hold</option><option value="QQQ">QQQ B&amp;H</option></select>
+            </div>
+          </div>
+        </div>
+        <div class="card-sources"><strong>Reference:</strong> Antonacci (2012) "Risk Premia Harvesting Through Dual Momentum".</div>
+      </div>`,
+    run: btRunMomentum
+  },
+
+  custom: {
+    name: 'Custom Strategy',
+    description: 'Define your own entry/exit rules using simple conditions.',
+    tickers: [],
+    configHTML: `
+      <div class="card" style="margin-bottom:14px;">
+        <div class="card-title">🔧 Custom Strategy Builder</div>
+        <div class="card-body">
+          <p style="font-size:12px;color:var(--text-sec);margin-bottom:12px;">Define a primary asset, an entry condition, and an exit condition. Supports moving average crossovers, RSI thresholds, and drawdown triggers.</p>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px;">
+            <div class="form-group"><label>Primary Asset</label><input type="text" id="bt_cust_ticker" value="SPY" style="text-transform:uppercase;width:100%;"></div>
+            <div class="form-group"><label>Benchmark</label><input type="text" id="bt_benchmark" value="SPY" style="text-transform:uppercase;width:100%;"></div>
+            <div class="form-group"><label>Starting Capital ($)</label><input type="number" id="bt_capital" value="100000" step="10000"></div>
+            <div class="form-group"><label>Backtest Period</label>
+              <select id="bt_period"><option value="5y" selected>5 Years</option><option value="10y">10 Years</option></select>
+            </div>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px;">
+            <div class="form-group">
+              <label>Entry Condition</label>
+              <select id="bt_cust_entry">
+                <option value="ma_cross_up">Price crosses above 50D MA</option>
+                <option value="ma200_cross_up">Price crosses above 200D MA</option>
+                <option value="rsi_oversold">RSI(14) crosses above 30</option>
+                <option value="dd_entry">Drawdown from ATH exceeds 15%</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Exit Condition</label>
+              <select id="bt_cust_exit">
+                <option value="ma_cross_down">Price crosses below 50D MA</option>
+                <option value="ma200_cross_down">Price crosses below 200D MA</option>
+                <option value="rsi_overbought">RSI(14) crosses above 70</option>
+                <option value="dd_exit">Return to ATH</option>
+              </select>
+            </div>
+          </div>
+        </div>
+      </div>`,
+    run: btRunCustom
+  }
+};
+
+// ── Strategy loader ─────────────────────────────────────────────────────────
+function btLoadStrategy(id) {
+  BT_STATE.strategyId = id;
+  var strat = BT_STRATEGIES[id];
+  if (!strat) return;
+
+  // Highlight active button
+  Object.keys(BT_STRATEGIES).forEach(function(k) {
+    var btn = document.getElementById('btStratBtn_' + k);
+    if (btn) { btn.className = k === id ? 'btn' : 'btn-outline'; }
+  });
+
+  document.getElementById('btConfigPanel').innerHTML = strat.configHTML;
+  document.getElementById('btRunRow').style.display = 'flex';
+  document.getElementById('btRunRow').style.alignItems = 'center';
+  document.getElementById('btResults').style.display = 'none';
+  document.getElementById('btRunStatus').textContent = '';
+
+  if (id === 'lvm') btUpdateWeightSum();
+}
+
+function btUpdateWeightSum() {
+  var tickers = ['TQQQ','SPXL','TECL','SOXL'];
+  var total = 0;
+  tickers.forEach(function(t) {
+    var el = document.getElementById('bt_w_' + t);
+    var val = el ? parseInt(el.value) : 0;
+    var labelEl = document.getElementById('bt_wv_' + t);
+    if (labelEl) labelEl.textContent = val + '%';
+    total += val;
+  });
+  var msg = document.getElementById('bt_weight_sum_msg');
+  if (msg) {
+    msg.textContent = 'Total: ' + total + '%';
+    msg.style.color = total === 100 ? C.success : C.danger;
+  }
+}
+
+// ── Shared: fetch daily price series ───────────────────────────────────────
+async function btFetchPrices(ticker, period) {
+  var WORKER = 'https://perry-finance-proxy.zachperrybusiness.workers.dev';
+  var vixTicker = ticker === '^VIX' ? '%5EVIX' : encodeURIComponent(ticker);
+  var res = await fetch(WORKER + '/chart?symbol=' + vixTicker + '&range=' + period + '&interval=1d');
+  var d = await res.json();
+  if (d.error) throw new Error('Price fetch failed for ' + ticker + ': ' + d.error);
+  return (d.points || []).filter(function(p) { return p.close != null; }).map(function(p) {
+    return { date: p.date.slice(0, 10), open: p.open || p.close, close: p.close };
+  });
+}
+
+// ── Shared: build date-aligned price map ───────────────────────────────────
+function btAlignPrices(seriesMap) {
+  // seriesMap: { ticker: [{date, open, close},...] }
+  // Returns { dates:[], prices:{ ticker: {date: {open,close}} } }
+  var allDates = new Set();
+  Object.values(seriesMap).forEach(function(pts) {
+    pts.forEach(function(p) { allDates.add(p.date); });
+  });
+  var dates = Array.from(allDates).sort();
+  var prices = {};
+  Object.entries(seriesMap).forEach(function([tk, pts]) {
+    prices[tk] = {};
+    pts.forEach(function(p) { prices[tk][p.date] = p; });
+  });
+  return { dates: dates, prices: prices };
+}
+
+// ── Shared: render KPI cards ────────────────────────────────────────────────
+function btRenderKPI(kpis) {
+  var el = document.getElementById('btKPIRow');
+  if (!el) return;
+  el.innerHTML = kpis.map(function(k) {
+    var col = k.color || C.navy;
+    return '<div style="background:var(--bg);border:1px solid var(--border);border-top:3px solid '+col+';border-radius:4px;padding:12px 16px;flex:1;min-width:130px;">'
+      + '<div style="font-size:10px;text-transform:uppercase;letter-spacing:.6px;color:var(--text-sec);">'+k.label+'</div>'
+      + '<div style="font-size:22px;font-weight:800;color:'+col+';">'+k.value+'</div>'
+      + (k.sub ? '<div style="font-size:10px;color:var(--text-sec);">'+k.sub+'</div>' : '')
+      + '</div>';
+  }).join('');
+}
+
+// ── Shared: render equity + drawdown + exposure charts ─────────────────────
+function btRenderCharts(dates, stratEquity, benchEquity, exposureData, stratLabel, benchLabel) {
+  document.getElementById('btResults').style.display = '';
+
+  // Equity curve
+  var ec = document.getElementById('btEquityChart');
+  if (ec) {
+    if (BT_CHARTS.equity) BT_CHARTS.equity.destroy();
+    BT_CHARTS.equity = new Chart(ec.getContext('2d'), {
+      type: 'line',
+      data: { labels: dates, datasets: [
+        { label: stratLabel, data: stratEquity, borderColor: C.success, borderWidth: 2, pointRadius: 0, fill: false, tension: 0.1 },
+        { label: benchLabel + ' (B&H)', data: benchEquity, borderColor: C.navy, borderWidth: 1.5, borderDash: [5,3], pointRadius: 0, fill: false, tension: 0.1 }
+      ]},
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { display: true, labels: { font: { size: 11 } } }, tooltip: chartTooltip },
+        scales: {
+          x: { grid: chartGrid, ticks: Object.assign({}, chartTicks, { maxTicksLimit: 10, font: { size: 9 }, autoSkip: true }) },
+          y: { grid: chartGrid, ticks: Object.assign({}, chartTicks, { callback: function(v) { return '$' + (v/1000).toFixed(0) + 'K'; }, font: { size: 9 } }) }
+        }
+      }
+    });
+  }
+
+  // Drawdown
+  function toDrawdown(equity) {
+    var peak = -Infinity, dd = [];
+    equity.forEach(function(v) { peak = Math.max(peak, v); dd.push(v > 0 ? (v - peak) / peak * 100 : 0); });
+    return dd;
+  }
+  var stratDD = toDrawdown(stratEquity);
+  var benchDD = toDrawdown(benchEquity);
+  var dc = document.getElementById('btDrawdownChart');
+  if (dc) {
+    if (BT_CHARTS.drawdown) BT_CHARTS.drawdown.destroy();
+    BT_CHARTS.drawdown = new Chart(dc.getContext('2d'), {
+      type: 'line',
+      data: { labels: dates, datasets: [
+        { label: stratLabel + ' DD', data: stratDD, borderColor: C.danger, borderWidth: 1.5, pointRadius: 0, fill: true, backgroundColor: 'rgba(139,42,42,0.12)', tension: 0.1 },
+        { label: benchLabel + ' DD', data: benchDD, borderColor: '#8B6914', borderWidth: 1, borderDash: [4,3], pointRadius: 0, fill: false, tension: 0.1 }
+      ]},
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { display: true, labels: { font: { size: 11 } } }, tooltip: chartTooltip },
+        scales: {
+          x: { grid: chartGrid, ticks: Object.assign({}, chartTicks, { maxTicksLimit: 10, font: { size: 9 }, autoSkip: true }) },
+          y: { grid: chartGrid, ticks: Object.assign({}, chartTicks, { callback: function(v) { return v.toFixed(1) + '%'; }, font: { size: 9 } }), suggestedMax: 0 }
+        }
+      }
+    });
+  }
+
+  // Exposure
+  if (exposureData && exposureData.datasets && exposureData.datasets.length) {
+    var xc = document.getElementById('btExposureChart');
+    if (xc) {
+      if (BT_CHARTS.exposure) BT_CHARTS.exposure.destroy();
+      BT_CHARTS.exposure = new Chart(xc.getContext('2d'), {
+        type: 'line',
+        data: { labels: dates, datasets: exposureData.datasets },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          plugins: { legend: { display: true, labels: { font: { size: 10 } } }, tooltip: chartTooltip },
+          scales: {
+            x: { grid: chartGrid, ticks: Object.assign({}, chartTicks, { maxTicksLimit: 10, font: { size: 9 }, autoSkip: true }) },
+            y: { grid: chartGrid, ticks: Object.assign({}, chartTicks, { callback: function(v) { return v + '%'; }, font: { size: 9 } }), min: 0, max: 100 }
+          }
+        }
+      });
+    }
+  }
+}
+
+// ── Shared: render trade log ────────────────────────────────────────────────
+function btRenderTradeLog(trades) {
+  var el = document.getElementById('btTradeLog');
+  if (!el) return;
+  if (!trades.length) { el.innerHTML = '<p style="padding:16px;color:var(--text-sec);">No trades generated.</p>'; return; }
+  var h = '<table style="width:100%;font-size:11.5px;border-collapse:collapse;white-space:nowrap;">';
+  h += '<thead><tr style="background:var(--navy);color:#fff;position:sticky;top:0;">';
+  ['Date','Action','Ticker','Shares','Price','Value','Portfolio Value','Notes'].forEach(function(col) {
+    h += '<th style="padding:7px 10px;text-align:left;">'+col+'</th>';
+  });
+  h += '</tr></thead><tbody>';
+  trades.forEach(function(t, i) {
+    var isBuy = t.action && t.action.includes('BUY');
+    var col = isBuy ? C.success : t.action && t.action.includes('SELL') ? C.danger : '#8B6914';
+    var bg = i%2===0?'':'background:rgba(0,0,0,0.02);';
+    h += '<tr style="'+bg+'border-bottom:1px solid var(--border);border-left:3px solid '+col+';">';
+    h += '<td style="padding:6px 10px;font-family:monospace;">'+t.date+'</td>';
+    h += '<td style="padding:6px 10px;font-weight:700;color:'+col+';">'+t.action+'</td>';
+    h += '<td style="padding:6px 10px;font-weight:600;">'+(t.ticker||'—')+'</td>';
+    h += '<td style="padding:6px 10px;font-family:monospace;text-align:right;">'+(t.shares!=null?t.shares.toLocaleString(undefined,{maximumFractionDigits:2}):'—')+'</td>';
+    h += '<td style="padding:6px 10px;font-family:monospace;text-align:right;">'+(t.price!=null?'$'+t.price.toFixed(2):'—')+'</td>';
+    h += '<td style="padding:6px 10px;font-family:monospace;text-align:right;font-weight:600;color:'+col+';">'+(t.value!=null?'$'+t.value.toLocaleString(undefined,{maximumFractionDigits:0}):'—')+'</td>';
+    h += '<td style="padding:6px 10px;font-family:monospace;text-align:right;">'+(t.portfolio!=null?'$'+t.portfolio.toLocaleString(undefined,{maximumFractionDigits:0}):'—')+'</td>';
+    h += '<td style="padding:6px 10px;font-size:10.5px;color:var(--text-sec);">'+(t.notes||'')+'</td>';
+    h += '</tr>';
+  });
+  h += '</tbody></table>';
+  el.innerHTML = h;
+}
+
+// ── Shared: compute statistics ─────────────────────────────────────────────
+function btStats(equity, benchEquity, capital) {
+  if (!equity.length) return {};
+  var finalVal = equity[equity.length-1];
+  var totalReturn = (finalVal - capital) / capital * 100;
+  var years = equity.length / 252;
+
+  // CAGR
+  var cagr = years > 0 ? (Math.pow(finalVal / capital, 1 / years) - 1) * 100 : 0;
+
+  // Max drawdown
+  var peak = -Infinity, maxDD = 0;
+  equity.forEach(function(v) {
+    peak = Math.max(peak, v);
+    var dd = (v - peak) / peak * 100;
+    maxDD = Math.min(maxDD, dd);
+  });
+
+  // Daily returns → Sharpe (annualized, rf=4%)
+  var rf_daily = 0.04 / 252;
+  var dailyRets = [];
+  for (var i = 1; i < equity.length; i++) {
+    if (equity[i-1] > 0) dailyRets.push(equity[i] / equity[i-1] - 1);
+  }
+  var meanRet = dailyRets.reduce(function(s,v){return s+v;},0) / Math.max(1,dailyRets.length);
+  var variance = dailyRets.reduce(function(s,v){return s+(v-meanRet)*(v-meanRet);},0) / Math.max(1,dailyRets.length-1);
+  var sharpe = variance > 0 ? (meanRet - rf_daily) / Math.sqrt(variance) * Math.sqrt(252) : 0;
+
+  // Sortino (downside std only)
+  var downRets = dailyRets.filter(function(r){return r < rf_daily;});
+  var downVar = downRets.reduce(function(s,v){return s+(v-rf_daily)*(v-rf_daily);},0) / Math.max(1,downRets.length-1);
+  var sortino = downVar > 0 ? (meanRet - rf_daily) / Math.sqrt(downVar) * Math.sqrt(252) : 0;
+
+  // Calmar
+  var calmar = maxDD !== 0 ? cagr / Math.abs(maxDD) : 0;
+
+  // Benchmark comparison
+  var benchReturn = benchEquity.length ? (benchEquity[benchEquity.length-1] - capital) / capital * 100 : null;
+  var alpha = benchReturn != null ? totalReturn - benchReturn : null;
+
+  // Win rate (monthly)
+  var monthlyRets = [];
+  for (var m = 21; m < equity.length; m += 21) {
+    if (equity[m-21] > 0) monthlyRets.push(equity[m] / equity[m-21] - 1);
+  }
+  var winRate = monthlyRets.length ? monthlyRets.filter(function(r){return r > 0;}).length / monthlyRets.length * 100 : null;
+
+  return {
+    totalReturn: totalReturn.toFixed(1),
+    cagr: cagr.toFixed(2),
+    maxDD: maxDD.toFixed(1),
+    sharpe: sharpe.toFixed(2),
+    sortino: sortino.toFixed(2),
+    calmar: calmar.toFixed(2),
+    finalVal: finalVal,
+    benchReturn: benchReturn != null ? benchReturn.toFixed(1) : null,
+    alpha: alpha != null ? alpha.toFixed(1) : null,
+    winRate: winRate != null ? winRate.toFixed(1) : null,
+    years: years.toFixed(1)
+  };
+}
+
+// ── STRATEGY 1: Leveraged Volatility Management ───────────────────────────
+async function btRunLVM() {
+  var status = document.getElementById('btRunStatus');
+  var btn = document.getElementById('btRunBtn');
+  btn.disabled = true; status.textContent = 'Fetching historical data…';
+
+  try {
+    var ddThresh  = parseFloat(document.getElementById('bt_dd_thresh').value) / 100;
+    var vixThresh = parseFloat(document.getElementById('bt_vix_thresh').value);
+    var period    = document.getElementById('bt_period').value;
+    var capital   = parseFloat(document.getElementById('bt_capital').value) || 100000;
+    var cashYield = parseFloat(document.getElementById('bt_cash_yield').value) / 100 / 252;
+    var deleverStep = parseFloat(document.getElementById('bt_delever_step').value) / 100;
+    var deleverPct  = parseFloat(document.getElementById('bt_delever_pct').value) / 100;
+    var benchTicker = document.getElementById('bt_benchmark').value;
+
+    var levTickers = ['TQQQ','SPXL','TECL','SOXL'];
+    var weights = {};
+    var total = 0;
+    levTickers.forEach(function(t) {
+      var w = parseFloat(document.getElementById('bt_w_' + t).value) / 100;
+      weights[t] = w; total += w;
+    });
+    if (Math.abs(total - 1.0) > 0.01) {
+      status.textContent = 'Weights must sum to 100%'; btn.disabled = false; return;
+    }
+
+    // Fetch all needed price series
+    status.textContent = 'Loading QQQ, VIX, leveraged ETF data…';
+    var allTickers = ['QQQ','^VIX'].concat(levTickers).concat(['SPY', benchTicker]);
+    var unique = allTickers.filter(function(t,i,a){return a.indexOf(t)===i;});
+    var seriesMap = {};
+    for (var ti = 0; ti < unique.length; ti++) {
+      status.textContent = 'Fetching ' + unique[ti] + ' (' + (ti+1) + '/' + unique.length + ')…';
+      try { seriesMap[unique[ti]] = await btFetchPrices(unique[ti], period); }
+      catch(e) { seriesMap[unique[ti]] = []; }
+    }
+
+    // Align on QQQ dates as master calendar (QQQ and VIX must both exist)
+    var qqqPts = seriesMap['QQQ'] || [];
+    var vixMap = {}; (seriesMap['^VIX']||[]).forEach(function(p){vixMap[p.date]=p.close;});
+    var priceMap = {};
+    unique.forEach(function(t) {
+      priceMap[t] = {};
+      (seriesMap[t]||[]).forEach(function(p){priceMap[t][p.date]={open:p.open||p.close,close:p.close};});
+    });
+
+    // Forward-fill prices so no gaps on non-trading days for leveraged ETFs
+    // (SOXL/TECL may have fewer trading days early in history)
+    var dates = qqqPts.map(function(p){return p.date;});
+
+    // ── Simulation loop ───────────────────────────────────────────────
+    var portfolio = capital;      // total portfolio value
+    var cash = capital;           // starts fully in cash
+    // holdings: { ticker: shares }
+    var holdings = {};
+    levTickers.forEach(function(t){holdings[t]=0;});
+    holdings['QQQ'] = 0; holdings['SPY'] = 0;
+
+    // Track state
+    var inPosition = false;       // true = leveraged position active
+    var ath = -Infinity;          // QQQ all-time-high (running)
+    var athAtEntry = null;        // QQQ ATH at time of entry
+    var deleverLevels = [];       // 5% above ATH triggers fired
+    var benchShares = capital / (priceMap[benchTicker][dates[0]]?.close || 1);
+
+    var equityCurve = [], benchCurve = [], tradeLog = [];
+    var exposureLev = [], exposureUnlev = [], exposureCash = [];
+
+    var prevPrices = {};          // last known price per ticker
+
+    for (var di = 0; di < dates.length; di++) {
+      var d = dates[di];
+      var qqqClose = priceMap['QQQ'][d]?.close;
+      var vixClose = vixMap[d];
+      if (!qqqClose) continue;
+
+      // Update last known prices
+      unique.forEach(function(t){
+        if (priceMap[t][d]?.close) prevPrices[t] = priceMap[t][d].close;
+      });
+
+      // Update ATH
+      ath = Math.max(ath, qqqClose);
+
+      // ── Compute portfolio value (mark-to-market) ──
+      var levVal = 0, unlevVal = 0;
+      levTickers.forEach(function(t){
+        var px = prevPrices[t] || 0;
+        levVal += holdings[t] * px;
+      });
+      unlevVal += holdings['QQQ'] * (prevPrices['QQQ'] || 0);
+      unlevVal += holdings['SPY'] * (prevPrices['SPY'] || 0);
+      portfolio = levVal + unlevVal + cash;
+
+      // Cash earns daily yield
+      cash *= (1 + cashYield);
+      portfolio = levVal + unlevVal + cash;
+
+      // ── Entry signal ─────────────────────────────────────────────
+      if (!inPosition && vixClose != null) {
+        var drawdown = (qqqClose - ath) / ath;
+        if (drawdown <= -ddThresh && vixClose >= vixThresh) {
+          // ENTER: buy leveraged ETFs
+          // Execute at next day's open
+          var execDate = di + 1 < dates.length ? dates[di+1] : d;
+          var investAmt = portfolio;
+          levTickers.forEach(function(t) {
+            var execPx = priceMap[t][execDate]?.open || prevPrices[t] || 0;
+            if (execPx > 0 && weights[t] > 0) {
+              var dollarAmt = investAmt * weights[t];
+              var shares = dollarAmt / execPx;
+              holdings[t] += shares;
+              cash -= dollarAmt;
+              tradeLog.push({ date: execDate, action: 'BUY', ticker: t,
+                shares: shares, price: execPx, value: dollarAmt, portfolio: portfolio,
+                notes: 'Entry: QQQ DD=' + (drawdown*100).toFixed(1) + '% VIX=' + vixClose.toFixed(1) });
+            }
+          });
+          inPosition = true;
+          athAtEntry = ath;
+          deleverLevels = [];
+          for (var lv = 1; lv <= Math.ceil(1 / deleverStep); lv++) {
+            deleverLevels.push(athAtEntry * (1 + lv * deleverStep));
+          }
+        }
+      }
+
+      // ── De-lever triggers (progressive exit as QQQ rises above ATH) ──
+      if (inPosition && qqqClose >= athAtEntry) {
+        var levelsToFire = deleverLevels.filter(function(lvl){return qqqClose >= lvl;});
+        levelsToFire.forEach(function(lvl) {
+          deleverLevels = deleverLevels.filter(function(l){return l !== lvl;});
+          // Sell deleverPct of each leveraged position
+          var execDate2 = di + 1 < dates.length ? dates[di+1] : d;
+          var totalPortVal = levVal + unlevVal + cash;
+          var sellAmt = totalPortVal * deleverPct;
+          // Sell proportionally from leveraged holdings
+          var levValNow = levTickers.reduce(function(s,t){return s+holdings[t]*(prevPrices[t]||0);},0);
+          if (levValNow > 0) {
+            levTickers.forEach(function(t) {
+              var tVal = holdings[t] * (prevPrices[t]||0);
+              var sellFraction = Math.min(1, sellAmt * (tVal/levValNow) / Math.max(0.01, tVal));
+              var sharesToSell = holdings[t] * sellFraction;
+              var execPx = priceMap[t][execDate2]?.open || prevPrices[t] || 0;
+              if (sharesToSell > 0.001 && execPx > 0) {
+                var proceeds = sharesToSell * execPx;
+                holdings[t] -= sharesToSell;
+                cash += proceeds * 0.5;  // 50% to QQQ
+                // Buy QQQ + SPY with proceeds
+                var qqqPx2 = priceMap['QQQ'][execDate2]?.open || prevPrices['QQQ'] || 0;
+                var spyPx2 = priceMap['SPY'][execDate2]?.open || prevPrices['SPY'] || 0;
+                if (qqqPx2 > 0) { holdings['QQQ'] += (proceeds*0.5) / qqqPx2; cash -= proceeds*0.5; }
+                if (spyPx2 > 0) { holdings['SPY'] += (proceeds*0.5) / spyPx2; cash -= proceeds*0.5; }
+                tradeLog.push({ date: execDate2, action: 'SELL', ticker: t,
+                  shares: sharesToSell, price: execPx, value: proceeds, portfolio: portfolio,
+                  notes: 'De-lever: QQQ ' + (((qqqClose/athAtEntry)-1)*100).toFixed(1) + '% above ATH' });
+              }
+            });
+          }
+          // Check if fully de-levered
+          var remainingLev = levTickers.reduce(function(s,t){return s+holdings[t];},0);
+          if (remainingLev < 0.001 || deleverLevels.length === 0) {
+            inPosition = false;
+            tradeLog.push({ date: execDate2, action: 'DE-LEVERED', ticker: '—',
+              shares: null, price: null, value: null, portfolio: portfolio,
+              notes: 'Fully transitioned back to unleveraged positions' });
+          }
+        });
+      }
+
+      // Recompute portfolio value after any trades
+      levVal = levTickers.reduce(function(s,t){return s+holdings[t]*(prevPrices[t]||0);},0);
+      unlevVal = holdings['QQQ']*(prevPrices['QQQ']||0) + holdings['SPY']*(prevPrices['SPY']||0);
+      portfolio = levVal + unlevVal + cash;
+
+      equityCurve.push(portfolio);
+
+      // Benchmark (buy & hold)
+      var bPx = prevPrices[benchTicker] || 0;
+      benchCurve.push(benchShares * bPx);
+
+      // Exposure tracking
+      var pv = portfolio > 0 ? portfolio : 1;
+      exposureLev.push(parseFloat((levVal / pv * 100).toFixed(1)));
+      exposureUnlev.push(parseFloat((unlevVal / pv * 100).toFixed(1)));
+      exposureCash.push(parseFloat((cash / pv * 100).toFixed(1)));
+    }
+
+    // ── Compute stats ──────────────────────────────────────────────
+    var stats = btStats(equityCurve, benchCurve, capital);
+
+    // ── Render ──────────────────────────────────────────────────────
+    var kpis = [
+      { label: 'Total Return',    value: stats.totalReturn + '%',  color: parseFloat(stats.totalReturn) >= 0 ? C.success : C.danger },
+      { label: 'CAGR',            value: stats.cagr + '%',         color: parseFloat(stats.cagr) >= 0 ? C.success : C.danger },
+      { label: 'Max Drawdown',    value: stats.maxDD + '%',        color: C.danger },
+      { label: 'Sharpe Ratio',    value: stats.sharpe,             color: parseFloat(stats.sharpe) >= 1 ? C.success : '#8B6914' },
+      { label: 'Sortino Ratio',   value: stats.sortino,            color: parseFloat(stats.sortino) >= 1.5 ? C.success : '#8B6914' },
+      { label: 'Calmar Ratio',    value: stats.calmar,             color: parseFloat(stats.calmar) >= 0.5 ? C.success : '#8B6914' },
+      { label: 'vs. '+benchTicker, value: (parseFloat(stats.alpha)>=0?'+':'')+stats.alpha+'%', color: parseFloat(stats.alpha)>=0 ? C.success : C.danger, sub: benchTicker + ' returned ' + stats.benchReturn + '%' },
+      { label: 'Monthly Win Rate', value: stats.winRate + '%',     color: parseFloat(stats.winRate) >= 55 ? C.success : '#8B6914' },
+      { label: 'Period',           value: stats.years + ' yrs',   color: C.navy },
+      { label: 'Trades',           value: tradeLog.length,         color: C.navy },
+    ];
+    btRenderKPI(kpis);
+
+    var exposureDatasets = [
+      { label: 'Leveraged ETFs', data: exposureLev, borderColor: C.danger, backgroundColor: 'rgba(139,42,42,0.25)', borderWidth: 1.5, fill: true, pointRadius: 0, tension: 0.1 },
+      { label: 'QQQ + SPY', data: exposureUnlev, borderColor: C.navy, backgroundColor: 'rgba(0,60,113,0.15)', borderWidth: 1.5, fill: true, pointRadius: 0, tension: 0.1 },
+      { label: 'Cash', data: exposureCash, borderColor: C.success, backgroundColor: 'rgba(46,125,82,0.12)', borderWidth: 1, fill: true, pointRadius: 0, tension: 0.1 },
+    ];
+    btRenderCharts(dates, equityCurve, benchCurve, { datasets: exposureDatasets }, 'LVM Strategy', benchTicker);
+    btRenderTradeLog(tradeLog);
+
+    status.textContent = 'Backtest complete — ' + tradeLog.length + ' trades over ' + stats.years + ' years.';
+  } catch(e) {
+    status.textContent = 'Error: ' + e.message;
+    console.error('[btRunLVM]', e);
+  }
+  btn.disabled = false;
+}
+
+// ── STRATEGY 2: Systematic DCA ─────────────────────────────────────────────
+async function btRunDCA() {
+  var status = document.getElementById('btRunStatus');
+  var btn = document.getElementById('btRunBtn');
+  btn.disabled = true; status.textContent = 'Fetching data…';
+  try {
+    var ticker    = (document.getElementById('bt_dca_ticker')?.value||'SPY').toUpperCase();
+    var amount    = parseFloat(document.getElementById('bt_dca_amount')?.value)||1000;
+    var freq      = document.getElementById('bt_dca_freq')?.value||'monthly';
+    var period    = document.getElementById('bt_period')?.value||'5y';
+    var benchT    = document.getElementById('bt_benchmark')?.value||'SPY';
+    var vixBoost  = document.getElementById('bt_dca_vix_boost')?.checked||false;
+
+    var seriesMap = {};
+    seriesMap[ticker] = await btFetchPrices(ticker, period);
+    if (benchT !== ticker) seriesMap[benchT] = await btFetchPrices(benchT, period);
+    if (vixBoost) { try { seriesMap['^VIX'] = await btFetchPrices('^VIX', period); } catch(e){} }
+
+    var pts = seriesMap[ticker];
+    var priceMap = {}; pts.forEach(function(p){priceMap[p.date]={open:p.open||p.close,close:p.close};});
+    var benchMap = {}; (seriesMap[benchT]||pts).forEach(function(p){benchMap[p.date]={close:p.close};});
+    var vixMap2 = {}; (seriesMap['^VIX']||[]).forEach(function(p){vixMap2[p.date]=p.close;});
+
+    var dates = pts.map(function(p){return p.date;});
+    var capital = 0, shares = 0, totalInvested = 0;
+    var equityCurve = [], benchCurve = [], benchShares = null, benchInvested = 0;
+    var tradeLog = [], daysSinceLast = 0;
+    var freqDays = freq==='weekly'?5:freq==='quarterly'?63:21;
+
+    dates.forEach(function(d, di) {
+      var px = priceMap[d]?.close;
+      if (!px) return;
+      daysSinceLast++;
+      var invest = 0;
+      if (daysSinceLast >= freqDays) {
+        daysSinceLast = 0;
+        invest = amount;
+        if (vixBoost && vixMap2[d] && vixMap2[d] > 30) invest *= 2;
+        var execPx = priceMap[d]?.open || px;
+        shares += invest / execPx;
+        capital += invest; totalInvested += invest;
+        tradeLog.push({ date: d, action: 'BUY', ticker: ticker,
+          shares: invest/execPx, price: execPx, value: invest, portfolio: shares*px,
+          notes: 'Periodic DCA' + (invest>amount?' (VIX boost)':'') });
+        // Benchmark: same cadence, lump sum simulation
+        if (benchShares === null) { benchInvested += invest; benchShares = invest / (benchMap[d]?.close||px); }
+        else { benchInvested += invest; benchShares += invest / (benchMap[d]?.close||px); }
+      }
+      equityCurve.push(shares * px);
+      benchCurve.push((benchShares||0) * (benchMap[d]?.close||px));
+    });
+
+    var stats = btStats(equityCurve, benchCurve, totalInvested);
+    var finalVal = equityCurve[equityCurve.length-1]||0;
+    var gain = finalVal - totalInvested;
+    btRenderKPI([
+      { label: 'Final Value',    value: '$'+(finalVal/1e3).toFixed(1)+'K', color: C.navy },
+      { label: 'Total Invested', value: '$'+(totalInvested/1e3).toFixed(1)+'K', color: C.textSec },
+      { label: 'Total Gain',     value: '$'+(gain/1e3).toFixed(1)+'K', color: gain>=0?C.success:C.danger },
+      { label: 'CAGR',           value: stats.cagr+'%', color: parseFloat(stats.cagr)>=0?C.success:C.danger },
+      { label: 'Max Drawdown',   value: stats.maxDD+'%', color: C.danger },
+      { label: 'Sharpe',         value: stats.sharpe, color: parseFloat(stats.sharpe)>=1?C.success:'#8B6914' },
+      { label: 'vs. '+benchT,   value: (parseFloat(stats.alpha)>=0?'+':'')+stats.alpha+'%', color: parseFloat(stats.alpha)>=0?C.success:C.danger },
+      { label: 'Purchases',      value: tradeLog.length, color: C.navy },
+    ]);
+    btRenderCharts(dates, equityCurve, benchCurve, {}, 'DCA Strategy', benchT);
+    btRenderTradeLog(tradeLog);
+    status.textContent = 'DCA backtest complete.';
+  } catch(e) { status.textContent = 'Error: '+e.message; }
+  btn.disabled = false;
+}
+
+// ── STRATEGY 3: Dual Momentum ─────────────────────────────────────────────
+async function btRunMomentum() {
+  var status = document.getElementById('btRunStatus');
+  var btn = document.getElementById('btRunBtn');
+  btn.disabled = true; status.textContent = 'Fetching data…';
+  try {
+    var lookback  = parseInt(document.getElementById('bt_mom_lookback')?.value||12) * 21;
+    var riskOff   = document.getElementById('bt_mom_riskoff')?.value||'AGG';
+    var capital   = parseFloat(document.getElementById('bt_capital')?.value)||100000;
+    var period    = document.getElementById('bt_period')?.value||'5y';
+    var benchT    = document.getElementById('bt_benchmark')?.value||'SPY';
+
+    var tickers = ['SPY','QQQ',riskOff,benchT].filter(function(t,i,a){return a.indexOf(t)===i;});
+    var seriesMap = {};
+    for (var ti=0;ti<tickers.length;ti++) {
+      try { seriesMap[tickers[ti]] = await btFetchPrices(tickers[ti],period); } catch(e){ seriesMap[tickers[ti]]=[]; }
+      status.textContent = 'Fetching '+tickers[ti]+'…';
+    }
+    var pm = {};
+    tickers.forEach(function(t){ pm[t]={}; (seriesMap[t]||[]).forEach(function(p){pm[t][p.date]={open:p.open||p.close,close:p.close};}); });
+
+    var dates = (seriesMap.SPY||[]).map(function(p){return p.date;});
+    var portfolio = capital, shares = 0, currentHolding = null;
+    var equityCurve = [], benchCurve = [], tradeLog = [];
+    var lastRebalance = -21;
+    var benchShares2 = capital / (pm[benchT][dates[0]]?.close||1);
+
+    dates.forEach(function(d, di) {
+      var spyPx = pm.SPY[d]?.close, qqqPx = pm.QQQ[d]?.close;
+      if (!spyPx) return;
+
+      // Monthly rebalance
+      if (di - lastRebalance >= 21 && di >= lookback) {
+        lastRebalance = di;
+        var pastDate = dates[di - lookback];
+        var spy12m = pm.SPY[pastDate]?.close;
+        var qqq12m = pm.QQQ[pastDate]?.close;
+        var riskOff12m = pm[riskOff][pastDate]?.close;
+        var spyRet  = spy12m  ? spyPx/spy12m-1  : 0;
+        var qqqRet  = qqqPx && qqq12m ? qqqPx/qqq12m-1 : 0;
+        var target;
+        if (spyRet > 0 || qqqRet > 0) {
+          target = qqqRet > spyRet ? 'QQQ' : 'SPY';
+        } else {
+          target = riskOff;
+        }
+        if (target !== currentHolding) {
+          var execD = di+1<dates.length?dates[di+1]:d;
+          var execPx = pm[target][execD]?.open || pm[target][d]?.close || 1;
+          var val = shares * (pm[currentHolding||target][execD]?.open || 1);
+          if (currentHolding) {
+            val = shares * (pm[currentHolding][execD]?.open || pm[currentHolding][d]?.close || 1);
+            tradeLog.push({ date: execD, action: 'SELL', ticker: currentHolding, shares: shares, price: pm[currentHolding][execD]?.open, value: val, portfolio: val, notes: 'Momentum rebalance' });
+          } else { val = capital; }
+          shares = val / execPx;
+          currentHolding = target;
+          tradeLog.push({ date: execD, action: 'BUY', ticker: target, shares: shares, price: execPx, value: val, portfolio: val, notes: 'Momentum: SPY='+( spyRet*100).toFixed(1)+'% QQQ='+(qqqRet*100).toFixed(1)+'%' });
+        }
+      }
+      var px = pm[currentHolding||'SPY'][d]?.close || spyPx;
+      equityCurve.push(shares > 0 ? shares * px : capital);
+      benchCurve.push(benchShares2 * (pm[benchT][d]?.close||spyPx));
+    });
+
+    var stats = btStats(equityCurve, benchCurve, capital);
+    btRenderKPI([
+      { label:'Total Return',  value:stats.totalReturn+'%', color:parseFloat(stats.totalReturn)>=0?C.success:C.danger },
+      { label:'CAGR',          value:stats.cagr+'%', color:parseFloat(stats.cagr)>=0?C.success:C.danger },
+      { label:'Max Drawdown',  value:stats.maxDD+'%', color:C.danger },
+      { label:'Sharpe',        value:stats.sharpe, color:parseFloat(stats.sharpe)>=1?C.success:'#8B6914' },
+      { label:'vs. '+benchT,  value:(parseFloat(stats.alpha)>=0?'+':'')+stats.alpha+'%', color:parseFloat(stats.alpha)>=0?C.success:C.danger },
+      { label:'Rebalances',    value:tradeLog.filter(function(t){return t.action==='BUY';}).length, color:C.navy },
+    ]);
+    btRenderCharts(dates, equityCurve, benchCurve, {}, 'Dual Momentum', benchT);
+    btRenderTradeLog(tradeLog);
+    status.textContent = 'Dual Momentum backtest complete.';
+  } catch(e) { status.textContent = 'Error: '+e.message; }
+  btn.disabled = false;
+}
+
+// ── STRATEGY 4: Custom ────────────────────────────────────────────────────
+async function btRunCustom() {
+  var status = document.getElementById('btRunStatus');
+  var btn = document.getElementById('btRunBtn');
+  btn.disabled = true; status.textContent = 'Fetching data…';
+  try {
+    var ticker  = (document.getElementById('bt_cust_ticker')?.value||'SPY').toUpperCase();
+    var capital = parseFloat(document.getElementById('bt_capital')?.value)||100000;
+    var period  = document.getElementById('bt_period')?.value||'5y';
+    var benchT  = document.getElementById('bt_benchmark')?.value||'SPY';
+    var entry   = document.getElementById('bt_cust_entry')?.value||'ma_cross_up';
+    var exit    = document.getElementById('bt_cust_exit')?.value||'ma_cross_down';
+
+    var pts = await btFetchPrices(ticker, period);
+    var benchPts = benchT !== ticker ? await btFetchPrices(benchT, period) : pts;
+    var bm = {}; benchPts.forEach(function(p){bm[p.date]=p.close;});
+    var closes = pts.map(function(p){return p.close;});
+    var dates  = pts.map(function(p){return p.date;});
+
+    // Pre-compute indicators
+    function sma(n, i) { if(i<n-1)return null; var s=0;for(var k=i-n+1;k<=i;k++)s+=closes[k];return s/n; }
+    function rsi(n, i) {
+      if(i<n)return null;
+      var g=0,l=0;
+      for(var k=i-n+1;k<=i;k++){var d=closes[k]-closes[k-1];if(d>0)g+=d;else l-=d;}
+      var rs=l===0?100:g/l;return 100-100/(1+rs);
+    }
+    var ath2 = -Infinity;
+
+    var portfolio = capital, shares = 0, inPos = false;
+    var equityCurve = [], benchCurve = [], tradeLog = [];
+    var benchShares3 = capital / (bm[dates[0]]||closes[0]);
+
+    for (var i=0; i<dates.length; i++) {
+      var d = dates[i]; var px = closes[i];
+      if (!px) continue;
+      ath2 = Math.max(ath2, px);
+      var ma50 = sma(50,i), ma200 = sma(200,i);
+      var rsi14 = rsi(14,i);
+      var dd2 = (px-ath2)/ath2;
+      var prevPx = closes[i-1]||px;
+      var prevMa50 = i>=1?sma(50,i-1):null;
+      var prevMa200= i>=1?sma(200,i-1):null;
+      var prevRsi  = i>=1?rsi(14,i-1):null;
+
+      var shouldEnter = false, shouldExit = false;
+      if (!inPos) {
+        if (entry==='ma_cross_up'    && ma50!=null  && prevMa50!=null  && prevPx<=prevMa50  && px>ma50)  shouldEnter=true;
+        if (entry==='ma200_cross_up' && ma200!=null && prevMa200!=null && prevPx<=prevMa200 && px>ma200) shouldEnter=true;
+        if (entry==='rsi_oversold'   && rsi14!=null && prevRsi!=null   && prevRsi<=30       && rsi14>30) shouldEnter=true;
+        if (entry==='dd_entry'       && dd2<=-0.15) shouldEnter=true;
+      } else {
+        if (exit==='ma_cross_down'    && ma50!=null  && prevMa50!=null  && prevPx>=prevMa50  && px<ma50)  shouldExit=true;
+        if (exit==='ma200_cross_down' && ma200!=null && prevMa200!=null && prevPx>=prevMa200 && px<ma200) shouldExit=true;
+        if (exit==='rsi_overbought'   && rsi14!=null && prevRsi!=null   && prevRsi<=70       && rsi14>70) shouldExit=true;
+        if (exit==='dd_exit'          && px>=ath2) shouldExit=true;
+      }
+      if (shouldEnter) {
+        shares = portfolio / px; inPos = true;
+        tradeLog.push({ date:d, action:'BUY', ticker:ticker, shares:shares, price:px, value:portfolio, portfolio:portfolio, notes: entry });
+      }
+      if (shouldExit && inPos) {
+        portfolio = shares * px; shares = 0; inPos = false;
+        tradeLog.push({ date:d, action:'SELL', ticker:ticker, shares:shares+portfolio/px, price:px, value:portfolio, portfolio:portfolio, notes: exit });
+      }
+      equityCurve.push(inPos ? shares*px : portfolio);
+      benchCurve.push(benchShares3*(bm[d]||px));
+    }
+
+    var stats = btStats(equityCurve, benchCurve, capital);
+    btRenderKPI([
+      { label:'Total Return', value:stats.totalReturn+'%', color:parseFloat(stats.totalReturn)>=0?C.success:C.danger },
+      { label:'CAGR',         value:stats.cagr+'%', color:parseFloat(stats.cagr)>=0?C.success:C.danger },
+      { label:'Max DD',       value:stats.maxDD+'%', color:C.danger },
+      { label:'Sharpe',       value:stats.sharpe, color:parseFloat(stats.sharpe)>=1?C.success:'#8B6914' },
+      { label:'vs. '+benchT, value:(parseFloat(stats.alpha)>=0?'+':'')+stats.alpha+'%', color:parseFloat(stats.alpha)>=0?C.success:C.danger },
+      { label:'Trades',       value:tradeLog.length, color:C.navy },
+    ]);
+    btRenderCharts(dates, equityCurve, benchCurve, {}, ticker+' Custom', benchT);
+    btRenderTradeLog(tradeLog);
+    status.textContent = 'Custom strategy backtest complete.';
+  } catch(e) { status.textContent = 'Error: '+e.message; }
+  btn.disabled = false;
+}
+
+// ── Main run dispatcher ─────────────────────────────────────────────────────
+function btRun() {
+  var id = BT_STATE.strategyId;
+  if (!id) return;
+  var strat = BT_STRATEGIES[id];
+  if (strat && strat.run) strat.run();
+}
+
+// Auto-load LVM strategy on page entry
+function btPageInit() {
+  btLoadStrategy('lvm');
+}
+
+// ═══════════ END BACKTESTING ENGINE ═══════════
 
 // ═══════════════════════════════════════════════════════════════════
 // ══════════  MORNING BRIEFING ENGINE  ══════════════════════════════
