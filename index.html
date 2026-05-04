@@ -983,27 +983,392 @@ tr:hover td { background: #EAF1F9; }
 .view-toggle:hover { background: rgba(255,255,255,0.22); }
 
 /* Mobile view (forced, via body class) */
-body.view-mobile .content-wrap { max-width: 420px !important; padding: 12px 10px 40px !important; }
-body.view-mobile .hero { padding: 22px 18px !important; }
-body.view-mobile .hero h1 { font-size: 20px !important; }
-body.view-mobile .hero p { font-size: 12px !important; }
-body.view-mobile .grid-2, body.view-mobile .grid-3 { grid-template-columns: 1fr !important; }
-body.view-mobile .card-body { padding: 14px !important; }
-body.view-mobile .card-title { font-size: 12.5px !important; padding: 9px 14px !important; }
-body.view-mobile .form-row { flex-direction: column !important; align-items: stretch !important; }
-body.view-mobile .form-group input, body.view-mobile .form-group select { width: 100% !important; }
-body.view-mobile .btn-group { flex-wrap: wrap !important; }
-body.view-mobile .metrics-row { grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)) !important; gap: 8px !important; }
-body.view-mobile .metric-card { padding: 10px !important; }
-body.view-mobile .metric-value { font-size: 14px !important; }
-body.view-mobile .chart-wrap { height: auto !important; }
-body.view-mobile table { font-size: 11px !important; }
-body.view-mobile th, body.view-mobile td { padding: 6px 8px !important; }
-body.view-mobile .table-wrap { overflow-x: auto !important; }
-body.view-mobile .nav-parent { padding: 0 12px !important; font-size: 11.5px !important; }
-body.view-mobile .topbar { padding: 0 10px !important; }
-body.view-mobile .logo { font-size: 13px !important; }
-body.view-mobile .logo-icon { width: 22px !important; height: 22px !important; font-size: 12px !important; }
+body./* ═══════════════════════════════════════════════════════════════
+   MOBILE VIEW — activated by body.view-mobile class
+   Comprehensive overhaul for any smartphone screen (320px–430px wide)
+   ═══════════════════════════════════════════════════════════════ */
+
+/* ── Layout ──────────────────────────────────────────────────── */
+body.view-mobile {
+  overflow-x: hidden !important;
+  -webkit-text-size-adjust: 100%;
+}
+body.view-mobile .content-wrap {
+  max-width: 100vw !important;
+  width: 100% !important;
+  padding: 12px 10px 80px !important;
+  box-sizing: border-box !important;
+  overflow-x: hidden !important;
+}
+body.view-mobile .hero {
+  padding: 18px 14px !important;
+}
+body.view-mobile .hero h1 {
+  font-size: 19px !important;
+  line-height: 1.3 !important;
+}
+body.view-mobile .hero p {
+  font-size: 12px !important;
+  line-height: 1.5 !important;
+}
+
+/* ── Topbar: logo + hamburger only ──────────────────────────── */
+body.view-mobile .topbar {
+  padding: 0 12px !important;
+  height: 50px !important;
+  position: sticky !important;
+  top: 0 !important;
+  z-index: 200 !important;
+}
+body.view-mobile .logo {
+  font-size: 13px !important;
+  gap: 6px !important;
+}
+body.view-mobile .logo-icon {
+  width: 24px !important; height: 24px !important; font-size: 12px !important;
+}
+/* Hide horizontal nav in mobile */
+body.view-mobile .nav {
+  display: none !important;
+}
+/* Show hamburger button */
+body.view-mobile #mobileMenuBtn {
+  display: flex !important;
+}
+/* Hide desktop topbar-right extras except view toggle */
+body.view-mobile .topbar-right {
+  gap: 8px !important;
+}
+body.view-mobile #loginBtn,
+body.view-mobile #logoutBtn,
+body.view-mobile .user-badge {
+  display: none !important;
+}
+body.view-mobile .view-toggle {
+  font-size: 11px !important;
+  padding: 4px 8px !important;
+}
+
+/* ── Mobile slide-out drawer nav ─────────────────────────────── */
+#mobileDrawer {
+  display: none;
+  position: fixed;
+  top: 0; left: 0;
+  width: 80vw;
+  max-width: 300px;
+  height: 100vh;
+  background: var(--navy);
+  z-index: 1000;
+  overflow-y: auto;
+  transform: translateX(-100%);
+  transition: transform 0.25s ease;
+  padding: 0 0 40px 0;
+  box-shadow: 4px 0 20px rgba(0,0,0,0.4);
+}
+#mobileDrawer.open {
+  transform: translateX(0);
+}
+#mobileDrawerOverlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.5);
+  z-index: 999;
+}
+body.view-mobile #mobileDrawer,
+body.view-mobile #mobileDrawerOverlay {
+  display: block;
+}
+.mob-drawer-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px;
+  border-bottom: 1px solid rgba(255,255,255,0.15);
+  color: #fff;
+  font-size: 14px;
+  font-weight: 700;
+}
+.mob-drawer-close {
+  background: none;
+  border: none;
+  color: #fff;
+  font-size: 22px;
+  cursor: pointer;
+  padding: 0;
+  line-height: 1;
+}
+.mob-nav-section {
+  padding: 6px 0;
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+}
+.mob-nav-label {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: rgba(255,255,255,0.45);
+  padding: 10px 16px 4px;
+}
+.mob-nav-item {
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: none;
+  border: none;
+  color: rgba(255,255,255,0.88);
+  font-size: 14px;
+  font-weight: 500;
+  padding: 12px 16px;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background 0.12s;
+  -webkit-tap-highlight-color: rgba(255,255,255,0.1);
+}
+.mob-nav-item:active,
+.mob-nav-item:hover {
+  background: rgba(255,255,255,0.12);
+}
+.mob-nav-item.active {
+  color: #fff;
+  font-weight: 700;
+  background: rgba(91,155,213,0.25);
+  border-left: 3px solid #5B9BD5;
+}
+
+/* ── Cards ───────────────────────────────────────────────────── */
+body.view-mobile .card {
+  border-radius: 6px !important;
+  margin-bottom: 12px !important;
+  overflow: hidden !important;
+}
+body.view-mobile .card-title {
+  font-size: 12.5px !important;
+  padding: 10px 12px !important;
+  flex-wrap: wrap !important;
+  gap: 6px !important;
+}
+body.view-mobile .card-body {
+  padding: 12px !important;
+}
+body.view-mobile .card-sources {
+  font-size: 10px !important;
+  padding: 6px 12px !important;
+}
+
+/* ── Grids → single column ───────────────────────────────────── */
+body.view-mobile .grid-2,
+body.view-mobile .grid-3,
+body.view-mobile [style*="grid-template-columns: 1fr 1fr"],
+body.view-mobile [style*="grid-template-columns:1fr 1fr"],
+body.view-mobile [style*="grid-template-columns: 1fr 1fr 1fr"],
+body.view-mobile [style*="grid-template-columns:1fr 1fr 1fr"] {
+  grid-template-columns: 1fr !important;
+}
+body.view-mobile [style*="display:grid"],
+body.view-mobile [style*="display: grid"] {
+  grid-template-columns: 1fr !important;
+}
+/* Override for metric cards — allow 2 per row on mobile */
+body.view-mobile .metrics-row,
+body.view-mobile [style*="minmax(130px"] {
+  grid-template-columns: repeat(2, 1fr) !important;
+  gap: 8px !important;
+}
+body.view-mobile [style*="minmax(160px"],
+body.view-mobile [style*="minmax(170px"],
+body.view-mobile [style*="minmax(180px"],
+body.view-mobile [style*="minmax(200px"],
+body.view-mobile [style*="minmax(220px"] {
+  grid-template-columns: 1fr !important;
+}
+
+/* ── Flex rows → stack ───────────────────────────────────────── */
+body.view-mobile .form-row {
+  flex-direction: column !important;
+  align-items: stretch !important;
+  gap: 8px !important;
+}
+body.view-mobile .form-group input,
+body.view-mobile .form-group select,
+body.view-mobile .form-group textarea {
+  width: 100% !important;
+  font-size: 15px !important; /* prevents iOS zoom */
+}
+body.view-mobile .btn-group {
+  flex-wrap: wrap !important;
+  gap: 6px !important;
+}
+
+/* ── Charts: taller on mobile for readability ────────────────── */
+body.view-mobile .chart-wrap {
+  height: 280px !important;
+  min-height: 280px !important;
+}
+body.view-mobile .chart-wrap canvas {
+  max-width: 100% !important;
+}
+
+/* ── Tables: horizontal scroll wrapper ──────────────────────── */
+body.view-mobile table {
+  font-size: 11px !important;
+  min-width: 500px;
+}
+body.view-mobile th,
+body.view-mobile td {
+  padding: 6px 8px !important;
+  white-space: nowrap;
+}
+body.view-mobile .card-body div[style*="overflow-x:auto"],
+body.view-mobile .card-body > div {
+  overflow-x: auto !important;
+  -webkit-overflow-scrolling: touch !important;
+}
+
+/* ── Tabs → horizontal scroll ────────────────────────────────── */
+body.view-mobile .pf-tabs {
+  overflow-x: auto !important;
+  -webkit-overflow-scrolling: touch !important;
+  flex-wrap: nowrap !important;
+  padding-bottom: 4px !important;
+  scrollbar-width: none !important;
+  gap: 4px !important;
+}
+body.view-mobile .pf-tabs::-webkit-scrollbar { display: none !important; }
+body.view-mobile .pf-tab {
+  white-space: nowrap !important;
+  font-size: 11.5px !important;
+  padding: 7px 12px !important;
+  flex-shrink: 0 !important;
+}
+/* Research / macro tabs */
+body.view-mobile [role="tablist"] {
+  overflow-x: auto !important;
+  flex-wrap: nowrap !important;
+  -webkit-overflow-scrolling: touch !important;
+  scrollbar-width: none !important;
+}
+body.view-mobile [role="tablist"]::-webkit-scrollbar { display: none; }
+
+/* ── Cross-asset CA tabs ─────────────────────────────────────── */
+body.view-mobile .ca-tabs {
+  overflow-x: auto !important;
+  flex-wrap: nowrap !important;
+  -webkit-overflow-scrolling: touch !important;
+}
+body.view-mobile .ca-tab {
+  white-space: nowrap !important;
+  font-size: 11px !important;
+  padding: 7px 10px !important;
+  flex-shrink: 0 !important;
+}
+
+/* ── Buttons: larger tap targets ─────────────────────────────── */
+body.view-mobile .btn,
+body.view-mobile .btn-outline {
+  min-height: 40px !important;
+  padding: 9px 16px !important;
+  font-size: 13px !important;
+  -webkit-tap-highlight-color: transparent;
+}
+body.view-mobile .btn-sm {
+  min-height: 34px !important;
+  padding: 6px 12px !important;
+  font-size: 12px !important;
+}
+body.view-mobile input[type="range"] {
+  height: 28px !important;
+}
+
+/* ── Sliders and inputs ──────────────────────────────────────── */
+body.view-mobile input[type="number"],
+body.view-mobile input[type="text"],
+body.view-mobile input[type="date"],
+body.view-mobile select {
+  font-size: 15px !important; /* iOS won't zoom if ≥16px, 15px is fine */
+  min-height: 38px !important;
+  padding: 6px 10px !important;
+}
+
+/* ── Specific page overrides ─────────────────────────────────── */
+/* Snapshot grid: 2 cols on mobile */
+body.view-mobile .snapshot-grid {
+  grid-template-columns: repeat(2, 1fr) !important;
+  gap: 5px !important;
+}
+/* Research header metric cards: 2 per row */
+body.view-mobile .metrics-row > div {
+  min-width: 0 !important;
+}
+/* Backtesting KPI row */
+body.view-mobile #btKPIRow {
+  grid-template-columns: repeat(2, 1fr) !important;
+}
+/* Insider table: always scroll */
+body.view-mobile #resInsiderTable {
+  overflow-x: auto !important;
+}
+/* Remove max-width constraints from content sections */
+body.view-mobile * {
+  max-width: 100% !important;
+  box-sizing: border-box !important;
+}
+/* But allow overflow-x:auto containers to have wider children */
+body.view-mobile [style*="overflow-x:auto"] *,
+body.view-mobile [style*="overflow-x: auto"] * {
+  max-width: none !important;
+}
+/* Fix any inline width:100vw or similar */
+body.view-mobile [style*="width:100vw"],
+body.view-mobile [style*="width: 100vw"] {
+  width: 100% !important;
+}
+
+/* ── Bottom navigation bar for mobile ────────────────────────── */
+#mobileBottomBar {
+  display: none;
+  position: fixed;
+  bottom: 0; left: 0; right: 0;
+  background: var(--navy);
+  border-top: 1px solid rgba(255,255,255,0.15);
+  z-index: 190;
+  padding: 4px 0 env(safe-area-inset-bottom, 4px);
+}
+body.view-mobile #mobileBottomBar {
+  display: flex !important;
+  align-items: center;
+  justify-content: space-around;
+}
+.mob-bottom-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  background: none;
+  border: none;
+  color: rgba(255,255,255,0.65);
+  font-size: 9px;
+  font-weight: 600;
+  font-family: inherit;
+  padding: 6px 10px;
+  cursor: pointer;
+  text-transform: uppercase;
+  letter-spacing: .4px;
+  min-width: 52px;
+  -webkit-tap-highlight-color: transparent;
+  transition: color 0.12s;
+}
+.mob-bottom-btn .mob-icon {
+  font-size: 18px;
+  line-height: 1;
+}
+.mob-bottom-btn.active {
+  color: #fff;
+}
+.mob-bottom-btn.active .mob-icon {
+  filter: drop-shadow(0 0 4px rgba(91,155,213,0.8));
+}
+
 
 /* Native mobile responsive (always active, even without toggle) */
 @media (max-width: 640px) {
@@ -1884,6 +2249,10 @@ body.view-mobile .logo-icon { width: 22px !important; height: 22px !important; f
     <div class="logo-icon">P</div>
     Perry Asset Management
   </div>
+  <!-- Hamburger — only visible in mobile view via CSS -->
+  <button id="mobileMenuBtn" onclick="mobileDrawerOpen()"
+    style="display:none;background:none;border:none;color:#fff;font-size:24px;cursor:pointer;padding:4px 8px;line-height:1;-webkit-tap-highlight-color:transparent;"
+    aria-label="Open menu">☰</button>
   <div class="nav">
     <div class="nav-group">
       <div class="nav-parent active" data-page="home" onclick="navigateTo('home')">
@@ -1930,6 +2299,50 @@ body.view-mobile .logo-icon { width: 22px !important; height: 22px !important; f
     <button class="btn btn-sm" id="loginBtn" onclick="handleLogin()">Sign In</button>
     <button class="btn btn-sm btn-danger" id="logoutBtn" onclick="handleLogout()" style="display:none;">Sign Out</button>
   </div>
+</div>
+
+<!-- ═══════════ MOBILE DRAWER OVERLAY ═══════════ -->
+<div id="mobileDrawerOverlay" onclick="mobileDrawerClose()" style="display:none;"></div>
+
+<!-- ═══════════ MOBILE SLIDE-OUT DRAWER ═══════════ -->
+<div id="mobileDrawer">
+  <div class="mob-drawer-header">
+    <div style="display:flex;align-items:center;gap:8px;">
+      <div class="logo-icon" style="width:26px;height:26px;font-size:13px;">P</div>
+      Perry Asset Management
+    </div>
+    <button class="mob-drawer-close" onclick="mobileDrawerClose()" aria-label="Close menu">✕</button>
+  </div>
+  <div class="mob-nav-section">
+    <div class="mob-nav-label">Home</div>
+    <button class="mob-nav-item" data-mobpage="home"      onclick="mobileNav('home')">🏠 Home</button>
+    <button class="mob-nav-item" data-mobpage="about"     onclick="mobileNav('about')">ℹ️ About Us</button>
+    <button class="mob-nav-item" data-mobpage="resources" onclick="mobileNav('resources')">📚 Resources / Training</button>
+  </div>
+  <div class="mob-nav-section">
+    <div class="mob-nav-label">Portfolio</div>
+    <button class="mob-nav-item" data-mobpage="holdings" onclick="mobileNav('holdings')">💼 Manage Holdings</button>
+    <button class="mob-nav-item" data-mobpage="themes"   onclick="mobileNav('themes')">🎯 Portfolio Themes</button>
+  </div>
+  <div class="mob-nav-section">
+    <div class="mob-nav-label">Analysis</div>
+    <button class="mob-nav-item" data-mobpage="macro"     onclick="mobileNav('macro')">📊 Macro Regime Analysis</button>
+    <button class="mob-nav-item" data-mobpage="research"  onclick="mobileNav('research')">🔬 Stock Research &amp; Quant Models</button>
+    <button class="mob-nav-item" data-mobpage="markets"   onclick="mobileNav('markets')">🌍 Cross-Asset Analysis</button>
+  </div>
+  <div class="mob-nav-section">
+    <div class="mob-nav-label">Backtesting</div>
+    <button class="mob-nav-item" data-mobpage="backtest" onclick="mobileNav('backtest')">⚡ Strategy Backtesting</button>
+  </div>
+</div>
+
+<!-- ═══════════ MOBILE BOTTOM NAV BAR ═══════════ -->
+<div id="mobileBottomBar">
+  <button class="mob-bottom-btn active" data-mobbottom="home"     onclick="mobileNav('home')"><span class="mob-icon">🏠</span>Home</button>
+  <button class="mob-bottom-btn"        data-mobbottom="macro"    onclick="mobileNav('macro')"><span class="mob-icon">📊</span>Macro</button>
+  <button class="mob-bottom-btn"        data-mobbottom="research" onclick="mobileNav('research')"><span class="mob-icon">🔬</span>Research</button>
+  <button class="mob-bottom-btn"        data-mobbottom="markets"  onclick="mobileNav('markets')"><span class="mob-icon">🌍</span>Markets</button>
+  <button class="mob-bottom-btn"        data-mobbottom="_menu"    onclick="mobileDrawerOpen()"><span class="mob-icon">☰</span>More</button>
 </div>
 
 <!-- ═══════════ HOME ═══════════ -->
@@ -5684,23 +6097,88 @@ function navigateTo(p) {
 function toggleView() {
   var isMobile = document.body.classList.toggle('view-mobile');
   localStorage.setItem('perry_view', isMobile ? 'mobile' : 'laptop');
-  var icon = document.getElementById('viewToggleIcon');
+  var icon  = document.getElementById('viewToggleIcon');
   var label = document.getElementById('viewToggleLabel');
-  if (icon) icon.innerHTML = isMobile ? '&#128241;' : '&#128187;';
+  if (icon)  icon.innerHTML  = isMobile ? '&#128241;' : '&#128187;';
   if (label) label.textContent = isMobile ? 'Mobile' : 'Laptop';
-  // Trigger chart resize
-  setTimeout(function(){ window.dispatchEvent(new Event('resize')); }, 120);
+  // Add viewport meta for mobile if not present
+  if (isMobile) {
+    var meta = document.querySelector('meta[name="viewport"]');
+    if (!meta) {
+      meta = document.createElement('meta');
+      meta.name = 'viewport';
+      document.head.appendChild(meta);
+    }
+    meta.content = 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no';
+  } else {
+    mobileDrawerClose();
+    var meta = document.querySelector('meta[name="viewport"]');
+    if (meta) meta.content = 'width=device-width, initial-scale=1.0';
+  }
+  setTimeout(function(){ window.dispatchEvent(new Event('resize')); }, 150);
 }
+
+// ── Mobile Drawer ──────────────────────────────────────────────
+function mobileDrawerOpen() {
+  var drawer  = document.getElementById('mobileDrawer');
+  var overlay = document.getElementById('mobileDrawerOverlay');
+  if (drawer)  { drawer.classList.add('open'); drawer.style.display = 'block'; }
+  if (overlay) overlay.style.display = 'block';
+  document.body.style.overflow = 'hidden';
+}
+
+function mobileDrawerClose() {
+  var drawer  = document.getElementById('mobileDrawer');
+  var overlay = document.getElementById('mobileDrawerOverlay');
+  if (drawer)  drawer.classList.remove('open');
+  if (overlay) overlay.style.display = 'none';
+  document.body.style.overflow = '';
+}
+
+function mobileNav(page) {
+  mobileDrawerClose();
+  navigateTo(page);
+  // Update drawer active state
+  document.querySelectorAll('[data-mobpage]').forEach(function(b) {
+    b.classList.toggle('active', b.dataset.mobpage === page);
+  });
+  // Update bottom bar active state
+  document.querySelectorAll('[data-mobbottom]').forEach(function(b) {
+    b.classList.toggle('active', b.dataset.mobbottom === page);
+  });
+  // Scroll to top
+  window.scrollTo(0, 0);
+}
+
+// Patch navigateTo to also sync mobile nav state
+(function() {
+  var _origNav = window.navigateTo || function(){};
+  window.navigateTo = function(p) {
+    _origNav(p);
+    // Sync mobile bottom bar + drawer highlights
+    document.querySelectorAll('[data-mobpage]').forEach(function(b) {
+      b.classList.toggle('active', b.dataset.mobpage === p);
+    });
+    document.querySelectorAll('[data-mobbottom]').forEach(function(b) {
+      b.classList.toggle('active', b.dataset.mobbottom === p);
+    });
+  };
+})();
+
 // Restore view preference on load
 (function(){
   var pref = localStorage.getItem('perry_view');
   if (pref === 'mobile') {
-    setTimeout(function(){ document.body.classList.add('view-mobile');
-      var icon = document.getElementById('viewToggleIcon');
+    setTimeout(function(){
+      document.body.classList.add('view-mobile');
+      var icon  = document.getElementById('viewToggleIcon');
       var label = document.getElementById('viewToggleLabel');
-      if (icon) icon.innerHTML = '&#128241;';
+      if (icon)  icon.innerHTML  = '&#128241;';
       if (label) label.textContent = 'Mobile';
-    }, 100);
+      var meta = document.querySelector('meta[name="viewport"]');
+      if (!meta) { meta = document.createElement('meta'); meta.name = 'viewport'; document.head.appendChild(meta); }
+      meta.content = 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no';
+    }, 50);
   }
 })();
 
