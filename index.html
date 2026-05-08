@@ -5744,14 +5744,20 @@ function isMobile() { return window.innerWidth < 768; }
 function legendPos() { return isMobile() ? 'bottom' : 'top'; }
 function chartFontSize() { return isMobile() ? 9 : 11; }
 
-// Chart.js defaults
-Chart.defaults.font.family = 'Arial, Helvetica, sans-serif';
-Chart.defaults.color = C.textSec;
-// Apply mobile legend position globally
-Chart.defaults.plugins.legend.position = legendPos();
+// Chart.js defaults — wrapped in guard in case CDN load is slow or partial
+try {
+  Chart.defaults.font.family = 'Arial, Helvetica, sans-serif';
+  Chart.defaults.color = C.textSec;
+  if (Chart.defaults.plugins && Chart.defaults.plugins.legend) {
+    Chart.defaults.plugins.legend.position = legendPos();
+  }
+} catch(e) { console.warn('Chart.js defaults not ready:', e); }
 window.addEventListener('resize', function() {
-  var pos = legendPos();
-  Chart.defaults.plugins.legend.position = pos;
+  try {
+    if (typeof Chart !== 'undefined' && Chart.defaults.plugins && Chart.defaults.plugins.legend) {
+      Chart.defaults.plugins.legend.position = legendPos();
+    }
+  } catch(e) {}
 });
 const chartTooltip = {
   backgroundColor: C.bg, titleColor: C.text, bodyColor: C.text,
@@ -22102,7 +22108,7 @@ function blotterRender() {
   t.innerHTML = html;
   var net = buyDol - sellDol;
   document.getElementById('blotterSummary').innerHTML = blotter.length+' trade(s) &middot; Buy $'+Math.round(buyDol).toLocaleString()+' &middot; Sell $'+Math.round(sellDol).toLocaleString()
-    + (Math.abs(net) > 1 ? ' &middot; Net: <span style="color:'+(net>0?'var(--danger)':'var(--success))'+'">'+(net>0?'+':'')+fmt(net)+'</span>' : ' &middot; <span style="color:var(--success);">&#10003; Self-funding</span>');
+    + (Math.abs(net) > 1 ? ' &middot; Net: <span style="color:'+(net>0?'var(--danger)':'var(--success)')+'">'+(net>0?'+':'')+fmt(net)+'</span>' : ' &middot; <span style="color:var(--success);">&#10003; Self-funding</span>');
 }
 function blotterRemove(i) {
   (window._blotter||[]).splice(i,1);
