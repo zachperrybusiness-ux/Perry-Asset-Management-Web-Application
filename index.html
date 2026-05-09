@@ -1744,6 +1744,72 @@ body.view-mobile #mobileBottomBar {
 .pf-tab-content.active { display: block; }
 @keyframes fadeIn { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: translateY(0); } }
 
+/* ── HOLDINGS KPI BAND ── */
+.hld-kpi-band {
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  padding: 14px 18px;
+  background: linear-gradient(135deg, var(--navy) 0%, #002A50 100%);
+  border-radius: var(--radius); margin-bottom: 16px;
+}
+.hld-kpi-band .metric-card {
+  background: rgba(255,255,255,0.07); border: 1px solid rgba(255,255,255,0.10);
+  color: #fff; flex: 1 1 130px; min-width: 120px;
+}
+.hld-kpi-band .metric-label { color: rgba(255,255,255,0.65); font-size: 10px; }
+.hld-kpi-band .metric-value { color: #fff; font-size: 17px; }
+.hld-kpi-band .metric-sub   { font-size: 11px; }
+.hld-kpi-controls {
+  display: flex; flex-direction: column; gap: 6px;
+  flex-shrink: 0; margin-left: auto;
+}
+@media (max-width: 640px) {
+  .hld-kpi-band { flex-direction: column; align-items: stretch; }
+  .hld-kpi-controls { flex-direction: row; flex-wrap: wrap; margin-left: 0; }
+}
+
+/* ── STORY CARDS ── */
+.hld-story-strip {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 10px; margin-bottom: 18px;
+}
+.hld-story-card {
+  display: flex; align-items: flex-start; gap: 10px; padding: 12px 14px;
+  border-radius: var(--radius); background: var(--panel);
+  border-left: 4px solid var(--navy);
+}
+.hld-story-card .sc-icon     { font-size: 22px; flex-shrink: 0; line-height: 1; }
+.hld-story-card .sc-body     { flex: 1; min-width: 0; }
+.hld-story-card .sc-headline { font-size: 11px; font-weight: 700; color: var(--navy);
+  margin-bottom: 2px; text-transform: uppercase; letter-spacing: .3px; }
+.hld-story-card .sc-value    { font-size: 18px; font-weight: 800; color: var(--navy);
+  line-height: 1.1; margin-bottom: 3px; }
+.hld-story-card .sc-explain  { font-size: 11px; color: var(--text-sec); line-height: 1.4; }
+.hld-story-card.danger  { border-left-color: var(--danger); }
+.hld-story-card.warning { border-left-color: #8B6914; }
+.hld-story-card.success { border-left-color: var(--success); }
+.hld-story-card.info    { border-left-color: var(--blue); }
+
+/* ── ANALYSIS GRID ── */
+.hld-analysis-grid {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 18px;
+}
+.hld-chart-panel { border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+.hld-chart-panel-header {
+  background: var(--navy); color: #fff; padding: 9px 14px;
+  font-size: 12px; font-weight: 700;
+}
+.hld-chart-panel-body { padding: 14px; background: var(--bg); }
+@media (max-width: 800px) { .hld-analysis-grid { grid-template-columns: 1fr; } }
+
+/* ── HOLDINGS SEARCH BAR ── */
+.hld-search-bar {
+  display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 12px;
+}
+.hld-search-bar input[type="text"] {
+  flex: 1; min-width: 160px; padding: 7px 11px;
+  border: 1px solid var(--border); border-radius: 4px; font-size: 13px;
+}
+
 /* Cross-Asset multi-column grids — collapse to single on narrow screens */
 @media (max-width: 1100px) {
   #page-markets .pf-tab-content > div[style*="grid-template-columns:1.2fr 1fr"],
@@ -3263,7 +3329,7 @@ body.view-mobile #mobileBottomBar {
   <div class="content-wrap">
     <div class="hero" style="padding:32px 40px;">
       <h1>Manage Holdings</h1>
-      <p>Add, view, and remove portfolio holdings. Market data is fetched live from Yahoo Finance. All holdings saved to your Firebase account.</p>
+      <p>Add, view, and manage portfolio holdings. Market data fetched live from Yahoo Finance. All holdings saved to your Firebase account.</p>
     </div>
     <!-- Auth gate -->
     <div id="holdingsAuth" class="auth-gate">
@@ -3273,251 +3339,329 @@ body.view-mobile #mobileBottomBar {
     </div>
     <!-- Holdings panel (shown when signed in) -->
     <div id="holdingsPanel" style="display:none;">
-      <!-- Account filter -->
-      <div class="account-bar">
-        <label>View Account:</label>
-        <select id="holdingsAccountFilter" onchange="filterHoldingsByAccount()">
-          <option value="all">All Accounts</option>
-          <option value="Individual">Individual Brokerage</option>
-          <option value="Roth IRA">Roth IRA</option>
-          <option value="Traditional IRA">Traditional IRA</option>
-          <option value="401(k)">Standard 401(k)</option>
-          <option value="Roth 401(k)">Roth 401(k)</option>
-          <option value="BrokerageLink 401(k)">BrokerageLink 401(k)</option>
-          <option value="BrokerageLink Roth IRA">BrokerageLink Roth IRA</option>
-          <option value="SEP IRA">SEP IRA</option>
-          <option value="529 Plan">529 Plan</option>
-          <option value="HSA">HSA</option>
-          <option value="Trust">Trust Account</option>
-          <option value="Custodial">Custodial (UTMA/UGMA)</option>
-          <option value="Joint">Joint Account</option>
-          <option value="Designated Beneficiary">Designated Beneficiary</option>
-        </select>
+      <!-- KPI Band (always visible) -->
+      <div class="hld-kpi-band" id="holdingsKpiBand">
+        <div id="hldKpiCards" style="display:contents;"></div>
+        <div class="hld-kpi-controls">
+          <select id="holdingsAccountFilter" onchange="filterHoldingsByAccount()" style="padding:6px 10px;border-radius:4px;border:1px solid rgba(255,255,255,0.3);background:rgba(255,255,255,0.12);color:#fff;font-size:12px;">
+            <option value="all">All Accounts</option>
+            <option value="Individual">Individual Brokerage</option>
+            <option value="Roth IRA">Roth IRA</option>
+            <option value="Traditional IRA">Traditional IRA</option>
+            <option value="401(k)">Standard 401(k)</option>
+            <option value="Roth 401(k)">Roth 401(k)</option>
+            <option value="BrokerageLink 401(k)">BrokerageLink 401(k)</option>
+            <option value="BrokerageLink Roth IRA">BrokerageLink Roth IRA</option>
+            <option value="SEP IRA">SEP IRA</option>
+            <option value="529 Plan">529 Plan</option>
+            <option value="HSA">HSA</option>
+            <option value="Trust">Trust Account</option>
+            <option value="Custodial">Custodial (UTMA/UGMA)</option>
+            <option value="Joint">Joint Account</option>
+            <option value="Designated Beneficiary">Designated Beneficiary</option>
+          </select>
+          <button class="btn btn-sm" onclick="holdingsShowTab('import')" style="white-space:nowrap;">+ Add Holding</button>
+        </div>
       </div>
-      <!-- Add holding card -->
-      <div class="card">
-        <div class="card-title">Add New Holding <span class="help-icon" title="Add a new position. Tip: enter just Ticker + Date Purchased + Shares — the Cost / Share auto-fills from Yahoo Finance using the actual closing price on that date. You can override it if you have a more precise basis.">?</span></div>
-        <div class="card-body">
-          <div id="addStatus" class="status-bar"></div>
-          <div style="margin-bottom:10px;">
-            <label style="font-size:11px;font-weight:600;margin-right:12px;">
-              <input type="radio" name="holdingType" value="security" checked onchange="toggleHoldingType()"> Stock / ETF / Fund
-            </label>
-            <label style="font-size:11px;font-weight:600;">
-              <input type="radio" name="holdingType" value="cash" onchange="toggleHoldingType()"> Cash / Money Market / CD / Bond
-            </label>
+      <!-- Tab Bar -->
+      <div class="pf-tabs">
+        <button class="pf-tab active" data-htab="holdings" onclick="holdingsShowTab('holdings')">Holdings</button>
+        <button class="pf-tab" data-htab="analysis" onclick="holdingsShowTab('analysis')">Analysis</button>
+        <button class="pf-tab" data-htab="rebalance" onclick="holdingsShowTab('rebalance')">Rebalance</button>
+        <button class="pf-tab" data-htab="import" onclick="holdingsShowTab('import')">Import &amp; Add</button>
+      </div>
+
+      <!-- ═══ TAB 1: Holdings ═══ -->
+      <div class="pf-tab-content active" id="htab-holdings">
+        <div class="card">
+          <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
+            <span>Your Holdings <span style="font-weight:400;font-size:12px;opacity:.7;" id="holdingsCount"></span></span>
           </div>
-          <div class="form-row" id="securityFields" style="align-items:flex-end;">
-            <div class="form-group" style="min-width:110px;">
-              <label title="Stock or ETF symbol (e.g., AAPL, NVDA, SPY)">Ticker
-                <span class="help-icon" title="Enter the ticker symbol of the stock, ETF, or fund. We'll auto-fetch its sector, industry, and current price.">?</span>
-              </label>
-              <input type="text" id="inputTicker" placeholder="AAPL, NVDA, SPY" style="text-transform:uppercase;" oninput="autofillCostBasis()" onblur="autofillCostBasis()">
-            </div>
-            <div class="form-group">
-              <label>Date Purchased
-                <span class="help-icon" title="When you bought the position. Defaults to today. If you enter a past date AND leave Cost/Share blank, we'll auto-fill the closing price on that date. Or fill in Cost/Share and we'll estimate the purchase date from price history.">?</span>
-              </label>
-              <input type="date" id="inputDate" onchange="autofillCostBasis()">
-              <div id="inputDateHint" style="font-size:10px;color:var(--text-sec);margin-top:2px;min-height:14px;line-height:1.3;"></div>
-            </div>
-            <div class="form-group" style="min-width:90px;">
-              <label>Shares
-                <span class="help-icon" title="Number of shares you own. Fractional shares supported (e.g., 0.5).">?</span>
-              </label>
-              <input type="number" id="inputQty" placeholder="50" min="0.0001" step="any">
-            </div>
-            <div class="form-group" style="min-width:130px;">
-              <label>Cost / Share
-                <span class="help-icon" title="What you paid per share. If you leave this blank and provide a Date Purchased, we'll auto-fill the closing price on that date. If you enter a cost here with the date still set to today, we'll estimate the purchase date from price history.">?</span>
-              </label>
-              <input type="number" id="inputCost" placeholder="auto-fill" min="0" step="0.01" oninput="estimatePurchaseDate()">
-              <div id="inputCostHint" style="font-size:10px;color:var(--success);margin-top:2px;min-height:14px;line-height:1.3;"></div>
-            </div>
-            <div class="form-group" style="min-width:80px;">
-              <label>Yield %
-                <span class="help-icon" title="Annual dividend or distribution yield (optional). E.g., 4.25 for 4.25% yield.">?</span>
-              </label>
-              <input type="number" id="inputYield" placeholder="4.25" min="0" step="0.01">
-            </div>
-            <div class="form-group" style="min-width:160px;">
-              <label>Account Type
-                <span class="help-icon" title="Tax treatment of the account holding this position (e.g., Taxable Brokerage, Roth IRA, 401(k)). Used to compute aggregate weight per account.">?</span>
-              </label>
-              <select id="inputAccountType">
-                <option value="Individual">Individual Brokerage</option>
-                <option value="Roth IRA">Roth IRA</option>
-                <option value="Traditional IRA">Traditional IRA</option>
-                <option value="401(k)">Standard 401(k)</option>
-                <option value="Roth 401(k)">Roth 401(k)</option>
-                <option value="BrokerageLink 401(k)">BrokerageLink 401(k)</option>
-                <option value="BrokerageLink Roth IRA">BrokerageLink Roth IRA</option>
-                <option value="SEP IRA">SEP IRA</option>
-                <option value="529 Plan">529 Plan</option>
-                <option value="HSA">HSA</option>
-                <option value="Trust">Trust Account</option>
-                <option value="Custodial">Custodial (UTMA/UGMA)</option>
-                <option value="Joint">Joint Account</option>
-                <option value="Designated Beneficiary">Designated Beneficiary</option>
+          <div class="card-body">
+            <div class="hld-search-bar">
+              <input type="text" id="holdingsSearch" placeholder="Search ticker, name, sector, account…" oninput="holdingsApplySearch()">
+              <select id="holdingsAssetFilter" onchange="holdingsApplySearch()" style="padding:7px 10px;border:1px solid var(--border);border-radius:4px;font-size:13px;">
+                <option value="all">All Types</option>
+                <option value="equity">Equity / ETF</option>
+                <option value="cash">Cash / Fixed Income</option>
               </select>
+              <button class="btn-outline btn-sm" onclick="refreshAllPrices()" id="refreshBtn">&#8635; Refresh Prices</button>
             </div>
-            <button class="btn" id="addBtn" onclick="addHolding()">Add Holding</button>
+            <div id="holdingsStatus" class="status-bar"></div>
+            <div class="table-wrap" id="holdingsTableWrap"></div>
           </div>
-          <div class="form-row" id="cashFields" style="display:none;">
-            <div class="form-group" style="min-width:140px;">
-              <label>Description</label>
-              <input type="text" id="cashName" placeholder="Cash, SPAXX, CD, Bond">
+          <div class="card-sources"><strong>Sources:</strong> Yahoo Finance via Cloudflare Worker &bull; Firebase Firestore</div>
+        </div>
+      </div>
+
+      <!-- ═══ TAB 2: Analysis ═══ -->
+      <div class="pf-tab-content" id="htab-analysis">
+        <!-- Story Cards -->
+        <div class="hld-story-strip" id="hldStoryStrip">
+          <div class="hld-story-card info">
+            <div class="sc-icon">📊</div>
+            <div class="sc-body">
+              <div class="sc-headline">Analysis Ready</div>
+              <div class="sc-value">—</div>
+              <div class="sc-explain">Load holdings to see analytics</div>
             </div>
-            <div class="form-group" style="min-width:120px;">
-              <label>Amount ($)</label>
-              <input type="number" id="cashAmount" placeholder="10000.00" min="0" step="0.01">
+          </div>
+        </div>
+        <!-- 4 Chart panels -->
+        <div class="hld-analysis-grid">
+          <div class="hld-chart-panel">
+            <div class="hld-chart-panel-header">📂 Sector Allocation</div>
+            <div class="hld-chart-panel-body" style="display:flex;gap:16px;align-items:center;">
+              <div style="position:relative;width:160px;height:160px;flex-shrink:0;">
+                <canvas id="hldSectorDonut" width="160" height="160"></canvas>
+                <div id="hldSectorCount" style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center;font-size:22px;font-weight:800;color:var(--navy);line-height:1;pointer-events:none;"></div>
+              </div>
+              <div id="hldSectorLegend" style="flex:1;font-size:11px;line-height:1.8;overflow:hidden;"></div>
             </div>
-            <div class="form-group" style="min-width:80px;">
-              <label>Yield %</label>
-              <input type="number" id="cashYield" placeholder="4.25" min="0" step="0.01">
+          </div>
+          <div class="hld-chart-panel">
+            <div class="hld-chart-panel-header">🏦 Asset Class Mix</div>
+            <div class="hld-chart-panel-body" style="display:flex;gap:16px;align-items:center;">
+              <div style="position:relative;width:160px;height:160px;flex-shrink:0;">
+                <canvas id="hldAssetDonut" width="160" height="160"></canvas>
+                <div id="hldAssetCount" style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center;font-size:22px;font-weight:800;color:var(--navy);line-height:1;pointer-events:none;"></div>
+              </div>
+              <div id="hldAssetLegend" style="flex:1;font-size:11px;line-height:1.8;overflow:hidden;"></div>
             </div>
-            <div class="form-group" style="min-width:160px;">
-              <label>Account Type</label>
-              <select id="cashAccountType">
-                <option value="Individual">Individual Brokerage</option>
-                <option value="Roth IRA">Roth IRA</option>
-                <option value="Traditional IRA">Traditional IRA</option>
-                <option value="401(k)">Standard 401(k)</option>
-                <option value="Roth 401(k)">Roth 401(k)</option>
-                <option value="BrokerageLink 401(k)">BrokerageLink 401(k)</option>
-                <option value="BrokerageLink Roth IRA">BrokerageLink Roth IRA</option>
-                <option value="SEP IRA">SEP IRA</option>
-                <option value="HSA">HSA</option>
+          </div>
+          <div class="hld-chart-panel">
+            <div class="hld-chart-panel-header">🏆 Top 10 Positions (% of Portfolio)</div>
+            <div class="hld-chart-panel-body" style="height:220px;position:relative;">
+              <canvas id="hldTopBar"></canvas>
+            </div>
+          </div>
+          <div class="hld-chart-panel">
+            <div class="hld-chart-panel-header">💰 Unrealized G/L by Position</div>
+            <div class="hld-chart-panel-body" style="height:220px;position:relative;">
+              <canvas id="hldGLBar"></canvas>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══ TAB 3: Rebalance ═══ -->
+      <div class="pf-tab-content" id="htab-rebalance">
+        <!-- Risk profile banner -->
+        <div id="hldRiskBanner" style="display:none;align-items:center;gap:12px;padding:10px 16px;background:linear-gradient(135deg,var(--navy),#002A50);border-radius:var(--radius);margin-bottom:12px;color:#fff;">
+          <span id="hldRiskBannerBadge" style="font-size:26px;"></span>
+          <div>
+            <div id="hldRiskBannerLabel" style="font-size:13px;font-weight:700;"></div>
+            <div id="hldRiskBannerDesc" style="font-size:11px;opacity:.8;"></div>
+          </div>
+        </div>
+        <div id="hldRiskBannerEmpty" style="display:none;font-size:12px;color:var(--text-sec);padding:6px 0 10px;">
+          No risk profile set. <a href="javascript:showRiskQuestionnaire()" style="color:var(--blue);">Take the questionnaire</a> to personalize your target model.
+        </div>
+        <!-- Current vs Target grouped bar -->
+        <div class="card" style="margin-bottom:16px;">
+          <div class="card-title">Current vs. Target Allocation</div>
+          <div class="card-body" style="height:240px;position:relative;">
+            <canvas id="hldRebalanceBar"></canvas>
+          </div>
+        </div>
+        <!-- Drift + Blotter card -->
+        <div class="card">
+          <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
+            <span>Sector Drift vs. Target Model &amp; Rebalance Blotter
+              <span class="help-icon" title="Compares your current sector weights to a configurable target model. Proposed rebalance trades appear immediately below. This blotter does NOT execute trades.">?</span>
+            </span>
+            <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+              <label style="font-size:11px;font-weight:600;">Target:</label>
+              <select id="driftModel" onchange="driftRender();renderHldRebalanceChart();" style="font-size:11px;padding:3px 8px;">
+                <option value="spy" selected>SPY — S&amp;P 500 Sector Weights</option>
+                <option value="qqq">QQQ — Nasdaq 100 Weights</option>
+                <option value="equal">Equal-Weight All Sectors</option>
+                <option value="aggressive_growth">Aggressive Growth (Tech-heavy)</option>
+                <option value="conservative">Conservative (Dividend/Defensive)</option>
+                <option value="balanced">Balanced / 60-40 Style</option>
+                <option value="custom">Custom (edit each row)</option>
               </select>
+              <label style="font-size:11px;font-weight:600;">Tolerance:</label>
+              <input type="number" id="driftTol" value="3" min="0.5" step="0.5" style="width:60px;font-size:11px;" onchange="driftRender();renderHldRebalanceChart();">
+              <span style="font-size:10px;color:var(--text-sec);">±%</span>
+              <button class="btn-outline btn-sm" onclick="showRiskQuestionnaire()" style="white-space:nowrap;">&#9881; Set Risk Profile</button>
+              <span id="riskProfileBadge" style="display:none;font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;background:var(--navy);color:#fff;"></span>
+              <button class="btn btn-sm" onclick="driftProposeRebalance()" style="white-space:nowrap;">Propose Rebalance</button>
             </div>
-            <button class="btn" id="addCashBtn" onclick="addCashPosition()">Add Cash Position</button>
           </div>
-          <!-- Bulk import section -->
-          <div style="border-top:1px solid var(--border);margin-top:16px;padding-top:16px;">
-            <div style="font-size:12px;font-weight:700;color:var(--navy);margin-bottom:8px;">
-              Bulk Import from File
-            </div>
-            <div class="drop-zone" id="dropZone" onclick="document.getElementById('fileInput').click()">
-              <div class="drop-zone-icon">&#128196;</div>
-              <div class="drop-zone-text">Drop a CSV, Excel, or PDF file here</div>
-              <div class="drop-zone-sub">or click to browse — expects columns: Ticker, Date, Shares, Cost/Share</div>
-              <input type="file" id="fileInput" accept=".csv,.xlsx,.xls,.pdf,.txt" onchange="handleFileSelect(event)">
-            </div>
-            <div id="scanStatus" class="status-bar"></div>
-            <div id="validateArea" style="display:none;">
-              <div style="font-size:12px;font-weight:700;color:var(--navy);margin-bottom:4px;">
-                Validate Before Submitting
+          <div class="card-body" style="padding-top:0;">
+            <div id="driftPanel" style="text-align:center;padding:14px;color:var(--text-sec);font-size:12px;">Loading drift analysis…</div>
+            <div id="blotterInline" style="display:none;margin-top:16px;">
+              <div style="background:var(--navy);color:#fff;padding:8px 12px;font-size:12px;font-weight:700;border-radius:4px 4px 0 0;display:flex;justify-content:space-between;align-items:center;">
+                <span>📋 Proposed Trade Blotter <span style="font-size:10px;font-weight:400;opacity:.8;">(does not execute — generates order list for your custodian)</span></span>
+                <div style="display:flex;gap:6px;">
+                  <button onclick="blotterExportCSV()" style="background:rgba(255,255,255,0.2);border:1px solid rgba(255,255,255,0.4);color:#fff;padding:3px 9px;border-radius:3px;cursor:pointer;font-size:11px;">Export CSV</button>
+                  <button onclick="blotterClear()" style="background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.3);color:#fff;padding:3px 9px;border-radius:3px;cursor:pointer;font-size:11px;">Clear</button>
+                </div>
               </div>
-              <div style="font-size:11px;color:var(--text-sec);margin-bottom:10px;">
-                These holdings will be <strong>added</strong> to your existing portfolio. No current holdings will be removed or modified.
-              </div>
-              <div class="validate-wrap">
-                <div class="table-wrap" id="validateTableWrap"></div>
-              </div>
-              <div class="validate-actions">
-                <button class="btn" id="submitBulkBtn" onclick="submitBulkHoldings()">Submit to Portfolio</button>
-                <button class="btn-outline btn-sm" onclick="cancelBulkImport()">Cancel</button>
-                <span class="validate-count" id="validateCount"></span>
+              <div style="border:1px solid var(--border);border-top:none;border-radius:0 0 4px 4px;padding:10px;">
+                <div id="blotterTable"></div>
+                <div style="margin-top:8px;display:flex;justify-content:flex-end;">
+                  <span id="blotterSummary" style="font-size:11px;color:var(--text-sec);"></span>
+                </div>
               </div>
             </div>
           </div>
+          <div class="card-sources"><strong>Method:</strong> MV-weighted sector exposure vs. target. Tolerance band: institutional convention 3–5%. &bull; Aggressive Growth: 40% Tech, 20% Comm. Svcs., 15% Cons. Disc., 10% Healthcare, 15% other. &bull; Conservative: 20% Healthcare, 18% Financials, 15% Cons. Staples, 12% Utilities, 12% Real Estate, 23% other.</div>
+        </div>
+        <!-- TLH Scanner -->
+        <div class="card">
+          <div class="card-title">Tax-Loss Harvesting Scanner
+            <span class="help-icon" title="Scans positions in TAXABLE accounts (Individual, Joint, Trust) for unrealized losses ≥ threshold. Excludes IRA/401k/Roth/HSA where TLH does not apply. 30-day wash-sale window flagged when applicable.">?</span>
+          </div>
+          <div class="card-body">
+            <p style="font-size:12px;color:var(--text-sec);margin-bottom:12px;">Scans positions in <strong>taxable accounts</strong> (Individual, Joint, Trust, Custodial) for unrealized losses. Tax-deferred accounts (IRA, 401k, HSA, 529) are excluded — TLH does not apply there. <strong>Wash-sale rule (IRC §1091):</strong> repurchasing the same or substantially identical security within 30 days disallows the loss.</p>
+            <div class="form-row" style="margin-bottom:10px;">
+              <div class="form-group"><label>Loss Threshold ($)</label>
+                <input type="number" id="tlhThreshold" value="500" min="0" step="100" style="width:120px;" onchange="tlhRender()">
+              </div>
+              <div class="form-group"><label>Min Loss %</label>
+                <input type="number" id="tlhMinPct" value="3" min="0" step="0.5" style="width:80px;" onchange="tlhRender()">
+              </div>
+              <button class="btn-outline btn-sm" onclick="tlhRender()">Refresh Scan</button>
+            </div>
+            <div id="tlhPanel" style="text-align:center;padding:14px;color:var(--text-sec);font-size:12px;">Click <strong>Refresh Scan</strong> to identify TLH candidates.</div>
+          </div>
+          <div class="card-sources"><strong>Reference:</strong> IRC §1091 (Wash Sale Rule), 30-day window before/after loss realization. IRS Publication 550. Modeled on iRebal/Tamarac TLH workflows.</div>
+        </div>
+        <!-- Legacy blotter card (hidden) -->
+        <div id="blotterCard" style="display:none;"></div>
+      </div>
+
+      <!-- ═══ TAB 4: Import & Add ═══ -->
+      <div class="pf-tab-content" id="htab-import">
+        <div class="card">
+          <div class="card-title">Add New Holding <span class="help-icon" title="Add a new position. Tip: enter just Ticker + Date Purchased + Shares — the Cost / Share auto-fills from Yahoo Finance using the actual closing price on that date. You can override it if you have a more precise basis.">?</span></div>
+          <div class="card-body">
+            <div id="addStatus" class="status-bar"></div>
+            <div style="margin-bottom:10px;">
+              <label style="font-size:11px;font-weight:600;margin-right:12px;">
+                <input type="radio" name="holdingType" value="security" checked onchange="toggleHoldingType()"> Stock / ETF / Fund
+              </label>
+              <label style="font-size:11px;font-weight:600;">
+                <input type="radio" name="holdingType" value="cash" onchange="toggleHoldingType()"> Cash / Money Market / CD / Bond
+              </label>
+            </div>
+            <div class="form-row" id="securityFields" style="align-items:flex-end;">
+              <div class="form-group" style="min-width:110px;">
+                <label title="Stock or ETF symbol (e.g., AAPL, NVDA, SPY)">Ticker
+                  <span class="help-icon" title="Enter the ticker symbol of the stock, ETF, or fund. We'll auto-fetch its sector, industry, and current price.">?</span>
+                </label>
+                <input type="text" id="inputTicker" placeholder="AAPL, NVDA, SPY" style="text-transform:uppercase;" oninput="autofillCostBasis()" onblur="autofillCostBasis()">
+              </div>
+              <div class="form-group">
+                <label>Date Purchased
+                  <span class="help-icon" title="When you bought the position. Defaults to today. If you enter a past date AND leave Cost/Share blank, we'll auto-fill the closing price on that date. Or fill in Cost/Share and we'll estimate the purchase date from price history.">?</span>
+                </label>
+                <input type="date" id="inputDate" onchange="autofillCostBasis()">
+                <div id="inputDateHint" style="font-size:10px;color:var(--text-sec);margin-top:2px;min-height:14px;line-height:1.3;"></div>
+              </div>
+              <div class="form-group" style="min-width:90px;">
+                <label>Shares
+                  <span class="help-icon" title="Number of shares you own. Fractional shares supported (e.g., 0.5).">?</span>
+                </label>
+                <input type="number" id="inputQty" placeholder="50" min="0.0001" step="any">
+              </div>
+              <div class="form-group" style="min-width:130px;">
+                <label>Cost / Share
+                  <span class="help-icon" title="What you paid per share. If you leave this blank and provide a Date Purchased, we'll auto-fill the closing price on that date. If you enter a cost here with the date still set to today, we'll estimate the purchase date from price history.">?</span>
+                </label>
+                <input type="number" id="inputCost" placeholder="auto-fill" min="0" step="0.01" oninput="estimatePurchaseDate()">
+                <div id="inputCostHint" style="font-size:10px;color:var(--success);margin-top:2px;min-height:14px;line-height:1.3;"></div>
+              </div>
+              <div class="form-group" style="min-width:80px;">
+                <label>Yield %
+                  <span class="help-icon" title="Annual dividend or distribution yield (optional). E.g., 4.25 for 4.25% yield.">?</span>
+                </label>
+                <input type="number" id="inputYield" placeholder="4.25" min="0" step="0.01">
+              </div>
+              <div class="form-group" style="min-width:160px;">
+                <label>Account Type
+                  <span class="help-icon" title="Tax treatment of the account holding this position (e.g., Taxable Brokerage, Roth IRA, 401(k)). Used to compute aggregate weight per account.">?</span>
+                </label>
+                <select id="inputAccountType">
+                  <option value="Individual">Individual Brokerage</option>
+                  <option value="Roth IRA">Roth IRA</option>
+                  <option value="Traditional IRA">Traditional IRA</option>
+                  <option value="401(k)">Standard 401(k)</option>
+                  <option value="Roth 401(k)">Roth 401(k)</option>
+                  <option value="BrokerageLink 401(k)">BrokerageLink 401(k)</option>
+                  <option value="BrokerageLink Roth IRA">BrokerageLink Roth IRA</option>
+                  <option value="SEP IRA">SEP IRA</option>
+                  <option value="529 Plan">529 Plan</option>
+                  <option value="HSA">HSA</option>
+                  <option value="Trust">Trust Account</option>
+                  <option value="Custodial">Custodial (UTMA/UGMA)</option>
+                  <option value="Joint">Joint Account</option>
+                  <option value="Designated Beneficiary">Designated Beneficiary</option>
+                </select>
+              </div>
+              <button class="btn" id="addBtn" onclick="addHolding()">Add Holding</button>
+            </div>
+            <div class="form-row" id="cashFields" style="display:none;">
+              <div class="form-group" style="min-width:140px;">
+                <label>Description</label>
+                <input type="text" id="cashName" placeholder="Cash, SPAXX, CD, Bond">
+              </div>
+              <div class="form-group" style="min-width:120px;">
+                <label>Amount ($)</label>
+                <input type="number" id="cashAmount" placeholder="10000.00" min="0" step="0.01">
+              </div>
+              <div class="form-group" style="min-width:80px;">
+                <label>Yield %</label>
+                <input type="number" id="cashYield" placeholder="4.25" min="0" step="0.01">
+              </div>
+              <div class="form-group" style="min-width:160px;">
+                <label>Account Type</label>
+                <select id="cashAccountType">
+                  <option value="Individual">Individual Brokerage</option>
+                  <option value="Roth IRA">Roth IRA</option>
+                  <option value="Traditional IRA">Traditional IRA</option>
+                  <option value="401(k)">Standard 401(k)</option>
+                  <option value="Roth 401(k)">Roth 401(k)</option>
+                  <option value="BrokerageLink 401(k)">BrokerageLink 401(k)</option>
+                  <option value="BrokerageLink Roth IRA">BrokerageLink Roth IRA</option>
+                  <option value="SEP IRA">SEP IRA</option>
+                  <option value="HSA">HSA</option>
+                </select>
+              </div>
+              <button class="btn" id="addCashBtn" onclick="addCashPosition()">Add Cash Position</button>
+            </div>
+            <!-- Bulk import -->
+            <div style="border-top:1px solid var(--border);margin-top:16px;padding-top:16px;">
+              <div style="font-size:12px;font-weight:700;color:var(--navy);margin-bottom:8px;">Bulk Import from File</div>
+              <div class="drop-zone" id="dropZone" onclick="document.getElementById('fileInput').click()">
+                <div class="drop-zone-icon">&#128196;</div>
+                <div class="drop-zone-text">Drop a CSV, Excel, or PDF file here</div>
+                <div class="drop-zone-sub">or click to browse — expects columns: Ticker, Date, Shares, Cost/Share</div>
+                <input type="file" id="fileInput" accept=".csv,.xlsx,.xls,.pdf,.txt" onchange="handleFileSelect(event)">
+              </div>
+              <div id="scanStatus" class="status-bar"></div>
+              <div id="validateArea" style="display:none;">
+                <div style="font-size:12px;font-weight:700;color:var(--navy);margin-bottom:4px;">Validate Before Submitting</div>
+                <div style="font-size:11px;color:var(--text-sec);margin-bottom:10px;">These holdings will be <strong>added</strong> to your existing portfolio. No current holdings will be removed or modified.</div>
+                <div class="validate-wrap">
+                  <div class="table-wrap" id="validateTableWrap"></div>
+                </div>
+                <div class="validate-actions">
+                  <button class="btn" id="submitBulkBtn" onclick="submitBulkHoldings()">Submit to Portfolio</button>
+                  <button class="btn-outline btn-sm" onclick="cancelBulkImport()">Cancel</button>
+                  <span class="validate-count" id="validateCount"></span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div style="background:var(--panel);border:1px solid var(--border);border-radius:6px;padding:14px 18px;margin-top:4px;font-size:12px;color:var(--text-sec);">
+          <strong style="color:var(--navy);">&#128218; Need help with account types?</strong> The full Account Types Reference Guide is on the <a href="javascript:navigateTo('resources')" style="color:var(--blue);font-weight:600;">Resources / Training</a> page, along with a comprehensive glossary of every metric, equation, and term used across the platform.
         </div>
       </div>
 
-      <!-- ═══════════ REBALANCING WORKBENCH (Drift + Blotter unified) ═══════════ -->
-      <div class="card">
-        <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
-          <span>Sector Drift vs. Target Model &amp; Rebalance Blotter
-            <span class="help-icon" title="Compares your current sector weights to a configurable target model. Proposed rebalance trades appear immediately below the drift analysis — they are part of the same workflow. This blotter does NOT execute trades.">?</span>
-          </span>
-          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
-            <label style="font-size:11px;font-weight:600;">Target:</label>
-            <select id="driftModel" onchange="driftRender()" style="font-size:11px;padding:3px 8px;">
-              <option value="spy" selected>SPY — S&amp;P 500 Sector Weights</option>
-              <option value="qqq">QQQ — Nasdaq 100 Weights</option>
-              <option value="equal">Equal-Weight All Sectors</option>
-              <option value="aggressive_growth">Aggressive Growth (Tech-heavy)</option>
-              <option value="conservative">Conservative (Dividend/Defensive)</option>
-              <option value="balanced">Balanced / 60-40 Style</option>
-              <option value="custom">Custom (edit each row)</option>
-            </select>
-            <label style="font-size:11px;font-weight:600;">Tolerance:</label>
-            <input type="number" id="driftTol" value="3" min="0.5" step="0.5" style="width:60px;font-size:11px;" onchange="driftRender()">
-            <span style="font-size:10px;color:var(--text-sec);">±%</span>
-            <button class="btn-outline btn-sm" onclick="showRiskQuestionnaire()" style="white-space:nowrap;">&#9881; Set Risk Profile</button>
-            <span id="riskProfileBadge" style="display:none;font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;background:var(--navy);color:#fff;"></span>
-            <button class="btn btn-sm" onclick="driftProposeRebalance()" style="white-space:nowrap;">Propose Rebalance</button>
-          </div>
-        </div>
-        <div class="card-body" style="padding-top:0;">
-          <!-- Drift table -->
-          <div id="driftPanel" style="text-align:center;padding:14px;color:var(--text-sec);font-size:12px;">Loading drift analysis…</div>
-          <!-- Blotter — shown inline when trades exist -->
-          <div id="blotterInline" style="display:none;margin-top:16px;">
-            <div style="background:var(--navy);color:#fff;padding:8px 12px;font-size:12px;font-weight:700;border-radius:4px 4px 0 0;display:flex;justify-content:space-between;align-items:center;">
-              <span>📋 Proposed Trade Blotter <span style="font-size:10px;font-weight:400;opacity:.8;">(does not execute — generates order list for your custodian)</span></span>
-              <div style="display:flex;gap:6px;">
-                <button onclick="blotterExportCSV()" style="background:rgba(255,255,255,0.2);border:1px solid rgba(255,255,255,0.4);color:#fff;padding:3px 9px;border-radius:3px;cursor:pointer;font-size:11px;">Export CSV</button>
-                <button onclick="blotterClear()" style="background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.3);color:#fff;padding:3px 9px;border-radius:3px;cursor:pointer;font-size:11px;">Clear</button>
-              </div>
-            </div>
-            <div style="border:1px solid var(--border);border-top:none;border-radius:0 0 4px 4px;padding:10px;">
-              <div id="blotterTable"></div>
-              <div style="margin-top:8px;display:flex;justify-content:flex-end;">
-                <span id="blotterSummary" style="font-size:11px;color:var(--text-sec);"></span>
-              </div>
-            </div>
-          </div>
-        </div>
-        <div class="card-sources"><strong>Method:</strong> MV-weighted sector exposure vs. target. Tolerance band: institutional convention 3–5%. &bull; Aggressive Growth: 40% Tech, 20% Comm. Svcs., 15% Cons. Disc., 10% Healthcare, 15% other. &bull; Conservative: 20% Healthcare, 18% Financials, 15% Cons. Staples, 12% Utilities, 12% Real Estate, 23% other.</div>
-      </div>
-
-      <!-- ═══════════ TAX-LOSS HARVESTING SCANNER ═══════════ -->
-      <div class="card">
-        <div class="card-title">Tax-Loss Harvesting Scanner
-          <span class="help-icon" title="Scans positions in TAXABLE accounts (Individual, Joint, Trust) for unrealized losses ≥ threshold. Excludes IRA/401k/Roth/HSA where TLH does not apply. 30-day wash-sale window flagged when applicable.">?</span>
-        </div>
-        <div class="card-body">
-          <p style="font-size:12px;color:var(--text-sec);margin-bottom:12px;">Scans positions in <strong>taxable accounts</strong> (Individual, Joint, Trust, Custodial) for unrealized losses. Tax-deferred accounts (IRA, 401k, HSA, 529) are excluded — TLH does not apply there. <strong>Wash-sale rule (IRC §1091):</strong> repurchasing the same or substantially identical security within 30 days disallows the loss.</p>
-          <div class="form-row" style="margin-bottom:10px;">
-            <div class="form-group"><label>Loss Threshold ($)</label>
-              <input type="number" id="tlhThreshold" value="500" min="0" step="100" style="width:120px;" onchange="tlhRender()">
-            </div>
-            <div class="form-group"><label>Min Loss %</label>
-              <input type="number" id="tlhMinPct" value="3" min="0" step="0.5" style="width:80px;" onchange="tlhRender()">
-            </div>
-            <button class="btn-outline btn-sm" onclick="tlhRender()">Refresh Scan</button>
-          </div>
-          <div id="tlhPanel" style="text-align:center;padding:14px;color:var(--text-sec);font-size:12px;">Click <strong>Refresh Scan</strong> to identify TLH candidates.</div>
-        </div>
-        <div class="card-sources"><strong>Reference:</strong> IRC §1091 (Wash Sale Rule), 30-day window before/after loss realization. IRS Publication 550. Modeled on iRebal/Tamarac TLH workflows.</div>
-      </div>
-      <!-- Legacy blotter card (hidden — blotter now lives inline in drift card) -->
-      <div id="blotterCard" style="display:none;"></div>
-
-      <!-- Holdings table card -->
-      <div class="card">
-        <div class="card-title">
-          Your Holdings
-          <span style="font-weight:400;font-size:12px;opacity:.7;" id="holdingsCount"></span>
-        </div>
-        <div class="card-body">
-          <div id="holdingsInsightPanel" style="display:none;margin-bottom:14px;"></div>
-          <div id="holdingsStatus" class="status-bar"></div>
-          <div class="table-wrap" id="holdingsTableWrap"></div>
-          <div style="margin-top:12px;">
-            <button class="btn" onclick="refreshAllPrices()" id="refreshBtn">Refresh All Prices</button>
-          </div>
-        </div>
-        <div class="card-sources">
-          <strong>Sources:</strong><br>
-          &#8226; Yahoo Finance via Cloudflare Worker &#8226; Firebase Firestore
-        </div>
-      </div>
-      <!-- Account Types Reference — moved to Resources -->
-      <div style="background:var(--panel);border:1px solid var(--border);border-radius:6px;padding:14px 18px;margin-top:4px;font-size:12px;color:var(--text-sec);">
-        <strong style="color:var(--navy);">&#128218; Need help with account types?</strong> The full Account Types Reference Guide is now on the <a href="javascript:navigateTo('resources')" style="color:var(--blue);font-weight:600;">Resources / Training</a> page, along with a comprehensive glossary of every metric, equation, and term used across the platform.
-      </div>
     </div>
   </div>
 </div>
@@ -5408,6 +5552,8 @@ body.view-mobile #mobileBottomBar {
       // Show table immediately with whatever prices are in Firestore
       window._holdings = h;
       renderHoldingsTable(h);
+      renderHoldingsKPIs(h);
+      _hldTabInit.analysis = false;
       if (typeof renderPortfolioOverview === 'function') renderPortfolioOverview();
       document.getElementById('holdingsCount').textContent =
         h.length ? '(' + h.length + ' positions)' : '';
@@ -5482,6 +5628,8 @@ body.view-mobile #mobileBottomBar {
       // Re-render with fresh prices
       window._holdings = h;
       renderHoldingsTable(h);
+      renderHoldingsKPIs(h);
+      _hldTabInit.analysis = false;
       // If Portfolio page is currently active, re-render it and auto-trigger analytics
       if (typeof renderPortfolioOverview === 'function' && document.getElementById('page-portfolio') && document.getElementById('page-portfolio').classList.contains('active')) {
         renderPortfolioOverview();
@@ -6614,6 +6762,10 @@ window.pfFilterHoldings = function(filterType, filterValue) {
 
 window.filterHoldingsByAccount = function() {
   renderHoldingsTable(window._holdings || []);
+  renderHoldingsKPIs(window._holdings || []);
+  _hldTabInit.analysis = false;
+  var at = document.getElementById('htab-analysis');
+  if (at && at.classList.contains('active')) renderHoldingsAnalysis(window._holdings || []);
 };
 
 // ═══ MANAGE HOLDINGS TABLE (with Account, Sell, Sort, Total) ═══
@@ -6690,7 +6842,6 @@ function renderHoldingsInsights(holdings) {
 }
 
 function renderHoldingsTable(holdings) {
-  renderHoldingsInsights(holdings);
   const wrap = document.getElementById('holdingsTableWrap');
   if (!holdings || !holdings.length) {
     wrap.innerHTML = '<div class="empty-state" style="padding:24px;"><h3>No Holdings Yet</h3><p>Use the form above to add your first holding.</p></div>';
@@ -6911,6 +7062,387 @@ function mcBig(label, value, sub, subColor) {
     '<div class="metric-value" style="font-size:18px;">' + value + '</div>' +
     '<div class="metric-sub" style="color:' + subColor + ';">' + sub + '</div></div>';
 }
+
+// ═══════════════════════════════════════════════════════
+// HOLDINGS PORT-MODULE — Tab Switching, KPIs, Analytics
+// ═══════════════════════════════════════════════════════
+
+var _hldTabInit = {};
+
+function holdingsShowTab(name) {
+  document.querySelectorAll('#page-holdings [data-htab]').forEach(function(b) {
+    b.classList.toggle('active', b.dataset.htab === name);
+  });
+  document.querySelectorAll('#page-holdings .pf-tab-content').forEach(function(c) {
+    c.classList.toggle('active', c.id === 'htab-' + name);
+  });
+  var h = window._holdings || [];
+  if (name === 'analysis') {
+    if (!_hldTabInit.analysis) { _hldTabInit.analysis = true; if (h.length) renderHoldingsAnalysis(h); }
+  }
+  if (name === 'rebalance') {
+    _hldTabInit.rebalance = true;
+    if (typeof driftRender === 'function') driftRender();
+    renderHldRebalanceChart();
+    updateHldRiskBanner();
+  }
+}
+
+function renderHoldingsKPIs(allH) {
+  var C = { textSec: 'var(--text-sec)', success: 'var(--success)', danger: 'var(--danger)', amber: '#8B6914', navy: 'var(--navy)' };
+  function pctColor(v) { return v > 0 ? C.success : v < 0 ? C.danger : C.textSec; }
+  var acctFilter = (document.getElementById('holdingsAccountFilter') || {}).value || 'all';
+  var h = acctFilter === 'all' ? allH : allH.filter(function(x){ return x.accountType === acctFilter; });
+  var isCashLike = function(x) { return ['Cash','Money Market','CD','Bond Position'].includes(x.assetClass); };
+  var fmt = function(v) {
+    if (v == null) return '—';
+    var abs = Math.abs(v);
+    var s = abs >= 1000000 ? (v < 0 ? '-' : '') + '$' + (abs/1000000).toFixed(2) + 'M'
+           : abs >= 1000 ? (v < 0 ? '-' : '') + '$' + (abs/1000).toFixed(1) + 'k'
+           : (v < 0 ? '-' : '') + '$' + abs.toFixed(2);
+    return (v > 0 ? '+' : '') + s;
+  };
+  var fmtV = function(v) {
+    if (v == null) return '—';
+    var abs = Math.abs(v);
+    return abs >= 1000000 ? '$' + (abs/1000000).toFixed(2) + 'M'
+         : abs >= 1000 ? '$' + (abs/1000).toFixed(1) + 'k'
+         : '$' + abs.toFixed(0);
+  };
+  var fmtPct = function(v) { return v == null ? '—' : (v > 0 ? '+' : '') + v.toFixed(2) + '%'; };
+
+  var tv = h.reduce(function(s,x){ return s + (x.currentPrice||0)*x.quantity; }, 0);
+  var costBasis = h.reduce(function(s,x){ return s + (x.costBasis||0)*x.quantity; }, 0);
+  var tgl = tv - costBasis;
+  var tglp = costBasis > 0 ? (tgl/costBasis)*100 : 0;
+  var dayChg = h.reduce(function(s,x){
+    return s + ((x.currentPrice||0) - (x.previousClose||x.currentPrice||0)) * x.quantity;
+  }, 0);
+  var prevTV = tv - dayChg;
+  var dayPct = prevTV > 0 ? (dayChg/prevTV)*100 : 0;
+  var annualIncome = h.reduce(function(s,x){
+    return s + (x.currentPrice||0)*x.quantity*(x.yieldPct||0)/100;
+  }, 0);
+  var wtdYield = tv > 0 ? (annualIncome/tv)*100 : 0;
+  var topPos = null, topPct = 0;
+  h.filter(function(x){ return !isCashLike(x); }).forEach(function(x){
+    var pct = tv > 0 ? ((x.currentPrice||0)*x.quantity/tv)*100 : 0;
+    if (pct > topPct) { topPct = pct; topPos = x; }
+  });
+  var topColor = topPct > 15 ? C.danger : topPct > 10 ? C.amber : C.navy;
+
+  var cards = [
+    mcBig('Total Value', fmtV(tv), fmtPct(dayPct) + ' today', pctColor(dayPct)),
+    mcBig('Total G/L', fmtPct(tglp), fmt(tgl), pctColor(tgl)),
+    mcBig('Day Change', fmt(dayChg), fmtPct(dayPct), pctColor(dayPct)),
+    mcBig('Positions', h.length, acctFilter === 'all' ? 'All Accounts' : acctFilter, C.textSec),
+    mcBig('Annual Income', fmtV(annualIncome), fmtPct(wtdYield) + ' wtd yield', C.success),
+    mcBig('Top Position', topPos ? topPos.ticker : '—', topPos ? topPct.toFixed(1) + '% of portfolio' : 'No holdings', topColor)
+  ];
+  var el = document.getElementById('hldKpiCards');
+  if (el) el.innerHTML = cards.join('');
+}
+
+function renderHoldingsAnalysis(allH) {
+  var acctFilter = (document.getElementById('holdingsAccountFilter') || {}).value || 'all';
+  var h = acctFilter === 'all' ? allH : allH.filter(function(x){ return x.accountType === acctFilter; });
+  var isCashLike = function(x) { return ['Cash','Money Market','CD','Bond Position'].includes(x.assetClass); };
+  var tv = h.reduce(function(s,x){ return s+(x.currentPrice||0)*x.quantity; }, 0);
+  if (!tv) return;
+
+  if (!window._hldCharts) window._hldCharts = {};
+  Object.keys(window._hldCharts).forEach(function(k){
+    try { window._hldCharts[k].destroy(); } catch(e){}
+    delete window._hldCharts[k];
+  });
+
+  var PAL = ['#003C71','#5B9BD5','#2E7D52','#8B2A2A','#8B6914','#4A90D9','#7B3F00','#1B6CA8','#A0522D','#2F4F4F','#6B3FA0','#B8860B'];
+
+  // Chart 1 — Sector Donut
+  var sectors = {};
+  h.forEach(function(x){ var s = x.sector||'Unknown'; sectors[s]=(sectors[s]||0)+(x.currentPrice||0)*x.quantity; });
+  var sLabels = Object.keys(sectors).sort(function(a,b){ return sectors[b]-sectors[a]; });
+  var sData = sLabels.map(function(s){ return sectors[s]; });
+  var sPcts = sData.map(function(v){ return tv>0?(v/tv*100).toFixed(1):'0.0'; });
+  var sCtx = document.getElementById('hldSectorDonut');
+  if (sCtx) {
+    window._hldCharts.sector = new Chart(sCtx.getContext('2d'), {
+      type:'doughnut',
+      data:{ labels:sLabels, datasets:[{ data:sData, backgroundColor:sLabels.map(function(_,i){ return PAL[i%PAL.length]; }), borderWidth:2, borderColor:'#fff' }] },
+      options:{ cutout:'60%', maintainAspectRatio:false,
+        plugins:{ legend:{display:false}, tooltip:{ callbacks:{ label:function(c){ return ' '+c.label+': '+sPcts[c.dataIndex]+'%'; } } } } }
+    });
+    var sc = document.getElementById('hldSectorCount');
+    if (sc) sc.innerHTML = sLabels.length+'<br><span style="font-size:10px;font-weight:400;">sectors</span>';
+    var sl = document.getElementById('hldSectorLegend');
+    if (sl) sl.innerHTML = sLabels.map(function(s,i){
+      return '<div style="display:flex;align-items:center;gap:5px;margin-bottom:3px;">'
+        +'<span style="width:10px;height:10px;border-radius:2px;background:'+PAL[i%PAL.length]+';flex-shrink:0;display:inline-block;"></span>'
+        +'<span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="'+s+'">'+s+'</span>'
+        +'<span style="color:var(--text-sec);font-size:10px;flex-shrink:0;">'+sPcts[i]+'%</span></div>';
+    }).join('');
+  }
+
+  // Chart 2 — Asset Class Donut
+  var assets = {};
+  h.forEach(function(x){
+    var ac = x.assetClass || (isCashLike(x)?'Cash / Fixed Income':'Equity');
+    if (['Cash','Money Market','CD','Bond Position','Fixed Income'].includes(ac)) ac='Cash / Fixed Income';
+    assets[ac]=(assets[ac]||0)+(x.currentPrice||0)*x.quantity;
+  });
+  var aLabels = Object.keys(assets).sort(function(a,b){ return assets[b]-assets[a]; });
+  var aData = aLabels.map(function(a){ return assets[a]; });
+  var aPcts = aData.map(function(v){ return tv>0?(v/tv*100).toFixed(1):'0.0'; });
+  var aCtx = document.getElementById('hldAssetDonut');
+  if (aCtx) {
+    window._hldCharts.asset = new Chart(aCtx.getContext('2d'), {
+      type:'doughnut',
+      data:{ labels:aLabels, datasets:[{ data:aData, backgroundColor:aLabels.map(function(_,i){ return PAL[i%PAL.length]; }), borderWidth:2, borderColor:'#fff' }] },
+      options:{ cutout:'60%', maintainAspectRatio:false,
+        plugins:{ legend:{display:false}, tooltip:{ callbacks:{ label:function(c){ return ' '+c.label+': '+aPcts[c.dataIndex]+'%'; } } } } }
+    });
+    var ac2 = document.getElementById('hldAssetCount');
+    if (ac2) ac2.innerHTML = aLabels.length+'<br><span style="font-size:10px;font-weight:400;">classes</span>';
+    var al = document.getElementById('hldAssetLegend');
+    if (al) al.innerHTML = aLabels.map(function(a,i){
+      return '<div style="display:flex;align-items:center;gap:5px;margin-bottom:3px;">'
+        +'<span style="width:10px;height:10px;border-radius:2px;background:'+PAL[i%PAL.length]+';flex-shrink:0;display:inline-block;"></span>'
+        +'<span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="'+a+'">'+a+'</span>'
+        +'<span style="color:var(--text-sec);font-size:10px;flex-shrink:0;">'+aPcts[i]+'%</span></div>';
+    }).join('');
+  }
+
+  // Chart 3 — Top 10 Positions (horizontal bar)
+  var sorted10 = h.slice().sort(function(a,b){ return (b.currentPrice||0)*b.quantity-(a.currentPrice||0)*a.quantity; }).slice(0,10);
+  var tLabels = sorted10.map(function(x){ return x.ticker; });
+  var tData = sorted10.map(function(x){ return tv>0?parseFloat(((x.currentPrice||0)*x.quantity/tv*100).toFixed(2)):0; });
+  var tColors = tData.map(function(v){ return v>15?'rgba(139,42,42,0.85)':v>10?'rgba(139,105,20,0.85)':'rgba(0,60,113,0.85)'; });
+  var tCtx = document.getElementById('hldTopBar');
+  if (tCtx) {
+    window._hldCharts.topBar = new Chart(tCtx.getContext('2d'), {
+      type:'bar',
+      data:{ labels:tLabels, datasets:[{ data:tData, backgroundColor:tColors, borderRadius:3 }] },
+      options:{ indexAxis:'y', maintainAspectRatio:false,
+        plugins:{ legend:{display:false}, tooltip:{ callbacks:{ label:function(c){ return ' '+c.parsed.x.toFixed(2)+'% of portfolio'; } } } },
+        scales:{ x:{ ticks:{ callback:function(v){ return v+'%'; }, font:{size:10} }, grid:{color:'rgba(0,0,0,0.05)'} }, y:{ ticks:{font:{size:11}} } }
+      }
+    });
+  }
+
+  // Chart 4 — G/L Waterfall (vertical bar)
+  var glH = h.filter(function(x){ return !isCashLike(x)&&x.costBasis>0&&x.currentPrice>0; });
+  var glSorted = glH.slice().sort(function(a,b){
+    return ((b.currentPrice-b.costBasis)*b.quantity)-((a.currentPrice-a.costBasis)*a.quantity);
+  });
+  var glLabels = glSorted.map(function(x){ return x.ticker; });
+  var glData = glSorted.map(function(x){ return parseFloat(((x.currentPrice-x.costBasis)*x.quantity).toFixed(2)); });
+  var glColors = glData.map(function(v){ return v>=0?'rgba(46,125,82,0.8)':'rgba(139,42,42,0.8)'; });
+  var glCtx = document.getElementById('hldGLBar');
+  if (glCtx) {
+    window._hldCharts.glBar = new Chart(glCtx.getContext('2d'), {
+      type:'bar',
+      data:{ labels:glLabels, datasets:[{ data:glData, backgroundColor:glColors, borderRadius:3 }] },
+      options:{ maintainAspectRatio:false,
+        plugins:{ legend:{display:false}, tooltip:{ callbacks:{ label:function(c){
+          var v=c.parsed.y; return ' '+(v>=0?'+':'')+v.toLocaleString('en-US',{style:'currency',currency:'USD',maximumFractionDigits:0});
+        } } } },
+        scales:{
+          x:{ ticks:{font:{size:10}, maxRotation:45} },
+          y:{ ticks:{ callback:function(v){
+            var a=Math.abs(v); return (v<0?'-':'')+'$'+(a>=1000?(a/1000).toFixed(1)+'k':a);
+          }, font:{size:10} }, grid:{color:'rgba(0,0,0,0.05)'} }
+        }
+      }
+    });
+  }
+
+  renderHldStoryCards(h, tv);
+}
+
+function renderHldStoryCards(h, tv) {
+  var el = document.getElementById('hldStoryStrip');
+  if (!el) return;
+  var isCashLike = function(x){ return ['Cash','Money Market','CD','Bond Position'].includes(x.assetClass); };
+  var equityH = h.filter(function(x){ return !isCashLike(x); });
+  var equityMV = equityH.reduce(function(s,x){ return s+(x.currentPrice||0)*x.quantity; }, 0);
+
+  // Story 1 — Sector drift vs SPY
+  var benchWeights = window.SPY_SECTOR_WEIGHTS || {};
+  var sectorMV = {};
+  equityH.forEach(function(x){ var s=x.sector||'Unknown'; sectorMV[s]=(sectorMV[s]||0)+(x.currentPrice||0)*x.quantity; });
+  var maxDrift=0, maxDriftSector='', maxDriftDir='';
+  Object.keys(benchWeights).forEach(function(sec){
+    var cur = equityMV>0?(sectorMV[sec]||0)/equityMV*100:0;
+    var tgt = benchWeights[sec]||0;
+    var drift = cur-tgt;
+    if (Math.abs(drift)>Math.abs(maxDrift)){ maxDrift=drift; maxDriftSector=sec; maxDriftDir=drift>0?'overweight':'underweight'; }
+  });
+  var sc1 = Math.abs(maxDrift)>5?'warning':'info';
+
+  // Story 2 — Largest position
+  var topPct=0, topTicker='';
+  equityH.forEach(function(x){
+    var pct=tv>0?(x.currentPrice||0)*x.quantity/tv*100:0;
+    if (pct>topPct){ topPct=pct; topTicker=x.ticker; }
+  });
+  var sc2 = topPct>15?'danger':topPct>10?'warning':'success';
+
+  // Story 3 — TLH candidates
+  var taxAccts = ['Individual','Joint','Trust','Custodial'];
+  var tlhCount = h.filter(function(x){
+    if (!taxAccts.includes(x.accountType)||isCashLike(x)) return false;
+    var gl=(x.currentPrice-x.costBasis)*x.quantity;
+    var glp=x.costBasis>0?(x.currentPrice-x.costBasis)/x.costBasis*100:0;
+    return gl<-500&&glp<-3;
+  }).length;
+  var sc3 = tlhCount>0?'warning':'success';
+
+  // Story 4 — Leveraged ETF exposure
+  var levMV=0;
+  h.forEach(function(x){
+    var info=(window.ETF_DB&&window.ETF_DB[x.ticker])||{};
+    if (info.lev) levMV+=(x.currentPrice||0)*x.quantity;
+  });
+  var levPct=tv>0?levMV/tv*100:0;
+  var sc4=levPct>10?'danger':levPct>0?'warning':'success';
+
+  // Story 5 — Unrealized P/L
+  var totalCost=equityH.reduce(function(s,x){ return s+(x.costBasis||0)*x.quantity; },0);
+  var totalMVeq=equityH.reduce(function(s,x){ return s+(x.currentPrice||0)*x.quantity; },0);
+  var totalGL=totalMVeq-totalCost;
+  var totalGLPct=totalCost>0?totalGL/totalCost*100:0;
+  var sc5=totalGL>=0?'success':'danger';
+
+  var fmtK = function(v){
+    var a=Math.abs(v);
+    return (v>0?'+':'')+(v<0?'-':'')+'$'+(a>=1000000?(a/1000000).toFixed(2)+'M':a>=1000?(a/1000).toFixed(1)+'k':a.toFixed(0));
+  };
+
+  el.innerHTML = [
+    '<div class="hld-story-card '+sc1+'"><div class="sc-icon">📐</div><div class="sc-body">'
+      +'<div class="sc-headline">Sector Drift (vs S&amp;P 500)</div>'
+      +'<div class="sc-value">'+(maxDriftSector?maxDriftSector.replace(' Services','').replace(' Discretionary','Disc.'):'—')+'</div>'
+      +'<div class="sc-explain">'+(maxDriftSector?(maxDrift>0?'+':'')+maxDrift.toFixed(1)+'% '+maxDriftDir+' vs benchmark':'Insufficient data')+'</div>'
+      +'</div></div>',
+    '<div class="hld-story-card '+sc2+'"><div class="sc-icon">🏆</div><div class="sc-body">'
+      +'<div class="sc-headline">Largest Position</div>'
+      +'<div class="sc-value">'+(topTicker||'—')+'</div>'
+      +'<div class="sc-explain">'+(topTicker?topPct.toFixed(1)+'% of portfolio'+(topPct>15?' — consider trimming':topPct>10?' — concentrated':' — well-sized'):'No equity holdings')+'</div>'
+      +'</div></div>',
+    '<div class="hld-story-card '+sc3+'"><div class="sc-icon">🔍</div><div class="sc-body">'
+      +'<div class="sc-headline">TLH Candidates</div>'
+      +'<div class="sc-value">'+tlhCount+'</div>'
+      +'<div class="sc-explain">'+(tlhCount?'Losses &gt;3% &amp; &gt;$500 in taxable accts — see <a href="javascript:holdingsShowTab(\'rebalance\')" style="color:var(--blue);">Rebalance</a> tab':'No significant TLH candidates')+'</div>'
+      +'</div></div>',
+    '<div class="hld-story-card '+sc4+'"><div class="sc-icon">&#9889;</div><div class="sc-body">'
+      +'<div class="sc-headline">Leveraged ETF Exposure</div>'
+      +'<div class="sc-value">'+levPct.toFixed(1)+'%</div>'
+      +'<div class="sc-explain">'+(levPct>0?'Volatility drag amplified — monitor closely':'No leveraged ETFs detected')+'</div>'
+      +'</div></div>',
+    '<div class="hld-story-card '+sc5+'"><div class="sc-icon">'+(totalGL>=0?'📈':'📉')+'</div><div class="sc-body">'
+      +'<div class="sc-headline">Unrealized P/L</div>'
+      +'<div class="sc-value">'+fmtK(totalGL)+'</div>'
+      +'<div class="sc-explain">'+(totalGLPct>0?'+':'')+totalGLPct.toFixed(2)+'% on cost basis</div>'
+      +'</div></div>'
+  ].join('');
+}
+
+function renderHldRebalanceChart() {
+  var h = window._holdings || [];
+  var isCashLike = function(x){ return ['Cash','Money Market','CD','Bond Position'].includes(x.assetClass); };
+  var equityH = h.filter(function(x){ return !isCashLike(x); });
+  var equityMV = equityH.reduce(function(s,x){ return s+(x.currentPrice||0)*x.quantity; }, 0);
+  var modelEl = document.getElementById('driftModel');
+  var tolEl = document.getElementById('driftTol');
+  var model = modelEl?modelEl.value:'spy';
+  var tol = tolEl?parseFloat(tolEl.value)||3:3;
+  var targets = model==='aggressive_growth'?(window.AGGRESSIVE_GROWTH_WEIGHTS||{})
+    :model==='conservative'?(window.CONSERVATIVE_WEIGHTS||{})
+    :model==='balanced'?(window.BALANCED_WEIGHTS||{})
+    :model==='qqq'?(window.QQQ_SECTOR_WEIGHTS||{})
+    :(window.SPY_SECTOR_WEIGHTS||{});
+  var sectorMV={};
+  equityH.forEach(function(x){ var s=x.sector||'Unknown'; sectorMV[s]=(sectorMV[s]||0)+(x.currentPrice||0)*x.quantity; });
+  var allSectors = Object.keys(targets).filter(function(s){ return (targets[s]||0)>0||(sectorMV[s]||0)>0; }).sort();
+  var curPcts = allSectors.map(function(s){ return equityMV>0?parseFloat(((sectorMV[s]||0)/equityMV*100).toFixed(1)):0; });
+  var tgtPcts = allSectors.map(function(s){ return targets[s]||0; });
+  var bdrColors = allSectors.map(function(s,i){ return Math.abs(curPcts[i]-tgtPcts[i])>tol?'#8B2A2A':'rgba(0,0,0,0)'; });
+  var ctx = document.getElementById('hldRebalanceBar');
+  if (!ctx) return;
+  if (!window._hldCharts) window._hldCharts={};
+  if (window._hldCharts.rebalance) { try{window._hldCharts.rebalance.destroy();}catch(e){} }
+  window._hldCharts.rebalance = new Chart(ctx.getContext('2d'), {
+    type:'bar',
+    data:{
+      labels:allSectors.map(function(s){ return s.replace(' Services','').replace(' Discretionary','Disc.').replace(' Staples','Stap.'); }),
+      datasets:[
+        { label:'Current', data:curPcts, backgroundColor:'rgba(91,155,213,0.8)', borderColor:bdrColors, borderWidth:2 },
+        { label:'Target', data:tgtPcts, backgroundColor:'rgba(0,60,113,0.6)' }
+      ]
+    },
+    options:{
+      maintainAspectRatio:false,
+      plugins:{
+        legend:{ position:'top', labels:{font:{size:11}} },
+        tooltip:{ callbacks:{ afterBody:function(items){
+          if (!items.length) return [];
+          var i=items[0].dataIndex;
+          var d=curPcts[i]-tgtPcts[i];
+          return ['Drift: '+(d>0?'+':'')+d.toFixed(1)+'%'+(Math.abs(d)>tol?' ⚠ Outside tolerance':'')];
+        }}}
+      },
+      scales:{
+        x:{ ticks:{font:{size:9}, maxRotation:45} },
+        y:{ ticks:{ callback:function(v){ return v+'%'; }, font:{size:10} }, grid:{color:'rgba(0,0,0,0.05)'} }
+      }
+    }
+  });
+}
+
+function updateHldRiskBanner() {
+  var banner = document.getElementById('hldRiskBanner');
+  var empty = document.getElementById('hldRiskBannerEmpty');
+  if (!banner||!empty) return;
+  var profile = window._riskProfile;
+  var profiles = window.RISK_PROFILES;
+  if (profile && profiles && profiles[profile]) {
+    var p = profiles[profile];
+    banner.style.display = 'flex';
+    empty.style.display = 'none';
+    var badgeEl = document.getElementById('hldRiskBannerBadge');
+    var labelEl = document.getElementById('hldRiskBannerLabel');
+    var descEl  = document.getElementById('hldRiskBannerDesc');
+    if (badgeEl) badgeEl.textContent = p.emoji||'📊';
+    if (labelEl) labelEl.textContent = p.label||profile;
+    if (descEl)  descEl.textContent  = p.description||('Target model: '+(p.driftModel||'spy').toUpperCase());
+  } else {
+    banner.style.display = 'none';
+    empty.style.display = 'block';
+  }
+}
+
+function holdingsApplySearch() {
+  var h = window._holdings || [];
+  var q = ((document.getElementById('holdingsSearch')||{}).value||'').toLowerCase().trim();
+  var assetF = ((document.getElementById('holdingsAssetFilter')||{}).value||'all');
+  var isCashLike = function(x){ return ['Cash','Money Market','CD','Bond Position'].includes(x.assetClass); };
+  var filtered = h.filter(function(x){
+    var matchQ = !q
+      ||(x.ticker||'').toLowerCase().includes(q)
+      ||(x.companyName||'').toLowerCase().includes(q)
+      ||(x.sector||'').toLowerCase().includes(q)
+      ||(x.industry||'').toLowerCase().includes(q)
+      ||(x.accountType||'').toLowerCase().includes(q);
+    var matchA = assetF==='all'
+      ||(assetF==='equity'&&!isCashLike(x))
+      ||(assetF==='cash'&&isCashLike(x));
+    return matchQ&&matchA;
+  });
+  renderHoldingsTable(filtered);
+  var countEl = document.getElementById('holdingsCount');
+  if (countEl) countEl.textContent = filtered.length?(filtered.length<h.length?'('+filtered.length+' of '+h.length+' positions)':'('+h.length+' positions)'):'(no matches)';
+}
+
 function rangeLabel() {
   const m = {"1mo":"1M","3mo":"3M","6mo":"6M","ytd":"YTD","1y":"1Y","3y":"3Y","5y":"5Y","10y":"10Y","15y":"15Y","20y":"20Y"};
   return m[currentRange] || currentRange;
