@@ -2534,7 +2534,6 @@ body.view-mobile #mobileBottomBar {
       <div class="nav-dropdown">
         <div class="nav-child" data-page="about" onclick="navigateTo('about')">About Us</div>
         <div class="nav-child" data-page="resources" onclick="navigateTo('resources')">Resources / Training</div>
-        <div class="nav-child" data-page="prevtools" onclick="navigateTo('prevtools')" style="border-top:1px solid rgba(255,255,255,0.12);margin-top:2px;padding-top:6px;">&#128451; Previous Tools</div>
       </div>
     </div>
     <div class="nav-group">
@@ -2543,7 +2542,7 @@ body.view-mobile #mobileBottomBar {
       </div>
       <div class="nav-dropdown">
         <div class="nav-child" data-page="holdings" onclick="navigateTo('holdings')">Manage Holdings</div>
-        <div class="nav-child" data-page="gap" onclick="navigateTo('gap')">&#128202; Gap Analysis</div>
+        <div class="nav-child" data-page="sector-macro-alignment" onclick="navigateTo('sector-macro-alignment')">Sector &amp; Macro Alignment</div>
         <div class="nav-child" data-page="themes" onclick="navigateTo('themes')">Portfolio Themes</div>
       </div>
     </div>
@@ -2553,7 +2552,6 @@ body.view-mobile #mobileBottomBar {
       </div>
       <div class="nav-dropdown">
         <div class="nav-child" data-page="macro" onclick="navigateTo('macro')">Macro Regime Analysis</div>
-        <div class="nav-child" data-page="playbook" onclick="navigateTo('playbook')">&#127942; Asset Playbook</div>
         <div class="nav-child" data-page="research" onclick="navigateTo('research')">Stock Research &amp; Quant Models</div>
         <div class="nav-child" data-page="markets" onclick="navigateTo('markets')">Cross-Asset Analysis</div>
       </div>
@@ -2599,11 +2597,12 @@ body.view-mobile #mobileBottomBar {
     <div class="mob-nav-label">Portfolio</div>
     <button class="mob-nav-item" data-mobpage="portfolio" onclick="mobileNav('portfolio')" style="font-weight:700;border-left:3px solid rgba(91,155,213,0.6);">📈 Portfolio Overview</button>
     <button class="mob-nav-item" data-mobpage="holdings" onclick="mobileNav('holdings')">💼 Manage Holdings</button>
-    <button class="mob-nav-item" data-mobpage="themes"   onclick="mobileNav('themes')">🎯 Portfolio Themes</button>
+    <button class="mob-nav-item" data-mobpage="sector-macro-alignment" onclick="mobileNav('sector-macro-alignment')">🎯 Sector &amp; Macro Alignment</button>
+    <button class="mob-nav-item" data-mobpage="themes"   onclick="mobileNav('themes')">🎨 Portfolio Themes</button>
   </div>
   <div class="mob-nav-section">
     <div class="mob-nav-label">Analysis</div>
-    <button class="mob-nav-item" data-mobpage="macro"     onclick="mobileNav('macro')" style="font-weight:700;border-left:3px solid rgba(91,155,213,0.6);">📊 Analysis Overview</button>
+    <button class="mob-nav-item" data-mobpage="macro"     onclick="mobileNav('macro')" style="font-weight:700;border-left:3px solid rgba(91,155,213,0.6);">📊 Macro Regime Analysis</button>
     <button class="mob-nav-item" data-mobpage="research"  onclick="mobileNav('research')">🔬 Stock Research &amp; Quant Models</button>
     <button class="mob-nav-item" data-mobpage="markets"   onclick="mobileNav('markets')">🌍 Cross-Asset Analysis</button>
   </div>
@@ -2639,7 +2638,7 @@ body.view-mobile #mobileBottomBar {
     <div class="card" style="margin-bottom:14px;">
       <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;">
         <span>Current Portfolio State &amp; Market Regime</span>
-        <button class="btn-sm" style="background:rgba(255,255,255,0.2);color:#fff;border:1px solid rgba(255,255,255,0.35);padding:3px 9px;border-radius:3px;font-size:11px;cursor:pointer;" onclick="briefingLoad()">&#8635; Refresh</button>
+        <button class="btn-sm" style="background:rgba(255,255,255,0.2);color:#fff;border:1px solid rgba(255,255,255,0.35);padding:3px 9px;border-radius:3px;font-size:11px;cursor:pointer;" onclick="briefingLoad(true)">&#8635; Refresh</button>
       </div>
       <div class="card-body" style="padding:0;">
         <div id="briefingRegime" style="padding:18px;text-align:center;color:var(--text-sec);font-size:13px;">
@@ -4330,17 +4329,14 @@ body.view-mobile #mobileBottomBar {
       <button class="story-step active" onclick="navigateTo('macro')" title="Step 1: Where are we in the cycle?">
         <span class="step-num">1</span> Macro Regime
       </button>
-      <button class="story-step" onclick="navigateTo('playbook')" title="Step 2: What assets should win?">
-        <span class="step-num">2</span> Playbook
+      <button class="story-step" onclick="navigateTo('portfolio')" title="Step 2: What do I own?">
+        <span class="step-num">2</span> My Portfolio
       </button>
-      <button class="story-step" onclick="navigateTo('portfolio')" title="Step 3: What do I own?">
-        <span class="step-num">3</span> My Portfolio
+      <button class="story-step" onclick="navigateTo('sector-macro-alignment')" title="Step 3: Where's the gap?">
+        <span class="step-num">3</span> Sector &amp; Macro Alignment
       </button>
-      <button class="story-step" onclick="navigateTo('gap')" title="Step 4: What's the gap?">
-        <span class="step-num">4</span> Gap Analysis
-      </button>
-      <button class="story-step" onclick="navigateTo('holdings');holdingsShowTab('rebalance')" title="Step 5: What should I do?">
-        <span class="step-num">5</span> Rebalance
+      <button class="story-step" onclick="navigateTo('holdings');holdingsShowTab('rebalance')" title="Step 4: What should I do?">
+        <span class="step-num">4</span> Rebalance
       </button>
     </div>
 
@@ -4380,7 +4376,7 @@ body.view-mobile #mobileBottomBar {
               Loading…
             </div>
             <div class="card-footer" style="padding:10px 14px;">
-              <button class="btn" onclick="navigateTo('playbook')">Full Playbook &#8594;</button>
+              <button class="btn" onclick="navigateTo('sector-macro-alignment')">Full Playbook &#8594;</button>
             </div>
           </div>
         </div>
@@ -5669,39 +5665,116 @@ body.view-mobile #mobileBottomBar {
 </div>
 
 
-<!-- ═══════════ PLAYBOOK PAGE ═══════════ -->
-<div class="page" id="page-playbook">
+<!-- ═══════════ SECTOR & MACRO ALIGNMENT PAGE (merged playbook + gap analysis) ═══════════ -->
+<div class="page" id="page-sector-macro-alignment">
   <div class="content-wrap">
     <div class="hero" style="padding:32px 40px;">
-      <h1>&#127942; Asset Playbook</h1>
-      <p>Regime-aware sector and asset class recommendations. Based on Fidelity AART business-cycle research and the current FRED macro signal.</p>
+      <h1>🎯 Sector &amp; Macro Alignment</h1>
+      <p>Compare your portfolio against the regime playbook and identify sector gaps. Combines portfolio drift analysis with regime-aware asset allocation recommendations.</p>
     </div>
     <!-- Story Breadcrumb -->
     <div class="story-breadcrumb" style="margin:0 0 0 0;border-radius:0;border-left:none;border-right:none;border-top:none;">
       <button class="story-step" onclick="navigateTo('macro')" title="Step 1: Where are we in the cycle?">
         <span class="step-num">1</span> Macro Regime
       </button>
-      <button class="story-step active" onclick="navigateTo('playbook')" title="Step 2: What assets should win?">
-        <span class="step-num">2</span> Playbook
+      <button class="story-step" onclick="navigateTo('portfolio')" title="Step 2: What do I own?">
+        <span class="step-num">2</span> My Portfolio
       </button>
-      <button class="story-step" onclick="navigateTo('portfolio')" title="Step 3: What do I own?">
-        <span class="step-num">3</span> My Portfolio
+      <button class="story-step active" onclick="navigateTo('sector-macro-alignment')" title="Step 3: Where's the gap?">
+        <span class="step-num">3</span> Sector &amp; Macro Alignment
       </button>
-      <button class="story-step" onclick="navigateTo('gap')" title="Step 4: What's the gap?">
-        <span class="step-num">4</span> Gap Analysis
-      </button>
-      <button class="story-step" onclick="navigateTo('holdings');holdingsShowTab('rebalance')" title="Step 5: What should I do?">
-        <span class="step-num">5</span> Rebalance
+      <button class="story-step" onclick="navigateTo('holdings');holdingsShowTab('rebalance')" title="Step 4: What should I do?">
+        <span class="step-num">4</span> Rebalance
       </button>
     </div>
 
-    <div id="playbookAuthGate" class="auth-gate" style="display:none;">
-      <div style="text-align:center;padding:40px;"><span style="font-size:36px;">&#127942;</span><br><br>
-        <strong>Sign in to view the Asset Playbook</strong><br>
-        <p style="color:var(--text-sec);font-size:13px;">The playbook connects to your holdings and FRED macro data.</p>
+    <div id="sectorMacroAuthGate" class="auth-gate" style="display:none;">
+      <div style="text-align:center;padding:40px;"><span style="font-size:36px;">🎯</span><br><br>
+        <strong>Sign in to view Sector &amp; Macro Alignment</strong><br>
+        <p style="color:var(--text-sec);font-size:13px;">This page requires your holdings data and FRED macro analysis.</p>
       </div>
     </div>
-    <div id="playbookPanel" style="display:none;">
+    <div id="sectorMacroPanel" style="display:none;">
+      <!-- ══════════════════════════════════════════════════════════════════ -->
+      <!-- SECTION 1: PORTFOLIO GAP ANALYSIS -->
+      <!-- ══════════════════════════════════════════════════════════════════ -->
+
+      <h2 style="margin-bottom:12px;">Portfolio Gap Analysis</h2>
+
+      <!-- KPI Band -->
+      <div class="gap-kpi-band" id="gapKpiBand" style="margin-bottom:16px;">
+        <div class="metric-card" id="gapDriftCard">
+          <div class="metric-label">Portfolio Drift</div>
+          <div class="metric-value" id="gapDriftVal">—</div>
+          <div class="metric-sub" id="gapDriftSub">vs. playbook</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-label">Regime</div>
+          <div class="metric-value" id="gapRegimeVal" style="font-size:13px;">—</div>
+          <div class="metric-sub" id="gapRegimeSub">current macro phase</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-label">Largest Gap</div>
+          <div class="metric-value" id="gapLargestVal" style="font-size:13px;">—</div>
+          <div class="metric-sub" id="gapLargestSub">sector mismatch</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-label">Holdings</div>
+          <div class="metric-value" id="gapPositionsVal">—</div>
+          <div class="metric-sub" id="gapPositionsSub">positions</div>
+        </div>
+      </div>
+
+      <div id="gapDriftBanner" style="margin-bottom:16px;"></div>
+
+      <div class="card">
+        <div class="card-title">Gap Analysis Chart</div>
+        <div class="card-body" style="padding:0;height:380px;">
+          <canvas id="gapBarChart"></canvas>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Sector-by-Sector Breakdown</div>
+        <div class="card-body">
+          <div style="overflow-x:auto;">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Sector</th>
+                  <th style="text-align:right;">Current %</th>
+                  <th style="text-align:right;">Target %</th>
+                  <th style="text-align:right;">Gap %</th>
+                  <th style="text-align:center;">Action</th>
+                </tr>
+              </thead>
+              <tbody id="gapDetailBody">
+                <tr><td colspan="5" style="text-align:center;padding:20px;color:var(--text-sec);">
+                  <span class="spinner"></span> Computing gap analysis…
+                </td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Rebalancing Actions</div>
+        <div class="card-body" id="gapRebalanceSuggestions" style="font-size:13px;">
+          <div style="text-align:center;color:var(--text-sec);padding:10px;"><span class="spinner"></span> Loading…</div>
+        </div>
+        <div class="card-footer" style="display:flex;gap:10px;padding:10px 14px;">
+          <button class="btn" onclick="navigateTo('holdings');holdingsShowTab('rebalance')">Go to Rebalancer &#8594;</button>
+          <button class="btn btn-outline" id="gapExportBtn" onclick="gapExportCSV()">Export Gap CSV</button>
+        </div>
+      </div>
+
+      <!-- ══════════════════════════════════════════════════════════════════ -->
+      <!-- SECTION 2: ASSET PLAYBOOK (Regime-aware recommendations) -->
+      <!-- ══════════════════════════════════════════════════════════════════ -->
+
+      <h2 style="margin-bottom:12px;margin-top:32px;">Asset Playbook</h2>
+
       <!-- Regime Banner -->
       <div id="playbookRegimeBanner" class="card" style="margin-bottom:16px;">
         <div class="card-body" id="playbookRegimeBody">
@@ -5709,12 +5782,12 @@ body.view-mobile #mobileBottomBar {
         </div>
       </div>
 
-      <!-- Sector Playbook Tabs -->
+      <!-- Asset Playbook Tabs -->
       <div class="pf-tabs">
-        <button class="pf-tab active" onclick="playbookShowTab('sectors')">Sector Playbook</button>
-        <button class="pf-tab" onclick="playbookShowTab('assets')">Asset Classes</button>
-        <button class="pf-tab" onclick="playbookShowTab('rrg')">Sector Rotation (RRG)</button>
-        <button class="pf-tab" onclick="playbookShowTab('hitrateS')">Historical Hit Rates</button>
+        <button class="pf-tab active" data-pbtab="sectors" onclick="playbookShowTab('sectors')">Sector Playbook</button>
+        <button class="pf-tab" data-pbtab="assets" onclick="playbookShowTab('assets')">Asset Classes</button>
+        <button class="pf-tab" data-pbtab="rrg" onclick="playbookShowTab('rrg')">Sector Rotation (RRG)</button>
+        <button class="pf-tab" data-pbtab="hitrateS" onclick="playbookShowTab('hitrateS')">Historical Hit Rates</button>
       </div>
 
       <!-- TAB: Sector Playbook -->
@@ -5803,216 +5876,6 @@ body.view-mobile #mobileBottomBar {
         </div>
       </div>
     </div>
-  </div>
-</div>
-
-<!-- ═══════════ GAP ANALYSIS PAGE ═══════════ -->
-<div class="page" id="page-gap">
-  <div class="content-wrap">
-    <div class="hero" style="padding:32px 40px;">
-      <h1>&#128202; Portfolio Gap Analysis</h1>
-      <p>Compares your current sector exposure to the regime playbook target allocation. Identifies over/underweight positions and calculates total portfolio drift.</p>
-    </div>
-    <!-- Story Breadcrumb -->
-    <div class="story-breadcrumb" style="margin:0 0 0 0;border-radius:0;border-left:none;border-right:none;border-top:none;">
-      <button class="story-step" onclick="navigateTo('macro')" title="Step 1">
-        <span class="step-num">1</span> Macro Regime
-      </button>
-      <button class="story-step" onclick="navigateTo('playbook')" title="Step 2">
-        <span class="step-num">2</span> Playbook
-      </button>
-      <button class="story-step" onclick="navigateTo('portfolio')" title="Step 3">
-        <span class="step-num">3</span> My Portfolio
-      </button>
-      <button class="story-step active" onclick="navigateTo('gap')" title="Step 4">
-        <span class="step-num">4</span> Gap Analysis
-      </button>
-      <button class="story-step" onclick="navigateTo('holdings');holdingsShowTab('rebalance')" title="Step 5">
-        <span class="step-num">5</span> Rebalance
-      </button>
-    </div>
-
-    <div id="gapAuthGate" class="auth-gate" style="display:none;">
-      <div style="text-align:center;padding:40px;"><span style="font-size:36px;">&#128202;</span><br><br>
-        <strong>Sign in to view Gap Analysis</strong><br>
-        <p style="color:var(--text-sec);font-size:13px;">Gap analysis requires your holdings data to compute drift.</p>
-      </div>
-    </div>
-    <div id="gapPanel" style="display:none;">
-      <!-- KPI Band -->
-      <div class="gap-kpi-band" id="gapKpiBand" style="margin-bottom:16px;">
-        <div class="metric-card" id="gapDriftCard">
-          <div class="metric-label">Portfolio Drift</div>
-          <div class="metric-value" id="gapDriftVal">—</div>
-          <div class="metric-sub" id="gapDriftSub">vs. playbook</div>
-        </div>
-        <div class="metric-card">
-          <div class="metric-label">Regime</div>
-          <div class="metric-value" id="gapRegimeVal" style="font-size:13px;">—</div>
-          <div class="metric-sub" id="gapRegimeSub">current macro phase</div>
-        </div>
-        <div class="metric-card">
-          <div class="metric-label">Largest Gap</div>
-          <div class="metric-value" id="gapLargestVal">—</div>
-          <div class="metric-sub" id="gapLargestSub">sector</div>
-        </div>
-        <div class="metric-card">
-          <div class="metric-label">Positions</div>
-          <div class="metric-value" id="gapPositionsVal">—</div>
-          <div class="metric-sub">in holdings</div>
-        </div>
-      </div>
-
-      <!-- Drift Status Banner -->
-      <div id="gapDriftBanner" style="margin-bottom:16px;"></div>
-
-      <!-- Gap Chart Card -->
-      <div class="card" style="margin-bottom:16px;">
-        <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
-          Sector Exposure vs. Playbook Target
-          <button class="btn btn-sm" onclick="loadGapAnalysis(true)">&#8635; Refresh</button>
-        </div>
-        <div class="card-body">
-          <p style="font-size:12px;color:var(--text-sec);margin-bottom:12px;">
-            <strong>Green bars</strong> = underweight vs. target (opportunity to add).
-            <strong>Red bars</strong> = overweight vs. target (consider trimming).
-            Center line = playbook target weight.
-            <span class="gloss-term">Drift<span class="gloss-tip">Portfolio Drift: Σ|actual − target|/2. The Betterment-style metric where each 1% overweight in one sector equals 1% underweight elsewhere. Rebalance recommended when drift exceeds 3%.</span></span> = Σ|actual − target| / 2.
-          </p>
-          <div id="gapChartStatus" style="font-size:12px;color:var(--text-sec);margin-bottom:8px;"></div>
-          <div style="position:relative;height:380px;" id="gapChartWrap">
-            <canvas id="gapBarChart"></canvas>
-          </div>
-        </div>
-      </div>
-
-      <!-- Sector Detail Table -->
-      <div class="card" style="margin-bottom:16px;">
-        <div class="card-title">Sector-Level Breakdown</div>
-        <div class="card-body" style="padding:0;">
-          <table class="data-table" id="gapDetailTable">
-            <thead>
-              <tr>
-                <th>Sector</th>
-                <th>Your Weight</th>
-                <th>Target Weight</th>
-                <th>Gap</th>
-                <th>Signal</th>
-                <th>Top ETF</th>
-              </tr>
-            </thead>
-            <tbody id="gapDetailBody">
-              <tr><td colspan="6" style="text-align:center;padding:20px;color:var(--text-sec);">
-                <span class="spinner"></span> Computing gap analysis…
-              </td></tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      <!-- Rebalance CTA -->
-      <div class="card">
-        <div class="card-title">Rebalancing Actions</div>
-        <div class="card-body" id="gapRebalanceSuggestions" style="font-size:13px;">
-          <div style="text-align:center;color:var(--text-sec);padding:10px;"><span class="spinner"></span> Loading…</div>
-        </div>
-        <div class="card-footer" style="display:flex;gap:10px;padding:10px 14px;">
-          <button class="btn" onclick="navigateTo('holdings');holdingsShowTab('rebalance')">Go to Rebalancer &#8594;</button>
-          <button class="btn btn-outline" id="gapExportBtn" onclick="gapExportCSV()">Export Gap CSV</button>
-        </div>
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- ═══════════ PREVIOUS TOOLS / VISUALIZATIONS ═══════════ -->
-<div class="page" id="page-prevtools">
-  <div class="content-wrap">
-    <div class="hero" style="padding:32px 40px;">
-      <h1>&#128451; Previous Tools &amp; Visualizations</h1>
-      <p>An archive of retired or superseded features. These tools are preserved here for reference in case you want to revisit, repurpose, or reintroduce them in the future. Nothing is deleted — only graduated here when a newer approach replaces it.</p>
-    </div>
-
-    <!-- Archive notice banner -->
-    <div style="background:#FFF8E8;border-left:4px solid #8B6914;padding:12px 16px;border-radius:4px;margin-bottom:18px;font-size:12px;line-height:1.6;color:#1A2733;">
-      <strong>&#128277; How this page works:</strong> When a tool or visualization on another page is replaced by a newer version, the prior version is moved here so you can see what it looked like, understand what changed, and optionally restore it. Each archived item includes the date it was retired and why it was replaced.
-    </div>
-
-    <!-- ── ARCHIVE: Holdings Text Insights ── -->
-    <div class="card" style="margin-bottom:14px;">
-      <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
-        <span>&#128200; Holdings Text Insights Panel</span>
-        <span style="font-size:11px;font-weight:400;color:rgba(255,255,255,0.7);text-transform:none;letter-spacing:0;">Retired: 2026 &bull; Replaced by: KPI Band + 4-Tab PORT Module</span>
-      </div>
-      <div class="card-body">
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:12px;">
-          <div>
-            <p style="font-size:13px;font-weight:600;color:var(--navy);margin-bottom:6px;">What it was:</p>
-            <p style="font-size:12px;color:var(--text-sec);line-height:1.6;">The original Manage Holdings page displayed a block of text-based "insights" above the holdings table. It computed 6–8 sentences about your portfolio (e.g. "Your top position is AAPL at 22.3% of your portfolio") but presented them as dense paragraphs with no visual hierarchy. Below it was a large Add Holding form, and the actual holdings table was buried at the bottom.</p>
-          </div>
-          <div>
-            <p style="font-size:13px;font-weight:600;color:var(--navy);margin-bottom:6px;">Why it was replaced:</p>
-            <p style="font-size:12px;color:var(--text-sec);line-height:1.6;">Replaced by the PORT-Module redesign: always-visible KPI band (6 metric cards), 4 tabs (Holdings / Analysis / Rebalance / Import &amp; Add), 4 Chart.js charts (sector donut, asset class donut, top-10 bar, G/L waterfall), 5 Story Cards, and a Brinson rebalance chart. The text insights were replaced by visual storytelling cards that are faster to scan.</p>
-          </div>
-        </div>
-        <div style="background:var(--panel);border-radius:4px;padding:14px;border:1px solid var(--border);">
-          <p style="font-size:11px;font-weight:700;color:var(--navy);margin-bottom:8px;text-transform:uppercase;letter-spacing:.4px;">Archive Preview — Original Text Insights Format</p>
-          <div id="prevToolsHoldingsInsights" style="font-size:12px;color:var(--text-sec);line-height:1.8;">
-            <em>Sign in and load holdings to see what the original text insights looked like.</em>
-          </div>
-          <script>
-            // Regenerate old text insights format from current holdings data
-            document.addEventListener('_holdingsLoaded', function() {
-              var h = window._holdings || [];
-              if (!h.length) return;
-              var tv = h.reduce(function(s,x){ return s+(x.currentPrice||0)*x.quantity; }, 0);
-              var sorted = h.slice().sort(function(a,b){ return ((b.currentPrice||0)*b.quantity)-((a.currentPrice||0)*a.quantity); });
-              var top = sorted[0];
-              var topPct = tv>0?(top.currentPrice||0)*top.quantity/tv*100:0;
-              var income = h.reduce(function(s,x){ return s+(((x.currentPrice||0)*x.quantity)*((x.yieldPct||0)/100)); }, 0);
-              var gl = h.reduce(function(s,x){ return s+(((x.currentPrice||0)-(x.costBasis||x.currentPrice||0))*x.quantity); }, 0);
-              var el = document.getElementById('prevToolsHoldingsInsights');
-              if (el) el.innerHTML = '<strong>Original text insights would read:</strong><br>'
-                + '&#8226; You hold <strong>'+h.length+'</strong> positions across your portfolio with a total market value of <strong>$'+tv.toLocaleString(undefined,{maximumFractionDigits:0})+'</strong>.<br>'
-                + '&#8226; Your largest position is <strong>'+top.ticker+'</strong> at <strong>'+topPct.toFixed(1)+'%</strong> of your portfolio.<br>'
-                + '&#8226; Your portfolio generates an estimated <strong>$'+income.toLocaleString(undefined,{maximumFractionDigits:0})+'</strong> in annual dividend income.<br>'
-                + '&#8226; Total unrealized gain/loss: <strong style="color:'+(gl>=0?'var(--success)':'var(--danger)')+';">'+(gl>=0?'+':'')+'$'+gl.toLocaleString(undefined,{maximumFractionDigits:0})+'</strong>.';
-            });
-          </script>
-        </div>
-      </div>
-    </div>
-
-    <!-- ── ARCHIVE: Attribution Single Horizontal Bar ── -->
-    <div class="card" style="margin-bottom:14px;">
-      <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
-        <span>&#128202; Attribution — Ticker-Level Horizontal Bar Only</span>
-        <span style="font-size:11px;font-weight:400;color:rgba(255,255,255,0.7);text-transform:none;letter-spacing:0;">Retired: 2026 &bull; Replaced by: Brinson-Fachler 3-Column Chart</span>
-      </div>
-      <div class="card-body">
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
-          <div>
-            <p style="font-size:13px;font-weight:600;color:var(--navy);margin-bottom:6px;">What it was:</p>
-            <p style="font-size:12px;color:var(--text-sec);line-height:1.6;">The Attribution tab originally showed a single horizontal bar chart of each holding's contribution to total portfolio return. Each bar was green (positive contribution) or red (negative). While useful for seeing which holdings drove returns, it couldn't explain <em>why</em> — whether the outperformance came from sector selection, stock picking within the sector, or the decision to overweight/underweight a sector.</p>
-          </div>
-          <div>
-            <p style="font-size:13px;font-weight:600;color:var(--navy);margin-bottom:6px;">Why it was replaced:</p>
-            <p style="font-size:12px;color:var(--text-sec);line-height:1.6;">Replaced by the Brinson-Fachler (1985) grouped bar chart which decomposes active return into three components per sector: <strong>Allocation</strong> (did you overweight the right sectors?), <strong>Selection</strong> (did you pick winners within each sector?), and <strong>Interaction</strong> (the cross-effect). The old single-bar chart is still present above the Brinson section for per-holding context.</p>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- ── PLACEHOLDER: Future Archives ── -->
-    <div class="card" style="background:var(--panel);border:2px dashed var(--border);">
-      <div class="card-title" style="background:transparent;color:var(--text-sec);border-bottom:1px dashed var(--border);">&#128203; Future Archives — Placeholder</div>
-      <div class="card-body" style="text-align:center;padding:40px;color:var(--text-sec);">
-        <div style="font-size:36px;margin-bottom:12px;">&#128451;</div>
-        <p style="font-size:13px;font-weight:600;margin-bottom:6px;">This is where future retired tools will appear.</p>
-        <p style="font-size:12px;line-height:1.6;max-width:500px;margin:0 auto;">As the platform evolves, features that are superseded by improved versions will be archived here rather than deleted. You can always look back at the design evolution and restore ideas that resurface as relevant.</p>
-      </div>
-    </div>
-
   </div>
 </div>
 
@@ -7167,7 +7030,7 @@ Chart.register(priceBubblePlugin);
 let donutCharts = {};
 
 // ═══ NAVIGATION ═══
-const parentMap = { home: 'home', about: 'home', resources: 'home', prevtools: 'home', portfolio: 'portfolio', holdings: 'portfolio', gap: 'portfolio', themes: 'portfolio', macro: 'analysis', playbook: 'analysis', quant: 'analysis', markets: 'analysis', research: 'analysis' };
+const parentMap = { home: 'home', about: 'home', resources: 'home', portfolio: 'portfolio', holdings: 'portfolio', 'sector-macro-alignment': 'portfolio', themes: 'portfolio', macro: 'analysis', markets: 'analysis', research: 'analysis' };
 function navigateTo(p) {
   document.activeElement.blur();
   document.querySelectorAll('.page').forEach(x => x.classList.remove('active'));
@@ -7202,11 +7065,11 @@ function navigateTo(p) {
     if (typeof macroShowTab === 'function') macroShowTab('dashboard');
     else loadMacroLiveTable();
   }
-  if (p === 'playbook') {
-    setTimeout(function(){ if (typeof loadPlaybook === 'function') loadPlaybook(); }, 100);
-  }
-  if (p === 'gap') {
-    setTimeout(function(){ if (typeof loadGapAnalysis === 'function') loadGapAnalysis(); }, 100);
+  if (p === 'sector-macro-alignment') {
+    setTimeout(function(){
+      if (typeof loadPlaybook === 'function') loadPlaybook();
+      if (typeof loadGapAnalysis === 'function') loadGapAnalysis();
+    }, 100);
   }
   if (p === 'home') {
     // Re-run briefing every time home is visited
@@ -7354,7 +7217,7 @@ const FEATURES = [
   { title: "Manage Holdings", desc: "Add/remove holdings stored in Firebase. Prices refresh from Yahoo Finance via Cloudflare Worker.", page: "holdings", tag: "Active" },
   { title: "Market Research", desc: "Real-time quotes, historical charts, and ticker search via Cloudflare data proxy.", page: "research", tag: "Active" },
   { title: "Macro Regime Analysis", desc: "CFA-based 10-indicator scorecard, business cycle classification, sector rotation, and cross-asset confirmation.", page: "macro", tag: "Active" },
-  { title: "Quantitative Models", desc: "Stock decision trees, MLR regression, peer comparison, Monte Carlo simulation, and regime backtesting.", page: "quant", tag: "Active" },
+  { title: "Quantitative Models", desc: "Stock decision trees, MLR regression, peer comparison, Monte Carlo simulation, and regime backtesting.", page: "research", tag: "Active" },
   { title: "Risk & Stress Testing", desc: "VaR (3 methods), Cox jump process, 3D volatility surface, efficient frontier, correlation heatmap, and cross-asset regime signals.", page: "markets", tag: "Active" }
 ];
 document.getElementById('featureGrid').innerHTML = FEATURES.map(f =>
@@ -7789,13 +7652,24 @@ function mcBig(label, value, sub, subColor) {
 
 var _hldTabInit = {};
 
+// Shared tab-toggle helper used by holdings/pf/rq/macro/ca/playbook ShowTab.
+// scope: CSS selector for the page (e.g. '#page-holdings')
+// dataAttr: data attribute name on tab buttons (e.g. 'data-htab')
+// name: tab key (e.g. 'analysis')
+// contentIdPrefix: content pane id prefix (e.g. 'htab-')
+function _toggleTabs(scope, dataAttr, name, contentIdPrefix) {
+  document.querySelectorAll(scope + ' [' + dataAttr + ']').forEach(function(b) {
+    b.classList.toggle('active', b.getAttribute(dataAttr) === name);
+  });
+  document.querySelectorAll(scope + ' .pf-tab-content').forEach(function(c) {
+    if (c.id && c.id.indexOf(contentIdPrefix) === 0) {
+      c.classList.toggle('active', c.id === contentIdPrefix + name);
+    }
+  });
+}
+
 function holdingsShowTab(name) {
-  document.querySelectorAll('#page-holdings [data-htab]').forEach(function(b) {
-    b.classList.toggle('active', b.dataset.htab === name);
-  });
-  document.querySelectorAll('#page-holdings .pf-tab-content').forEach(function(c) {
-    c.classList.toggle('active', c.id === 'htab-' + name);
-  });
+  _toggleTabs('#page-holdings', 'data-htab', name, 'htab-');
   var h = window._holdings || [];
   if (name === 'analysis') {
     if (!_hldTabInit.analysis) { _hldTabInit.analysis = true; if (h.length) renderHoldingsAnalysis(h); }
@@ -10960,14 +10834,7 @@ window.runResearch = async function() {
 var _macroTabInit = {};
 
 function macroShowTab(name) {
-  // Toggle buttons
-  document.querySelectorAll('[data-macrotab]').forEach(function(b) {
-    b.classList.toggle('active', b.dataset.macrotab === name);
-  });
-  // Toggle content panes
-  document.querySelectorAll('.pf-tab-content[id^="macrotab-"]').forEach(function(c) {
-    c.classList.toggle('active', c.id === 'macrotab-' + name);
-  });
+  _toggleTabs('#page-macro', 'data-macrotab', name, 'macrotab-');
   // Auto-load content on first visit
   if (!_macroTabInit[name]) {
     _macroTabInit[name] = true;
@@ -11998,10 +11865,10 @@ var CMDK_ITEMS = [
   { section: 'Pages', title: 'Manage Holdings', desc: 'Add, edit, or sell positions', action: function(){ navigateTo('holdings'); } },
   { section: 'Pages', title: 'Financial Analysis', desc: 'Ticker lookup with SEC fundamentals', action: function(){ navigateTo('research'); } },
   { section: 'Pages', title: 'Macro Regime Analysis', desc: 'CFA regime scorecard, FRED data', action: function(){ navigateTo('macro'); loadMacroLiveTable(); } },
-  { section: 'Pages', title: 'Quantitative Models', desc: 'MLR, regime backtest, Monte Carlo', action: function(){ navigateTo('quant'); } },
+  { section: 'Pages', title: 'Quantitative Models', desc: 'MLR, regime backtest, Monte Carlo', action: function(){ navigateTo('research'); setTimeout(function(){ if (typeof rqShowTab === 'function') rqShowTab('quant'); }, 200); } },
   { section: 'Pages', title: 'Markets', desc: 'Cross-asset analytics, VaR, efficient frontier', action: function(){ navigateTo('markets'); } },
   { section: 'Actions', title: 'Analyze a ticker', desc: 'Jump to Financial Analysis and pre-fill', action: null, isTickerPrompt: true },
-  { section: 'Actions', title: 'Run Quant analysis', desc: 'Jump to Quant page', action: function(){ navigateTo('quant'); setTimeout(function(){ document.getElementById('quantTicker').focus(); }, 200); } },
+  { section: 'Actions', title: 'Run Quant analysis', desc: 'Jump to Quant tab in Research', action: function(){ navigateTo('research'); setTimeout(function(){ if (typeof rqShowTab === 'function') rqShowTab('quant'); var el = document.getElementById('quantTicker'); if (el) el.focus(); }, 300); } },
   { section: 'Actions', title: 'Refresh Macro data', desc: 'Re-pull FRED indicators', action: function(){ navigateTo('macro'); loadMacroLiveTable(true); } },
   { section: 'Actions', title: 'Open Markets &mdash; load default universe', desc: 'Auto-load 7 default tickers', action: function(){ navigateTo('markets'); setTimeout(function(){ if (typeof mktLoadAll === 'function') mktLoadAll(); }, 300); } }
 ];
@@ -12044,10 +11911,13 @@ function renderCmdKResults(query) {
         title: 'Run Quant on '+query.trim().toUpperCase(),
         desc: 'MLR + Monte Carlo analysis',
         action: function(){
-          navigateTo('quant');
+          navigateTo('research');
           setTimeout(function(){
-            document.getElementById('quantTicker').value = query.trim().toUpperCase();
-            runQuantAnalysis();
+            if (typeof rqShowTab === 'function') rqShowTab('quant');
+            setTimeout(function(){
+              var el = document.getElementById('quantTicker');
+              if (el) { el.value = query.trim().toUpperCase(); runQuantAnalysis(); }
+            }, 200);
           }, 200);
         }
       });
@@ -18611,7 +18481,13 @@ function btPageInit() {
 // ═══════════════════════════════════════════════════════════════════
 // ══════════  MORNING BRIEFING ENGINE  ══════════════════════════════
 // ═══════════════════════════════════════════════════════════════════
-async function briefingLoad() {
+async function briefingLoad(force) {
+  // Skip refetch if loaded < 5 minutes ago (unless explicit refresh via button)
+  var BRIEFING_TTL_MS = 5 * 60 * 1000;
+  if (!force && window._briefingLastLoaded && (Date.now() - window._briefingLastLoaded) < BRIEFING_TTL_MS) {
+    return;
+  }
+  window._briefingLastLoaded = Date.now();
   document.getElementById('briefingDate').textContent = new Date().toLocaleDateString('en-US',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
   var WORKER = 'https://perry-finance-proxy.zachperrybusiness.workers.dev';
   // ── Pulse row (live quotes) ──
@@ -20955,12 +20831,7 @@ function pfHoldingsToggle() {
 
 // ────────── Research / Quant Models tab merger (Fix #4) ──────────
 function rqShowTab(name) {
-  document.querySelectorAll('#page-research [data-rqtab]').forEach(function(b){
-    b.classList.toggle('active', b.dataset.rqtab === name);
-  });
-  document.querySelectorAll('#page-research .pf-tab-content').forEach(function(c){
-    c.classList.toggle('active', c.id === 'rqtab-' + name);
-  });
+  _toggleTabs('#page-research', 'data-rqtab', name, 'rqtab-');
   // Lazy-load content when tab first visited (if data already loaded)
   var d = window._lastSecData, tk = window._lastSecTicker;
   if (name === 'financials' && d && tk) {
@@ -22534,12 +22405,7 @@ async function buildFixedRegimeSeries(regime, rangeKey) {
 
 // ────────── Tab switcher ──────────
 function pfShowTab(name) {
-  document.querySelectorAll('#page-portfolio .pf-tab').forEach(b => {
-    b.classList.toggle('active', b.dataset.pftab === name);
-  });
-  document.querySelectorAll('#page-portfolio .pf-tab-content').forEach(c => {
-    c.classList.toggle('active', c.id === 'pftab-' + name);
-  });
+  _toggleTabs('#page-portfolio', 'data-pftab', name, 'pftab-');
   // Lazy-load tab content on first activation
   try {
     if (name === 'performance' && !window._pfPerfRun) { window._pfPerfRun = true; pfRenderPerformance(); }
@@ -24120,81 +23986,53 @@ var RISK_PROFILES = {
   }
 };
 
+// Simple dropdown risk-profile selector (replaces the 5-question questionnaire)
 window.showRiskQuestionnaire = function() {
   if (document.getElementById('riskQuizModal')) return;
-  var questions = [
-    { id: 'q1', text: 'How long until you plan to use this money?',
-      opts: [['< 2 years', 0], ['2–5 years', 1], ['5–10 years', 2], ['10+ years', 3]] },
-    { id: 'q2', text: 'If your portfolio dropped 20% in a month, you would:',
-      opts: [['Sell everything to stop the bleeding', 0], ['Sell some to reduce risk', 1], ['Hold and wait it out', 2], ['Buy more — it\'s a sale', 3]] },
-    { id: 'q3', text: 'What is your primary goal?',
-      opts: [['Preserve what I have', 0], ['Grow steadily with low stress', 1], ['Aggressive growth over time', 2], ['Maximum returns — I accept big swings', 3]] },
-    { id: 'q4', text: 'Do you need regular income from this portfolio?',
-      opts: [['Yes — monthly income', 0], ['Occasionally — a few times per year', 1], ['No — I reinvest everything', 2]] },
-    { id: 'q5', text: 'How would you describe your investing experience?',
-      opts: [['New — I\'m just getting started', 0], ['Some experience — a few years', 1], ['Experienced — 5+ years', 2], ['Professional / active trader', 3]] }
-  ];
+  var current = window._riskProfile || 'moderate';
+  var opts = Object.keys(RISK_PROFILES).map(function(k) {
+    var p = RISK_PROFILES[k];
+    return '<option value="'+k+'"'+(k===current?' selected':'')+'>'+p.emoji+' '+p.label+'</option>';
+  }).join('');
   var html = '<div id="riskQuizModal" class="modal-overlay" onclick="if(event.target===this)this.remove()">'
-    + '<div class="modal-box" style="max-width:560px;padding:28px;">'
-    + '<h3 style="margin:0 0 6px;font-size:17px;color:var(--navy);">&#9881; Set Your Risk Profile</h3>'
-    + '<p style="font-size:12px;color:var(--text-sec);margin:0 0 20px;">5 quick questions. Your answers determine the target model used for drift analysis and trade blotter recommendations.</p>';
-  questions.forEach(function(q, qi) {
-    html += '<div style="margin-bottom:18px;">'
-      + '<div style="font-size:13px;font-weight:700;color:var(--navy);margin-bottom:8px;">'+(qi+1)+'. '+q.text+'</div>'
-      + '<div style="display:flex;flex-direction:column;gap:6px;">';
-    q.opts.forEach(function(opt) {
-      html += '<label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;padding:6px 10px;border:1px solid var(--border);border-radius:5px;transition:background .15s;" onmouseover="this.style.background=\'var(--panel)\'" onmouseout="this.style.background=\'\'">'
-        + '<input type="radio" name="'+q.id+'" value="'+opt[1]+'" style="margin:0;"> '+opt[0]+'</label>';
-    });
-    html += '</div></div>';
-  });
-  html += '<div id="riskQuizResult" style="display:none;margin-bottom:16px;padding:14px;border-radius:8px;"></div>'
+    + '<div class="modal-box" style="max-width:460px;padding:24px;">'
+    + '<h3 style="margin:0 0 6px;font-size:16px;color:var(--navy);">&#9881; Target Risk Profile</h3>'
+    + '<p style="font-size:12px;color:var(--text-sec);margin:0 0 14px;">Sets the target model used for drift analysis and rebalance recommendations.</p>'
+    + '<select id="riskProfileSelect" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:4px;font-size:13px;margin-bottom:10px;">'+opts+'</select>'
+    + '<div id="riskProfileDesc" style="font-size:12px;color:var(--text-sec);line-height:1.5;margin-bottom:16px;padding:10px;background:var(--panel);border-radius:4px;"></div>'
     + '<div class="modal-actions">'
-    + '<button class="btn" onclick="submitRiskQuestionnaire()">Calculate My Risk Profile</button>'
+    + '<button class="btn" onclick="submitRiskQuestionnaire()">Apply</button>'
     + '<button class="btn-outline" onclick="document.getElementById(\'riskQuizModal\').remove()">Cancel</button>'
     + '</div></div></div>';
   var el = document.createElement('div');
   el.innerHTML = html;
   document.body.appendChild(el.firstChild);
+  var updateDesc = function() {
+    var k = document.getElementById('riskProfileSelect').value;
+    var p = RISK_PROFILES[k];
+    document.getElementById('riskProfileDesc').innerHTML = '<strong style="color:'+p.color+';">'+p.label+'</strong> — '+p.description;
+  };
+  document.getElementById('riskProfileSelect').addEventListener('change', updateDesc);
+  updateDesc();
 };
 
 window.submitRiskQuestionnaire = function() {
-  var scores = [0, 0, 0, 0, 0];
-  var allAnswered = true;
-  ['q1','q2','q3','q4','q5'].forEach(function(id, i) {
-    var sel = document.querySelector('input[name="'+id+'"]:checked');
-    if (sel) scores[i] = parseInt(sel.value);
-    else allAnswered = false;
-  });
-  if (!allAnswered) { alert('Please answer all 5 questions.'); return; }
-  var total = scores.reduce(function(s,v){return s+v;}, 0);
-  var maxPossible = 3+3+3+2+3; // 14
-  var pct = total / maxPossible;
-  var profileKey = pct < 0.25 ? 'conservative' : pct < 0.55 ? 'moderate' : pct < 0.80 ? 'aggressive' : 'speculative';
+  var sel = document.getElementById('riskProfileSelect');
+  if (!sel) return;
+  var profileKey = sel.value;
   var profile = RISK_PROFILES[profileKey];
+  if (!profile) return;
   window._riskProfile = profileKey;
-  // Update drift model
   var driftSel = document.getElementById('driftModel');
-  if (driftSel) { driftSel.value = profile.driftModel; driftRender(); }
-  // Update badge
+  if (driftSel) { driftSel.value = profile.driftModel; if (typeof driftRender === 'function') driftRender(); }
   var badge = document.getElementById('riskProfileBadge');
   if (badge) {
     badge.style.display = '';
     badge.style.background = profile.color;
     badge.textContent = profile.emoji + ' ' + profile.label;
   }
-  // Show result in modal
-  var resultEl = document.getElementById('riskQuizResult');
-  if (resultEl) {
-    resultEl.style.display = '';
-    resultEl.style.background = 'rgba(0,60,113,0.07)';
-    resultEl.style.border = '1px solid ' + profile.color;
-    resultEl.innerHTML = '<div style="font-size:15px;font-weight:700;color:'+profile.color+';">'+profile.emoji+' Your Profile: '+profile.label+'</div>'
-      + '<div style="font-size:12px;margin-top:6px;color:var(--text-sec);">'+profile.description+'</div>'
-      + '<div style="font-size:11px;margin-top:8px;color:var(--navy);font-weight:600;">Target allocations applied to drift model → <em>'+driftSel.options[driftSel.selectedIndex].text+'</em></div>';
-  }
-  var btn = document.querySelector('#riskQuizModal .btn');
-  if (btn) { btn.textContent = 'Close'; btn.onclick = function(){ document.getElementById('riskQuizModal').remove(); }; }
+  var modal = document.getElementById('riskQuizModal');
+  if (modal) modal.remove();
 };
 
 // ────────── Bloomberg WEI-style Global Snapshot ──────────
@@ -26280,12 +26118,7 @@ function caIsStale(name, windowMs) {
 function caMarkLoaded(name) { window._caTabLoadedAt[name] = Date.now(); }
 
 window.caShowTab = function(name) {
-  document.querySelectorAll('[data-catab]').forEach(function(b) {
-    b.classList.toggle('active', b.dataset.catab === name);
-  });
-  document.querySelectorAll('#page-markets .pf-tab-content').forEach(function(c) {
-    c.classList.toggle('active', c.id === 'catab-' + name);
-  });
+  _toggleTabs('#page-markets', 'data-catab', name, 'catab-');
   caAutoLoad(name);
 };
 
@@ -27688,8 +27521,8 @@ function renderQuadMap() {
 // ════════════════════════════════════════════════════════════════════
 
 function loadPlaybook() {
-  var authEl = document.getElementById('playbookAuthGate');
-  var panelEl = document.getElementById('playbookPanel');
+  var authEl = document.getElementById('sectorMacroAuthGate');
+  var panelEl = document.getElementById('sectorMacroPanel');
   var user = window._currentUser;
 
   if (!user) {
@@ -27729,18 +27562,8 @@ function loadPlaybook() {
 }
 
 function playbookShowTab(name) {
-  // Tab buttons (use data-pbtab attribute)
-  document.querySelectorAll('#page-playbook .pf-tab').forEach(function(b) {
-    // Match by onclick content or data attribute
-    var on = b.getAttribute('onclick') || '';
-    b.classList.toggle('active', on.indexOf("'" + name + "'") !== -1 || on.indexOf('"' + name + '"') !== -1);
-  });
-  // Content panes
-  document.querySelectorAll('#page-playbook .pf-tab-content').forEach(function(c) {
-    c.classList.toggle('active', c.id === 'pbtab-' + name);
-  });
-
-  // Lazy-load RRG
+  _toggleTabs('#page-sector-macro-alignment', 'data-pbtab', name, 'pbtab-');
+  // Lazy-load RRG only when its tab is opened
   if (name === 'rrg' && !window._rrgLoaded) {
     loadRRG();
   }
@@ -28024,8 +27847,8 @@ var _gapBarChart = null;
 var _gapData = null;
 
 function loadGapAnalysis(force) {
-  var authEl = document.getElementById('gapAuthGate');
-  var panelEl = document.getElementById('gapPanel');
+  var authEl = document.getElementById('sectorMacroAuthGate');
+  var panelEl = document.getElementById('sectorMacroPanel');
   var user = window._currentUser;
 
   if (!user) {
