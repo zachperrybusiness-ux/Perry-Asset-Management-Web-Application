@@ -2278,6 +2278,17 @@ body.view-mobile #mobileBottomBar {
   .hero h1 { font-size: 20px !important; }
 }
 
+/* Portfolio Snapshot chart — horizontal scroll on small screens */
+@media (max-width: 640px) {
+  #portfolioChartWrap { overflow-x: auto; overflow-y: hidden; }
+  #portfolioChartWrap canvas {
+    min-width: 500px !important;
+    max-width: none !important;
+    max-height: 260px !important;
+    height: 260px !important;
+  }
+}
+
 /* Loading shimmer for AI */
 .ai-loading {
   display: inline-block;
@@ -2811,7 +2822,7 @@ body.view-mobile #mobileBottomBar {
           <div id="chartLoading" style="text-align:center;padding:40px;color:var(--text-sec);display:none;">
             <span class="spinner"></span> Loading chart data...
           </div>
-          <div class="chart-wrap">
+          <div class="chart-wrap" id="portfolioChartWrap">
             <canvas id="portfolioLineChart"></canvas>
           </div>
           <div class="zoom-hint">Click and drag to zoom in. Double-click or pinch to reset zoom.</div>
@@ -3000,6 +3011,34 @@ body.view-mobile #mobileBottomBar {
           <div class="card-body">
             <div class="table-wrap"><table id="attrSectorTable"><thead><tr><th>Sector</th><th style="text-align:right;">Weight %</th><th style="text-align:right;">Sector Return</th><th style="text-align:right;">Contribution</th></tr></thead><tbody></tbody></table></div>
           </div>
+        </div>
+
+        <!-- Brinson-Fachler Attribution -->
+        <div class="card">
+          <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
+            <span>Brinson-Fachler Attribution <span class="help-icon" data-help="sectorExposure">ⓘ</span></span>
+            <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+              <label style="font-size:11px;color:rgba(255,255,255,0.75);font-weight:600;">Period:</label>
+              <select id="brinsonWindow" style="font-size:11px;padding:3px 8px;" onchange="brinsonRun()">
+                <option value="21">1 Month</option>
+                <option value="63" selected>3 Months</option>
+                <option value="126">6 Months</option>
+                <option value="252">1 Year</option>
+              </select>
+              <label style="font-size:11px;color:rgba(255,255,255,0.75);font-weight:600;">vs:</label>
+              <select id="brinsonBench" style="font-size:11px;padding:3px 8px;" onchange="brinsonRun()">
+                <option value="SPY">SPY (S&amp;P 500)</option>
+                <option value="QQQ">QQQ (Nasdaq)</option>
+                <option value="IWM">IWM (Russell 2000)</option>
+              </select>
+            </div>
+          </div>
+          <div class="card-body">
+            <div id="brinsonChartWrap" style="height:260px;margin-bottom:14px;display:none;"><canvas id="brinsonChart"></canvas></div>
+            <div id="brinsonResults" style="text-align:center;color:var(--text-sec);padding:16px;font-size:13px;">Loading Brinson-Fachler attribution…</div>
+          </div>
+          <div class="card-body" id="brinsonContrib" style="padding-top:0;display:none;"></div>
+          <div class="card-sources"><strong>Method:</strong> Brinson-Fachler (1985) &bull; Allocation = (w<sub>p</sub>&minus;w<sub>b</sub>)&times;(R<sub>b,i</sub>&minus;R<sub>bench</sub>) &bull; Selection = w<sub>b</sub>&times;(R<sub>p,i</sub>&minus;R<sub>b,i</sub>) &bull; Interaction = (w<sub>p</sub>&minus;w<sub>b</sub>)&times;(R<sub>p,i</sub>&minus;R<sub>b,i</sub>) &bull; Sector benchmarks: SPDR sector ETFs (XLK, XLE, XLF…)</div>
         </div>
       </div>
 
@@ -18783,6 +18822,9 @@ async function ffRunAnalysis() {
       +'<div class="metric-sub" style="color:var(--text-sec);font-weight:400;">'+n+' day window</div>'
       +'</div>';
     el.innerHTML=cardHtml;
+    // Mirror to the Risk tab factor-risk box (if loaded there)
+    var frEl=document.getElementById('factorRiskBox');
+    if(frEl){ frEl.style.textAlign=''; frEl.innerHTML='<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px;">'+cardHtml+'</div>'; }
 
     // Store last result for risk tab factor chart
     // factorKeys: ['Market (Mkt-RF)', 'Size (SMB)', 'Value (HML)', 'Momentum (MOM)']
@@ -22259,31 +22301,53 @@ async function renderPerformanceTab() {
     }
     var bsEl = document.getElementById('perfBenchScorecard');
     if (bsEl) {
-      var spyDailyRets = spyData ? spyData.map(function(p,idx){ return idx>0?(p.val-spyData[idx-1].val)/spyData[idx-1].val:0; }).slice(1) : [];
-      var nCommon = Math.min(dailyRets.length, spyDailyRets.length);
+      // Build SPY daily-return lookup keyed by date (date-aligned, not positional)
+      var spyDateRetMap = {};
+      if (spyData && spyData.length > 1) {
+        for (var sdi=1; sdi<spyData.length; sdi++) {
+          if (spyData[sdi-1].val > 0) spyDateRetMap[spyData[sdi].date] = (spyData[sdi].val - spyData[sdi-1].val) / spyData[sdi-1].val;
+        }
+      }
+      // Align portfolio returns with SPY returns by matching date strings
+      var alignedPf=[], alignedSpy=[];
+      for (var ai=1; ai<dates.length; ai++) {
+        var sr = spyDateRetMap[dates[ai]];
+        if (sr !== undefined && dailyRets[ai-1] !== undefined) {
+          alignedPf.push(dailyRets[ai-1]);
+          alignedSpy.push(sr);
+        }
+      }
+      var nCommon = alignedPf.length;
       var beta=1, trackErr=0, infoRatio=0, upCapture=100, downCapture=100;
       if (nCommon > 10) {
-        var covSum=0,varSpy=0,pfAvg2=0,spyAvg2=0;
-        for (var si=0;si<nCommon;si++){pfAvg2+=dailyRets[si];spyAvg2+=spyDailyRets[si];}
+        var pfAvg2=0, spyAvg2=0;
+        for (var si=0;si<nCommon;si++){pfAvg2+=alignedPf[si];spyAvg2+=alignedSpy[si];}
         pfAvg2/=nCommon; spyAvg2/=nCommon;
-        for (var si2=0;si2<nCommon;si2++){covSum+=(dailyRets[si2]-pfAvg2)*(spyDailyRets[si2]-spyAvg2);varSpy+=(spyDailyRets[si2]-spyAvg2)*(spyDailyRets[si2]-spyAvg2);}
+        var covSum=0,varSpy=0;
+        for (var si2=0;si2<nCommon;si2++){covSum+=(alignedPf[si2]-pfAvg2)*(alignedSpy[si2]-spyAvg2);varSpy+=(alignedSpy[si2]-spyAvg2)*(alignedSpy[si2]-spyAvg2);}
         beta = varSpy>0?covSum/varSpy:1;
-        var diffs=dailyRets.slice(0,nCommon).map(function(r,ii){return r-spyDailyRets[ii];});
+        var diffs=alignedPf.map(function(r,ii){return r-alignedSpy[ii];});
         var diffMean=diffs.reduce(function(s,r){return s+r;},0)/diffs.length;
         var diffVar=diffs.reduce(function(s,r){return s+(r-diffMean)*(r-diffMean);},0)/diffs.length;
         trackErr=Math.sqrt(diffVar)*Math.sqrt(252); infoRatio=trackErr>0?(diffMean/Math.sqrt(diffVar))*Math.sqrt(252):0;
-        var upDays=0,upPf=0,upSpy=0,downDays=0,downPf=0,downSpy=0;
-        for (var si3=0;si3<nCommon;si3++){if(spyDailyRets[si3]>0){upDays++;upPf+=dailyRets[si3];upSpy+=spyDailyRets[si3];}else{downDays++;downPf+=dailyRets[si3];downSpy+=spyDailyRets[si3];}}
-        upCapture=upDays>0&&upSpy!==0?(upPf/upDays)/(upSpy/upDays)*100:100;
-        downCapture=downDays>0&&downSpy!==0?(downPf/downDays)/(downSpy/downDays)*100:100;
+        // Cumulative-product capture ratio (Morningstar standard — avoids daily-average distortion)
+        var upPfCum=1,upSpyCum=1,downPfCum=1,downSpyCum=1,upCount=0,downCount=0;
+        for (var si3=0;si3<nCommon;si3++){
+          if(alignedSpy[si3]>0){ upPfCum*=(1+alignedPf[si3]); upSpyCum*=(1+alignedSpy[si3]); upCount++; }
+          else if(alignedSpy[si3]<0){ downPfCum*=(1+alignedPf[si3]); downSpyCum*=(1+alignedSpy[si3]); downCount++; }
+        }
+        upCapture   = upCount>0   && (upSpyCum-1)!==0   ? (upPfCum-1)/(upSpyCum-1)*100   : 100;
+        downCapture = downCount>0 && (downSpyCum-1)!==0 ? (downPfCum-1)/(downSpyCum-1)*100 : 100;
+        upCapture   = Math.max(-500, Math.min(500, upCapture));
+        downCapture = Math.max(-500, Math.min(500, downCapture));
       }
       bsEl.innerHTML=[
         {l:'Beta vs SPY',v:beta.toFixed(2),c:beta<1.2?'var(--success)':'var(--warning)'},
         {l:'Tracking Error',v:((trackErr||0)*100).toFixed(1)+'%',c:'var(--text)'},
         {l:'Information Ratio',v:(infoRatio||0).toFixed(2),c:infoRatio>0.5?'var(--success)':infoRatio>0?'var(--warning)':'var(--danger)'},
-        {l:'Up Capture',v:((upCapture)||0).toFixed(0)+'%',c:upCapture>100?'var(--success)':'var(--text)'},
-        {l:'Down Capture',v:((downCapture)||0).toFixed(0)+'%',c:downCapture<100?'var(--success)':'var(--danger)'}
-      ].map(function(s){return '<div class="chart-stat-box"><div class="chart-stat-label">'+s.l+'</div><div class="chart-stat-value" style="color:'+s.c+';">'+s.v+'</div></div>';}).join('');
+        {l:'Up Capture',v:(upCapture||0).toFixed(0)+'%',c:upCapture>100?'var(--success)':'var(--text)',tip:'Portfolio cumulative return on SPY up-days ÷ SPY cumulative return on same days. >100% = captured more upside than SPY.'},
+        {l:'Down Capture',v:(downCapture||0).toFixed(0)+'%',c:downCapture<100?'var(--success)':'var(--danger)',tip:'Portfolio cumulative return on SPY down-days ÷ SPY cumulative return on same days. <100% = lost less than SPY on bad days (good).'}
+      ].map(function(s){return '<div class="chart-stat-box" title="'+(s.tip||'')+'"><div class="chart-stat-label">'+s.l+'</div><div class="chart-stat-value" style="color:'+s.c+';">'+s.v+'</div></div>';}).join('');
     }
   } catch(e) { console.error('renderPerformanceTab error:',e); if (kpiEl) kpiEl.innerHTML = '<span style="color:var(--danger);font-size:12px;">Error: '+e.message+'</span>'; }
 }
@@ -22358,6 +22422,8 @@ function renderAttributionTab() {
         +'<td style="text-align:right;font-weight:600;color:'+(s.contrib>=0?'var(--success)':'var(--danger)')+';">'+(s.contrib*100>=0?'+':'')+((s.contrib||0)*100).toFixed(2)+'%</td></tr>';
     }).join('');
   }
+  // Auto-run Brinson-Fachler attribution whenever attribution tab renders
+  if (typeof brinsonRun === 'function') brinsonRun();
 }
 
 function ytdDays() {
@@ -22638,6 +22704,39 @@ async function brinsonRun() {
     html += '<p style="font-size:11px;color:var(--text-sec);margin-top:10px;line-height:1.5;"><strong>Reading the table.</strong> <strong>Allocation</strong> measures whether your sector tilt vs. '+benchSym+' added value (overweight a strong sector, underweight a weak one). <strong>Selection</strong> measures whether your picks within each sector beat the sector benchmark (XLK for Tech, XLE for Energy, etc.). <strong>Interaction</strong> is a cross-effect — being overweight in a sector where your picks also outperformed.</p>';
     el.innerHTML = html;
 
+    // ── Grouped bar chart: Allocation / Selection / Interaction per sector ──
+    var brinsonChartWrap = document.getElementById('brinsonChartWrap');
+    var brinsonCtx = document.getElementById('brinsonChart');
+    if (brinsonCtx && rows.length) {
+      if (window._brinsonChart) { try { window._brinsonChart.destroy(); } catch(e2){} }
+      if (brinsonChartWrap) brinsonChartWrap.style.display = '';
+      window._brinsonChart = new Chart(brinsonCtx.getContext('2d'), {
+        type: 'bar',
+        data: {
+          labels: rows.map(function(r){ return r.sector; }),
+          datasets: [
+            { label: 'Allocation',   data: rows.map(function(r){ return r.alloc  != null ? parseFloat(r.alloc.toFixed(3))  : 0; }), backgroundColor: 'rgba(0,60,113,0.78)',   borderWidth: 0 },
+            { label: 'Selection',    data: rows.map(function(r){ return r.sel    != null ? parseFloat(r.sel.toFixed(3))    : 0; }), backgroundColor: 'rgba(46,125,82,0.78)',  borderWidth: 0 },
+            { label: 'Interaction',  data: rows.map(function(r){ return r.inter  != null ? parseFloat(r.inter.toFixed(3))  : 0; }), backgroundColor: 'rgba(139,100,20,0.78)', borderWidth: 0 }
+          ]
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false, animation: false,
+          plugins: {
+            legend: { position: 'top', labels: { font: { size: 11 }, color: '#1A2733' } },
+            tooltip: { callbacks: { label: function(c){ return c.dataset.label+': '+(c.parsed.y>=0?'+':'')+c.parsed.y.toFixed(2)+'%'; } } }
+          },
+          scales: {
+            x: { ticks: { font: { size: 10 }, maxRotation: 35 }, grid: { display: false } },
+            y: {
+              ticks: { callback: function(v){ return (v>=0?'+':'')+v.toFixed(2)+'%'; }, font: { size: 10 } },
+              title: { display: true, text: 'Active Return (%)', font: { size: 11 }, color: '#5A6772' }
+            }
+          }
+        }
+      });
+    }
+
     // Per-position contribution
     let cHtml = '<table style="width:100%;border-collapse:collapse;font-size:12px;font-family:Arial;">';
     cHtml += '<thead><tr style="background:var(--navy);color:#fff;">'+
@@ -22667,7 +22766,7 @@ async function brinsonRun() {
         '<td style="padding:6px 8px;text-align:right;font-family:Courier New,monospace;font-weight:700;color:'+col(c.contrib)+';">'+fmt(c.contrib)+'</td></tr>';
     });
     cHtml += '</tbody></table>';
-    if (elContrib) elContrib.innerHTML = cHtml;
+    if (elContrib) { elContrib.innerHTML = cHtml; elContrib.style.display = ''; }
   } catch(e) {
     el.innerHTML = '<p style="color:var(--danger);">Attribution failed: '+e.message+'</p>';
   }
@@ -26012,7 +26111,7 @@ async function renderSectorStocksPanel(wrap) {
   var results = {};
   await Promise.allSettled(tickers.map(async function(t){ try { results[t]=await fetchQuoteWithCache(t); } catch(e){ results[t]=null; } }));
   function buildTable(tickerList, title, isEtf) {
-    var rows = tickerList.map(function(t){ var q=results[t]; return { t:t, price:q&&typeof q.price==='number'?q.price:null, pct:q&&typeof q.changePct==='number'?q.changePct:(q&&typeof q.changePercent==='number'?q.changePercent:null), name:q?(q.shortName||q.name||q.longName||''):'', mc:q&&q.marketCap?q.marketCap:null }; });
+    var rows = tickerList.map(function(t){ var q=results[t]; var rawP=q?(q.current||q.price||null):null; return { t:t, price:typeof rawP==='number'&&rawP>0?rawP:null, pct:q&&typeof q.changePct==='number'?q.changePct:(q&&typeof q.changePercent==='number'?q.changePercent:null), name:q?(q.shortName||q.name||q.longName||''):'', mc:q&&q.marketCap?q.marketCap:null }; });
     var h = '<div class="card" style="margin:0;"><div class="card-header"><span class="card-title">'+title+'</span></div>'
       + '<div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;font-size:13px;">'
       + '<thead><tr style="border-bottom:1px solid var(--border);"><th style="text-align:left;padding:6px 8px;color:var(--text-sec);font-weight:600;">Ticker</th><th style="text-align:left;padding:6px 8px;color:var(--text-sec);font-weight:600;">Name</th><th style="text-align:right;padding:6px 8px;color:var(--text-sec);font-weight:600;">Price</th><th style="text-align:right;padding:6px 8px;color:var(--text-sec);font-weight:600;">1D%</th>'
@@ -26054,7 +26153,7 @@ async function renderTickerListPanel(wrap, tickers, title) {
   wrap.innerHTML='<div style="text-align:center;padding:40px 0;color:var(--text-sec);"><div class="spinner" style="margin:0 auto 10px;"></div>Loading '+title+'…</div>';
   var results={};
   await Promise.allSettled(tickers.map(async function(t){ try { results[t]=await fetchQuoteWithCache(t); } catch(e){ results[t]=null; } }));
-  var rows=tickers.map(function(t){ var q=results[t]; return { t:t, price:q&&typeof q.price==='number'?q.price:null, pct:q&&typeof q.changePct==='number'?q.changePct:(q&&typeof q.changePercent==='number'?q.changePercent:null), name:q?(q.shortName||q.name||''):'', mc:q&&q.marketCap?q.marketCap:null }; }).sort(function(a,b){ return (b.mc||0)-(a.mc||0); });
+  var rows=tickers.map(function(t){ var q=results[t]; var rawP=q?(q.current||q.price||null):null; return { t:t, price:typeof rawP==='number'&&rawP>0?rawP:null, pct:q&&typeof q.changePct==='number'?q.changePct:(q&&typeof q.changePercent==='number'?q.changePercent:null), name:q?(q.shortName||q.name||''):'', mc:q&&q.marketCap?q.marketCap:null }; }).sort(function(a,b){ return (b.mc||0)-(a.mc||0); });
   var h='<div class="card"><div class="card-header"><span class="card-title">'+title+'</span></div><div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;font-size:13px;"><thead><tr style="border-bottom:1px solid var(--border);"><th style="text-align:left;padding:6px 8px;color:var(--text-sec);font-weight:600;">Ticker</th><th style="text-align:left;padding:6px 8px;color:var(--text-sec);font-weight:600;">Name</th><th style="text-align:right;padding:6px 8px;color:var(--text-sec);font-weight:600;">Price</th><th style="text-align:right;padding:6px 8px;color:var(--text-sec);font-weight:600;">1D%</th><th style="text-align:right;padding:6px 8px;color:var(--text-sec);font-weight:600;">Mkt Cap</th></tr></thead><tbody>';
   rows.forEach(function(r){
     var pctStr=r.pct===null?'—':(r.pct>=0?'+':'')+r.pct.toFixed(2)+'%', pctColor=r.pct===null?'var(--text-sec)':r.pct>=0?'var(--success)':'var(--danger)';
@@ -26077,7 +26176,7 @@ async function renderTickerGridPanel(wrap, tickers, labelFn) {
   await Promise.allSettled(tickers.map(async function(t){ try { results[t]=await fetchQuoteWithCache(t); } catch(e){ results[t]=null; } }));
   var h='<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px;">';
   tickers.forEach(function(t){
-    var q=results[t], price=q&&typeof q.price==='number'?q.price:null, pct=q&&typeof q.changePct==='number'?q.changePct:(q&&typeof q.changePercent==='number'?q.changePercent:null), change=q&&typeof q.change==='number'?q.change:null;
+    var q=results[t]; var rawP2=q?(q.current||q.price||null):null; var price=typeof rawP2==='number'&&rawP2>0?rawP2:null; var pct=q&&typeof q.changePct==='number'?q.changePct:(q&&typeof q.changePercent==='number'?q.changePercent:null); var change=q&&typeof q.change==='number'?q.change:null;
     var label=labelFn?labelFn(t):t;
     var pctStr=pct===null?'—':(pct>=0?'+':'')+pct.toFixed(2)+'%', pctColor=pct===null?'var(--text-sec)':pct>=0?'var(--success)':'var(--danger)';
     var chgStr=change===null?'':(change>=0?'+':'')+change.toFixed(2);
