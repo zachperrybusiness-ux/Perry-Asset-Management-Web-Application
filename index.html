@@ -1810,6 +1810,148 @@ body.view-mobile #mobileBottomBar {
   border: 1px solid var(--border); border-radius: 4px; font-size: 13px;
 }
 
+/* ── STORY BREADCRUMB (5-step narrative nav) ── */
+.story-breadcrumb {
+  display: flex; align-items: center; gap: 0; margin-bottom: 18px;
+  background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius);
+  overflow: hidden; flex-wrap: wrap;
+}
+.story-step {
+  display: flex; align-items: center; gap: 6px; padding: 9px 14px;
+  font-size: 12px; font-weight: 600; color: var(--text-sec); cursor: pointer;
+  border-right: 1px solid var(--border); flex: 1; min-width: 100px;
+  transition: background .15s; white-space: nowrap; background: transparent;
+  border-bottom: none; border-top: none; text-align: left;
+}
+.story-step:last-child { border-right: none; }
+.story-step:hover { background: rgba(0,60,113,0.06); color: var(--navy); }
+.story-step.active {
+  background: var(--navy); color: #fff;
+}
+.story-step .step-num {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 20px; height: 20px; border-radius: 50%; font-size: 10px; font-weight: 800;
+  background: rgba(255,255,255,0.2); flex-shrink: 0;
+}
+.story-step.active .step-num { background: rgba(255,255,255,0.3); }
+.story-step .step-arrow { margin-left: auto; opacity: 0.5; font-size: 10px; }
+@media (max-width: 640px) {
+  .story-breadcrumb { flex-direction: column; }
+  .story-step { border-right: none; border-bottom: 1px solid var(--border); }
+  .story-step:last-child { border-bottom: none; }
+}
+
+/* ── QUAD MAP ── */
+.quad-map-wrap {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 18px;
+}
+.quad-map-container {
+  position: relative; background: var(--panel); border: 1px solid var(--border);
+  border-radius: var(--radius); padding: 16px; text-align: center;
+}
+.quad-map-canvas-wrap {
+  position: relative; height: 320px; margin: 0 auto; max-width: 420px;
+}
+.quad-narrative-panel {
+  display: flex; flex-direction: column; gap: 12px;
+}
+.quad-badge {
+  display: flex; align-items: center; gap: 12px; padding: 14px 16px;
+  border-radius: var(--radius); border-left: 5px solid var(--navy);
+  background: var(--panel); border: 1px solid var(--border);
+}
+.quad-badge-icon { font-size: 32px; flex-shrink: 0; }
+.quad-badge-label { font-size: 18px; font-weight: 800; color: var(--navy); }
+.quad-badge-sub { font-size: 12px; color: var(--text-sec); margin-top: 2px; }
+.quad-signal-row {
+  display: flex; align-items: center; gap: 10px; padding: 8px 12px;
+  background: var(--panel); border: 1px solid var(--border); border-radius: 4px;
+  font-size: 13px;
+}
+.quad-signal-row .sig-label { flex: 1; color: var(--text-sec); }
+.quad-signal-row .sig-val { font-weight: 700; color: var(--navy); }
+.quad-signal-row .sig-arrow { font-size: 16px; }
+@media (max-width: 800px) { .quad-map-wrap { grid-template-columns: 1fr; } }
+
+/* ── PLAYBOOK PAGE ── */
+.playbook-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(155px, 1fr)); gap: 10px;
+  margin-bottom: 18px;
+}
+.playbook-tile {
+  padding: 13px 12px; border-radius: var(--radius); border-left: 4px solid var(--border);
+  background: var(--panel); border: 1px solid var(--border); cursor: pointer;
+  transition: transform .15s, box-shadow .15s; position: relative;
+}
+.playbook-tile:hover { transform: translateY(-2px); box-shadow: var(--shadow); }
+.playbook-tile.ow  { border-left-color: var(--success); }
+.playbook-tile.neut { border-left-color: #8B6914; }
+.playbook-tile.uw  { border-left-color: var(--danger); }
+.playbook-tile-name { font-size: 12px; font-weight: 700; color: var(--navy); margin-bottom: 4px; }
+.playbook-tile-rec  {
+  display: inline-block; font-size: 10px; font-weight: 700; padding: 2px 7px;
+  border-radius: 10px; text-transform: uppercase; letter-spacing: .5px; margin-bottom: 5px;
+}
+.playbook-tile.ow  .playbook-tile-rec  { background: rgba(46,125,82,.15); color: var(--success); }
+.playbook-tile.neut .playbook-tile-rec { background: rgba(139,105,20,.12); color: #8B6914; }
+.playbook-tile.uw  .playbook-tile-rec  { background: rgba(139,42,42,.12); color: var(--danger); }
+.playbook-tile-hit  { font-size: 11px; color: var(--text-sec); }
+.playbook-tile-etfs { font-size: 10px; color: var(--text-sec); margin-top: 4px; }
+.playbook-section-title {
+  font-size: 13px; font-weight: 700; color: var(--navy); margin: 16px 0 8px;
+  padding-bottom: 5px; border-bottom: 2px solid var(--navy);
+}
+
+/* ── RRG CHART ── */
+.rrg-legend {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 12px;
+}
+.rrg-legend-item {
+  display: flex; align-items: center; gap: 6px; font-size: 11px;
+  padding: 5px 8px; border-radius: 4px;
+}
+.rrg-legend-item .dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+.rrg-quad-label {
+  position: absolute; font-size: 11px; font-weight: 700; opacity: 0.55; pointer-events: none;
+}
+
+/* ── GAP ANALYSIS ── */
+.gap-kpi-band {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px;
+  margin-bottom: 18px;
+}
+.gap-diverging-wrap { overflow-x: auto; }
+.gap-sector-row {
+  display: grid; grid-template-columns: 130px 1fr 60px; align-items: center;
+  gap: 8px; padding: 6px 0; border-bottom: 1px solid var(--border); font-size: 12px;
+}
+.gap-sector-row:last-child { border-bottom: none; }
+.gap-sector-name { color: var(--text-sec); font-weight: 600; }
+.gap-bar-wrap { position: relative; height: 20px; background: var(--bg); border-radius: 3px; overflow: hidden; }
+.gap-bar-center { position: absolute; left: 50%; width: 2px; background: var(--navy); top: 0; bottom: 0; transform: translateX(-50%); }
+.gap-bar-fill { position: absolute; top: 3px; bottom: 3px; border-radius: 2px; }
+.gap-pct { font-weight: 700; text-align: right; }
+.gap-pct.pos { color: var(--success); }
+.gap-pct.neg { color: var(--danger); }
+
+/* ── GLOSSARY TOOLTIP ── */
+.gloss-term {
+  border-bottom: 1px dashed var(--navy); color: var(--navy); cursor: help;
+  position: relative; display: inline;
+}
+.gloss-tip {
+  display: none; position: absolute; z-index: 9999; bottom: 125%; left: 50%;
+  transform: translateX(-50%); background: var(--navy); color: #fff;
+  padding: 6px 10px; border-radius: 4px; font-size: 11px; line-height: 1.4;
+  width: 220px; pointer-events: none; white-space: normal; text-align: center;
+  box-shadow: 0 4px 12px rgba(0,0,0,.25);
+}
+.gloss-tip::after {
+  content: ''; position: absolute; top: 100%; left: 50%; transform: translateX(-50%);
+  border: 5px solid transparent; border-top-color: var(--navy);
+}
+.gloss-term:hover .gloss-tip { display: block; }
+
 /* Cross-Asset multi-column grids — collapse to single on narrow screens */
 @media (max-width: 1100px) {
   #page-markets .pf-tab-content > div[style*="grid-template-columns:1.2fr 1fr"],
@@ -2401,6 +2543,7 @@ body.view-mobile #mobileBottomBar {
       </div>
       <div class="nav-dropdown">
         <div class="nav-child" data-page="holdings" onclick="navigateTo('holdings')">Manage Holdings</div>
+        <div class="nav-child" data-page="gap" onclick="navigateTo('gap')">&#128202; Gap Analysis</div>
         <div class="nav-child" data-page="themes" onclick="navigateTo('themes')">Portfolio Themes</div>
       </div>
     </div>
@@ -2410,6 +2553,7 @@ body.view-mobile #mobileBottomBar {
       </div>
       <div class="nav-dropdown">
         <div class="nav-child" data-page="macro" onclick="navigateTo('macro')">Macro Regime Analysis</div>
+        <div class="nav-child" data-page="playbook" onclick="navigateTo('playbook')">&#127942; Asset Playbook</div>
         <div class="nav-child" data-page="research" onclick="navigateTo('research')">Stock Research &amp; Quant Models</div>
         <div class="nav-child" data-page="markets" onclick="navigateTo('markets')">Cross-Asset Analysis</div>
       </div>
@@ -4181,13 +4325,90 @@ body.view-mobile #mobileBottomBar {
       The <strong>Macro Regime Verdict</strong> here (Early / Mid / Late Cycle / Contraction) uses FRED economic data and operates on a 3–12 month economic cycle frequency. The <strong>Portfolio State</strong> on Cross-Asset Analysis (Leveraged / Growth / Neutral / Drawdown) uses market price action (VIX, SPY momentum) and operates on a shorter tactical frequency. A "Mid-Cycle" economy can simultaneously produce a "Positioned for Drawdown" portfolio signal when equity valuations are stretched — markets lead the economy by 6–12 months on average. Use the Macro Regime for strategic sector rotation and the Portfolio State for tactical position sizing.
     </div>
 
+    <!-- Story Breadcrumb -->
+    <div class="story-breadcrumb" style="margin:0 0 0 0;border-radius:0;border-left:none;border-right:none;border-top:none;">
+      <button class="story-step active" onclick="navigateTo('macro')" title="Step 1: Where are we in the cycle?">
+        <span class="step-num">1</span> Macro Regime
+      </button>
+      <button class="story-step" onclick="navigateTo('playbook')" title="Step 2: What assets should win?">
+        <span class="step-num">2</span> Playbook
+      </button>
+      <button class="story-step" onclick="navigateTo('portfolio')" title="Step 3: What do I own?">
+        <span class="step-num">3</span> My Portfolio
+      </button>
+      <button class="story-step" onclick="navigateTo('gap')" title="Step 4: What's the gap?">
+        <span class="step-num">4</span> Gap Analysis
+      </button>
+      <button class="story-step" onclick="navigateTo('holdings');holdingsShowTab('rebalance')" title="Step 5: What should I do?">
+        <span class="step-num">5</span> Rebalance
+      </button>
+    </div>
+
     <!-- ═══════════ MACRO PAGE TABS ═══════════ -->
     <div class="pf-tabs" style="margin:0 0 0 0;">
+      <button class="pf-tab" data-macrotab="quadmap"   onclick="macroShowTab('quadmap')">&#127970; Quad Map</button>
       <button class="pf-tab active" data-macrotab="dashboard"  onclick="macroShowTab('dashboard')">Macro Indicator Dashboard</button>
       <button class="pf-tab"        data-macrotab="biz"        onclick="macroShowTab('biz')">Business Cycle</button>
       <button class="pf-tab"        data-macrotab="breakdown"  onclick="macroShowTab('breakdown')">Economic Cycle Breakdown</button>
       <button class="pf-tab"        data-macrotab="yieldcurve" onclick="macroShowTab('yieldcurve')">Yield Curve</button>
       <button class="pf-tab"        data-macrotab="lic"        onclick="macroShowTab('lic')">Leading Indicator Composite</button>
+    </div>
+
+    <!-- ── TAB: Quad Map ── -->
+    <div class="pf-tab-content" id="macrotab-quadmap">
+      <div class="quad-map-wrap">
+        <div class="quad-map-container card" style="padding:16px;">
+          <div class="card-title">Business Cycle Quad Map <span class="help-icon" title="The Hedgeye/Fidelity 2×2 business cycle grid. X-axis = Growth direction (Industrial Production MoM). Y-axis = Inflation direction (Core PCE YoY trend). The red dot shows where FRED data places the economy today.">?</span></div>
+          <div class="card-body" style="padding:0;">
+            <div class="quad-map-canvas-wrap" id="quadMapWrap">
+              <canvas id="quadMapCanvas"></canvas>
+            </div>
+          </div>
+        </div>
+        <div class="quad-narrative-panel">
+          <div class="card" style="flex:1;">
+            <div class="card-title">Current Regime Signal</div>
+            <div class="card-body" id="quadNarrativeBody">
+              <div style="text-align:center;padding:24px;color:var(--text-sec);">
+                <span class="spinner"></span><br><small>Loading FRED data…</small>
+              </div>
+            </div>
+          </div>
+          <div class="card">
+            <div class="card-title">Quad Playbook Summary</div>
+            <div class="card-body" id="quadPlaybookSummary" style="font-size:12px;line-height:1.6;color:var(--text-sec);">
+              Loading…
+            </div>
+            <div class="card-footer" style="padding:10px 14px;">
+              <button class="btn" onclick="navigateTo('playbook')">Full Playbook &#8594;</button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title">Quad Framework — Quadrant Guide</div>
+        <div class="card-body">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+            <div style="padding:12px;border-radius:4px;background:rgba(46,125,82,.08);border-left:4px solid var(--success);">
+              <strong style="color:var(--success);">Q1 — Goldilocks</strong>
+              <p style="font-size:12px;margin:4px 0 0;color:var(--text-sec);">Growth ↑ &amp; Inflation ↓. Historically the best environment for equities. Favors: Tech, Consumer Discretionary, Small-Cap, High-Yield, EM.</p>
+            </div>
+            <div style="padding:12px;border-radius:4px;background:rgba(139,105,20,.08);border-left:4px solid #8B6914;">
+              <strong style="color:#8B6914;">Q2 — Overheat</strong>
+              <p style="font-size:12px;margin:4px 0 0;color:var(--text-sec);">Growth ↑ &amp; Inflation ↑. Commodities and real assets lead. Favors: Energy, Materials, Industrials, REITs, Commodities, TIPS.</p>
+            </div>
+            <div style="padding:12px;border-radius:4px;background:rgba(139,42,42,.08);border-left:4px solid var(--danger);">
+              <strong style="color:var(--danger);">Q3 — Stagflation</strong>
+              <p style="font-size:12px;margin:4px 0 0;color:var(--text-sec);">Growth ↓ &amp; Inflation ↑. Worst for most assets. Favors: Gold, Energy, Short-Duration Bonds, Commodities. Avoid: Tech, duration.</p>
+            </div>
+            <div style="padding:12px;border-radius:4px;background:rgba(91,155,213,.08);border-left:4px solid var(--blue);">
+              <strong style="color:var(--blue);">Q4 — Deflation / Recession</strong>
+              <p style="font-size:12px;margin:4px 0 0;color:var(--text-sec);">Growth ↓ &amp; Inflation ↓. Long bonds and defensives lead. Favors: Treasuries, Utilities, Staples, Gold, Cash.</p>
+            </div>
+          </div>
+        </div>
+        <div class="card-sources"><strong>Framework basis:</strong> Hedgeye GIP Quad model, Fidelity Asset Allocation Research Team (AART) business-cycle playbook, CFA curriculum business cycle framework. FRED indicator data.</div>
+      </div>
     </div>
 
     <!-- ── TAB: Macro Indicator Dashboard ── -->
@@ -5448,6 +5669,262 @@ body.view-mobile #mobileBottomBar {
 </div>
 
 
+<!-- ═══════════ PLAYBOOK PAGE ═══════════ -->
+<div class="page" id="page-playbook">
+  <div class="content-wrap">
+    <div class="hero" style="padding:32px 40px;">
+      <h1>&#127942; Asset Playbook</h1>
+      <p>Regime-aware sector and asset class recommendations. Based on Fidelity AART business-cycle research and the current FRED macro signal.</p>
+    </div>
+    <!-- Story Breadcrumb -->
+    <div class="story-breadcrumb" style="margin:0 0 0 0;border-radius:0;border-left:none;border-right:none;border-top:none;">
+      <button class="story-step" onclick="navigateTo('macro')" title="Step 1: Where are we in the cycle?">
+        <span class="step-num">1</span> Macro Regime
+      </button>
+      <button class="story-step active" onclick="navigateTo('playbook')" title="Step 2: What assets should win?">
+        <span class="step-num">2</span> Playbook
+      </button>
+      <button class="story-step" onclick="navigateTo('portfolio')" title="Step 3: What do I own?">
+        <span class="step-num">3</span> My Portfolio
+      </button>
+      <button class="story-step" onclick="navigateTo('gap')" title="Step 4: What's the gap?">
+        <span class="step-num">4</span> Gap Analysis
+      </button>
+      <button class="story-step" onclick="navigateTo('holdings');holdingsShowTab('rebalance')" title="Step 5: What should I do?">
+        <span class="step-num">5</span> Rebalance
+      </button>
+    </div>
+
+    <div id="playbookAuthGate" class="auth-gate" style="display:none;">
+      <div style="text-align:center;padding:40px;"><span style="font-size:36px;">&#127942;</span><br><br>
+        <strong>Sign in to view the Asset Playbook</strong><br>
+        <p style="color:var(--text-sec);font-size:13px;">The playbook connects to your holdings and FRED macro data.</p>
+      </div>
+    </div>
+    <div id="playbookPanel" style="display:none;">
+      <!-- Regime Banner -->
+      <div id="playbookRegimeBanner" class="card" style="margin-bottom:16px;">
+        <div class="card-body" id="playbookRegimeBody">
+          <div style="text-align:center;padding:20px;color:var(--text-sec);"><span class="spinner"></span> Loading regime…</div>
+        </div>
+      </div>
+
+      <!-- Sector Playbook Tabs -->
+      <div class="pf-tabs">
+        <button class="pf-tab active" onclick="playbookShowTab('sectors')">Sector Playbook</button>
+        <button class="pf-tab" onclick="playbookShowTab('assets')">Asset Classes</button>
+        <button class="pf-tab" onclick="playbookShowTab('rrg')">Sector Rotation (RRG)</button>
+        <button class="pf-tab" onclick="playbookShowTab('hitrateS')">Historical Hit Rates</button>
+      </div>
+
+      <!-- TAB: Sector Playbook -->
+      <div class="pf-tab-content active" id="pbtab-sectors">
+        <div class="card">
+          <div class="card-title">GICS Sector Playbook — <span id="pbSectorQuadLabel">Current Regime</span>
+            <span class="help-icon" title="Color-coded by the Fidelity AART business-cycle playbook. Green = Overweight, Yellow = Neutral, Red = Underweight. Hit rate = % of historical periods this sector outperformed in this cycle phase.">?</span>
+          </div>
+          <div class="card-body">
+            <div class="playbook-section-title">Equity Sectors (GICS)</div>
+            <div class="playbook-grid" id="pbSectorGrid">
+              <div style="grid-column:1/-1;text-align:center;padding:20px;color:var(--text-sec);"><span class="spinner"></span> Loading…</div>
+            </div>
+          </div>
+          <div class="card-sources"><strong>Source:</strong> Fidelity Asset Allocation Research Team (AART) business-cycle sector study (1962–2020). Hit rates represent historical frequency of outperformance vs. S&amp;P 500 during the indicated cycle phase. Not investment advice.</div>
+        </div>
+        <div class="card" style="margin-top:16px;">
+          <div class="card-title">Playbook Positioning vs. My Holdings</div>
+          <div class="card-body" id="pbVsHoldings">
+            <div style="text-align:center;padding:20px;color:var(--text-sec);font-size:13px;">
+              Load your holdings in <button class="btn btn-sm" onclick="navigateTo('holdings')">Manage Holdings</button> to see how your portfolio aligns to the playbook.
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- TAB: Asset Classes -->
+      <div class="pf-tab-content" id="pbtab-assets">
+        <div class="card">
+          <div class="card-title">Asset Class Playbook — <span id="pbAssetQuadLabel">Current Regime</span></div>
+          <div class="card-body">
+            <div class="playbook-grid" id="pbAssetGrid">
+              <div style="grid-column:1/-1;text-align:center;padding:20px;color:var(--text-sec);"><span class="spinner"></span> Loading…</div>
+            </div>
+          </div>
+          <div class="card-sources"><strong>Source:</strong> Fidelity AART, Bridgewater regime research, CFA business-cycle curriculum. Asset class performance data 1972–2023. Past performance does not guarantee future results.</div>
+        </div>
+      </div>
+
+      <!-- TAB: RRG Sector Rotation -->
+      <div class="pf-tab-content" id="pbtab-rrg">
+        <div class="card">
+          <div class="card-title">Relative Rotation Graph (RRG) — Sector Momentum
+            <span class="help-icon" title="The RRG shows sector ETFs plotted by relative strength (X) vs. momentum of relative strength (Y). Leading = strong and accelerating. Weakening = strong but decelerating. Lagging = weak and decelerating. Improving = weak but accelerating.">?</span>
+            <button class="btn btn-sm" onclick="loadRRG(true)" style="float:right;">Refresh Data</button>
+          </div>
+          <div class="card-body">
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;font-size:11px;">
+              <div style="padding:6px 10px;background:rgba(46,125,82,.1);border-radius:4px;border-left:3px solid var(--success);"><strong style="color:var(--success);">Leading</strong> — Strong RS, Positive Momentum</div>
+              <div style="padding:6px 10px;background:rgba(139,105,20,.1);border-radius:4px;border-left:3px solid #8B6914;"><strong style="color:#8B6914);">Weakening</strong> — Strong RS, Negative Momentum</div>
+              <div style="padding:6px 10px;background:rgba(139,42,42,.1);border-radius:4px;border-left:3px solid var(--danger);"><strong style="color:var(--danger);">Lagging</strong> — Weak RS, Negative Momentum</div>
+              <div style="padding:6px 10px;background:rgba(0,120,215,.1);border-radius:4px;border-left:3px solid var(--blue);"><strong style="color:var(--blue);">Improving</strong> — Weak RS, Positive Momentum</div>
+            </div>
+            <div id="rrgStatus" style="font-size:12px;color:var(--text-sec);margin-bottom:8px;"></div>
+            <div style="position:relative;height:420px;"><canvas id="rrgChart"></canvas></div>
+            <div id="rrgSectorList" style="margin-top:14px;font-size:12px;display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:6px;"></div>
+          </div>
+          <div class="card-sources"><strong>Calculation:</strong> RS-Ratio = Sector ETF / SPY (52-week window). RS-Momentum = 14-day EMA of RS-Ratio minus 28-day EMA. Normalized to 100. Method: Julius de Kempenaer (2014). Data: Yahoo Finance via Cloudflare proxy. Weekly intervals.</div>
+        </div>
+      </div>
+
+      <!-- TAB: Historical Hit Rates -->
+      <div class="pf-tab-content" id="pbtab-hitrateS">
+        <div class="card">
+          <div class="card-title">Historical Hit Rates by Business Cycle Phase
+            <span class="help-icon" title="Hit rate = % of historical cycle-phase periods where each sector generated positive excess return vs. SPX. Source: Fidelity AART business-cycle sector study 1962–2020. For educational reference only.">?</span>
+          </div>
+          <div class="card-body">
+            <div style="overflow-x:auto;">
+              <table class="data-table" id="hitRateTable">
+                <thead>
+                  <tr>
+                    <th>Sector</th>
+                    <th style="background:rgba(46,125,82,.12);">Early Expansion</th>
+                    <th style="background:rgba(91,155,213,.12);">Mid Expansion</th>
+                    <th style="background:rgba(139,105,20,.12);">Late / Peak</th>
+                    <th style="background:rgba(139,42,42,.12);">Contraction</th>
+                    <th>Top ETF</th>
+                  </tr>
+                </thead>
+                <tbody id="hitRateBody"></tbody>
+              </table>
+            </div>
+          </div>
+          <div class="card-sources"><strong>Source:</strong> Fidelity Asset Allocation Research Team (AART), "Business Cycle and Sector Performance," 2022. Hit rates calculated from NBER business cycle dates 1962–2020. Gross total returns. Past performance is not indicative of future results.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════ GAP ANALYSIS PAGE ═══════════ -->
+<div class="page" id="page-gap">
+  <div class="content-wrap">
+    <div class="hero" style="padding:32px 40px;">
+      <h1>&#128202; Portfolio Gap Analysis</h1>
+      <p>Compares your current sector exposure to the regime playbook target allocation. Identifies over/underweight positions and calculates total portfolio drift.</p>
+    </div>
+    <!-- Story Breadcrumb -->
+    <div class="story-breadcrumb" style="margin:0 0 0 0;border-radius:0;border-left:none;border-right:none;border-top:none;">
+      <button class="story-step" onclick="navigateTo('macro')" title="Step 1">
+        <span class="step-num">1</span> Macro Regime
+      </button>
+      <button class="story-step" onclick="navigateTo('playbook')" title="Step 2">
+        <span class="step-num">2</span> Playbook
+      </button>
+      <button class="story-step" onclick="navigateTo('portfolio')" title="Step 3">
+        <span class="step-num">3</span> My Portfolio
+      </button>
+      <button class="story-step active" onclick="navigateTo('gap')" title="Step 4">
+        <span class="step-num">4</span> Gap Analysis
+      </button>
+      <button class="story-step" onclick="navigateTo('holdings');holdingsShowTab('rebalance')" title="Step 5">
+        <span class="step-num">5</span> Rebalance
+      </button>
+    </div>
+
+    <div id="gapAuthGate" class="auth-gate" style="display:none;">
+      <div style="text-align:center;padding:40px;"><span style="font-size:36px;">&#128202;</span><br><br>
+        <strong>Sign in to view Gap Analysis</strong><br>
+        <p style="color:var(--text-sec);font-size:13px;">Gap analysis requires your holdings data to compute drift.</p>
+      </div>
+    </div>
+    <div id="gapPanel" style="display:none;">
+      <!-- KPI Band -->
+      <div class="gap-kpi-band" id="gapKpiBand" style="margin-bottom:16px;">
+        <div class="metric-card" id="gapDriftCard">
+          <div class="metric-label">Portfolio Drift</div>
+          <div class="metric-value" id="gapDriftVal">—</div>
+          <div class="metric-sub" id="gapDriftSub">vs. playbook</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-label">Regime</div>
+          <div class="metric-value" id="gapRegimeVal" style="font-size:13px;">—</div>
+          <div class="metric-sub" id="gapRegimeSub">current macro phase</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-label">Largest Gap</div>
+          <div class="metric-value" id="gapLargestVal">—</div>
+          <div class="metric-sub" id="gapLargestSub">sector</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-label">Positions</div>
+          <div class="metric-value" id="gapPositionsVal">—</div>
+          <div class="metric-sub">in holdings</div>
+        </div>
+      </div>
+
+      <!-- Drift Status Banner -->
+      <div id="gapDriftBanner" style="margin-bottom:16px;"></div>
+
+      <!-- Gap Chart Card -->
+      <div class="card" style="margin-bottom:16px;">
+        <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
+          Sector Exposure vs. Playbook Target
+          <button class="btn btn-sm" onclick="loadGapAnalysis(true)">&#8635; Refresh</button>
+        </div>
+        <div class="card-body">
+          <p style="font-size:12px;color:var(--text-sec);margin-bottom:12px;">
+            <strong>Green bars</strong> = underweight vs. target (opportunity to add).
+            <strong>Red bars</strong> = overweight vs. target (consider trimming).
+            Center line = playbook target weight.
+            <span class="gloss-term">Drift<span class="gloss-tip">Portfolio Drift: Σ|actual − target|/2. The Betterment-style metric where each 1% overweight in one sector equals 1% underweight elsewhere. Rebalance recommended when drift exceeds 3%.</span></span> = Σ|actual − target| / 2.
+          </p>
+          <div id="gapChartStatus" style="font-size:12px;color:var(--text-sec);margin-bottom:8px;"></div>
+          <div style="position:relative;height:380px;" id="gapChartWrap">
+            <canvas id="gapBarChart"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <!-- Sector Detail Table -->
+      <div class="card" style="margin-bottom:16px;">
+        <div class="card-title">Sector-Level Breakdown</div>
+        <div class="card-body" style="padding:0;">
+          <table class="data-table" id="gapDetailTable">
+            <thead>
+              <tr>
+                <th>Sector</th>
+                <th>Your Weight</th>
+                <th>Target Weight</th>
+                <th>Gap</th>
+                <th>Signal</th>
+                <th>Top ETF</th>
+              </tr>
+            </thead>
+            <tbody id="gapDetailBody">
+              <tr><td colspan="6" style="text-align:center;padding:20px;color:var(--text-sec);">
+                <span class="spinner"></span> Computing gap analysis…
+              </td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Rebalance CTA -->
+      <div class="card">
+        <div class="card-title">Rebalancing Actions</div>
+        <div class="card-body" id="gapRebalanceSuggestions" style="font-size:13px;">
+          <div style="text-align:center;color:var(--text-sec);padding:10px;"><span class="spinner"></span> Loading…</div>
+        </div>
+        <div class="card-footer" style="display:flex;gap:10px;padding:10px 14px;">
+          <button class="btn" onclick="navigateTo('holdings');holdingsShowTab('rebalance')">Go to Rebalancer &#8594;</button>
+          <button class="btn btn-outline" id="gapExportBtn" onclick="gapExportCSV()">Export Gap CSV</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- ═══════════ PREVIOUS TOOLS / VISUALIZATIONS ═══════════ -->
 <div class="page" id="page-prevtools">
   <div class="content-wrap">
@@ -6690,7 +7167,7 @@ Chart.register(priceBubblePlugin);
 let donutCharts = {};
 
 // ═══ NAVIGATION ═══
-const parentMap = { home: 'home', about: 'home', resources: 'home', portfolio: 'portfolio', holdings: 'portfolio', research: 'portfolio', themes: 'portfolio', macro: 'analysis', quant: 'analysis', markets: 'analysis' };
+const parentMap = { home: 'home', about: 'home', resources: 'home', prevtools: 'home', portfolio: 'portfolio', holdings: 'portfolio', gap: 'portfolio', themes: 'portfolio', macro: 'analysis', playbook: 'analysis', quant: 'analysis', markets: 'analysis', research: 'analysis' };
 function navigateTo(p) {
   document.activeElement.blur();
   document.querySelectorAll('.page').forEach(x => x.classList.remove('active'));
@@ -6724,6 +7201,12 @@ function navigateTo(p) {
     // Always land on the dashboard tab; macroShowTab handles lazy loading per tab
     if (typeof macroShowTab === 'function') macroShowTab('dashboard');
     else loadMacroLiveTable();
+  }
+  if (p === 'playbook') {
+    setTimeout(function(){ if (typeof loadPlaybook === 'function') loadPlaybook(); }, 100);
+  }
+  if (p === 'gap') {
+    setTimeout(function(){ if (typeof loadGapAnalysis === 'function') loadGapAnalysis(); }, 100);
   }
   if (p === 'home') {
     // Re-run briefing every time home is visited
@@ -10512,6 +10995,13 @@ function macroShowTab(name) {
         licRender(window._lastMacroData);
       }
     }
+    if (name === 'quadmap') {
+      if (!window._lastMacroData) {
+        loadMacroLiveTable(); // renderQuadMap() is called inside after data loads
+      } else {
+        renderQuadMap();
+      }
+    }
   }
 }
 
@@ -10668,6 +11158,11 @@ function loadMacroLiveTable(force) {
     if (typeof renderBusinessCycleChart === 'function') renderBusinessCycleChart(d.phase, d.totalScore, d.maxScore);
     // Cache for briefing page and LIC
     window._lastMacroData = d;
+    // Render Quad Map if quadmap tab is active (or was first-visited)
+    var quadTab = document.getElementById('macrotab-quadmap');
+    if (quadTab && quadTab.classList.contains('active')) {
+      if (typeof renderQuadMap === 'function') renderQuadMap();
+    }
     // Render Leading Indicator Composite only if LIC tab is currently active
     if (typeof licRender === 'function') {
       var licTab = document.getElementById('macrotab-lic');
@@ -26860,6 +27355,874 @@ window.rqShowTab = function(name) {
     if (name === 'sectors') setTimeout(function(){ if (typeof renderSectorsTab==='function') renderSectorsTab(); }, 50);
   };
 })();
+
+// ════════════════════════════════════════════════════════════════════
+// QUAD MAP — Business Cycle Visualization (Hedgeye GIP / Fidelity AART)
+// ════════════════════════════════════════════════════════════════════
+
+// Static playbook data (Fidelity AART framework)
+var PLAYBOOK_DATA = {
+  'Goldilocks': {
+    label: 'Goldilocks', quadNum: 'Q1', emoji: '☀️',
+    growthDir: 'Accelerating', inflDir: 'Decelerating',
+    color: '#2E7D52',
+    narrative: 'Growth is accelerating while inflation cools — the most favorable environment for risk assets. Equities historically outperform, with cyclicals and growth stocks leading. The Fed is likely on hold or cutting.',
+    sectors: [
+      { name: 'Technology', rec: 'OW', hit: 74, etfs: 'XLK, QQQ, SOXX' },
+      { name: 'Consumer Discretionary', rec: 'OW', hit: 68, etfs: 'XLY, AMZN, RIVN' },
+      { name: 'Financials', rec: 'OW', hit: 63, etfs: 'XLF, KRE, BRK' },
+      { name: 'Industrials', rec: 'OW', hit: 61, etfs: 'XLI, ITA, JETS' },
+      { name: 'Communication Services', rec: 'OW', hit: 59, etfs: 'XLC, META, GOOGL' },
+      { name: 'Healthcare', rec: 'NEUT', hit: 48, etfs: 'XLV, IBB, ARKG' },
+      { name: 'Materials', rec: 'NEUT', hit: 45, etfs: 'XLB, GDX, COPX' },
+      { name: 'Energy', rec: 'NEUT', hit: 42, etfs: 'XLE, USO, XOM' },
+      { name: 'Consumer Staples', rec: 'UW', hit: 38, etfs: 'XLP, KO, PG' },
+      { name: 'Utilities', rec: 'UW', hit: 32, etfs: 'XLU, NEE, DUK' },
+      { name: 'Real Estate', rec: 'UW', hit: 30, etfs: 'XLRE, VNQ, O' }
+    ],
+    assets: [
+      { name: 'US Equities', rec: 'OW', hit: 72, note: 'Core overweight — broad SPY or QQQ' },
+      { name: 'Intl Developed', rec: 'OW', hit: 60, note: 'EFA, VEA — benefits from USD softening' },
+      { name: 'HY Credit', rec: 'OW', hit: 65, note: 'Spreads compress in goldilocks; HYG, JNK' },
+      { name: 'Commodities', rec: 'NEUT', hit: 48, note: 'Moderate; copper benefits from growth' },
+      { name: 'EM Equities', rec: 'NEUT', hit: 52, note: 'EEM — limited upside vs. US growth' },
+      { name: 'Gold', rec: 'UW', hit: 38, note: 'Inflation falling = headwind for gold' },
+      { name: 'Long Duration UST', rec: 'UW', hit: 35, note: 'Rising risk appetite pressures bonds' },
+      { name: 'Cash', rec: 'UW', hit: 28, note: 'Opportunity cost high in goldilocks' }
+    ]
+  },
+  'Overheat': {
+    label: 'Overheat', quadNum: 'Q2', emoji: '🔥',
+    growthDir: 'Accelerating', inflDir: 'Accelerating',
+    color: '#8B6914',
+    narrative: 'Growth is still strong but inflation is rising. Commodities and real assets shine. The Fed is likely hiking. Risk assets remain positive but momentum slows. Avoid long-duration bonds.',
+    sectors: [
+      { name: 'Energy', rec: 'OW', hit: 76, etfs: 'XLE, USO, MRO' },
+      { name: 'Materials', rec: 'OW', hit: 70, etfs: 'XLB, COPX, GDX' },
+      { name: 'Financials', rec: 'OW', hit: 62, etfs: 'XLF, KBE, JPM' },
+      { name: 'Industrials', rec: 'OW', hit: 58, etfs: 'XLI, ITA, DE' },
+      { name: 'Real Estate', rec: 'NEUT', hit: 45, etfs: 'XLRE, VNQ, SPG' },
+      { name: 'Healthcare', rec: 'NEUT', hit: 50, etfs: 'XLV, UNH, JNJ' },
+      { name: 'Consumer Discretionary', rec: 'NEUT', hit: 43, etfs: 'XLY, AMZN, HD' },
+      { name: 'Consumer Staples', rec: 'NEUT', hit: 47, etfs: 'XLP, PG, KO' },
+      { name: 'Technology', rec: 'UW', hit: 36, etfs: 'XLK — valuation compression' },
+      { name: 'Communication Services', rec: 'UW', hit: 34, etfs: 'XLC — ad spend slows' },
+      { name: 'Utilities', rec: 'UW', hit: 30, etfs: 'XLU — rising rates = headwind' }
+    ],
+    assets: [
+      { name: 'Commodities', rec: 'OW', hit: 78, note: 'DJP, PDBC — inflation hedge' },
+      { name: 'Gold', rec: 'OW', hit: 68, note: 'GLD, IAU — rising inflation premium' },
+      { name: 'TIPS', rec: 'OW', hit: 65, note: 'TIP, VTIP — inflation protection' },
+      { name: 'US Equities', rec: 'NEUT', hit: 52, note: 'Still positive but rate risk rising' },
+      { name: 'EM Equities', rec: 'NEUT', hit: 48, note: 'EEM — commodity producers benefit' },
+      { name: 'HY Credit', rec: 'UW', hit: 40, note: 'Spreads vulnerable to rate shock' },
+      { name: 'Long Duration UST', rec: 'UW', hit: 28, note: 'TLT — worst asset in overheat' },
+      { name: 'Cash', rec: 'NEUT', hit: 50, note: 'Yields rising; short-T-bills attractive' }
+    ]
+  },
+  'Stagflation': {
+    label: 'Stagflation', quadNum: 'Q3', emoji: '⚠️',
+    growthDir: 'Decelerating', inflDir: 'Accelerating',
+    color: '#8B2A2A',
+    narrative: 'The worst quadrant: growth is falling while inflation stays elevated. The Fed is stuck. Real assets and defensives preserve capital best. Avoid growth equities and long duration.',
+    sectors: [
+      { name: 'Energy', rec: 'OW', hit: 72, etfs: 'XLE, USO, VLO' },
+      { name: 'Consumer Staples', rec: 'OW', hit: 68, etfs: 'XLP, KO, WMT' },
+      { name: 'Healthcare', rec: 'OW', hit: 65, etfs: 'XLV, MDT, ABBV' },
+      { name: 'Utilities', rec: 'OW', hit: 60, etfs: 'XLU, NEE, D' },
+      { name: 'Materials', rec: 'NEUT', hit: 50, etfs: 'XLB — mixed; gold miners OW' },
+      { name: 'Real Estate', rec: 'UW', hit: 38, etfs: 'XLRE — hurt by rates + weak economy' },
+      { name: 'Financials', rec: 'UW', hit: 35, etfs: 'XLF — credit losses rise' },
+      { name: 'Industrials', rec: 'UW', hit: 32, etfs: 'XLI — demand collapse' },
+      { name: 'Technology', rec: 'UW', hit: 28, etfs: 'XLK — growth premium deflates' },
+      { name: 'Consumer Discretionary', rec: 'UW', hit: 25, etfs: 'XLY — consumers squeezed' },
+      { name: 'Communication Services', rec: 'UW', hit: 30, etfs: 'XLC — ad spend collapses' }
+    ],
+    assets: [
+      { name: 'Gold', rec: 'OW', hit: 76, note: 'GLD — classic stagflation hedge' },
+      { name: 'Commodities', rec: 'OW', hit: 65, note: 'PDBC — supply shock driven' },
+      { name: 'TIPS', rec: 'OW', hit: 62, note: 'TIP — inflation floor protection' },
+      { name: 'Cash', rec: 'OW', hit: 60, note: 'Yields high; T-bills preserve optionality' },
+      { name: 'EM Equities', rec: 'UW', hit: 35, note: 'Dollar strength = EM headwind' },
+      { name: 'US Equities', rec: 'UW', hit: 32, note: 'Margin compression + rate pressure' },
+      { name: 'HY Credit', rec: 'UW', hit: 28, note: 'Default risk spikes in stagflation' },
+      { name: 'Long Duration UST', rec: 'UW', hit: 30, note: 'Inflation keeps long yields elevated' }
+    ]
+  },
+  'Deflation': {
+    label: 'Deflation', quadNum: 'Q4', emoji: '❄️',
+    growthDir: 'Decelerating', inflDir: 'Decelerating',
+    color: '#5B9BD5',
+    narrative: 'Growth is slowing and inflation is falling. The Fed is cutting. Long-duration bonds rally sharply. Defensives outperform. Cash flow businesses with pricing power hold up best.',
+    sectors: [
+      { name: 'Healthcare', rec: 'OW', hit: 70, etfs: 'XLV, JNJ, UNH' },
+      { name: 'Consumer Staples', rec: 'OW', hit: 67, etfs: 'XLP, PG, COST' },
+      { name: 'Utilities', rec: 'OW', hit: 72, etfs: 'XLU, NEE, DUK' },
+      { name: 'Real Estate', rec: 'OW', hit: 58, etfs: 'XLRE, VNQ — cuts = cap rate relief' },
+      { name: 'Financials', rec: 'NEUT', hit: 45, etfs: 'XLF — NIM compression' },
+      { name: 'Technology', rec: 'NEUT', hit: 50, etfs: 'XLK — durable cash flows help' },
+      { name: 'Communication Services', rec: 'NEUT', hit: 45, etfs: 'XLC — defensive revenue mix' },
+      { name: 'Industrials', rec: 'UW', hit: 38, etfs: 'XLI — capex dries up' },
+      { name: 'Energy', rec: 'UW', hit: 32, etfs: 'XLE — demand falls, oil drops' },
+      { name: 'Materials', rec: 'UW', hit: 30, etfs: 'XLB — deflationary pressure on PPI' },
+      { name: 'Consumer Discretionary', rec: 'UW', hit: 35, etfs: 'XLY — consumer retrenchment' }
+    ],
+    assets: [
+      { name: 'Long Duration UST', rec: 'OW', hit: 78, note: 'TLT, EDV — best asset in deflation' },
+      { name: 'Gold', rec: 'OW', hit: 65, note: 'GLD — negative real rates boost gold' },
+      { name: 'Intl Developed', rec: 'NEUT', hit: 50, note: 'EFA — depends on global cycle sync' },
+      { name: 'US Equities', rec: 'NEUT', hit: 48, note: 'Quality factor (QUAL) outperforms' },
+      { name: 'Cash', rec: 'NEUT', hit: 52, note: 'Short T-bills until cuts materialize' },
+      { name: 'HY Credit', rec: 'UW', hit: 35, note: 'Recession risk = wider spreads' },
+      { name: 'Commodities', rec: 'UW', hit: 30, note: 'PDBC — demand destruction' },
+      { name: 'EM Equities', rec: 'UW', hit: 38, note: 'EEM — slower global growth' }
+    ]
+  }
+};
+
+// Hit rate data by cycle phase (Fidelity AART framework)
+var HIT_RATE_DATA = [
+  { sector: 'Technology',           early: 68, mid: 74, late: 45, recession: 28 },
+  { sector: 'Consumer Discret.',    early: 72, mid: 68, late: 42, recession: 25 },
+  { sector: 'Financials',           early: 70, mid: 63, late: 38, recession: 35 },
+  { sector: 'Industrials',          early: 65, mid: 61, late: 48, recession: 32 },
+  { sector: 'Communication Svc.',   early: 60, mid: 59, late: 44, recession: 30 },
+  { sector: 'Healthcare',           early: 48, mid: 50, late: 65, recession: 70 },
+  { sector: 'Consumer Staples',     early: 38, mid: 47, late: 68, recession: 67 },
+  { sector: 'Energy',               early: 42, mid: 58, late: 76, recession: 40 },
+  { sector: 'Materials',            early: 55, mid: 70, late: 62, recession: 30 },
+  { sector: 'Utilities',            early: 32, mid: 30, late: 60, recession: 72 },
+  { sector: 'Real Estate',          early: 58, mid: 45, late: 38, recession: 58 }
+];
+
+// Compute current Quad from macro pillar data
+function computeCurrentQuad(macroData) {
+  if (!macroData || !macroData.pillars) return null;
+  var pillars = macroData.pillars;
+
+  // Growth score: Growth Analysis + Labor Market pillars
+  var growthPillar = pillars.filter(function(p) { return p.name === 'Growth Analysis' || p.name === 'Labor Market'; });
+  var growthScore = growthPillar.reduce(function(sum, p) {
+    return sum + p.indicators.reduce(function(s, ind) { return s + (ind.score || 0); }, 0);
+  }, 0);
+
+  // Inflation score: Inflation pillar (positive = rising inflation)
+  var inflPillar = pillars.find(function(p) { return p.name === 'Inflation'; });
+  // In FRED scoring, positive inflation score = decelerating (good). Invert for Y axis.
+  var inflScore = inflPillar ? -inflPillar.indicators.reduce(function(s, ind) { return s + (ind.score || 0); }, 0) : 0;
+
+  // Normalize to -1..+1 range
+  var maxGrowth = 8, maxInfl = 4;
+  var xRaw = Math.max(-maxGrowth, Math.min(maxGrowth, growthScore));
+  var yRaw = Math.max(-maxInfl, Math.min(maxInfl, inflScore));
+  var x = xRaw / maxGrowth;  // positive = growth accelerating
+  var y = yRaw / maxInfl;    // positive = inflation rising
+
+  // Assign quadrant label
+  var quadLabel, quadNum, quadColor;
+  if (x >= 0 && y < 0)       { quadLabel = 'Goldilocks'; quadNum = 'Q1'; quadColor = '#2E7D52'; }
+  else if (x >= 0 && y >= 0) { quadLabel = 'Overheat';   quadNum = 'Q2'; quadColor = '#8B6914'; }
+  else if (x < 0 && y >= 0)  { quadLabel = 'Stagflation';quadNum = 'Q3'; quadColor = '#8B2A2A'; }
+  else                        { quadLabel = 'Deflation';  quadNum = 'Q4'; quadColor = '#5B9BD5'; }
+
+  // Confidence: how strongly the indicators agree (0–100%)
+  var totalIndicators = pillars.reduce(function(s, p) { return s + p.indicators.length; }, 0);
+  var agreedIndicators = pillars.reduce(function(s, p) {
+    return s + p.indicators.filter(function(ind) { return ind.score !== 0; }).length;
+  }, 0);
+  var confidence = totalIndicators > 0 ? Math.round(agreedIndicators / totalIndicators * 100) : 50;
+
+  return { quadLabel: quadLabel, quadNum: quadNum, quadColor: quadColor, x: x, y: y,
+           growthScore: growthScore, inflScore: -inflScore, confidence: confidence };
+}
+
+// Chart.js instance for Quad Map
+var _quadMapChart = null;
+
+function renderQuadMap() {
+  var macroData = window._lastMacroData;
+  var canvasEl = document.getElementById('quadMapCanvas');
+  if (!canvasEl) return;
+
+  var qd = macroData ? computeCurrentQuad(macroData) : null;
+
+  // Default position if no data
+  var dotX = qd ? qd.x : 0;
+  var dotY = qd ? -qd.y : 0; // Chart Y: up = positive; our y = inflation rising = up
+
+  if (_quadMapChart) { try { _quadMapChart.destroy(); } catch(e){} _quadMapChart = null; }
+
+  var quadPlugin = {
+    id: 'quadBackground',
+    beforeDraw: function(chart) {
+      var ctx = chart.ctx;
+      var xAxis = chart.scales.x;
+      var yAxis = chart.scales.y;
+      var midX = xAxis.getPixelForValue(0);
+      var midY = yAxis.getPixelForValue(0);
+      var left = chart.chartArea.left;
+      var right = chart.chartArea.right;
+      var top = chart.chartArea.top;
+      var bottom = chart.chartArea.bottom;
+      // Q2 Overheat (top-left): Growth ↑, Inflation ↑ — but on chart: x<0 top
+      // Our mapping: x = growth (right=positive), y on chart = -inflation (up=inflation falling)
+      // So: top-right = Goldilocks (x>0, inflFalling), top-left = Deflation (x<0, inflFalling)
+      //     bottom-right = Overheat (x>0, inflRising), bottom-left = Stagflation (x<0, inflRising)
+      var quads = [
+        { l: left,  r: midX, t: top,    b: midY,    color: 'rgba(91,155,213,0.12)',  label: 'Deflation ❄️'    }, // top-left
+        { l: midX,  r: right,t: top,    b: midY,    color: 'rgba(46,125,82,0.12)',   label: 'Goldilocks ☀️'   }, // top-right
+        { l: left,  r: midX, t: midY,   b: bottom,  color: 'rgba(139,42,42,0.12)',   label: 'Stagflation ⚠️' }, // bottom-left
+        { l: midX,  r: right,t: midY,   b: bottom,  color: 'rgba(139,105,20,0.12)',  label: 'Overheat 🔥'     }  // bottom-right
+      ];
+      quads.forEach(function(q) {
+        ctx.save();
+        ctx.fillStyle = q.color;
+        ctx.fillRect(q.l, q.t, q.r - q.l, q.b - q.t);
+        ctx.restore();
+      });
+      // Draw axes
+      ctx.save();
+      ctx.strokeStyle = 'rgba(0,60,113,0.3)';
+      ctx.lineWidth = 1;
+      ctx.setLineDash([4, 4]);
+      ctx.beginPath(); ctx.moveTo(midX, top); ctx.lineTo(midX, bottom); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(left, midY); ctx.lineTo(right, midY); ctx.stroke();
+      ctx.restore();
+      // Quadrant labels
+      ctx.save();
+      ctx.font = '11px Arial, sans-serif';
+      ctx.fillStyle = 'rgba(0,0,0,0.45)';
+      ctx.textAlign = 'center';
+      var pad = 8;
+      ctx.fillText('Deflation ❄️',    (left + midX) / 2,   top + pad + 6);
+      ctx.fillText('Goldilocks ☀️',   (midX + right) / 2,  top + pad + 6);
+      ctx.fillText('Stagflation ⚠️', (left + midX) / 2,   bottom - pad - 2);
+      ctx.fillText('Overheat 🔥',     (midX + right) / 2,  bottom - pad - 2);
+      ctx.restore();
+    }
+  };
+
+  _quadMapChart = new Chart(canvasEl, {
+    type: 'scatter',
+    plugins: [quadPlugin],
+    data: {
+      datasets: [{
+        label: 'Current Position',
+        data: [{ x: dotX, y: -dotY }],
+        pointStyle: 'circle',
+        pointRadius: 14,
+        pointHoverRadius: 16,
+        backgroundColor: qd ? qd.quadColor : '#003C71',
+        borderColor: '#fff',
+        borderWidth: 2
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      animation: { duration: 600 },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: function(ctx) {
+              if (!qd) return 'No data';
+              return qd.quadLabel + ' (Confidence: ' + qd.confidence + '%)';
+            }
+          }
+        }
+      },
+      scales: {
+        x: {
+          min: -1.2, max: 1.2,
+          title: { display: true, text: '← Growth Decelerating | Growth Accelerating →', font: { size: 11 } },
+          grid: { display: false },
+          ticks: { display: false }
+        },
+        y: {
+          min: -1.2, max: 1.2,
+          title: { display: true, text: '↑ Inflation Decelerating | Inflation Accelerating ↓', font: { size: 11 } },
+          grid: { display: false },
+          ticks: { display: false }
+        }
+      }
+    }
+  });
+
+  // Update narrative panel
+  var body = document.getElementById('quadNarrativeBody');
+  if (body && qd) {
+    var pd = PLAYBOOK_DATA[qd.quadLabel] || {};
+    body.innerHTML =
+      '<div class="quad-badge" style="background:' + qd.quadColor + ';color:#fff;display:inline-block;padding:4px 14px;border-radius:20px;font-size:12px;font-weight:700;margin-bottom:8px;">' +
+      qd.quadNum + ' — ' + qd.quadLabel + ' ' + (pd.emoji || '') + '</div>' +
+      '<div class="quad-signal-row" style="display:flex;gap:18px;flex-wrap:wrap;margin-bottom:10px;">' +
+      '<div><span style="font-size:11px;color:var(--text-sec);">GROWTH</span><br><strong style="color:' + (qd.growthScore >= 0 ? '#2E7D52' : '#8B2A2A') + ';">' + (qd.growthScore >= 0 ? '↑ Accelerating' : '↓ Decelerating') + '</strong></div>' +
+      '<div><span style="font-size:11px;color:var(--text-sec);">INFLATION</span><br><strong style="color:' + (qd.inflScore <= 0 ? '#2E7D52' : '#8B2A2A') + ';">' + (qd.inflScore <= 0 ? '↓ Decelerating' : '↑ Accelerating') + '</strong></div>' +
+      '<div><span style="font-size:11px;color:var(--text-sec);">CONFIDENCE</span><br><strong>' + qd.confidence + '%</strong></div>' +
+      '</div>' +
+      '<p style="font-size:12px;color:var(--text-sec);line-height:1.5;">' + (pd.narrative || '') + '</p>';
+  } else if (body) {
+    body.innerHTML = '<div style="padding:16px;color:var(--text-sec);">Load macro data to see current quad position. <button class="btn btn-sm" onclick="loadMacroLiveTable(true)">Load Now</button></div>';
+  }
+
+  var summary = document.getElementById('quadPlaybookSummary');
+  if (summary && qd) {
+    var pd2 = PLAYBOOK_DATA[qd.quadLabel] || {};
+    var topSectors = (pd2.sectors || []).filter(function(s){ return s.rec === 'OW'; }).slice(0,3);
+    var h = '<div style="font-size:12px;font-weight:700;color:var(--navy);margin-bottom:6px;">Top Sectors in ' + qd.quadLabel + '</div>';
+    topSectors.forEach(function(s) {
+      h += '<div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">' +
+           '<span style="background:#2E7D52;color:#fff;font-size:10px;font-weight:700;padding:2px 7px;border-radius:10px;">OW</span>' +
+           '<span style="font-size:12px;font-weight:600;">' + s.name + '</span>' +
+           '<span style="font-size:11px;color:var(--text-sec);">Hit: ' + s.hit + '%</span>' +
+           '</div>';
+    });
+    h += '<div style="margin-top:10px;"><a href="javascript:navigateTo(\'playbook\')" style="font-size:12px;color:var(--blue);">See full playbook → </a></div>';
+    summary.innerHTML = h;
+  }
+}
+
+// ════════════════════════════════════════════════════════════════════
+// ASSET PLAYBOOK PAGE
+// ════════════════════════════════════════════════════════════════════
+
+function loadPlaybook() {
+  var authEl = document.getElementById('playbookAuthGate');
+  var panelEl = document.getElementById('playbookPanel');
+  var user = window._currentUser;
+
+  if (!user) {
+    if (authEl) authEl.style.display = '';
+    if (panelEl) panelEl.style.display = 'none';
+    return;
+  }
+  if (authEl) authEl.style.display = 'none';
+  if (panelEl) panelEl.style.display = '';
+
+  var macroData = window._lastMacroData;
+  var qd = macroData ? computeCurrentQuad(macroData) : null;
+  var quadLabel = qd ? qd.quadLabel : null;
+
+  // Update regime banner
+  var regimeBanner = document.getElementById('playbookRegimeBody');
+  if (regimeBanner) {
+    if (qd) {
+      var pd = PLAYBOOK_DATA[qd.quadLabel] || {};
+      regimeBanner.innerHTML =
+        '<div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;">' +
+        '<div style="font-size:28px;">' + (pd.emoji || '📊') + '</div>' +
+        '<div><div style="font-size:16px;font-weight:800;color:' + qd.quadColor + ';">' +
+        qd.quadNum + ' — ' + qd.quadLabel + '</div>' +
+        '<div style="font-size:12px;color:var(--text-sec);">Growth ' + (qd.growthScore >= 0 ? '↑' : '↓') + ' · Inflation ' + (qd.inflScore <= 0 ? '↓' : '↑') + ' · Confidence: ' + qd.confidence + '%</div>' +
+        '<div style="font-size:12px;margin-top:4px;">' + (pd.narrative || '') + '</div></div>' +
+        '<div style="margin-left:auto;"><button class="btn btn-sm" onclick="navigateTo(\'macro\');macroShowTab(\'quadmap\')">View Quad Map →</button></div>' +
+        '</div>';
+    } else {
+      regimeBanner.innerHTML = '<div style="color:var(--text-sec);font-size:13px;">Loading regime data… <button class="btn btn-sm" onclick="loadMacroLiveTable(true);setTimeout(loadPlaybook,800);">Refresh</button></div>';
+      if (!macroData) loadMacroLiveTable();
+    }
+  }
+
+  renderPlaybook(quadLabel);
+  populateHitRateTable(quadLabel);
+}
+
+function playbookShowTab(name) {
+  // Tab buttons (use data-pbtab attribute)
+  document.querySelectorAll('#page-playbook .pf-tab').forEach(function(b) {
+    // Match by onclick content or data attribute
+    var on = b.getAttribute('onclick') || '';
+    b.classList.toggle('active', on.indexOf("'" + name + "'") !== -1 || on.indexOf('"' + name + '"') !== -1);
+  });
+  // Content panes
+  document.querySelectorAll('#page-playbook .pf-tab-content').forEach(function(c) {
+    c.classList.toggle('active', c.id === 'pbtab-' + name);
+  });
+
+  // Lazy-load RRG
+  if (name === 'rrg' && !window._rrgLoaded) {
+    loadRRG();
+  }
+}
+
+function renderPlaybook(quadLabel) {
+  var pd = PLAYBOOK_DATA[quadLabel] || PLAYBOOK_DATA['Goldilocks']; // fallback
+
+  // Sector Grid
+  var grid = document.getElementById('pbSectorGrid');
+  if (grid) {
+    var h = '';
+    (pd.sectors || []).forEach(function(s) {
+      var recClass = s.rec === 'OW' ? 'ow' : s.rec === 'UW' ? 'uw' : 'neut';
+      var recColor = s.rec === 'OW' ? '#2E7D52' : s.rec === 'UW' ? '#8B2A2A' : '#8B6914';
+      h += '<div class="playbook-tile ' + recClass + '">' +
+           '<div class="playbook-tile-name">' + s.name + '</div>' +
+           '<div class="playbook-tile-rec" style="background:' + recColor + ';color:#fff;display:inline-block;padding:2px 10px;border-radius:10px;font-size:11px;font-weight:700;">' + s.rec + '</div>' +
+           '<div class="playbook-tile-hit" style="font-size:12px;margin-top:4px;">Hit rate: <strong>' + s.hit + '%</strong></div>' +
+           '<div class="playbook-tile-etfs" style="font-size:10px;color:var(--text-sec);margin-top:4px;">' + s.etfs + '</div>' +
+           '</div>';
+    });
+    grid.innerHTML = h || '<p style="color:var(--text-sec);">No playbook data available.</p>';
+  }
+
+  // Asset Class Grid
+  var agrid = document.getElementById('pbAssetGrid');
+  if (agrid) {
+    var ah = '';
+    (pd.assets || []).forEach(function(a) {
+      var recClass = a.rec === 'OW' ? 'ow' : a.rec === 'UW' ? 'uw' : 'neut';
+      var recColor = a.rec === 'OW' ? '#2E7D52' : a.rec === 'UW' ? '#8B2A2A' : '#8B6914';
+      ah += '<div class="playbook-tile ' + recClass + '">' +
+            '<div class="playbook-tile-name">' + a.name + '</div>' +
+            '<div class="playbook-tile-rec" style="background:' + recColor + ';color:#fff;display:inline-block;padding:2px 10px;border-radius:10px;font-size:11px;font-weight:700;">' + a.rec + '</div>' +
+            '<div class="playbook-tile-hit" style="font-size:12px;margin-top:4px;">Hit rate: <strong>' + a.hit + '%</strong></div>' +
+            '<div class="playbook-tile-etfs" style="font-size:11px;color:var(--text-sec);margin-top:4px;">' + a.note + '</div>' +
+            '</div>';
+    });
+    agrid.innerHTML = ah || '<p style="color:var(--text-sec);">No playbook data available.</p>';
+  }
+}
+
+function populateHitRateTable(activeQuadLabel) {
+  var body = document.getElementById('hitRateBody');
+  if (!body) return;
+  var qd = activeQuadLabel || (window._lastMacroData ? (computeCurrentQuad(window._lastMacroData) || {}).quadLabel : null);
+  var phaseMap = { 'Goldilocks': 'early', 'Deflation': 'recession', 'Overheat': 'mid', 'Stagflation': 'late' };
+  var activePhase = phaseMap[qd] || 'early';
+  var h = '';
+  HIT_RATE_DATA.forEach(function(row) {
+    var highlightCol = function(phase, val) {
+      var isActive = phase === activePhase;
+      var color = val >= 65 ? '#2E7D52' : val >= 50 ? '#8B6914' : '#8B2A2A';
+      return '<td style="text-align:center;font-weight:' + (isActive ? '800' : '400') + ';color:' + (isActive ? color : '#5A6A7A') + ';background:' + (isActive ? 'rgba(91,155,213,0.10)' : '') + ';">' + val + '%</td>';
+    };
+    h += '<tr><td style="font-weight:600;padding:7px 12px;">' + row.sector + '</td>' +
+         highlightCol('early', row.early) + highlightCol('mid', row.mid) +
+         highlightCol('late', row.late) + highlightCol('recession', row.recession) + '</tr>';
+  });
+  body.innerHTML = h;
+}
+
+// ════════════════════════════════════════════════════════════════════
+// RRG — Relative Rotation Graph
+// ════════════════════════════════════════════════════════════════════
+
+var _rrgLoaded = false;
+var _rrgChart = null;
+var SECTOR_ETFS = ['XLC','XLY','XLP','XLE','XLF','XLV','XLI','XLB','XLRE','XLK','XLU'];
+
+function loadRRG(force) {
+  if (_rrgLoaded && !force) return;
+  var status = document.getElementById('rrgStatus');
+  var sectorList = document.getElementById('rrgSectorList');
+  if (status) status.textContent = 'Fetching sector price data…';
+  if (sectorList) sectorList.innerHTML = '';
+
+  // Fetch SPY and all 11 sector ETFs in parallel (3 months of daily closes)
+  // Uses /chart?symbol=XLK&range=3mo&interval=1d → { points: [{date, close, ...}] }
+  var tickers = SECTOR_ETFS.concat(['SPY']);
+  var fetchFns = tickers.map(function(t) {
+    return fetch(WORKER_URL + '/chart?symbol=' + t + '&range=3mo&interval=1d')
+      .then(function(r) { return r.json(); })
+      .then(function(d) {
+        // Extract array of close prices (most recent first for consistency)
+        var closes = [];
+        if (d && d.points && d.points.length) {
+          closes = d.points.map(function(p) { return p.close; }).filter(function(v) { return v != null; });
+        }
+        return { ticker: t, closes: closes };
+      })
+      .catch(function() { return { ticker: t, closes: [] }; });
+  });
+
+  Promise.all(fetchFns).then(function(results) {
+    var byTicker = {};
+    results.forEach(function(r) { byTicker[r.ticker] = r; });
+    var spy = byTicker['SPY'];
+    if (!spy || spy.closes.length < 30) {
+      if (status) status.textContent = 'Failed to load SPY data. Please retry.';
+      return;
+    }
+    _rrgLoaded = true;
+    var sectorData = computeRRG(byTicker, spy);
+    renderRRG(sectorData);
+    if (status) status.textContent = 'Updated ' + new Date().toLocaleTimeString();
+
+    // Populate sector list
+    if (sectorList) {
+      var listH = '';
+      sectorData.forEach(function(s) {
+        var qColor = s.quadrant === 'Leading' ? '#2E7D52' : s.quadrant === 'Weakening' ? '#8B6914' : s.quadrant === 'Lagging' ? '#8B2A2A' : '#5B9BD5';
+        listH += '<div style="display:flex;align-items:center;gap:8px;margin-bottom:5px;">' +
+                 '<span style="background:' + qColor + ';color:#fff;font-size:10px;font-weight:700;padding:2px 7px;border-radius:8px;min-width:70px;text-align:center;">' + s.quadrant + '</span>' +
+                 '<span style="font-size:12px;font-weight:600;">' + s.ticker + '</span>' +
+                 '<span style="font-size:11px;color:var(--text-sec);">RS: ' + s.rsRatio.toFixed(1) + ' Mom: ' + (s.rsMom >= 0 ? '+' : '') + s.rsMom.toFixed(1) + '</span>' +
+                 '</div>';
+      });
+      sectorList.innerHTML = listH;
+    }
+  }).catch(function(e) {
+    if (status) status.textContent = 'Error: ' + e.message;
+    _rrgLoaded = false;
+  });
+}
+
+function computeRRG(byTicker, spy) {
+  var spyCloses = spy.closes || [];
+  var results = [];
+
+  SECTOR_ETFS.forEach(function(ticker) {
+    var d = byTicker[ticker];
+    if (!d || !d.closes || d.closes.length < 30) return;
+    var closes = d.closes;
+    // Align length to shortest series
+
+    var n = Math.min(closes.length, spyCloses.length);
+    if (n < 30) return;
+
+    // RS-Ratio: sector / SPY, normalized to 100
+    var rsRatios = [];
+    for (var i = 0; i < n; i++) {
+      rsRatios.push(closes[i] / spyCloses[i] * 100);
+    }
+
+    // EMA helper
+    function ema(arr, period) {
+      var k = 2 / (period + 1), emaArr = [arr[0]];
+      for (var j = 1; j < arr.length; j++) {
+        emaArr.push(arr[j] * k + emaArr[j-1] * (1 - k));
+      }
+      return emaArr;
+    }
+
+    var ema14 = ema(rsRatios, 14);
+    var ema28 = ema(rsRatios, 28);
+    var rsMomArr = ema14.map(function(v, i) { return v - ema28[i]; });
+
+    // Use most recent values, normalized
+    var currentRS = ema14[ema14.length - 1];
+    var currentMom = rsMomArr[rsMomArr.length - 1];
+
+    // Normalize RS around 100, Mom around 0
+    var rsNorm = ((currentRS - 100) / 3) * 100 + 100;  // shift to 100-centered
+    var momNorm = currentMom / 0.05 * 10; // scale momentum
+
+    var quadrant;
+    if (rsNorm >= 100 && momNorm >= 0)      quadrant = 'Leading';
+    else if (rsNorm >= 100 && momNorm < 0)  quadrant = 'Weakening';
+    else if (rsNorm < 100 && momNorm < 0)   quadrant = 'Lagging';
+    else                                     quadrant = 'Improving';
+
+    results.push({ ticker: ticker, rsRatio: rsNorm, rsMom: momNorm, quadrant: quadrant });
+  });
+  return results;
+}
+
+function renderRRG(sectorData) {
+  var canvasEl = document.getElementById('rrgChart');
+  if (!canvasEl) return;
+  if (_rrgChart) { try { _rrgChart.destroy(); } catch(e){} _rrgChart = null; }
+
+  var qColors = { Leading: '#2E7D52', Weakening: '#8B6914', Lagging: '#8B2A2A', Improving: '#5B9BD5' };
+
+  var quadPlugin = {
+    id: 'rrgQuadBackground',
+    beforeDraw: function(chart) {
+      var ctx = chart.ctx;
+      var xAxis = chart.scales.x;
+      var yAxis = chart.scales.y;
+      var midX = xAxis.getPixelForValue(100);
+      var midY = yAxis.getPixelForValue(0);
+      var left = chart.chartArea.left, right = chart.chartArea.right;
+      var top = chart.chartArea.top, bottom = chart.chartArea.bottom;
+      var zones = [
+        { l: midX, r: right, t: top,    b: midY,    color: 'rgba(46,125,82,0.10)',   label: 'Leading'   },
+        { l: midX, r: right, t: midY,   b: bottom,  color: 'rgba(139,105,20,0.10)',  label: 'Weakening' },
+        { l: left,  r: midX, t: midY,   b: bottom,  color: 'rgba(139,42,42,0.10)',   label: 'Lagging'   },
+        { l: left,  r: midX, t: top,    b: midY,    color: 'rgba(91,155,213,0.10)',  label: 'Improving' }
+      ];
+      zones.forEach(function(z) {
+        ctx.save();
+        ctx.fillStyle = z.color;
+        ctx.fillRect(z.l, z.t, z.r - z.l, z.b - z.t);
+        ctx.font = '11px Arial';
+        ctx.fillStyle = 'rgba(0,0,0,0.40)';
+        ctx.textAlign = 'center';
+        ctx.fillText(z.label, (z.l + z.r) / 2, z.t + 14);
+        ctx.restore();
+      });
+      ctx.save();
+      ctx.strokeStyle = 'rgba(0,60,113,0.25)'; ctx.lineWidth = 1; ctx.setLineDash([4,4]);
+      ctx.beginPath(); ctx.moveTo(midX, top); ctx.lineTo(midX, bottom); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(left, midY); ctx.lineTo(right, midY); ctx.stroke();
+      ctx.restore();
+    }
+  };
+
+  var datasets = sectorData.map(function(s) {
+    return {
+      label: s.ticker,
+      data: [{ x: s.rsRatio, y: s.rsMom }],
+      pointStyle: 'circle',
+      pointRadius: 10,
+      pointHoverRadius: 13,
+      backgroundColor: qColors[s.quadrant] || '#003C71',
+      borderColor: '#fff', borderWidth: 1.5
+    };
+  });
+
+  _rrgChart = new Chart(canvasEl, {
+    type: 'scatter',
+    plugins: [quadPlugin],
+    data: { datasets: datasets },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: function(ctx) {
+              return ctx.dataset.label + ': RS ' + ctx.parsed.x.toFixed(1) + ' | Mom ' + (ctx.parsed.y >= 0 ? '+' : '') + ctx.parsed.y.toFixed(1);
+            }
+          }
+        }
+      },
+      scales: {
+        x: { title: { display: true, text: 'RS-Ratio (relative strength vs SPY, 100 = neutral)' }, grid: { display: false } },
+        y: { title: { display: true, text: 'RS-Momentum (14-EMA minus 28-EMA)' }, grid: { display: false } }
+      }
+    }
+  });
+
+  // Draw ticker labels
+  setTimeout(function() {
+    if (!_rrgChart) return;
+    var chart = _rrgChart;
+    var ctx = chart.ctx;
+    ctx.save();
+    ctx.font = 'bold 10px Arial';
+    ctx.textAlign = 'center';
+    sectorData.forEach(function(s) {
+      var meta = chart.getDatasetMeta(SECTOR_ETFS.indexOf(s.ticker));
+      if (meta && meta.data && meta.data[0]) {
+        var point = meta.data[0];
+        ctx.fillStyle = '#000';
+        ctx.fillText(s.ticker, point.x, point.y - 13);
+      }
+    });
+    ctx.restore();
+  }, 50);
+}
+
+// ════════════════════════════════════════════════════════════════════
+// GAP ANALYSIS — Portfolio Drift vs Playbook Targets
+// ════════════════════════════════════════════════════════════════════
+
+var _gapBarChart = null;
+var _gapData = null;
+
+function loadGapAnalysis(force) {
+  var authEl = document.getElementById('gapAuthGate');
+  var panelEl = document.getElementById('gapPanel');
+  var user = window._currentUser;
+
+  if (!user) {
+    if (authEl) authEl.style.display = '';
+    if (panelEl) panelEl.style.display = 'none';
+    return;
+  }
+  if (authEl) authEl.style.display = 'none';
+  if (panelEl) panelEl.style.display = '';
+
+  var holdings = window._holdings || [];
+  var macroData = window._lastMacroData;
+  var qd = macroData ? computeCurrentQuad(macroData) : null;
+
+  // Get target weights for current quadrant
+  var quadLabel = qd ? qd.quadLabel : null;
+  var pd = quadLabel ? PLAYBOOK_DATA[quadLabel] : null;
+  var targetSectors = {};
+  if (pd) {
+    pd.sectors.forEach(function(s) {
+      var w = s.rec === 'OW' ? 1.3 : s.rec === 'UW' ? 0.5 : 1.0;
+      targetSectors[s.name] = w;
+    });
+    // Normalize targets to sum to 100%
+    var totalW = Object.keys(targetSectors).reduce(function(s, k) { return s + targetSectors[k]; }, 0);
+    Object.keys(targetSectors).forEach(function(k) { targetSectors[k] = targetSectors[k] / totalW * 100; });
+  } else {
+    // Default to SPY weights
+    targetSectors = Object.assign({}, SPY_SECTOR_WEIGHTS);
+  }
+
+  // Compute current sector weights from holdings
+  var isCash = function(h) { return ['Cash','Money Market','CD','Bond Position'].includes(h.assetClass); };
+  var equityHoldings = holdings.filter(function(h) { return !isCash(h) && h.currentPrice; });
+  var totalMV = equityHoldings.reduce(function(sum, h) { return sum + (h.currentPrice * h.quantity); }, 0);
+
+  var currentSectors = {};
+  equityHoldings.forEach(function(h) {
+    var sec = h.sector || 'Other';
+    var mv = h.currentPrice * h.quantity;
+    currentSectors[sec] = (currentSectors[sec] || 0) + mv;
+  });
+  // Convert to percentages
+  if (totalMV > 0) {
+    Object.keys(currentSectors).forEach(function(k) { currentSectors[k] = currentSectors[k] / totalMV * 100; });
+  }
+
+  // Build gap rows — union of all sectors in target or current
+  var allSectors = {};
+  Object.keys(targetSectors).forEach(function(k) { allSectors[k] = true; });
+  Object.keys(currentSectors).forEach(function(k) { allSectors[k] = true; });
+
+  var rows = Object.keys(allSectors).map(function(sec) {
+    var cur = currentSectors[sec] || 0;
+    var tgt = targetSectors[sec] || 0;
+    return { sector: sec, current: cur, target: tgt, gap: cur - tgt };
+  }).sort(function(a, b) { return Math.abs(b.gap) - Math.abs(a.gap); });
+
+  // Drift calculation: Σ|actual-target|/2
+  var drift = rows.reduce(function(sum, r) { return sum + Math.abs(r.gap); }, 0) / 2;
+
+  _gapData = { rows: rows, drift: drift, quadLabel: quadLabel, qd: qd, totalMV: totalMV, holdings: holdings.length };
+
+  // Update KPIs
+  var kpiDrift = document.getElementById('gapDriftVal');
+  var kpiRegime = document.getElementById('gapRegimeVal');
+  var kpiLargest = document.getElementById('gapLargestVal');
+  var kpiPositions = document.getElementById('gapPositionsVal');
+  if (kpiDrift) kpiDrift.textContent = drift.toFixed(1) + '%';
+  if (kpiRegime) kpiRegime.textContent = quadLabel ? (qd.quadNum + ' ' + quadLabel) : '—';
+  var largestGap = rows[0];
+  if (kpiLargest) kpiLargest.textContent = largestGap ? largestGap.sector.split(' ')[0] + ' (' + (largestGap.gap >= 0 ? '+' : '') + largestGap.gap.toFixed(1) + '%)' : '—';
+  if (kpiPositions) kpiPositions.textContent = equityHoldings.length;
+
+  // Drift banner
+  var banner = document.getElementById('gapDriftBanner');
+  if (banner) {
+    var needsRebal = drift > 3;
+    banner.style.background = needsRebal ? 'rgba(139,42,42,0.08)' : 'rgba(46,125,82,0.08)';
+    banner.style.border = '1px solid ' + (needsRebal ? 'rgba(139,42,42,0.3)' : 'rgba(46,125,82,0.3)');
+    banner.innerHTML = '<strong style="color:' + (needsRebal ? '#8B2A2A' : '#2E7D52') + ';">' +
+      (needsRebal ? '⚠️ Rebalance Needed' : '✅ Within Tolerance') + '</strong> — Portfolio drift is ' +
+      drift.toFixed(1) + '% vs. ' + (quadLabel || 'SPY') + ' targets. Betterment-style threshold: 3%. ' +
+      (needsRebal ? '<a href="javascript:navigateTo(\'holdings\');holdingsShowTab(\'rebalance\')" style="color:var(--blue);">Go to Rebalancer →</a>' : 'No action required.');
+  }
+
+  // Render bar chart
+  renderGapChart(rows);
+
+  // Render detail table
+  var tbody = document.getElementById('gapDetailBody');
+  if (tbody) {
+    var h = '';
+    rows.forEach(function(r) {
+      var gc = r.gap > 0 ? '#2E7D52' : r.gap < 0 ? '#8B2A2A' : '#5A6A7A';
+      var action = Math.abs(r.gap) < 1 ? '—' : r.gap > 0 ? 'Trim' : 'Add';
+      h += '<tr>' +
+           '<td style="font-weight:600;padding:7px 12px;">' + r.sector + '</td>' +
+           '<td style="text-align:right;padding:7px 12px;">' + r.current.toFixed(1) + '%</td>' +
+           '<td style="text-align:right;padding:7px 12px;">' + r.target.toFixed(1) + '%</td>' +
+           '<td style="text-align:right;padding:7px 12px;font-weight:700;color:' + gc + ';">' + (r.gap >= 0 ? '+' : '') + r.gap.toFixed(1) + '%</td>' +
+           '<td style="text-align:center;padding:7px 12px;font-weight:600;color:' + gc + ';">' + action + '</td>' +
+           '</tr>';
+    });
+    tbody.innerHTML = h || '<tr><td colspan="5" style="text-align:center;color:var(--text-sec);padding:16px;">Add holdings to see gap analysis.</td></tr>';
+  }
+
+  // Show no-holdings message if needed
+  if (!equityHoldings.length) {
+    if (panelEl) panelEl.innerHTML += '';
+    var empty = document.getElementById('gapEmptyMsg');
+    if (!empty && panelEl) {
+      var msg = document.createElement('div');
+      msg.id = 'gapEmptyMsg';
+      msg.style.cssText = 'padding:24px;text-align:center;color:var(--text-sec);';
+      msg.innerHTML = 'No equity holdings found. <a href="javascript:navigateTo(\'holdings\');holdingsShowTab(\'import\')">Add holdings →</a>';
+      panelEl.prepend(msg);
+    }
+  }
+}
+
+function renderGapChart(rows) {
+  var canvasEl = document.getElementById('gapBarChart');
+  if (!canvasEl) return;
+  if (_gapBarChart) { try { _gapBarChart.destroy(); } catch(e){} _gapBarChart = null; }
+
+  var top12 = rows.slice(0, 12);
+  var labels = top12.map(function(r) { return r.sector.length > 16 ? r.sector.substring(0, 14) + '…' : r.sector; });
+  var data = top12.map(function(r) { return +r.gap.toFixed(2); });
+  var colors = data.map(function(v) { return v >= 0 ? 'rgba(46,125,82,0.75)' : 'rgba(139,42,42,0.75)'; });
+
+  _gapBarChart = new Chart(canvasEl, {
+    type: 'bar',
+    data: {
+      labels: labels,
+      datasets: [{
+        label: 'Gap (Current − Target)',
+        data: data,
+        backgroundColor: colors,
+        borderRadius: 3
+      }]
+    },
+    options: {
+      indexAxis: 'y',
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: function(ctx) {
+              var v = ctx.raw;
+              return (v >= 0 ? 'Overweight +' : 'Underweight ') + Math.abs(v).toFixed(1) + '%';
+            }
+          }
+        }
+      },
+      scales: {
+        x: {
+          title: { display: true, text: 'Gap vs. Target (%)' },
+          grid: { color: 'rgba(0,0,0,0.06)' },
+          ticks: { callback: function(v) { return (v >= 0 ? '+' : '') + v + '%'; } }
+        },
+        y: { grid: { display: false } }
+      }
+    }
+  });
+}
+
+function gapExportCSV() {
+  if (!_gapData || !_gapData.rows || !_gapData.rows.length) {
+    alert('No gap data to export. Please refresh.');
+    return;
+  }
+  var lines = ['Sector,Current %,Target %,Gap %,Action'];
+  _gapData.rows.forEach(function(r) {
+    var action = Math.abs(r.gap) < 1 ? 'Hold' : r.gap > 0 ? 'Trim' : 'Add';
+    lines.push([
+      '"' + r.sector + '"',
+      r.current.toFixed(2),
+      r.target.toFixed(2),
+      (r.gap >= 0 ? '+' : '') + r.gap.toFixed(2),
+      action
+    ].join(','));
+  });
+  lines.push('"Portfolio Drift",' + _gapData.drift.toFixed(2) + ',,,"' + (_gapData.quadLabel || 'SPY') + ' Targets"');
+
+  var blob = new Blob([lines.join('\n')], { type: 'text/csv' });
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement('a');
+  a.href = url;
+  a.download = 'gap-analysis-' + new Date().toISOString().slice(0,10) + '.csv';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
 
 </script>
 </body>
