@@ -2392,6 +2392,7 @@ body.view-mobile #mobileBottomBar {
       <div class="nav-dropdown">
         <div class="nav-child" data-page="about" onclick="navigateTo('about')">About Us</div>
         <div class="nav-child" data-page="resources" onclick="navigateTo('resources')">Resources / Training</div>
+        <div class="nav-child" data-page="prevtools" onclick="navigateTo('prevtools')" style="border-top:1px solid rgba(255,255,255,0.12);margin-top:2px;padding-top:6px;">&#128451; Previous Tools</div>
       </div>
     </div>
     <div class="nav-group">
@@ -2968,6 +2969,24 @@ body.view-mobile #mobileBottomBar {
           <div class="card-title">Best &amp; Worst Periods</div>
           <div class="card-body">
             <div class="table-wrap"><table id="perfBestWorstTable"><thead><tr><th>Period</th><th style="color:var(--success)">Best Return</th><th style="color:var(--success)">Date</th><th style="color:var(--danger)">Worst Return</th><th style="color:var(--danger)">Date</th></tr></thead><tbody></tbody></table></div>
+          </div>
+        </div>
+
+        <!-- Underwater / Drawdown chart -->
+        <div class="card">
+          <div class="card-title">&#127754; Portfolio Drawdown (Underwater Chart) <span class="help-icon" title="Shows how far your portfolio is below its previous all-time high at each point in time. 0% = at a new high. −20% = 20% below the peak. The depth shows how bad the drawdown was; the width shows how long it lasted. This is the most information-dense single chart for understanding a strategy's risk profile.">ⓘ</span></div>
+          <div class="card-body">
+            <div style="height:200px;"><canvas id="perfUnderwaterChart"></canvas></div>
+            <div id="perfDrawdownTable" style="margin-top:12px;font-size:12px;"></div>
+          </div>
+          <div class="card-sources"><strong>Reading:</strong> Every dip below the zero line is a drawdown. The deepest point = Max Drawdown. Width = recovery time. Green shading = portfolio is at or near all-time high.</div>
+        </div>
+
+        <!-- Monthly returns heatmap -->
+        <div class="card">
+          <div class="card-title">&#128197; Monthly Returns Heatmap <span class="help-icon" title="Each cell shows the portfolio's return for that month and year. Green = positive month. Red = negative month. Darker = larger magnitude. This is the standard tearsheet element used by Portfolio Visualizer and Composer.">ⓘ</span></div>
+          <div class="card-body" style="overflow-x:auto;">
+            <div id="perfMonthlyHeatmap" style="min-width:480px;"></div>
           </div>
         </div>
 
@@ -3736,6 +3755,7 @@ body.view-mobile #mobileBottomBar {
       <button class="pf-tab"        data-rqtab="moat"       onclick="rqShowTab('moat')">Company Moat</button>
       <button class="pf-tab"        data-rqtab="insider"    onclick="rqShowTab('insider')">Insider Actions</button>
       <button class="pf-tab"        data-rqtab="quant"      onclick="rqShowTab('quant')">Quant Models</button>
+      <button class="pf-tab"        data-rqtab="levETF"     onclick="rqShowTab('levETF')">&#9889; Lev ETF Signals</button>
     </div>
 
     <!-- ── TAB: OVERVIEW ── -->
@@ -4026,6 +4046,93 @@ body.view-mobile #mobileBottomBar {
         <p style="text-align:center;color:var(--text-sec);padding:18px;font-size:13px;">Quant Models will load here…</p>
       </div>
     </div>
+
+    <!-- ── TAB: LEVERAGED ETF SIGNALS ── -->
+    <div class="pf-tab-content" id="rqtab-levETF">
+      <div class="card" style="padding:10px 16px;margin-bottom:0;">
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+          <span style="font-size:12px;font-weight:700;color:var(--navy);text-transform:uppercase;letter-spacing:.4px;">&#9889; Leveraged ETF</span>
+          <div class="form-group" style="margin:0;">
+            <select id="levETFTicker" style="font-size:11px;padding:3px 8px;" onchange="levETFRun()">
+              <option value="TQQQ">TQQQ (3× QQQ)</option>
+              <option value="SOXL">SOXL (3× Semiconductors)</option>
+              <option value="UPRO">UPRO (3× SPY)</option>
+              <option value="TECL">TECL (3× Tech)</option>
+              <option value="FNGU">FNGU (3× FANG+)</option>
+              <option value="QLD">QLD (2× QQQ)</option>
+              <option value="SSO">SSO (2× SPY)</option>
+              <option value="custom">Custom…</option>
+            </select>
+          </div>
+          <input type="text" id="levETFCustom" placeholder="Ticker" style="font-size:11px;padding:4px 8px;border:1px solid var(--border);border-radius:4px;width:80px;display:none;text-transform:uppercase;" oninput="this.value=this.value.toUpperCase()">
+          <div class="form-group" style="margin:0;">
+            <select id="levETFMult" style="font-size:11px;padding:3px 8px;">
+              <option value="2">2× Leverage</option>
+              <option value="3" selected>3× Leverage</option>
+            </select>
+          </div>
+          <button class="btn btn-sm" onclick="levETFRun()">&#9889; Run Analysis</button>
+          <span id="levETFStatus" style="font-size:11px;color:var(--text-sec);"></span>
+        </div>
+      </div>
+
+      <!-- Suitability Score banner -->
+      <div id="levETFScoreBanner" style="display:none;margin:0;border-radius:0;"></div>
+
+      <!-- KPI strip -->
+      <div id="levETFKPIs" class="chart-stats" style="margin:0 0 14px 0;"></div>
+
+      <!-- 2-column grid: Decay Calculator | Transition Signals -->
+      <div class="grid-2" style="margin-bottom:14px;">
+        <div class="card" style="margin:0;">
+          <div class="card-title">&#128200; Volatility Decay Calculator <span class="help-icon" title="The core math of leveraged ETF erosion. A 3× fund in a choppy market loses value even if the underlying ends flat. Formula: Daily Decay = L×(L−1)/2 × σ². At 2% daily vol, a 3× ETF loses ~0.12% per day (≈30%/year) purely to volatility drag — before market direction.">ⓘ</span></div>
+          <div class="card-body" id="levETFDecayBox">
+            <p style="color:var(--text-sec);font-size:13px;">Run analysis to compute decay rate.</p>
+          </div>
+          <div class="card-sources"><strong>Formula:</strong> Lev_Return ≈ L × Index_Return − [L(L−1)/2] × σ² &bull; L = leverage multiplier &bull; σ² = variance of daily returns &bull; Source: Avellaneda &amp; Zhang (2010), "Path-Dependence of Leveraged ETF Returns"</div>
+        </div>
+        <div class="card" style="margin:0;">
+          <div class="card-title">&#128680; Regime Transition Signals <span class="help-icon" title="Composite rules synthesized from academic work (Quantpedia, Composer symphonies, Bogleheads HFEA thread). Signal uses SPY 200-SMA trend filter + VIX absolute level + VIX vs realized vol + RSI extremes. 200-SMA alone historically cuts 3× max drawdown from ~99.86% to ~92.51% and nearly doubles median 10-year return.">ⓘ</span></div>
+          <div class="card-body" id="levETFSignalBox">
+            <p style="color:var(--text-sec);font-size:13px;">Run analysis to load live signals.</p>
+          </div>
+          <div class="card-sources"><strong>Sources:</strong> SPY, VIX via Cloudflare Worker &bull; 200-SMA filter: Antonacci (2014) &bull; VIX rule: Quantpedia &bull; RSI: Wilder (1978)</div>
+        </div>
+      </div>
+
+      <!-- Drawdown comparison chart -->
+      <div class="card">
+        <div class="card-title">&#127754; Drawdown History — Leveraged vs Underlying <span class="help-icon" title="The most important chart for leveraged ETFs. Shows how far each fund dropped from its peak at every point in time. The leveraged fund's drawdowns are dramatically deeper and take far longer to recover (a 90% loss requires a 900% gain to break even).">ⓘ</span></div>
+        <div class="card-body">
+          <div id="levETFDDLoading" style="text-align:center;padding:30px;color:var(--text-sec);"><span class="spinner"></span> Run analysis to load chart.</div>
+          <div style="height:260px;display:none;" id="levETFDDWrap"><canvas id="levETFDDChart"></canvas></div>
+          <div id="levETFDDStats" style="margin-top:10px;font-size:12px;color:var(--text-sec);"></div>
+        </div>
+        <div class="card-sources"><strong>Data:</strong> 5-year daily close prices via Yahoo Finance / Cloudflare Worker &bull; Drawdown = (Price − PeakPrice) / PeakPrice × 100</div>
+      </div>
+
+      <!-- Hedgefundie reference box -->
+      <div class="card" style="background:var(--panel);">
+        <div class="card-title" style="background:transparent;color:var(--navy);border-bottom:1px solid var(--border);">&#128218; Research Context — Hedgefundie / Academic Background</div>
+        <div class="card-body" style="font-size:12px;line-height:1.7;color:var(--text-sec);">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+            <div>
+              <p style="font-weight:600;color:var(--navy);margin-bottom:4px;">The Volatility Decay Equation</p>
+              <p>A leveraged ETF with multiplier L and underlying daily volatility σ experiences <strong>Decay ≈ L(L−1)/2 × σ²</strong> per day. At 2% daily vol: 2× loses ~0.02%/day (≈5%/yr), 3× loses ~0.12%/day (≈30%/yr) to pure compounding drag — independent of market direction.</p>
+              <p style="margin-top:8px;font-style:italic;font-size:11px;">Source: Avellaneda &amp; Zhang (2010)</p>
+            </div>
+            <div>
+              <p style="font-weight:600;color:var(--navy);margin-bottom:4px;">The 200-SMA + VIX Filter</p>
+              <p>Academic and practitioner research (Quantpedia, Bogleheads HFEA thread) shows that holding 3× leverage <em>only</em> when the underlying is above its 200-day SMA AND VIX is below ~25–30 dramatically improves Sharpe and cuts max drawdown. The filter alone roughly halves expected max drawdown vs. buy-and-hold.</p>
+              <p style="margin-top:8px;font-style:italic;font-size:11px;">Source: Quantpedia "Volatility Edge" series &bull; Bogleheads HFEA thread (2019–2026)</p>
+            </div>
+          </div>
+          <div style="background:#FEF2F2;border-left:3px solid var(--danger);padding:10px 12px;border-radius:3px;margin-top:12px;">
+            <strong style="color:var(--danger);">&#9888; Risk Disclosure:</strong> Leveraged ETFs are designed for short-term use. A 3× ETF on a 2000-dotcom equivalent drawdown would lose ~99.8% of value. The HFEA strategy (55% UPRO / 45% TMF) was down 65%+ in 2022 when both equities and bonds fell simultaneously. This tool is for education and risk awareness — not a recommendation.
+          </div>
+        </div>
+      </div>
+    </div><!-- /rqtab-levETF -->
 
   </div>
 </div>
@@ -5340,6 +5447,97 @@ body.view-mobile #mobileBottomBar {
   </div>
 </div>
 
+
+<!-- ═══════════ PREVIOUS TOOLS / VISUALIZATIONS ═══════════ -->
+<div class="page" id="page-prevtools">
+  <div class="content-wrap">
+    <div class="hero" style="padding:32px 40px;">
+      <h1>&#128451; Previous Tools &amp; Visualizations</h1>
+      <p>An archive of retired or superseded features. These tools are preserved here for reference in case you want to revisit, repurpose, or reintroduce them in the future. Nothing is deleted — only graduated here when a newer approach replaces it.</p>
+    </div>
+
+    <!-- Archive notice banner -->
+    <div style="background:#FFF8E8;border-left:4px solid #8B6914;padding:12px 16px;border-radius:4px;margin-bottom:18px;font-size:12px;line-height:1.6;color:#1A2733;">
+      <strong>&#128277; How this page works:</strong> When a tool or visualization on another page is replaced by a newer version, the prior version is moved here so you can see what it looked like, understand what changed, and optionally restore it. Each archived item includes the date it was retired and why it was replaced.
+    </div>
+
+    <!-- ── ARCHIVE: Holdings Text Insights ── -->
+    <div class="card" style="margin-bottom:14px;">
+      <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
+        <span>&#128200; Holdings Text Insights Panel</span>
+        <span style="font-size:11px;font-weight:400;color:rgba(255,255,255,0.7);text-transform:none;letter-spacing:0;">Retired: 2026 &bull; Replaced by: KPI Band + 4-Tab PORT Module</span>
+      </div>
+      <div class="card-body">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:12px;">
+          <div>
+            <p style="font-size:13px;font-weight:600;color:var(--navy);margin-bottom:6px;">What it was:</p>
+            <p style="font-size:12px;color:var(--text-sec);line-height:1.6;">The original Manage Holdings page displayed a block of text-based "insights" above the holdings table. It computed 6–8 sentences about your portfolio (e.g. "Your top position is AAPL at 22.3% of your portfolio") but presented them as dense paragraphs with no visual hierarchy. Below it was a large Add Holding form, and the actual holdings table was buried at the bottom.</p>
+          </div>
+          <div>
+            <p style="font-size:13px;font-weight:600;color:var(--navy);margin-bottom:6px;">Why it was replaced:</p>
+            <p style="font-size:12px;color:var(--text-sec);line-height:1.6;">Replaced by the PORT-Module redesign: always-visible KPI band (6 metric cards), 4 tabs (Holdings / Analysis / Rebalance / Import &amp; Add), 4 Chart.js charts (sector donut, asset class donut, top-10 bar, G/L waterfall), 5 Story Cards, and a Brinson rebalance chart. The text insights were replaced by visual storytelling cards that are faster to scan.</p>
+          </div>
+        </div>
+        <div style="background:var(--panel);border-radius:4px;padding:14px;border:1px solid var(--border);">
+          <p style="font-size:11px;font-weight:700;color:var(--navy);margin-bottom:8px;text-transform:uppercase;letter-spacing:.4px;">Archive Preview — Original Text Insights Format</p>
+          <div id="prevToolsHoldingsInsights" style="font-size:12px;color:var(--text-sec);line-height:1.8;">
+            <em>Sign in and load holdings to see what the original text insights looked like.</em>
+          </div>
+          <script>
+            // Regenerate old text insights format from current holdings data
+            document.addEventListener('_holdingsLoaded', function() {
+              var h = window._holdings || [];
+              if (!h.length) return;
+              var tv = h.reduce(function(s,x){ return s+(x.currentPrice||0)*x.quantity; }, 0);
+              var sorted = h.slice().sort(function(a,b){ return ((b.currentPrice||0)*b.quantity)-((a.currentPrice||0)*a.quantity); });
+              var top = sorted[0];
+              var topPct = tv>0?(top.currentPrice||0)*top.quantity/tv*100:0;
+              var income = h.reduce(function(s,x){ return s+(((x.currentPrice||0)*x.quantity)*((x.yieldPct||0)/100)); }, 0);
+              var gl = h.reduce(function(s,x){ return s+(((x.currentPrice||0)-(x.costBasis||x.currentPrice||0))*x.quantity); }, 0);
+              var el = document.getElementById('prevToolsHoldingsInsights');
+              if (el) el.innerHTML = '<strong>Original text insights would read:</strong><br>'
+                + '&#8226; You hold <strong>'+h.length+'</strong> positions across your portfolio with a total market value of <strong>$'+tv.toLocaleString(undefined,{maximumFractionDigits:0})+'</strong>.<br>'
+                + '&#8226; Your largest position is <strong>'+top.ticker+'</strong> at <strong>'+topPct.toFixed(1)+'%</strong> of your portfolio.<br>'
+                + '&#8226; Your portfolio generates an estimated <strong>$'+income.toLocaleString(undefined,{maximumFractionDigits:0})+'</strong> in annual dividend income.<br>'
+                + '&#8226; Total unrealized gain/loss: <strong style="color:'+(gl>=0?'var(--success)':'var(--danger)')+';">'+(gl>=0?'+':'')+'$'+gl.toLocaleString(undefined,{maximumFractionDigits:0})+'</strong>.';
+            });
+          </script>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── ARCHIVE: Attribution Single Horizontal Bar ── -->
+    <div class="card" style="margin-bottom:14px;">
+      <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
+        <span>&#128202; Attribution — Ticker-Level Horizontal Bar Only</span>
+        <span style="font-size:11px;font-weight:400;color:rgba(255,255,255,0.7);text-transform:none;letter-spacing:0;">Retired: 2026 &bull; Replaced by: Brinson-Fachler 3-Column Chart</span>
+      </div>
+      <div class="card-body">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+          <div>
+            <p style="font-size:13px;font-weight:600;color:var(--navy);margin-bottom:6px;">What it was:</p>
+            <p style="font-size:12px;color:var(--text-sec);line-height:1.6;">The Attribution tab originally showed a single horizontal bar chart of each holding's contribution to total portfolio return. Each bar was green (positive contribution) or red (negative). While useful for seeing which holdings drove returns, it couldn't explain <em>why</em> — whether the outperformance came from sector selection, stock picking within the sector, or the decision to overweight/underweight a sector.</p>
+          </div>
+          <div>
+            <p style="font-size:13px;font-weight:600;color:var(--navy);margin-bottom:6px;">Why it was replaced:</p>
+            <p style="font-size:12px;color:var(--text-sec);line-height:1.6;">Replaced by the Brinson-Fachler (1985) grouped bar chart which decomposes active return into three components per sector: <strong>Allocation</strong> (did you overweight the right sectors?), <strong>Selection</strong> (did you pick winners within each sector?), and <strong>Interaction</strong> (the cross-effect). The old single-bar chart is still present above the Brinson section for per-holding context.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── PLACEHOLDER: Future Archives ── -->
+    <div class="card" style="background:var(--panel);border:2px dashed var(--border);">
+      <div class="card-title" style="background:transparent;color:var(--text-sec);border-bottom:1px dashed var(--border);">&#128203; Future Archives — Placeholder</div>
+      <div class="card-body" style="text-align:center;padding:40px;color:var(--text-sec);">
+        <div style="font-size:36px;margin-bottom:12px;">&#128451;</div>
+        <p style="font-size:13px;font-weight:600;margin-bottom:6px;">This is where future retired tools will appear.</p>
+        <p style="font-size:12px;line-height:1.6;max-width:500px;margin:0 auto;">As the platform evolves, features that are superseded by improved versions will be archived here rather than deleted. You can always look back at the design evolution and restore ideas that resurface as relevant.</p>
+      </div>
+    </div>
+
+  </div>
+</div>
 
 <!-- ═══════════ COMMAND PALETTE ═══════════ -->
 <div class="cmdk-overlay" id="cmdkOverlay" onclick="if(event.target===this)closeCmdK()">
@@ -26191,6 +26389,468 @@ async function renderTickerGridPanel(wrap, tickers, labelFn) {
   });
   h+='</div>'; wrap.innerHTML=h;
 }
+
+// Wire pfShowTab for sectors tab — wrap once after all patches are done
+(function() {
+  var _origPfShowTab_sectors = window.pfShowTab;
+  window.pfShowTab = function(name) {
+    if (typeof _origPfShowTab_sectors === 'function') _origPfShowTab_sectors(name);
+    if (name === 'sectors') setTimeout(function(){ if (typeof renderSectorsTab==='function') renderSectorsTab(); }, 50);
+  };
+})();
+
+// ═══════════════════════════════════════════════════════════
+// ════  PERFORMANCE TAB ADDITIONS  ══════════════════════════
+// ═══════════════════════════════════════════════════════════
+
+// ── Underwater / Drawdown Chart (Portfolio Performance tab) ──
+function renderPerfUnderwaterChart(values, dates, spyData) {
+  var ctx = document.getElementById('perfUnderwaterChart');
+  if (!ctx || !values || values.length < 2) return;
+  if (window._perfUnderwaterChart) { try { window._perfUnderwaterChart.destroy(); } catch(e){} }
+
+  // Compute drawdown series
+  function toDD(arr) {
+    var peak = -Infinity, dd = [];
+    arr.forEach(function(v) { peak = Math.max(peak, v); dd.push(v > 0 ? (v - peak) / peak * 100 : 0); });
+    return dd;
+  }
+  var pfDD = toDD(values);
+  var datasets = [
+    { label: 'Portfolio Drawdown', data: pfDD,
+      borderColor: 'rgba(139,42,42,0.9)', borderWidth: 1.5, pointRadius: 0,
+      fill: true, backgroundColor: 'rgba(139,42,42,0.12)', tension: 0.2 }
+  ];
+  if (spyData && spyData.length > 1) {
+    var spyVals = spyData.map(function(p){ return p.val; });
+    var spyDD = toDD(spyVals);
+    // Align spy dates to portfolio dates count
+    var aligned = [];
+    for (var i = 0; i < pfDD.length; i++) { aligned.push(spyDD[Math.round(i * (spyDD.length-1) / Math.max(pfDD.length-1,1))]||0); }
+    datasets.push({ label: 'SPY Drawdown', data: aligned,
+      borderColor: 'rgba(91,155,213,0.8)', borderWidth: 1, borderDash: [4,3], pointRadius: 0,
+      fill: false, tension: 0.2 });
+  }
+  window._perfUnderwaterChart = new Chart(ctx.getContext('2d'), {
+    type: 'line',
+    data: { labels: dates, datasets: datasets },
+    options: {
+      responsive: true, maintainAspectRatio: false, animation: false,
+      plugins: {
+        legend: { position: 'top', labels: { font: { size: 11 } } },
+        tooltip: { callbacks: { label: function(c){ return c.dataset.label+': '+(c.parsed.y||0).toFixed(1)+'%'; } } }
+      },
+      scales: {
+        x: { ticks: { maxTicksLimit: 10, font: { size: 10 } }, grid: { display: false } },
+        y: { ticks: { callback: function(v){ return v.toFixed(0)+'%'; }, font: { size: 10 } },
+             suggestedMax: 0, suggestedMin: null }
+      }
+    }
+  });
+
+  // Top-5 drawdown table
+  var ddEl = document.getElementById('perfDrawdownTable');
+  if (ddEl) {
+    var drawdowns = [], inDD = false, start = 0, peak2 = 0;
+    for (var i2 = 0; i2 < values.length; i2++) {
+      if (values[i2] >= peak2) {
+        if (inDD) { drawdowns.push({ start: dates[start], trough: dates[i2-1], depth: (peak2 - Math.min.apply(null,values.slice(start,i2)))/peak2*100, len: i2-start }); }
+        peak2 = values[i2]; inDD = false;
+      } else { if (!inDD) { start = i2-1; inDD = true; } }
+    }
+    drawdowns.sort(function(a,b){ return b.depth-a.depth; });
+    var top5 = drawdowns.slice(0,5);
+    if (top5.length) {
+      var html = '<table style="width:100%;border-collapse:collapse;font-size:11px;"><thead><tr style="background:var(--panel);"><th style="padding:4px 8px;text-align:left;">Start</th><th style="padding:4px 8px;text-align:left;">Trough</th><th style="padding:4px 8px;text-align:right;color:var(--danger);">Depth</th><th style="padding:4px 8px;text-align:right;">Duration</th></tr></thead><tbody>';
+      top5.forEach(function(d,i){
+        html += '<tr style="border-bottom:1px solid var(--border);"><td style="padding:4px 8px;">'+(i+1)+'. '+d.start+'</td><td style="padding:4px 8px;">'+d.trough+'</td><td style="padding:4px 8px;text-align:right;color:var(--danger);font-weight:700;">−'+d.depth.toFixed(1)+'%</td><td style="padding:4px 8px;text-align:right;">'+d.len+' days</td></tr>';
+      });
+      html += '</tbody></table>';
+      ddEl.innerHTML = '<p style="font-size:11px;font-weight:600;color:var(--navy);margin-bottom:6px;">Top Drawdown Periods</p>' + html;
+    }
+  }
+}
+
+// ── Monthly Returns Heatmap ──
+function renderPerfMonthlyHeatmap(values, dates) {
+  var el = document.getElementById('perfMonthlyHeatmap');
+  if (!el || !values || values.length < 2) return;
+  var MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  var monthMap = {}; // { '2023': { 0: [v1,v2...], 1: [...] } }
+  for (var i = 1; i < values.length; i++) {
+    if (!values[i-1] || !values[i]) continue;
+    var d = new Date(dates[i]+'T00:00:00');
+    var yr = d.getFullYear(), mo = d.getMonth();
+    if (!monthMap[yr]) monthMap[yr] = {};
+    if (!monthMap[yr][mo]) monthMap[yr][mo] = [];
+    monthMap[yr][mo].push({ from: values[i-1], to: values[i] });
+  }
+  var years = Object.keys(monthMap).sort();
+  if (!years.length) { el.innerHTML = '<p style="color:var(--text-sec);font-size:12px;">Not enough data.</p>'; return; }
+
+  // For each month, compute compound return
+  function moRet(pts) {
+    if (!pts || !pts.length) return null;
+    var cum = 1;
+    pts.forEach(function(p){ cum *= p.to/p.from; });
+    return (cum - 1) * 100;
+  }
+  function cellColor(r) {
+    if (r === null) return '#F4F6F9';
+    if (r >= 5)  return '#1B6B3A';
+    if (r >= 3)  return '#2E7D52';
+    if (r >= 1)  return '#4CAF78';
+    if (r >= 0)  return '#A8D5B5';
+    if (r >= -1) return '#F4B8B8';
+    if (r >= -3) return '#D45D5D';
+    if (r >= -5) return '#B73030';
+    return '#8B1515';
+  }
+  function textColor(r) { return (r !== null && Math.abs(r) >= 2) ? '#fff' : 'var(--text)'; }
+
+  var html = '<table style="border-collapse:collapse;width:100%;font-size:11px;">';
+  html += '<thead><tr><th style="padding:3px 6px;text-align:left;color:var(--text-sec);font-weight:600;">Year</th>';
+  MONTHS.forEach(function(m){ html += '<th style="padding:3px 6px;text-align:center;color:var(--text-sec);font-weight:600;">'+m+'</th>'; });
+  html += '<th style="padding:3px 6px;text-align:right;color:var(--text-sec);font-weight:600;">Full Year</th></tr></thead><tbody>';
+  years.forEach(function(yr) {
+    var yrTotal = 1;
+    html += '<tr><td style="padding:4px 6px;font-weight:700;color:var(--navy);">'+yr+'</td>';
+    for (var m = 0; m < 12; m++) {
+      var r = moRet(monthMap[yr][m]);
+      if (r !== null) yrTotal *= (1 + r/100);
+      var bg = cellColor(r), tc = textColor(r);
+      html += '<td style="padding:3px 4px;text-align:center;background:'+bg+';color:'+tc+';border-radius:2px;font-family:monospace;">'
+        + (r !== null ? (r >= 0 ? '+' : '') + r.toFixed(1)+'%' : '—') + '</td>';
+    }
+    var yrRet = (yrTotal - 1) * 100;
+    html += '<td style="padding:4px 6px;text-align:right;font-weight:700;font-family:monospace;color:'+(yrRet>=0?'var(--success)':'var(--danger)')+';">'+(yrRet>=0?'+':'')+yrRet.toFixed(1)+'%</td>';
+    html += '</tr>';
+  });
+  html += '</tbody></table>';
+  el.innerHTML = html;
+}
+
+// ── Patch renderPerformanceTab to call new charts and add Calmar/Time-Underwater ──
+var _origRenderPerfTab = window.renderPerformanceTab;
+window.renderPerformanceTab = async function() {
+  if (typeof _origRenderPerfTab === 'function') await _origRenderPerfTab.call(this);
+
+  // Retrieve values/dates/spyData that were computed inside the original function
+  // Re-run the data preparation (fast, cached) to get these values
+  try {
+    var holdings = window._holdings || [];
+    if (!holdings.length) return;
+    var rangeBtn = document.querySelector('#perfTimeframeBtns .btn-outline.active');
+    var range = rangeBtn ? rangeBtn.getAttribute('data-perf-range') : '1y';
+    var pfSeries = await pfBuildValueSeries(range);
+    if (!pfSeries || !pfSeries.dates || pfSeries.dates.length < 5) return;
+    var now = new Date();
+    var cutoff = new Date(now);
+    if (range==='1mo') cutoff.setMonth(cutoff.getMonth()-1);
+    else if (range==='3mo') cutoff.setMonth(cutoff.getMonth()-3);
+    else if (range==='6mo') cutoff.setMonth(cutoff.getMonth()-6);
+    else if (range==='ytd') cutoff=new Date(now.getFullYear(),0,1);
+    else if (range==='1y') cutoff.setFullYear(cutoff.getFullYear()-1);
+    else if (range==='3y') cutoff.setFullYear(cutoff.getFullYear()-3);
+    else if (range==='5y') cutoff.setFullYear(cutoff.getFullYear()-5);
+    var cutStr = cutoff.toISOString().slice(0,10);
+    var filtPairs = [];
+    for (var fi=0;fi<pfSeries.dates.length;fi++) {
+      if (pfSeries.dates[fi]>=cutStr && pfSeries.values[fi]!=null && pfSeries.values[fi]>0)
+        filtPairs.push({date:pfSeries.dates[fi], value:pfSeries.values[fi]});
+    }
+    if (filtPairs.length < 5) return;
+    var dates = filtPairs.map(function(p){return p.date;});
+    var values = filtPairs.map(function(p){return p.value;});
+
+    // SPY data
+    var spyData = null;
+    try {
+      var spyR = await fetchChart('SPY', range==='ytd'?'1y':range, '1d');
+      var spyPts = (spyR.points||[]).filter(function(p){return p.date && p.close && p.date>=cutStr;});
+      if (spyPts.length) { var s0=spyPts[0].close; spyData=spyPts.map(function(p){return{date:p.date,val:(p.close/s0)*values[0]};}); }
+    } catch(e2){}
+
+    // Render underwater chart
+    renderPerfUnderwaterChart(values, dates, spyData);
+    // Render monthly heatmap
+    renderPerfMonthlyHeatmap(values, dates);
+
+    // Add Calmar ratio and Time-Underwater to the scorecard
+    var bsEl = document.getElementById('perfBenchScorecard');
+    if (bsEl && values.length > 5) {
+      var totalReturn = (values[values.length-1] - values[0]) / values[0];
+      var annRet2 = Math.pow(1+totalReturn, 252/(Math.max(values.length-1,1))) - 1;
+      var peak3 = values[0], maxDD2 = 0;
+      values.forEach(function(v){ if(v>peak3) peak3=v; var dd=(peak3-v)/peak3; if(dd>maxDD2) maxDD2=dd; });
+      var calmar = maxDD2 > 0 ? (annRet2 / maxDD2) : 0;
+      // Time Underwater = % of days in drawdown
+      var peakTU = values[0], uwDays = 0;
+      values.forEach(function(v){ if(v>=peakTU) peakTU=v; else uwDays++; });
+      var timeUW = values.length > 1 ? uwDays / (values.length - 1) * 100 : 0;
+
+      // Append to existing scorecard HTML
+      var newCards = [
+        {l:'Calmar Ratio', v: calmar.toFixed(2), c: calmar>1?'var(--success)':calmar>0.5?'var(--warning)':'var(--danger)',
+         tip:'Ann. Return ÷ Max Drawdown. >1.0 = excellent risk-adjusted return per drawdown unit.'},
+        {l:'Time Underwater', v: timeUW.toFixed(0)+'%', c: timeUW<25?'var(--success)':timeUW<50?'var(--warning)':'var(--danger)',
+         tip:'% of trading days spent below the previous portfolio high. Lower = more time at or near new highs.'}
+      ].map(function(s){
+        return '<div class="chart-stat-box" title="'+(s.tip||'')+'"><div class="chart-stat-label">'+s.l+'</div><div class="chart-stat-value" style="color:'+s.c+';">'+s.v+'</div></div>';
+      }).join('');
+      bsEl.innerHTML += newCards;
+    }
+  } catch(e3) { console.warn('[renderPerformanceTab extension]', e3); }
+};
+
+// ═══════════════════════════════════════════════════════════
+// ════  LEVERAGED ETF SIGNALS MODULE  ═══════════════════════
+// ═══════════════════════════════════════════════════════════
+
+document.getElementById('levETFTicker') && document.getElementById('levETFTicker').addEventListener('change', function(){
+  var customEl = document.getElementById('levETFCustom');
+  if (customEl) customEl.style.display = this.value === 'custom' ? '' : 'none';
+});
+
+async function levETFRun() {
+  var tickerSel = document.getElementById('levETFTicker');
+  var customEl  = document.getElementById('levETFCustom');
+  var multEl    = document.getElementById('levETFMult');
+  var statusEl  = document.getElementById('levETFStatus');
+  var ticker = tickerSel && tickerSel.value === 'custom' ? (customEl ? customEl.value.trim().toUpperCase() : '') : (tickerSel ? tickerSel.value : 'TQQQ');
+  if (!ticker) { if(statusEl) statusEl.textContent = 'Enter a ticker.'; return; }
+  var L = parseInt(multEl ? multEl.value : 3) || 3;
+  if (statusEl) statusEl.textContent = '⏳ Fetching data…';
+
+  // Underlying ticker (strip leverage)
+  var UNDERLYING = {
+    'TQQQ':'QQQ','SOXL':'SOXX','UPRO':'SPY','TECL':'XLK','FNGU':'FNGU',
+    'QLD':'QQQ','SSO':'SPY','SPXL':'SPY','LABU':'XBI','TNA':'IWM'
+  };
+  var underlying = UNDERLYING[ticker] || (L > 1 ? 'SPY' : ticker);
+
+  try {
+    // Fetch in parallel: leveraged ETF 5yr, underlying 5yr, SPY 1yr (for 200-SMA), VIX quote
+    var [levR, undR, spyR, vixQ] = await Promise.allSettled([
+      fetchChart(ticker, '5y', '1d'),
+      fetchChart(underlying, '5y', '1d'),
+      fetchChart('SPY', '1y', '1d'),
+      fetchQuote('%5EVIX')
+    ]);
+
+    var levPts  = levR.status  === 'fulfilled' ? (levR.value.points  ||[]).filter(function(p){return p.close!=null;}) : [];
+    var undPts  = undR.status  === 'fulfilled' ? (undR.value.points  ||[]).filter(function(p){return p.close!=null;}) : [];
+    var spy1Pts = spyR.status  === 'fulfilled' ? (spyR.value.points  ||[]).filter(function(p){return p.close!=null;}) : [];
+    var vixQ2   = vixQ.status  === 'fulfilled' ? vixQ.value : null;
+
+    // ── Decay Calculator ──
+    var decayEl = document.getElementById('levETFDecayBox');
+    if (decayEl && undPts.length > 20) {
+      var closes = undPts.map(function(p){return p.close;});
+      var rets = [];
+      for (var i=1;i<closes.length;i++) rets.push((closes[i]-closes[i-1])/closes[i-1]);
+      var recentRets = rets.slice(-63); // 3-month window
+      var mean = recentRets.reduce(function(s,r){return s+r;},0)/recentRets.length;
+      var variance = recentRets.reduce(function(s,r){return s+(r-mean)*(r-mean);},0)/recentRets.length;
+      var sigma = Math.sqrt(variance);
+      var decayPerDay = L*(L-1)/2*variance;
+      var decayAnn    = (1-Math.pow(1-decayPerDay,252))*100;
+      var sigmaAnn    = sigma*Math.sqrt(252)*100;
+
+      decayEl.innerHTML =
+        '<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;">'
+        +'<div class="metric-card" style="background:var(--panel);">'
+          +'<div class="metric-label">Daily Volatility Decay</div>'
+          +'<div class="metric-value" style="color:var(--danger);font-size:22px;">−'+(decayPerDay*100).toFixed(3)+'%</div>'
+          +'<div class="metric-sub">per trading day</div></div>'
+        +'<div class="metric-card" style="background:var(--panel);">'
+          +'<div class="metric-label">Annualized Decay</div>'
+          +'<div class="metric-value" style="color:var(--danger);font-size:22px;">−'+decayAnn.toFixed(1)+'%</div>'
+          +'<div class="metric-sub">pure vol drag / year</div></div>'
+        +'<div class="metric-card" style="background:var(--panel);">'
+          +'<div class="metric-label">Underlying Ann. Vol</div>'
+          +'<div class="metric-value" style="color:var(--navy);font-size:20px;">'+sigmaAnn.toFixed(1)+'%</div>'
+          +'<div class="metric-sub">3-month realized</div></div>'
+        +'<div class="metric-card" style="background:var(--panel);">'
+          +'<div class="metric-label">Leverage Multiplier</div>'
+          +'<div class="metric-value" style="color:var(--navy);font-size:20px;">'+L+'×</div>'
+          +'<div class="metric-sub">'+ticker+' on '+underlying+'</div></div>'
+        +'</div>'
+        +'<div style="font-size:11px;color:var(--text-sec);background:var(--panel);padding:8px 10px;border-radius:4px;">'
+          +'<strong>Formula:</strong> Decay/day = L×(L−1)/2 × σ² = '+L+'×'+(L-1)+'/2 × '+(variance*10000).toFixed(2)+'bp = '+(decayPerDay*100).toFixed(3)+'%/day &bull; '
+          +'This means '+ticker+' must earn <strong>>'+(decayPerDay*100).toFixed(2)+'% per day</strong> just to stay flat after decay.'
+        +'</div>';
+    }
+
+    // ── Suitability Score ──
+    var signalEl = document.getElementById('levETFSignalBox');
+    var scoreBanner = document.getElementById('levETFScoreBanner');
+    if (signalEl && spy1Pts.length > 200) {
+      var spyCloses = spy1Pts.map(function(p){return p.close;});
+      var spy200 = spyCloses.slice(-200).reduce(function(s,v){return s+v;},0)/200;
+      var spyCurrent = spyCloses[spyCloses.length-1];
+      var spyAbove200 = spyCurrent > spy200;
+
+      // VIX
+      var vixLevel = vixQ2 ? (vixQ2.current || vixQ2.price || 20) : 20;
+      var vixBelow25 = vixLevel < 25;
+      var vixBelow30 = vixLevel < 30;
+
+      // RSI(14) on SPY
+      function rsi14(closes) {
+        var gains=0,losses=0;
+        var recent=closes.slice(-15);
+        for(var i=1;i<recent.length;i++){var d=recent[i]-recent[i-1];if(d>0)gains+=d;else losses-=d;}
+        var rs=losses>0?gains/losses:100; return 100-100/(1+rs);
+      }
+      var spyRSI = rsi14(spyCloses);
+      var rsiOK = spyRSI >= 30 && spyRSI <= 70;
+
+      // SPY drawdown from recent peak
+      var spyPeak = Math.max.apply(null,spyCloses.slice(-252));
+      var spyDD = (spyCurrent - spyPeak) / spyPeak * 100;
+      var spyDDOK = spyDD > -15;
+
+      // Score
+      var score = 0;
+      if (spyAbove200) score += 30;
+      if (vixBelow25)  score += 25;
+      if (vixBelow30 && !vixBelow25) score += 10;
+      if (rsiOK)       score += 15;
+      if (spyDDOK)     score += 15;
+      if (vixLevel > 30) score -= 30;
+      if (spyDD < -15) score -= 20;
+      score = Math.max(-20, Math.min(100, score));
+
+      var scoreColor = score >= 75 ? 'var(--success)' : score >= 50 ? '#8B6914' : score >= 25 ? 'var(--warning)' : 'var(--danger)';
+      var scoreLabel = score >= 75 ? '✅ Conditions Favorable — Leverage Appropriate'
+                     : score >= 50 ? '⚠️ Mixed Signals — Consider Reducing Leverage'
+                     : score >= 25 ? '🔶 Caution — Conditions Deteriorating'
+                     : '🚫 Risk-Off — Reduce / Exit Leverage';
+      var scoreAction = score >= 75 ? '100% leveraged position appropriate per composite signal.'
+                      : score >= 50 ? '50% leveraged / 50% underlying or index ETF.'
+                      : score >= 25 ? '100% unleveraged ETF or index.'
+                      : '50% defensive (TLT, SHV, GLD, XLP) or cash.';
+
+      // Render signal panel
+      signalEl.innerHTML =
+        '<div style="display:grid;gap:8px;">'
+        +sigRow('SPY above 200-SMA', spyAbove200, 'SPY $'+spyCurrent.toFixed(2)+' vs 200-SMA $'+spy200.toFixed(2), '+30 pts')
+        +sigRow('VIX < 25', vixBelow25, 'VIX = '+vixLevel.toFixed(1), vixBelow25?'+25 pts':vixBelow30?'+10 pts (below 30)':'−30 pts (above 30)')
+        +sigRow('RSI(14) 30–70', rsiOK, 'SPY RSI = '+spyRSI.toFixed(0), rsiOK?'+15 pts':'0 pts')
+        +sigRow('SPY < −15% from peak', spyDDOK, 'SPY drawdown = '+spyDD.toFixed(1)+'%', spyDDOK?'+15 pts':'−20 pts')
+        +'</div>'
+        +'<div style="margin-top:12px;padding:10px;background:var(--panel);border-radius:4px;font-size:12px;">'
+          +'<strong>Suggested Action:</strong> '+scoreAction+'</div>';
+
+      // Score banner
+      if (scoreBanner) {
+        scoreBanner.style.display = 'flex';
+        scoreBanner.style.alignItems = 'center';
+        scoreBanner.style.gap = '16px';
+        scoreBanner.style.padding = '14px 18px';
+        scoreBanner.style.background = 'linear-gradient(135deg,var(--navy),#002A50)';
+        scoreBanner.style.borderRadius = 'var(--radius)';
+        scoreBanner.style.marginBottom = '14px';
+        scoreBanner.innerHTML =
+          '<div style="font-size:48px;font-weight:900;color:'+scoreColor+';font-family:Courier New,monospace;line-height:1;">'+score+'</div>'
+          +'<div style="flex:1;">'
+            +'<div style="font-size:13px;font-weight:700;color:#fff;margin-bottom:2px;">'+scoreLabel+'</div>'
+            +'<div style="font-size:11px;color:rgba(255,255,255,0.65);">Suitability score out of 100 &bull; Based on: SPY 200-SMA (+30), VIX (+25), RSI (+15), Drawdown (+15), Penalties (−30/−20)</div>'
+          +'</div>';
+      }
+    }
+
+    // KPI strip
+    var kpiEl = document.getElementById('levETFKPIs');
+    if (kpiEl && levPts.length > 5) {
+      var lev0=levPts[0].close, levN=levPts[levPts.length-1].close;
+      var levRet=(levN-lev0)/lev0*100;
+      var und0=undPts.length?undPts[0].close:null, undN=undPts.length?undPts[undPts.length-1].close:null;
+      var undRet=und0&&undN?(undN-und0)/und0*100:null;
+      var levDDs=[]; var levPk=levPts[0].close;
+      levPts.forEach(function(p){levPk=Math.max(levPk,p.close);levDDs.push((p.close-levPk)/levPk*100);});
+      var levMDD=Math.min.apply(null,levDDs);
+
+      kpiEl.innerHTML=[
+        {l:ticker+' 5Y Return',v:(levRet>=0?'+':'')+levRet.toFixed(0)+'%',c:levRet>=0?'var(--success)':'var(--danger)'},
+        undRet!==null?{l:underlying+' 5Y Return',v:(undRet>=0?'+':'')+undRet.toFixed(0)+'%',c:undRet>=0?'var(--success)':'var(--danger)'}:null,
+        {l:ticker+' Max Drawdown',v:levMDD.toFixed(1)+'%',c:'var(--danger)'},
+        vixQ2?{l:'VIX (Live)',v:(vixQ2.current||vixQ2.price||'—').toFixed?((vixQ2.current||vixQ2.price||0)).toFixed(1):'—',c:'var(--navy)'}:null
+      ].filter(Boolean).map(function(s){return '<div class="chart-stat-box"><div class="chart-stat-label">'+s.l+'</div><div class="chart-stat-value" style="color:'+s.c+';">'+s.v+'</div></div>';}).join('');
+    }
+
+    // ── Drawdown comparison chart ──
+    var ddLoading = document.getElementById('levETFDDLoading');
+    var ddWrap    = document.getElementById('levETFDDWrap');
+    var ddCtx     = document.getElementById('levETFDDChart');
+    var ddStats   = document.getElementById('levETFDDStats');
+    if (ddCtx && levPts.length > 5 && undPts.length > 5) {
+      if (window._levETFDDChart) { try{window._levETFDDChart.destroy();}catch(e){} }
+      if (ddLoading) ddLoading.style.display='none';
+      if (ddWrap)    ddWrap.style.display='';
+
+      function toDD2(pts) { var pk=pts[0].close,dd=[]; pts.forEach(function(p){pk=Math.max(pk,p.close);dd.push((p.close-pk)/pk*100);}); return dd; }
+      var levDD2 = toDD2(levPts);
+      var undDD2 = toDD2(undPts);
+      var ddLabels = levPts.map(function(p){return p.date?p.date.slice(0,10):'';});
+      // Align underlying to lev length
+      var undDDAligned = undDD2.slice(-levDD2.length);
+      if (undDDAligned.length < levDD2.length) {
+        var pad = new Array(levDD2.length-undDDAligned.length).fill(0);
+        undDDAligned = pad.concat(undDDAligned);
+      }
+
+      window._levETFDDChart = new Chart(ddCtx.getContext('2d'), {
+        type:'line',
+        data:{ labels:ddLabels, datasets:[
+          { label:ticker+' Drawdown', data:levDD2, borderColor:'rgba(139,42,42,0.9)', borderWidth:1.5,
+            pointRadius:0, fill:true, backgroundColor:'rgba(139,42,42,0.15)', tension:0.2 },
+          { label:underlying+' Drawdown', data:undDDAligned, borderColor:'rgba(91,155,213,0.8)', borderWidth:1,
+            borderDash:[4,3], pointRadius:0, fill:false, tension:0.2 }
+        ]},
+        options:{
+          responsive:true, maintainAspectRatio:false, animation:false,
+          plugins:{ legend:{display:true,labels:{font:{size:11}}},
+            tooltip:{callbacks:{label:function(c){return c.dataset.label+': '+(c.parsed.y||0).toFixed(1)+'%';}}}},
+          scales:{ x:{ticks:{maxTicksLimit:10,font:{size:9}},grid:{display:false}},
+            y:{ticks:{callback:function(v){return v.toFixed(0)+'%';},font:{size:9}},suggestedMax:0} }
+        }
+      });
+      var levMDD3=Math.min.apply(null,levDD2), undMDD3=Math.min.apply(null,undDDAligned);
+      if (ddStats) ddStats.innerHTML='<strong>'+ticker+' Max Drawdown: </strong><span style="color:var(--danger);font-weight:700;">'+levMDD3.toFixed(1)+'%</span> &bull; <strong>'+underlying+' Max Drawdown: </strong><span style="color:#8B6914;font-weight:700;">'+undMDD3.toFixed(1)+'%</span> &bull; <span style="font-size:11px;color:var(--text-sec);">Recovery math: a '+Math.abs(levMDD3).toFixed(0)+'% loss requires a '+((1/(1+levMDD3/100)-1)*100).toFixed(0)+'% gain to recover.</span>';
+    }
+
+    if (statusEl) statusEl.textContent = '✓ Done';
+  } catch(e) {
+    if (statusEl) statusEl.textContent = '⚠ Error: ' + e.message;
+    console.error('[levETFRun]', e);
+  }
+}
+
+function sigRow(label, pass, detail, pts) {
+  var color = pass ? 'var(--success)' : 'var(--danger)';
+  var icon  = pass ? '✅' : '❌';
+  return '<div style="display:flex;align-items:center;gap:10px;padding:7px 10px;background:var(--panel);border-radius:4px;border-left:3px solid '+color+';">'
+    +'<span style="font-size:16px;">'+icon+'</span>'
+    +'<div style="flex:1;">'
+      +'<div style="font-size:12px;font-weight:600;color:var(--navy);">'+label+'</div>'
+      +'<div style="font-size:11px;color:var(--text-sec);">'+detail+'</div>'
+    +'</div>'
+    +'<div style="font-size:11px;font-family:Courier New,monospace;color:'+color+';font-weight:700;">'+pts+'</div>'
+    +'</div>';
+}
+
+// ── Wire rqShowTab to handle levETF tab ──
+var _origRqShowTab = window.rqShowTab;
+window.rqShowTab = function(name) {
+  if (typeof _origRqShowTab === 'function') _origRqShowTab(name);
+  if (name === 'levETF') {
+    // Auto-run if not yet run
+    var ddLoading = document.getElementById('levETFDDLoading');
+    if (ddLoading && ddLoading.style.display !== 'none') levETFRun();
+  }
+};
 
 // Wire pfShowTab for sectors tab — wrap once after all patches are done
 (function() {
