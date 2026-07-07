@@ -2511,7 +2511,8 @@ body.view-mobile #mobileBottomBar {
 }
 #helpPopover .hp-close:hover { color: var(--navy); }
 /* Override help-icon cursor to pointer for popover */
-.help-icon[data-help] { cursor: pointer; }
+.help-icon { cursor: pointer; }
+.help-icon:hover { filter: brightness(1.25); }
 </style>
 </head>
 <body>
@@ -2999,7 +3000,7 @@ body.view-mobile #mobileBottomBar {
         <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;cursor:pointer;" onclick="pfHoldingsToggle()">
           <span>
             <span id="pfHoldingsCaret" style="display:inline-block;width:14px;text-align:center;font-family:'Courier New',monospace;color:#fff;font-weight:700;transition:transform 0.18s ease;">▼</span>
-            Portfolio Holdings <span class="help-icon" data-help="regimeFit" title="Click for plain-English explanation">ⓘ</span>
+            Portfolio Holdings <span class="help-icon" data-help="allocation" title="Click for plain-English explanation">ⓘ</span>
           </span>
           <div style="display:flex;gap:8px;align-items:center;" onclick="event.stopPropagation();">
             <span id="holdingsCountInline" style="font-size:11px;color:var(--text-sec);font-weight:500;text-transform:none;letter-spacing:0;"></span>
@@ -3017,9 +3018,15 @@ body.view-mobile #mobileBottomBar {
 
       <!-- PORTFOLIO OPTIMIZATION ENGINE -->
       <div class="card">
-        <div class="card-title">Portfolio Optimization &mdash; Regime-Conditioned Weights <span class="help-icon" data-help="regimeFit" title="Click for plain-English explanation">ⓘ</span></div>
+        <div class="card-title">Portfolio Optimization &mdash; Regime &amp; Risk-Profile Conditioned Weights <span class="help-icon" data-help="optimization" title="Click for plain-English explanation">ⓘ</span></div>
         <div class="card-body">
-          <p style="font-size:12px;color:var(--text-sec);margin-bottom:10px;">For each regime, solves for optimal weights across your holdings using Markowitz mean-variance optimization (max Sharpe). Compares to your current weights and shows: <strong>(1)</strong> recommended rotation actions (e.g., &quot;Add 8% Energy, reduce Tech by 12%&quot;), <strong>(2)</strong> backtest of optimal weights vs. your actual portfolio over the past 3 years, and <strong>(3)</strong> projected return uplift if you rotate.</p>
+          <p style="font-size:12px;color:var(--text-sec);margin-bottom:10px;">Solves for the max-Sharpe weight mix across your holdings (Markowitz mean-variance), <strong>constrained by your risk profile</strong> — position caps, leveraged-ETF limits, and defensive floors are hard constraints, so a Conservative profile can never be told to hold 50% TQQQ while a Speculative one can. Every run also pulls <strong>fresh regime research</strong> (live sector momentum, cycle playbook, candidate buys with current quotes) from the data worker, so you see <strong>(1)</strong> what to rotate within your holdings, <strong>(2)</strong> what to consider buying that you don't own, <strong>(3)</strong> which sectors to favor/avoid and why, and <strong>(4)</strong> a historical backtest of the proposed weights.</p>
+          <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px;padding:8px 12px;background:var(--panel);border:1px solid var(--border);border-radius:4px;">
+            <span style="font-size:11px;font-weight:700;color:var(--navy);text-transform:uppercase;letter-spacing:.4px;">Risk Profile:</span>
+            <span id="poeProfileBadge" style="font-size:12px;font-weight:700;"></span>
+            <button class="btn-outline btn-sm" onclick="showRiskQuestionnaire()">&#9881; Change Profile</button>
+            <script>setTimeout(function(){var b=document.getElementById('poeProfileBadge');if(b&&typeof RISK_PROFILES!=='undefined'){var k=window._riskProfile||'moderate';var p=RISK_PROFILES[k];if(p)b.innerHTML='<span style="color:'+p.color+';">'+p.emoji+' '+p.label+'</span>';}},800);</script>
+          </div>
           <div class="form-row" style="margin-bottom:10px;">
             <div class="form-group"><label>Account</label>
               <select id="poeAccount">
@@ -3047,7 +3054,7 @@ body.view-mobile #mobileBottomBar {
           <div id="poeResults" style="text-align:center;color:var(--text-sec);padding:16px;font-size:13px;">Click &quot;Run Optimization &amp; Backtest&quot; to compute regime-optimal weights and validate them against the past.</div>
           <div class="chart-wrap" style="height:280px;display:none;margin-top:12px;" id="poeChartWrap"><canvas id="poeChart"></canvas></div>
         </div>
-        <div class="card-sources"><strong>Method:</strong> Markowitz (1952) mean-variance optimization on per-state expected returns &bull; Solved via gradient projection on long-only simplex (sum to 1, weights ≥ 0) &bull; Regime-conditioned drifts from SPY 5-year history segmented by Perry 4-state classifier &bull; Per-holding beta scaled to SPY proxy &bull; Backtest: holds optimal weights through specified window, compares cumulative return to actual portfolio (equal-weight rebalanced)</div>
+        <div class="card-sources"><strong>Method:</strong> Markowitz (1952) mean-variance optimization on per-state expected returns &bull; Solved via constrained random search + pairwise refinement on the long-only simplex, with every candidate projected onto your risk-profile constraint set (per-position cap, leveraged-ETF sleeve cap) so the optimum is feasible by construction &bull; Regime-conditioned drifts from SPY 5-year history segmented by Perry 4-state classifier &bull; Fresh research (live sector momentum + cycle playbook + candidate buys) pulled from the Cloudflare worker <code>/optimize-research</code> endpoint on every run &bull; Backtest: holds optimal weights through specified window vs. actual portfolio &bull; Set your risk profile under Manage Holdings &rarr; Rebalance &rarr; &#9881; Set Risk Profile</div>
       </div>
 
       <!-- FAMA-FRENCH FACTOR EXPOSURE moved to top of page -->
@@ -3163,7 +3170,7 @@ body.view-mobile #mobileBottomBar {
 
         <!-- Contribution to return chart -->
         <div class="card">
-          <div class="card-title">Contribution to Return by Holding <span class="help-icon" data-help="sectorExposure">ⓘ</span></div>
+          <div class="card-title">Contribution to Return by Holding <span class="help-icon" data-help="contribution">ⓘ</span></div>
           <div class="card-body"><div style="height:320px;"><canvas id="attrContribChart"></canvas></div></div>
         </div>
 
@@ -3178,7 +3185,7 @@ body.view-mobile #mobileBottomBar {
         <!-- Brinson-Fachler Attribution -->
         <div class="card">
           <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
-            <span>Brinson-Fachler Attribution <span class="help-icon" data-help="sectorExposure">ⓘ</span></span>
+            <span>Brinson-Fachler Attribution <span class="help-icon" data-help="brinson">ⓘ</span></span>
             <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
               <label style="font-size:11px;color:rgba(255,255,255,0.75);font-weight:600;">Period:</label>
               <select id="brinsonWindow" style="font-size:11px;padding:3px 8px;" onchange="brinsonRun()">
@@ -3218,7 +3225,7 @@ body.view-mobile #mobileBottomBar {
         </div>
         <div class="card">
           <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;">
-            <span>Top Contributors to Total Risk (Marginal VaR) <span class="help-icon" data-help="var95" title="Click for plain-English explanation">ⓘ</span></span>
+            <span>Top Contributors to Total Risk (Marginal VaR) <span class="help-icon" data-help="marginalVar" title="Click for plain-English explanation">ⓘ</span></span>
             <button class="btn-light-sm" onclick="window._pfRiskRun=false;pfRenderRisk();">Refresh</button>
           </div>
           <div class="card-body">
@@ -3655,6 +3662,19 @@ body.view-mobile #mobileBottomBar {
             <div id="hldRiskBannerDesc" style="font-size:11px;opacity:.8;"></div>
           </div>
         </div>
+        <!-- Rebalance context: regime + profile + live research (added 2026-07) -->
+        <div class="card" style="margin-bottom:16px;">
+          <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
+            <span>Rebalance Context — What Regime, What Profile, What to Buy
+              <span class="help-icon" data-help="rebalanceContext" title="Click for plain-English explanation">ⓘ</span>
+            </span>
+            <button class="btn btn-sm" onclick="loadRebalanceContext(true)">🔄 Refresh Research</button>
+          </div>
+          <div class="card-body" id="rebalanceContextPanel" style="font-size:12px;">
+            <div style="text-align:center;padding:14px;color:var(--text-sec);">Loading regime + profile context…</div>
+          </div>
+          <div class="card-sources"><strong>Sources:</strong> Cloudflare worker <code>/optimize-research</code> — live Yahoo sector momentum (fresh on each refresh), Fidelity AART/CFA cycle playbook, your saved risk-profile constraints.</div>
+        </div>
         <div id="hldRiskBannerEmpty" style="display:none;font-size:12px;color:var(--text-sec);padding:6px 0 10px;">
           No risk profile set. <a href="javascript:showRiskQuestionnaire()" style="color:var(--blue);">Take the questionnaire</a> to personalize your target model.
         </div>
@@ -3669,7 +3689,7 @@ body.view-mobile #mobileBottomBar {
         <div class="card">
           <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
             <span>Sector Drift vs. Target Model &amp; Rebalance Blotter
-              <span class="help-icon" title="Compares your current sector weights to a configurable target model. Proposed rebalance trades appear immediately below. This blotter does NOT execute trades.">?</span>
+              <span class="help-icon" data-help="driftBlotter" title="Click for plain-English explanation">ⓘ</span>
             </span>
             <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
               <label style="font-size:11px;font-weight:600;">Target:</label>
@@ -3892,6 +3912,7 @@ body.view-mobile #mobileBottomBar {
 
     <!-- Outer tabs: Research sub-tabs / Quant Models -->
     <div class="pf-tabs" role="tablist" aria-label="Research workspace">
+      <button class="pf-tab"        data-rqtab="baseline"   onclick="rqShowTab('baseline')">&#129517; Market Baseline</button>
       <button class="pf-tab active" data-rqtab="research"   onclick="rqShowTab('research')">Overview</button>
       <button class="pf-tab"        data-rqtab="financials" onclick="rqShowTab('financials')">Financial Statements &amp; Forecasts</button>
       <button class="pf-tab"        data-rqtab="valuation"  onclick="rqShowTab('valuation')">Stock vs. Peers</button>
@@ -3900,6 +3921,30 @@ body.view-mobile #mobileBottomBar {
       <button class="pf-tab"        data-rqtab="quant"      onclick="rqShowTab('quant')">Quant Models</button>
       <button class="pf-tab"        data-rqtab="levETF"     onclick="rqShowTab('levETF')">&#9889; Lev ETF Signals</button>
     </div>
+
+    <!-- ── TAB: MARKET BASELINE (top-down starting point, added 2026-07) ── -->
+    <div class="pf-tab-content" id="rqtab-baseline">
+      <div class="card">
+        <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
+          <span>Market Baseline — Sectors, Asset Classes &amp; Themes
+            <span class="help-icon" data-help="baseline" title="Click for plain-English explanation">ⓘ</span>
+          </span>
+          <div style="display:flex;gap:8px;align-items:center;">
+            <span id="baselineTimestamp" style="font-size:11px;color:var(--text-sec);font-weight:400;text-transform:none;letter-spacing:0;"></span>
+            <button class="btn btn-sm" onclick="loadMarketBaseline(true)">🔄 Pull Fresh Data</button>
+          </div>
+        </div>
+        <div class="card-body" style="padding:0;">
+          <div style="padding:10px 16px;font-size:12px;color:var(--text-sec);border-bottom:1px solid var(--border);line-height:1.6;">
+            <strong style="color:var(--navy);">How to use this tab:</strong> research top-down. <strong>1)</strong> Check which sectors, asset classes, and themes align with the current macro regime (⭐ = favored by the regime playbook). <strong>2)</strong> Confirm with live momentum — returns below refresh from Yahoo Finance each time you pull. <strong>3)</strong> Click any baseline ticker to load it into the full research workspace and compare it against its peers. The baseline names are curated liquid leaders — use them as the comparison anchor for anything else you consider in that group.
+          </div>
+          <div id="baselineContent">
+            <div style="padding:40px;text-align:center;color:var(--text-sec);"><span class="spinner"></span><br><br>Loading market baseline…</div>
+          </div>
+        </div>
+        <div class="card-sources"><strong>Sources:</strong> Yahoo Finance (spark batch via Cloudflare Worker <code>/baseline</code>) — 1M/3M/6M/1Y returns, 30-day volatility, 200-day trend &bull; Regime alignment: Fidelity AART / CFA business-cycle playbook &bull; Data refreshes on every "Pull Fresh Data" click.</div>
+      </div>
+    </div><!-- /rqtab-baseline -->
 
     <!-- ── TAB: OVERVIEW ── -->
     <div class="pf-tab-content active" id="rqtab-research">
@@ -3968,7 +4013,7 @@ body.view-mobile #mobileBottomBar {
         <!-- Income Statement -->
         <div class="card" style="margin-bottom:14px;">
           <div class="card-title">Income Statement — Annual (Last 5 Years)
-            <span class="help-icon" title="Revenue, gross profit, operating income, net income, and EPS from SEC EDGAR 10-K filings. Year-over-year growth rates shown. All figures in USD millions.">?</span>
+            <span class="help-icon" data-help="incomeStatement" title="Click for plain-English explanation">ⓘ</span>
           </div>
           <div class="card-body" style="padding:0;">
             <div id="resIncomeStatement" style="overflow-x:auto;"></div>
@@ -3978,7 +4023,7 @@ body.view-mobile #mobileBottomBar {
         <!-- Balance Sheet -->
         <div class="card" style="margin-bottom:14px;">
           <div class="card-title">Balance Sheet — Annual (Last 5 Years)
-            <span class="help-icon" title="Assets, liabilities, equity, cash, debt from SEC 10-K filings. Includes current ratio, debt/equity, and net cash position.">?</span>
+            <span class="help-icon" data-help="balanceSheet" title="Click for plain-English explanation">ⓘ</span>
           </div>
           <div class="card-body" style="padding:0;">
             <div id="resBalanceSheet" style="overflow-x:auto;"></div>
@@ -3988,7 +4033,7 @@ body.view-mobile #mobileBottomBar {
         <!-- Cash Flow -->
         <div class="card" style="margin-bottom:14px;">
           <div class="card-title">Cash Flow Statement — Annual (Last 5 Years)
-            <span class="help-icon" title="Operating cash flow, capital expenditures, free cash flow, share buybacks, dividends paid.">?</span>
+            <span class="help-icon" data-help="cashFlow" title="Click for plain-English explanation">ⓘ</span>
           </div>
           <div class="card-body" style="padding:0;">
             <div id="resCashFlow" style="overflow-x:auto;"></div>
@@ -3998,7 +4043,7 @@ body.view-mobile #mobileBottomBar {
         <!-- Analyst Forecasts -->
         <div class="card" style="margin-bottom:14px;">
           <div class="card-title">Analyst Estimates &amp; Forecasts
-            <span class="help-icon" title="Wall Street consensus price targets (high/mean/median/low), analyst rating distribution (Strong Buy → Strong Sell), and forward EPS/revenue estimates where available.">?</span>
+            <span class="help-icon" data-help="analystEstimates" title="Click for plain-English explanation">ⓘ</span>
           </div>
           <div class="card-body">
             <div id="resAnalystForecasts"></div>
@@ -4008,7 +4053,7 @@ body.view-mobile #mobileBottomBar {
         <!-- Bear / Base / Bull scenarios -->
         <div class="card" style="margin-bottom:14px;" id="resScenarioCard" style="display:none;">
           <div class="card-title">3-Year Scenario Outlook — Bear / Base / Bull
-            <span class="help-icon" title="Bear = 40% of trailing CAGR. Base = trailing CAGR. Bull = 160% of trailing CAGR. These are mechanical projections, not analyst guidance.">?</span>
+            <span class="help-icon" data-help="scenarioOutlook" title="Click for plain-English explanation">ⓘ</span>
           </div>
           <div class="card-body">
             <div id="resScenarioTable"></div>
@@ -4077,7 +4122,7 @@ body.view-mobile #mobileBottomBar {
         <!-- Options IV Analysis -->
         <div class="card" id="ivCard">
           <div class="card-title">Options Implied Volatility &amp; IV Percentile
-            <span class="help-icon" title="Implied Volatility (IV) is the market's expectation of price movement baked into options. IV Percentile shows where current IV ranks vs. past year — high = options expensive (good for sellers), low = cheap (good for buyers).">?</span>
+            <span class="help-icon" data-help="optionsChain" title="Click for plain-English explanation">ⓘ</span>
           </div>
           <div class="card-body">
             <p style="font-size:12px;color:var(--text-sec);margin-bottom:12px;">Live options analysis for <strong id="ivTicker"></strong>.</p>
@@ -4098,7 +4143,7 @@ body.view-mobile #mobileBottomBar {
           <div id="resPeersHeader" style="margin-bottom:14px;"></div>
           <div class="card" style="margin-bottom:14px;">
             <div class="card-title">Peer Comparison
-              <span class="help-icon" title="Default peers are auto-detected from sector and industry. You can override by typing custom tickers. Comparison pulls key financial metrics, valuation ratios, and returns for each peer from SEC EDGAR and Yahoo Finance.">?</span>
+              <span class="help-icon" data-help="peerComparison" title="Click for plain-English explanation">ⓘ</span>
             </div>
             <div class="card-body">
               <div class="form-row" style="margin-bottom:10px;">
@@ -4324,23 +4369,9 @@ body.view-mobile #mobileBottomBar {
       The <strong>Macro Regime Verdict</strong> here (Early / Mid / Late Cycle / Contraction) uses FRED economic data and operates on a 3–12 month economic cycle frequency. The <strong>Portfolio State</strong> on Cross-Asset Analysis (Leveraged / Growth / Neutral / Drawdown) uses market price action (VIX, SPY momentum) and operates on a shorter tactical frequency. A "Mid-Cycle" economy can simultaneously produce a "Positioned for Drawdown" portfolio signal when equity valuations are stretched — markets lead the economy by 6–12 months on average. Use the Macro Regime for strategic sector rotation and the Portfolio State for tactical position sizing.
     </div>
 
-    <!-- Story Breadcrumb -->
-    <div class="story-breadcrumb" style="margin:0 0 0 0;border-radius:0;border-left:none;border-right:none;border-top:none;">
-      <button class="story-step active" onclick="navigateTo('macro')" title="Step 1: Where are we in the cycle?">
-        <span class="step-num">1</span> Macro Regime
-      </button>
-      <button class="story-step" onclick="navigateTo('portfolio')" title="Step 2: What do I own?">
-        <span class="step-num">2</span> My Portfolio
-      </button>
-      <button class="story-step" onclick="navigateTo('sector-macro-alignment')" title="Step 3: Where's the gap?">
-        <span class="step-num">3</span> Sector &amp; Macro Alignment
-      </button>
-      <button class="story-step" onclick="navigateTo('holdings');holdingsShowTab('rebalance')" title="Step 4: What should I do?">
-        <span class="step-num">4</span> Rebalance
-      </button>
-    </div>
-
     <!-- ═══════════ MACRO PAGE TABS ═══════════ -->
+    <!-- (Story breadcrumb strip removed 2026-07: it duplicated main-nav destinations.
+         All cross-page navigation now goes through the top navigation bar only.) -->
     <div class="pf-tabs" style="margin:0 0 0 0;">
       <button class="pf-tab" data-macrotab="quadmap"   onclick="macroShowTab('quadmap')">&#127970; Quad Map</button>
       <button class="pf-tab active" data-macrotab="dashboard"  onclick="macroShowTab('dashboard')">Macro Indicator Dashboard</button>
@@ -4354,7 +4385,7 @@ body.view-mobile #mobileBottomBar {
     <div class="pf-tab-content" id="macrotab-quadmap">
       <div class="quad-map-wrap">
         <div class="quad-map-container card" style="padding:16px;">
-          <div class="card-title">Business Cycle Quad Map <span class="help-icon" title="The Hedgeye/Fidelity 2×2 business cycle grid. X-axis = Growth direction (Industrial Production MoM). Y-axis = Inflation direction (Core PCE YoY trend). The red dot shows where FRED data places the economy today.">?</span></div>
+          <div class="card-title">Business Cycle Quad Map <span class="help-icon" data-help="quadMap" title="Click for plain-English explanation">ⓘ</span></div>
           <div class="card-body" style="padding:0;">
             <div class="quad-map-canvas-wrap" id="quadMapWrap">
               <canvas id="quadMapCanvas"></canvas>
@@ -4410,7 +4441,7 @@ body.view-mobile #mobileBottomBar {
     <!-- ── TAB: Macro Indicator Dashboard ── -->
     <div class="pf-tab-content active" id="macrotab-dashboard">
       <div class="card" id="macroLiveTableCard">
-        <div class="card-title">Macro Indicator Dashboard — Live FRED Data <span class="help-icon" title="Real-time economic indicators from the St. Louis Fed (FRED). 24 indicators across 6 pillars (Growth, Labor, Inflation, Monetary Policy, Fiscal Policy, Global Liquidity) with traffic-light scoring vs. historical thresholds.">?</span></div>
+        <div class="card-title">Macro Indicator Dashboard — Live FRED Data <span class="help-icon" data-help="macroDashboard" title="Click for plain-English explanation">ⓘ</span></div>
         <div class="card-body" style="padding:0;" id="macroLiveTableBody">
           <div style="padding:40px;text-align:center;">
             <span class="spinner"></span><br><br>
@@ -4427,7 +4458,7 @@ body.view-mobile #mobileBottomBar {
       <!-- CFA Business Cycle Guide — populated by loadMacroLiveTable -->
       <div id="macroCycleGuide" style="display:none;"></div>
       <div class="card" id="businessCycleCard">
-        <div class="card-title">Business Cycle Curve <span class="help-icon" title="The 4-phase business cycle from CFA economics curriculum: Early Expansion → Mid Expansion → Late Expansion / Peak → Contraction. Each phase favors different sectors and asset classes; the dot shows the model's current placement.">?</span></div>
+        <div class="card-title">Business Cycle Curve <span class="help-icon" data-help="businessCycle" title="Click for plain-English explanation">ⓘ</span></div>
         <div class="card-body">
           <div style="position:relative;height:420px;"><canvas id="businessCycleChart"></canvas></div>
         </div>
@@ -4440,7 +4471,7 @@ body.view-mobile #mobileBottomBar {
       <div class="card">
         <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
           <span>Economic Cycle Breakdown — Where is the Pressure?
-            <span class="help-icon" title="Shows where in the economy cycle pressure is currently building or receding across Consumer, Business, Real Estate, Supply Chain, and Labor Breadth categories. Each indicator is scored from FRED data into one of 5 cycle phases: Recovery, Expansion, Neutral, Slowdown, or Contraction. Green = healthy. Amber = slowing. Red = contracting.">?</span>
+            <span class="help-icon" data-help="cycleBreakdown" title="Click for plain-English explanation">ⓘ</span>
           </span>
           <button class="btn btn-sm" onclick="regimeLoadBreakdown(true)" style="background:rgba(255,255,255,0.2);color:#fff;border:1px solid rgba(255,255,255,0.3);padding:4px 10px;border-radius:3px;cursor:pointer;font-size:11px;">Refresh</button>
         </div>
@@ -5672,21 +5703,8 @@ body.view-mobile #mobileBottomBar {
       <h1>🎯 Sector &amp; Macro Alignment</h1>
       <p>Compare your portfolio against the regime playbook and identify sector gaps. Combines portfolio drift analysis with regime-aware asset allocation recommendations.</p>
     </div>
-    <!-- Story Breadcrumb -->
-    <div class="story-breadcrumb" style="margin:0 0 0 0;border-radius:0;border-left:none;border-right:none;border-top:none;">
-      <button class="story-step" onclick="navigateTo('macro')" title="Step 1: Where are we in the cycle?">
-        <span class="step-num">1</span> Macro Regime
-      </button>
-      <button class="story-step" onclick="navigateTo('portfolio')" title="Step 2: What do I own?">
-        <span class="step-num">2</span> My Portfolio
-      </button>
-      <button class="story-step active" onclick="navigateTo('sector-macro-alignment')" title="Step 3: Where's the gap?">
-        <span class="step-num">3</span> Sector &amp; Macro Alignment
-      </button>
-      <button class="story-step" onclick="navigateTo('holdings');holdingsShowTab('rebalance')" title="Step 4: What should I do?">
-        <span class="step-num">4</span> Rebalance
-      </button>
-    </div>
+    <!-- (Story breadcrumb strip removed 2026-07: it duplicated main-nav destinations.
+         All cross-page navigation now goes through the top navigation bar only.) -->
 
     <div id="sectorMacroAuthGate" class="auth-gate" style="display:none;">
       <div style="text-align:center;padding:40px;"><span style="font-size:36px;">🎯</span><br><br>
@@ -7670,6 +7688,7 @@ function _toggleTabs(scope, dataAttr, name, contentIdPrefix) {
 
 function holdingsShowTab(name) {
   _toggleTabs('#page-holdings', 'data-htab', name, 'htab-');
+  if (name === 'rebalance' && typeof loadRebalanceContext === 'function') loadRebalanceContext(false);
   var h = window._holdings || [];
   if (name === 'analysis') {
     if (!_hldTabInit.analysis) { _hldTabInit.analysis = true; if (h.length) renderHoldingsAnalysis(h); }
@@ -10979,7 +10998,8 @@ function loadMacroLiveTable(force) {
             h += '<td rowspan="'+pillar.indicators.length+'" style="padding:12px 14px;font-weight:700;color:'+pillarColor+';vertical-align:top;border-right:2px solid var(--border);line-height:1.5;">';
             h += pillar.name + '<br><span style="font-size:16px;font-weight:800;">' + (pillarTotal >= 0 ? '+' : '') + pillarTotal + '</span></td>';
           }
-          h += '<td style="padding:8px 14px;font-weight:600;">' + ind.indicator + '</td>';
+          var explAttr = ind.explain ? ind.explain.replace(/"/g, '&quot;') : '';
+          h += '<td style="padding:8px 14px;font-weight:600;">' + ind.indicator + (explAttr ? ' <span class="help-icon" title="'+explAttr+'" data-heading="'+String(ind.indicator).replace(/"/g,'&quot;')+'" style="font-size:11px;">\u24d8</span>' : '') + '</td>';
           h += '<td style="padding:8px 14px;font-weight:700;color:'+sc+';">' + (ind.value || '\u2014') + '</td>';
           h += '<td style="padding:8px 14px;color:'+C.textSec+';font-size:11px;">' + (ind.date || '') + '</td>';
           h += '<td style="padding:8px 14px;font-size:11px;color:'+C.textSec+';">' + (ind.threshold || '') + '</td>';
@@ -15983,8 +16003,11 @@ function renderCycleBreakdown(data) {
       });
       phaseBarHtml += '</div>';
 
+      var indExpl = ind.explain ? String(ind.explain).replace(/"/g, '&quot;') : '';
       tablesHtml += '<tr style="' + rowBg + 'border-bottom:1px solid var(--border);">';
-      tablesHtml += '<td style="padding:7px 14px;font-weight:600;">' + ind.name + '</td>';
+      tablesHtml += '<td style="padding:7px 14px;font-weight:600;">' + ind.name
+        + (indExpl ? ' <span class="help-icon" title="' + indExpl + '" data-heading="' + String(ind.name).replace(/"/g,'&quot;') + '" style="font-size:11px;">ⓘ</span>' : '')
+        + '</td>';
       tablesHtml += '<td style="padding:7px 14px;text-align:right;font-weight:700;font-family:monospace;">' + valFmt + '</td>';
       tablesHtml += '<td style="padding:7px 14px;text-align:center;font-size:13px;font-weight:700;color:' + dirColor + ';">' + ind.direction + '</td>';
       tablesHtml += '<td style="padding:7px 14px;text-align:right;font-weight:700;color:' + pctColor + ';font-family:monospace;">' + pctFmt + '</td>';
@@ -16566,10 +16589,14 @@ async function resPeerRun() {
   resultEl.innerHTML = '<div style="text-align:center;padding:24px;"><span class="spinner"></span> Loading peer data for '+([anchor].concat(peers)).join(', ')+'...</div>';
 
   var all = [anchor].concat(peers);
+  var WORKER = 'https://perry-finance-proxy.zachperrybusiness.workers.dev';
   var peerData = {};
+  // Batch FMP pack runs in parallel with the per-ticker SEC pulls — used to
+  // backfill any metric the SEC/Yahoo path fails to produce, so every peer
+  // row populates even when one source is rate-limited.
+  var peerFinPromise = fetch(WORKER+'/peer-financials?symbols='+all.join(',')).then(function(r){return r.json();}).catch(function(){return null;});
   await Promise.all(all.map(async function(tk) {
     try {
-      var WORKER = 'https://perry-finance-proxy.zachperrybusiness.workers.dev';
       var [fund, quote, chart] = await Promise.all([
         fetch(WORKER+'/fundamentals?symbol='+tk).then(function(r){return r.json();}),
         fetch(WORKER+'/quote?symbol='+tk).then(function(r){return r.json();}),
@@ -16578,17 +16605,26 @@ async function resPeerRun() {
       peerData[tk] = { fund, quote, chart };
     } catch(e) { peerData[tk] = { error: e.message }; }
   }));
+  var peerFin = await peerFinPromise;
+  var peerFinMap = {};
+  if (peerFin && peerFin.peers) peerFin.peers.forEach(function(p){ peerFinMap[p.symbol] = p; });
 
   function getMetrics(tk) {
     var pd = peerData[tk];
-    if (!pd||pd.error) return null;
-    var d = pd.fund; var q = pd.quote; var ch = pd.chart;
+    var fb = peerFinMap[tk] || {};       // FMP batch fallback pack
+    var fbR = fb.ratios || {};
+    var fbB = fb.balance || {};
+    if ((!pd || pd.error) && !fb.symbol) return null;
+    var d = (pd && pd.fund) || {}; var q = (pd && pd.quote) || {}; var ch = (pd && pd.chart) || {};
     var inc = d.incomeStatement||{}, bs = d.balanceSheet||{}, cf = d.cashFlowStatement||{};
     function L(arr){return arr&&arr.length?arr[arr.length-1].value:null;}
-    var px  = q.current || (d.price&&d.price.current);
+    function P(arr){return arr&&arr.length>1?arr[arr.length-2].value:null;}
+    var px  = q.current || (d.price&&d.price.current) || fb.price || null;
     var rev = L(inc.revenue);
+    var revPrev = P(inc.revenue);
     var ni  = L(inc.netIncome);
     var eps = L(inc.eps);
+    var gp  = L(inc.grossProfit);
     var ocf = L(cf.operatingCashFlow);
     var capex = cf.capitalExpenditures&&cf.capitalExpenditures.length?Math.abs(cf.capitalExpenditures[cf.capitalExpenditures.length-1].value):0;
     var fcf = ocf!=null?ocf-capex:null;
@@ -16596,7 +16632,9 @@ async function resPeerRun() {
     var ltd = L(bs.longTermDebt)||0;
     var cash = (L(bs.cash)||0)+(L(bs.shortTermInvestments)||0);
     var shares = L(bs.sharesOutstanding);
-    var mktCap = (d.profile&&d.profile.marketCap)||(px&&shares?px*shares:null);
+    var assets = L(bs.totalAssets);
+    var liabs  = L(bs.totalLiabilities);
+    var mktCap = (d.profile&&d.profile.marketCap)||fb.marketCap||(px&&shares?px*shares:null);
     var ev = mktCap!=null?mktCap+ltd-cash:null;
     // 1Y and 3M returns from chart
     var pts = (ch.points||[]).filter(function(p){return p.close!=null;});
@@ -16607,9 +16645,25 @@ async function resPeerRun() {
     var pb = eq&&eq>0&&mktCap?mktCap/eq:null;
     var roe= ni&&eq&&eq>0?ni/eq*100:null;
     var npm= rev&&ni?ni/rev*100:null;
+    var gm = rev&&gp!=null?gp/rev*100:null;
+    var revG = (rev!=null&&revPrev)?((rev-revPrev)/Math.abs(revPrev))*100:null;
+    var de = eq&&eq>0?(ltd/eq):null;
     var pfcf=fcf&&fcf>0&&mktCap?mktCap/fcf:null;
     var profile = d.profile||{};
-    return { ticker:tk, name:profile.name||tk, sector:profile.sector||'', px, mktCap, ev, rev, ni, eps, fcf, pe, ps, pb, roe, npm, pfcf, ret1y, ret3m, ltd, cash };
+    // ── FMP fallback backfill: any metric the SEC/Yahoo path missed ──
+    if (pe==null && fbR.pe!=null) pe = fbR.pe;
+    if (ps==null && fbR.ps!=null) ps = fbR.ps;
+    if (pb==null && fbR.pb!=null) pb = fbR.pb;
+    if (roe==null && fbR.roe!=null) roe = fbR.roe*100;
+    if (npm==null && fbR.netMargin!=null) npm = fbR.netMargin*100;
+    if (gm==null && fbR.grossMargin!=null) gm = fbR.grossMargin*100;
+    if (de==null && fbR.debtToEquity!=null) de = fbR.debtToEquity;
+    if (revG==null && fb.revenueGrowthYoY!=null) revG = fb.revenueGrowthYoY;
+    if (assets==null && fbB.totalAssets!=null) assets = fbB.totalAssets;
+    if (liabs==null && fbB.totalLiabilities!=null) liabs = fbB.totalLiabilities;
+    if (rev==null && fb.income && fb.income.length) rev = fb.income[fb.income.length-1].revenue;
+    if (ni==null && fb.income && fb.income.length) ni = fb.income[fb.income.length-1].netIncome;
+    return { ticker:tk, name:profile.name||fb.name||tk, sector:profile.sector||fb.sector||'', px, mktCap, ev, rev, ni, eps, fcf, pe, ps, pb, roe, npm, gm, revG, de, assets, liabs, pfcf, ret1y, ret3m, ltd, cash };
   }
 
   var metrics = all.map(getMetrics);
@@ -16620,15 +16674,21 @@ async function resPeerRun() {
   // Fetch returns for sparkline comparison — just use ret1y/ret3m already loaded
 
   var cols = [
-    { label:'Company',      key:'name',   fmt:function(v,m){return '<span style="font-weight:700;">'+m.ticker+'</span><br><span style="font-size:10px;color:var(--text-sec);">'+v.slice(0,22)+'</span>';}, raw:false },
+    { label:'Company',      key:'name',   fmt:function(v,m){return '<span style="font-weight:700;">'+m.ticker+'</span><br><span style="font-size:10px;color:var(--text-sec);">'+String(v||'').slice(0,22)+'</span>';}, raw:false },
     { label:'Price',        key:'px',     fmt:function(v){return v!=null?'$'+v.toFixed(2):'—';}, color:false },
     { label:'Mkt Cap',      key:'mktCap', fmt:resN, color:false },
+    { label:'Revenue',      key:'rev',    fmt:resN, color:false },
+    { label:'Rev Growth',   key:'revG',   fmt:function(v){return v!=null?(v>=0?'+':'')+v.toFixed(1)+'%':'—';}, higher:true },
+    { label:'Assets',       key:'assets', fmt:resN, color:false },
+    { label:'Liabilities',  key:'liabs',  fmt:resN, color:false },
+    { label:'D/E',          key:'de',     fmt:resX, higher:false },
     { label:'P/E',          key:'pe',     fmt:resX, higher:false },
     { label:'P/S',          key:'ps',     fmt:resX, higher:false },
     { label:'P/Book',       key:'pb',     fmt:resX, higher:false },
     { label:'P/FCF',        key:'pfcf',   fmt:resX, higher:false },
-    { label:'ROE',          key:'roe',    fmt:function(v){return v!=null?v.toFixed(1)+'%':'—';}, higher:true },
+    { label:'Gross Margin', key:'gm',     fmt:function(v){return v!=null?v.toFixed(1)+'%':'—';}, higher:true },
     { label:'Net Margin',   key:'npm',    fmt:function(v){return v!=null?v.toFixed(1)+'%':'—';}, higher:true },
+    { label:'ROE',          key:'roe',    fmt:function(v){return v!=null?v.toFixed(1)+'%':'—';}, higher:true },
     { label:'1Y Return',    key:'ret1y',  fmt:function(v){return v!=null?(v>=0?'+':'')+v.toFixed(1)+'%':'—';}, higher:true },
     { label:'3M Return',    key:'ret3m',  fmt:function(v){return v!=null?(v>=0?'+':'')+v.toFixed(1)+'%':'—';}, higher:true },
   ];
@@ -16673,7 +16733,7 @@ async function resPeerRun() {
     html += '</tr>';
   });
   html += '</tbody></table></div>';
-  html += '<div style="font-size:10.5px;color:var(--text-sec);margin-top:8px;padding:0 4px;">Green = best in group · Red = worst. Anchor ticker highlighted in blue. Sources: SEC EDGAR, Yahoo Finance, FMP via Cloudflare Worker.</div>';
+  html += '<div style="font-size:10.5px;color:var(--text-sec);margin-top:8px;padding:0 4px;">Green = best in group · Red = worst. Anchor ticker highlighted in blue. Primary source: SEC EDGAR audited 10-K data + Yahoo Finance prices; any gap is automatically backfilled from the FMP batch endpoint (<code>/peer-financials</code>) so every peer row populates. Valuation multiples use last-annual fundamentals vs. current price.</div>';
   resultEl.innerHTML = html;
 
   // ── Visual comparison charts ──
@@ -19033,10 +19093,119 @@ async function pfrComputeRegimeDrifts() {
 // ═══════════════════════════════════════════════════════════════════
 // ════════  PORTFOLIO OPTIMIZATION ENGINE  ══════════════════════════
 // ═══════════════════════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════════════════════
+// REBALANCE CONTEXT — answers "what regime are we in, what risk profile
+// do I have, what should I be buying, and what am I comparing against?"
+// before any rebalance trade is proposed. Fresh data on every refresh.
+// ═══════════════════════════════════════════════════════════════════
+var _rebCtxCache = null;
+async function loadRebalanceContext(force) {
+  var el = document.getElementById('rebalanceContextPanel');
+  if (!el) return;
+  if (_rebCtxCache && !force) { renderRebalanceContext(_rebCtxCache); return; }
+  el.innerHTML = '<div style="text-align:center;padding:14px;color:var(--text-sec);"><span class="spinner"></span> Pulling fresh regime research…</div>';
+  try {
+    var WORKER = window.WORKER_URL || 'https://perry-finance-proxy.zachperrybusiness.workers.dev';
+    // Regime: prefer the committed macro phase (stable), fall back to tactical state
+    var regime = null;
+    try { regime = sessionStorage.getItem('perry_macro_phase_committed'); } catch(e) {}
+    if (!regime) regime = window._briefingState || 'growth';
+    var profileKey = window._riskProfile || 'moderate';
+    var r = await fetch(WORKER + '/optimize-research?regime=' + encodeURIComponent(regime) + '&profile=' + encodeURIComponent(profileKey) + (force ? '&fresh=1' : ''));
+    var d = await r.json();
+    if (d.error) throw new Error(d.error);
+    _rebCtxCache = d;
+    renderRebalanceContext(d);
+  } catch(e) {
+    el.innerHTML = '<div style="color:var(--danger);padding:10px;">Could not load research: ' + e.message + ' <button class="btn btn-sm" onclick="loadRebalanceContext(true)">Retry</button></div>';
+  }
+}
+
+function renderRebalanceContext(d) {
+  var el = document.getElementById('rebalanceContextPanel');
+  if (!el) return;
+  var cons = d.constraints || {};
+  var profileSet = !!window._riskProfile;
+  var favored = (d.sectorMomentum || []).filter(function(m){ return m.favored; });
+  var avoided = (d.sectorMomentum || []).filter(function(m){ return m.avoided; });
+  var fmtM = function(m) {
+    var mc = (m.momentumScore != null && m.momentumScore >= 0) ? C.success : C.danger;
+    return '<div style="display:flex;justify-content:space-between;padding:2px 0;border-bottom:1px dashed var(--border);">'
+      + '<span><strong>'+m.etf+'</strong>'+(m.above200dma===false?' <span title="Below 200-day average — no live trend confirmation" style="color:#8B6914;">⚠</span>':'')+'</span>'
+      + '<span style="color:'+mc+';font-weight:600;">'+(m.momentumScore!=null?(m.momentumScore>=0?'+':'')+m.momentumScore.toFixed(1)+'%':'—')+'</span></div>';
+  };
+  var candChips = '';
+  (d.candidates || []).slice(0, 5).forEach(function(grp) {
+    (grp.tickers || []).slice(0, 3).forEach(function(t) {
+      if (t.price == null) return;
+      var cc = (t.chg3m != null && t.chg3m >= 0) ? C.success : C.danger;
+      candChips += '<span onclick="navigateTo(\'research\');var ri=document.getElementById(\'researchTicker\');if(ri){ri.value=\''+t.ticker+'\';runResearch();}" style="display:inline-block;cursor:pointer;background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:3px 10px;margin:2px;font-size:11px;" title="Open full research for '+t.ticker+'"><strong style="color:var(--navy);">'+t.ticker+'</strong> $'+(t.price||0).toLocaleString(undefined,{maximumFractionDigits:2})+(t.chg3m!=null?' <span style="color:'+cc+';font-weight:600;">'+(t.chg3m>=0?'+':'')+t.chg3m.toFixed(1)+'% 3M</span>':'')+'</span>';
+    });
+  });
+  el.innerHTML =
+    '<div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:10px;">'
+    + '<div style="flex:1;min-width:180px;background:var(--panel);border:1px solid var(--border);border-radius:6px;padding:10px 14px;"><div style="font-size:10px;text-transform:uppercase;letter-spacing:.5px;color:var(--text-sec);font-weight:700;">Current Regime</div><div style="font-size:15px;font-weight:800;color:var(--navy);">'+d.regime+'</div><div style="font-size:11px;color:var(--text-sec);margin-top:2px;">'+(d.regimeNote||'')+'</div></div>'
+    + '<div style="flex:1;min-width:180px;background:var(--panel);border:1px solid var(--border);border-radius:6px;padding:10px 14px;"><div style="font-size:10px;text-transform:uppercase;letter-spacing:.5px;color:var(--text-sec);font-weight:700;">Your Risk Profile</div><div style="font-size:15px;font-weight:800;color:var(--navy);">'+(cons.label||d.profile)+(profileSet?'':' <span style="font-size:10px;color:#8B6914;">(default — not set)</span>')+'</div><div style="font-size:11px;color:var(--text-sec);margin-top:2px;">'+(cons.description||'')+'</div>'+(profileSet?'':'<button class="btn-outline btn-sm" style="margin-top:6px;" onclick="showRiskQuestionnaire()">Set your profile →</button>')+'</div>'
+    + '</div>'
+    + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:10px;">'
+    +   '<div><div style="font-size:11px;font-weight:700;color:var(--success);text-transform:uppercase;letter-spacing:.4px;margin-bottom:4px;">Favor in this regime (live momentum)</div>'+favored.map(fmtM).join('')+'</div>'
+    +   '<div><div style="font-size:11px;font-weight:700;color:var(--danger);text-transform:uppercase;letter-spacing:.4px;margin-bottom:4px;">Reduce / avoid in this regime</div>'+avoided.map(fmtM).join('')+'</div>'
+    + '</div>'
+    + (candChips ? '<div style="font-size:11px;font-weight:700;color:var(--navy);text-transform:uppercase;letter-spacing:.4px;margin-bottom:4px;">What to buy — candidates with fresh quotes (click for research)</div><div style="margin-bottom:8px;">'+candChips+'</div>' : '')
+    + '<div style="font-size:11px;color:var(--text-sec);border-top:1px solid var(--border);padding-top:6px;">'
+    +   '<strong>What you\'re comparing against:</strong> the drift table below measures your portfolio vs. the <em>'+(cons.label||d.profile)+'</em> target model; the playbook above tells you which direction to lean <em>within</em> the tolerance band. Constraints: max '+Math.round((cons.maxSinglePosition||1)*100)+'% per position · max '+Math.round((cons.maxLeveragedETF||0)*100)+'% leveraged ETFs'+(cons.minDefensive!=null?' · ≥'+Math.round(cons.minDefensive*100)+'% defensive':'')+'.'
+    +   ' Data pulled ' + new Date(d.timestamp).toLocaleTimeString() + '.'
+    + '</div>';
+}
+
+// ── Leveraged ETF detection (used to enforce risk-profile leverage caps) ──
+var LEVERAGED_TICKERS = {'TQQQ':1,'SQQQ':1,'UPRO':1,'SPXU':1,'SPXL':1,'SPXS':1,'SOXL':1,'SOXS':1,'SSO':1,'SDS':1,'QLD':1,'QID':1,'TMF':1,'TMV':1,'UDOW':1,'SDOW':1,'TNA':1,'TZA':1,'FAS':1,'FAZ':1,'LABU':1,'LABD':1,'NUGT':1,'DUST':1,'ERX':1,'ERY':1,'UCO':1,'SCO':1,'BOIL':1,'KOLD':1,'TECL':1,'TECS':1,'FNGU':1,'FNGD':1,'WEBL':1,'WEBS':1,'BULZ':1,'BERZ':1,'ROM':1,'REW':1,'MVV':1,'UWM':1,'DDM':1,'DXD':1,'URTY':1,'SRTY':1,'YINN':1,'YANG':1,'EDC':1,'EDZ':1,'DRN':1,'DRV':1,'CURE':1,'DFEN':1,'DPST':1,'MSTU':1,'MSTZ':1,'NVDL':1,'NVDU':1,'TSLL':1,'TSLQ':1,'CONL':1,'BITX':1,'ETHU':1};
+function poeIsLeveraged(t) { return !!LEVERAGED_TICKERS[String(t||'').toUpperCase()]; }
+
+// Enforce per-position + leveraged-sleeve caps on a weight vector (long-only simplex).
+// Iterative clip-and-redistribute: caps are HARD (excess redistributed pro-rata to uncapped names).
+function poeApplyConstraints(w, tickers, cons) {
+  var maxPos = cons && cons.maxSinglePosition != null ? cons.maxSinglePosition : 1;
+  var maxLev = cons && cons.maxLeveragedETF != null ? cons.maxLeveragedETF : 1;
+  var n = w.length;
+  w = w.slice();
+  for (var pass = 0; pass < 12; pass++) {
+    var changed = false;
+    // 1) Per-position cap
+    var excess = 0; var free = [];
+    for (var i = 0; i < n; i++) {
+      if (w[i] > maxPos + 1e-9) { excess += w[i] - maxPos; w[i] = maxPos; changed = true; }
+      else if (w[i] < maxPos - 1e-9) free.push(i);
+    }
+    if (excess > 0 && free.length) {
+      var freeSum = free.reduce(function(s,i){return s + w[i];}, 0) || 1;
+      free.forEach(function(i){ w[i] += excess * (w[i] / freeSum); });
+    }
+    // 2) Leveraged sleeve cap
+    var levIdx = []; var levSum = 0;
+    for (var i = 0; i < n; i++) { if (poeIsLeveraged(tickers[i])) { levIdx.push(i); levSum += w[i]; } }
+    if (levSum > maxLev + 1e-9) {
+      var scale = maxLev / levSum; var freed = 0;
+      levIdx.forEach(function(i){ freed += w[i] * (1 - scale); w[i] *= scale; });
+      var nonLev = []; for (var i = 0; i < n; i++) if (!poeIsLeveraged(tickers[i])) nonLev.push(i);
+      if (nonLev.length) {
+        var nlSum = nonLev.reduce(function(s,i){return s + w[i];}, 0) || 1;
+        nonLev.forEach(function(i){ w[i] += freed * (w[i] / nlSum); });
+      }
+      changed = true;
+    }
+    // 3) Renormalize
+    var sum = w.reduce(function(a,b){return a+b;}, 0);
+    if (Math.abs(sum - 1) > 1e-9) { for (var i = 0; i < n; i++) w[i] /= sum; }
+    if (!changed) break;
+  }
+  return w;
+}
+
 async function poeRun() {
   var el = document.getElementById('poeResults');
   var chartWrap = document.getElementById('poeChartWrap');
-  el.innerHTML = '<div style="padding:14px;text-align:center;"><span class="spinner"></span> Loading holdings price history, computing covariance matrix...</div>';
+  el.innerHTML = '<div style="padding:14px;text-align:center;"><span class="spinner"></span> Loading holdings history, pulling fresh regime research, computing constrained covariance optimization...</div>';
   chartWrap.style.display = 'none';
 
   if (!window._holdings || !window._holdings.length) {
@@ -19048,6 +19217,16 @@ async function poeRun() {
     var targetState = document.getElementById('poeTarget').value;
     var btYears = parseInt(document.getElementById('poeBacktest').value);
     if (targetState === 'current') targetState = window._briefingState || 'growth';
+
+    // ── Risk profile: the optimizer is conditioned on BOTH regime and profile ──
+    var profileKey = window._riskProfile || 'moderate';
+    var profileMeta = (typeof RISK_PROFILES !== 'undefined' && RISK_PROFILES[profileKey]) ? RISK_PROFILES[profileKey] : null;
+
+    // ── Fresh research pack: pulled from the worker on EVERY run (fresh=1
+    //    bypasses the 15-min edge cache). Contains live sector momentum,
+    //    the regime playbook, profile constraints, and candidate buys. ──
+    var researchPromise = fetch(WORKER + '/optimize-research?regime=' + encodeURIComponent(targetState) + '&profile=' + encodeURIComponent(profileKey) + '&fresh=1')
+      .then(function(r){ return r.json(); }).catch(function(){ return null; });
 
     // Filter to securities, aggregate by ticker
     var holdings = window._holdings.filter(function(h){
@@ -19143,14 +19322,27 @@ async function poeRun() {
       var sum = w.reduce(function(a,b){return a+b;},0);
       return w.map(function(v){return v/sum;});
     }
+    // ── Await the fresh research pack (constraints + playbook + momentum) ──
+    var research = await researchPromise;
+    var cons = (research && research.constraints) ? research.constraints : {
+      // Offline fallback mirrors the worker's PROFILE_CONSTRAINTS
+      conservative: { label:'Conservative', maxSinglePosition:0.10, maxLeveragedETF:0.00 },
+      moderate:     { label:'Moderate', maxSinglePosition:0.15, maxLeveragedETF:0.05 },
+      aggressive:   { label:'Aggressive Growth', maxSinglePosition:0.25, maxLeveragedETF:0.15 },
+      speculative:  { label:'Speculative', maxSinglePosition:0.35, maxLeveragedETF:0.50 }
+    }[profileKey] || { label:'Moderate', maxSinglePosition:0.15, maxLeveragedETF:0.05 };
+
     var bestW = null; var bestS = -Infinity;
-    // 2000 random portfolios
+    // 2000 random portfolios — every candidate is projected onto the
+    // risk-profile constraint set BEFORE scoring, so the optimum is
+    // feasible by construction (not clipped after the fact).
     for (var trial = 0; trial < 2000; trial++) {
-      var w = dirichlet(nT, 1);
+      var w = poeApplyConstraints(dirichlet(nT, 1), validTickers, cons);
       var st = portfolioStats(w);
       if (st.sharpe > bestS) { bestS = st.sharpe; bestW = w; }
     }
-    // Local refinement: try ±2% bumps on each pair, keep improvements
+    if (!bestW) { el.innerHTML = '<div style="color:var(--danger);padding:10px;">No feasible allocation under the '+(cons.label||profileKey)+' constraints.</div>'; return; }
+    // Local refinement: try ±2% bumps on each pair, keep improvements (re-projected each step)
     for (var iter = 0; iter < 50; iter++) {
       var improved = false;
       for (var i=0;i<nT;i++) {
@@ -19160,8 +19352,9 @@ async function poeRun() {
           if (bestW[j] >= bump) {
             var w2 = bestW.slice();
             w2[i] += bump; w2[j] -= bump;
+            w2 = poeApplyConstraints(w2, validTickers, cons);
             var s2 = portfolioStats(w2);
-            if (s2.sharpe > bestS) { bestS = s2.sharpe; bestW = w2; improved = true; }
+            if (s2.sharpe > bestS + 1e-6) { bestS = s2.sharpe; bestW = w2; improved = true; }
           }
         }
       }
@@ -19205,9 +19398,54 @@ async function poeRun() {
         + '</tr>';
     }).join('');
 
+    // ── Research panel: what to buy, which sectors, and why — fresh data ──
+    var researchHtml = '';
+    if (research && research.sectorMomentum) {
+      var favored = research.sectorMomentum.filter(function(m){ return m.favored; });
+      var topMomentum = research.sectorMomentum.slice(0, 5);
+      var candChips = '';
+      (research.candidates || []).slice(0, 6).forEach(function(grp) {
+        (grp.tickers || []).slice(0, 4).forEach(function(t) {
+          if (t.price == null) return;
+          var chg = t.chg3m != null ? (t.chg3m >= 0 ? '+' : '') + t.chg3m.toFixed(1) + '% 3M' : '';
+          var cc = t.chg3m != null && t.chg3m >= 0 ? C.success : C.danger;
+          candChips += '<span onclick="navigateTo(\'research\');var ri=document.getElementById(\'researchTicker\');if(ri){ri.value=\''+t.ticker+'\';runResearch();}" '
+            + 'style="display:inline-block;cursor:pointer;background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:3px 10px;margin:2px;font-size:11px;" '
+            + 'title="Click to open full research for '+t.ticker+'">'
+            + '<strong style="color:var(--navy);">'+t.ticker+'</strong> $'+(t.price||0).toLocaleString(undefined,{maximumFractionDigits:2})
+            + (chg ? ' <span style="color:'+cc+';font-weight:600;">'+chg+'</span>' : '') + '</span>';
+        });
+      });
+      researchHtml = '<div style="border:1px solid var(--border);border-radius:6px;margin-bottom:16px;overflow:hidden;">'
+        + '<div style="background:var(--navy);color:#fff;padding:8px 14px;font-size:12px;font-weight:700;display:flex;justify-content:space-between;flex-wrap:wrap;gap:6px;">'
+        +   '<span>📡 Live Regime Research — pulled fresh at '+new Date(research.timestamp).toLocaleTimeString()+' <span class="help-icon" data-help="rebalanceContext" style="font-size:11px;">ⓘ</span></span>'
+        +   '<span style="font-weight:500;opacity:.85;">Regime: '+research.regime+' &middot; Profile: '+(cons.label||profileKey)+'</span>'
+        + '</div>'
+        + '<div style="padding:12px 14px;font-size:12px;">'
+        +   '<div style="margin-bottom:8px;color:var(--text-sec);line-height:1.5;"><strong style="color:var(--navy);">Playbook:</strong> '+(research.regimeNote||'')+'</div>'
+        +   '<div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:10px;">'
+        +     '<div><div style="font-size:11px;font-weight:700;color:var(--success);text-transform:uppercase;letter-spacing:.4px;margin-bottom:4px;">Sectors to Favor (playbook ∩ live momentum)</div>'
+        +       favored.map(function(m){ var mc = (m.momentumScore!=null && m.momentumScore>=0)?C.success:C.danger; return '<div style="display:flex;justify-content:space-between;padding:2px 0;border-bottom:1px dashed var(--border);"><span><strong>'+m.etf+'</strong>'+(m.above200dma===false?' <span title="Below its 200-day average — playbook pick lacks live trend confirmation" style="color:#8B6914;">⚠</span>':'')+'</span><span style="color:'+mc+';font-weight:600;">'+(m.momentumScore!=null?(m.momentumScore>=0?'+':'')+m.momentumScore.toFixed(1)+'%':'—')+'</span></div>'; }).join('')
+        +     '</div>'
+        +     '<div><div style="font-size:11px;font-weight:700;color:var(--navy);text-transform:uppercase;letter-spacing:.4px;margin-bottom:4px;">Top 5 by Live Momentum (all groups)</div>'
+        +       topMomentum.map(function(m){ var mc = (m.momentumScore!=null && m.momentumScore>=0)?C.success:C.danger; return '<div style="display:flex;justify-content:space-between;padding:2px 0;border-bottom:1px dashed var(--border);"><span><strong>'+m.etf+'</strong>'+(m.avoided?' <span style="font-size:10px;color:var(--danger);">(playbook: avoid)</span>':'')+'</span><span style="color:'+mc+';font-weight:600;">'+(m.momentumScore!=null?(m.momentumScore>=0?'+':'')+m.momentumScore.toFixed(1)+'%':'—')+'</span></div>'; }).join('')
+        +     '</div>'
+        +   '</div>'
+        +   (candChips ? '<div style="font-size:11px;font-weight:700;color:var(--navy);text-transform:uppercase;letter-spacing:.4px;margin-bottom:4px;">Candidate Buys (fresh quotes — click any ticker for full research)</div><div>'+candChips+'</div>' : '')
+        +   (research.avoidGroups && research.avoidGroups.length ? '<div style="margin-top:8px;font-size:11px;color:var(--text-sec);"><strong style="color:var(--danger);">Reduce/avoid in this regime:</strong> '+research.avoidGroups.join(', ')+'</div>' : '')
+        +   '<div style="margin-top:8px;font-size:11px;color:var(--text-sec);border-top:1px solid var(--border);padding-top:6px;"><strong>Your '+(cons.label||profileKey)+' constraints (hard caps applied to the optimizer):</strong> max '+Math.round((cons.maxSinglePosition||1)*100)+'% per position &middot; max '+Math.round((cons.maxLeveragedETF||0)*100)+'% total in leveraged ETFs'+(cons.minDefensive!=null?' &middot; target ≥'+Math.round(cons.minDefensive*100)+'% defensive sleeve':'')+(cons.guidelineBasis?'<br><em>'+cons.guidelineBasis+'</em>':'')+'</div>'
+        + '</div></div>';
+    } else {
+      researchHtml = '<div style="background:rgba(139,105,20,0.08);border:1px solid #8B6914;border-radius:4px;padding:8px 12px;margin-bottom:12px;font-size:12px;color:#5C4500;">Live research unavailable (worker /optimize-research unreachable) — optimization ran with local '+(cons.label||profileKey)+' constraints only.</div>';
+    }
+
     el.innerHTML = '<div style="text-align:left;">'
+      + researchHtml
       + '<div style="background:var(--panel);border:1px solid var(--border);border-radius:4px;padding:10px 14px;margin-bottom:14px;font-size:12px;">'
-      +   '<strong>Optimizing for:</strong> '+stateNames[targetState]+' regime &middot; <strong>Backtest window:</strong> '+btYears+' year(s) &middot; <strong>Tickers:</strong> '+validTickers.length
+      +   '<strong>Optimizing for:</strong> '+stateNames[targetState]+' regime &middot; <strong>Risk profile:</strong> '+(cons.label||profileKey)+' &middot; <strong>Backtest window:</strong> '+btYears+' year(s) &middot; <strong>Tickers:</strong> '+validTickers.length
+      +   ((cons.maxSinglePosition && validTickers.length * cons.maxSinglePosition < 0.999)
+          ? '<div style="margin-top:6px;color:#8B6914;font-weight:600;">⚠ Note: your '+(cons.label||profileKey)+' profile caps positions at '+Math.round(cons.maxSinglePosition*100)+'%, but with only '+validTickers.length+' holdings that cap cannot sum to 100%. Weights were relaxed proportionally — consider adding more positions (see candidate buys above) to make the cap enforceable.'
+          : '')
       + '</div>'
       // Actual vs Optimal stats
       + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:16px;">'
@@ -20830,8 +21068,101 @@ function pfHoldingsToggle() {
 }
 
 // ────────── Research / Quant Models tab merger (Fix #4) ──────────
+// ═══════════════════════════════════════════════════════════════════
+// MARKET BASELINE TAB — top-down sector / asset-class / theme scan
+// with curated baseline tickers. Fresh Yahoo data per pull.
+// ═══════════════════════════════════════════════════════════════════
+var _baselineData = null;
+async function loadMarketBaseline(force) {
+  var el = document.getElementById('baselineContent');
+  if (!el) return;
+  if (_baselineData && !force) { renderMarketBaseline(_baselineData); return; }
+  el.innerHTML = '<div style="padding:40px;text-align:center;color:var(--text-sec);"><span class="spinner"></span><br><br>Pulling fresh quotes for ~70 baseline tickers…</div>';
+  try {
+    var WORKER = window.WORKER_URL || 'https://perry-finance-proxy.zachperrybusiness.workers.dev';
+    var r = await fetch(WORKER + '/baseline' + (force ? '?fresh=1' : ''));
+    var d = await r.json();
+    if (d.error) throw new Error(d.error);
+    _baselineData = d;
+    renderMarketBaseline(d);
+  } catch(e) {
+    el.innerHTML = '<div style="padding:24px;text-align:center;color:var(--danger);">Failed to load baseline: '+e.message+' <button class="btn btn-sm" onclick="loadMarketBaseline(true)">Retry</button></div>';
+  }
+}
+
+function baselinePickTicker(t) {
+  var ri = document.getElementById('researchTicker');
+  if (ri) { ri.value = t; rqShowTab('research'); if (typeof runResearch === 'function') runResearch(); }
+}
+
+function renderMarketBaseline(d) {
+  var el = document.getElementById('baselineContent');
+  if (!el) return;
+  var ts = document.getElementById('baselineTimestamp');
+  if (ts) ts.textContent = 'Data as of ' + new Date(d.timestamp).toLocaleString();
+  // Current regime (committed macro phase) for alignment stars
+  var regime = null;
+  try { regime = sessionStorage.getItem('perry_macro_phase_committed'); } catch(e) {}
+  var fmtPct = function(v) {
+    if (v == null) return '<span style="color:var(--text-sec);">—</span>';
+    var c = v >= 0 ? C.success : C.danger;
+    return '<span style="color:'+c+';font-weight:600;font-family:monospace;">'+(v>=0?'+':'')+v.toFixed(1)+'%</span>';
+  };
+  var chip = function(t) {
+    if (!t || t.price == null) return t ? '<span style="display:inline-block;background:var(--panel);border:1px dashed var(--border);border-radius:12px;padding:2px 8px;margin:1px;font-size:10.5px;color:var(--text-sec);">'+t.ticker+' n/a</span>' : '';
+    var cc = (t.chg3m != null && t.chg3m >= 0) ? C.success : C.danger;
+    return '<span onclick="baselinePickTicker(\''+t.ticker+'\')" title="Click to research '+t.ticker+' — $'+t.price+' · 1Y '+(t.chg1y!=null?(t.chg1y>=0?'+':'')+t.chg1y.toFixed(1)+'%':'n/a')+'" '
+      + 'style="display:inline-block;cursor:pointer;background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:2px 8px;margin:1px;font-size:10.5px;">'
+      + '<strong style="color:var(--navy);">'+t.ticker+'</strong> <span style="color:'+cc+';font-weight:600;">'+(t.chg3m!=null?(t.chg3m>=0?'+':'')+t.chg3m.toFixed(0)+'%':'')+'</span></span>';
+  };
+  function sectionTable(title, rows, showThesis) {
+    var h = '<div style="background:var(--navy);color:#fff;padding:8px 16px;font-size:12px;font-weight:700;letter-spacing:.3px;">'+title+'</div>';
+    h += '<div style="overflow-x:auto;"><table style="width:100%;font-size:11.5px;border-collapse:collapse;">';
+    h += '<thead><tr style="background:var(--panel);">'
+      + '<th style="padding:7px 12px;text-align:left;color:var(--text-sec);border-bottom:1px solid var(--border);min-width:150px;">Group</th>'
+      + '<th style="padding:7px 12px;text-align:left;color:var(--text-sec);border-bottom:1px solid var(--border);">ETF</th>'
+      + '<th style="padding:7px 12px;text-align:right;color:var(--text-sec);border-bottom:1px solid var(--border);">Price</th>'
+      + '<th style="padding:7px 12px;text-align:right;color:var(--text-sec);border-bottom:1px solid var(--border);">1M</th>'
+      + '<th style="padding:7px 12px;text-align:right;color:var(--text-sec);border-bottom:1px solid var(--border);">3M</th>'
+      + '<th style="padding:7px 12px;text-align:right;color:var(--text-sec);border-bottom:1px solid var(--border);">6M</th>'
+      + '<th style="padding:7px 12px;text-align:right;color:var(--text-sec);border-bottom:1px solid var(--border);">1Y</th>'
+      + '<th style="padding:7px 12px;text-align:center;color:var(--text-sec);border-bottom:1px solid var(--border);" title="Above or below the 200-day moving average">Trend</th>'
+      + '<th style="padding:7px 12px;text-align:left;color:var(--text-sec);border-bottom:1px solid var(--border);min-width:220px;">Baseline Tickers (click to research)</th>'
+      + '</tr></thead><tbody>';
+    rows.forEach(function(row, i) {
+      var q = row.etfData || {};
+      var aligned = regime && row.regimes && row.regimes.indexOf(regime) >= 0;
+      var trendBadge = q.above200dma == null ? '—' : (q.above200dma ? '<span style="color:'+C.success+';font-weight:700;">▲ Up</span>' : '<span style="color:'+C.danger+';font-weight:700;">▼ Down</span>');
+      h += '<tr style="'+(i%2?'background:rgba(0,0,0,0.02);':'')+'border-bottom:1px solid var(--border);'+(aligned?'box-shadow:inset 3px 0 0 '+C.success+';':'')+'">'
+        + '<td style="padding:7px 12px;font-weight:600;">'+(aligned?'<span title="Favored by the playbook for the current regime ('+regime+')">⭐ </span>':'')+row.name+(showThesis&&row.thesis?' <span class="help-icon" title="'+String(row.thesis).replace(/"/g,'&quot;')+'" data-heading="'+row.name+'" style="font-size:10px;">ⓘ</span>':'')+'</td>'
+        + '<td style="padding:7px 12px;"><strong style="color:var(--navy);cursor:pointer;" onclick="baselinePickTicker(\''+row.etf+'\')" title="Click to research '+row.etf+'">'+row.etf+'</strong></td>'
+        + '<td style="padding:7px 12px;text-align:right;font-family:monospace;">'+(q.price!=null?'$'+q.price.toLocaleString(undefined,{maximumFractionDigits:2}):'—')+'</td>'
+        + '<td style="padding:7px 12px;text-align:right;">'+fmtPct(q.chg1m)+'</td>'
+        + '<td style="padding:7px 12px;text-align:right;">'+fmtPct(q.chg3m)+'</td>'
+        + '<td style="padding:7px 12px;text-align:right;">'+fmtPct(q.chg6m)+'</td>'
+        + '<td style="padding:7px 12px;text-align:right;">'+fmtPct(q.chg1y)+'</td>'
+        + '<td style="padding:7px 12px;text-align:center;">'+trendBadge+'</td>'
+        + '<td style="padding:7px 12px;">'+(row.baselineData||[]).map(chip).join('')+'</td>'
+        + '</tr>';
+    });
+    h += '</tbody></table></div>';
+    return h;
+  }
+  var html = '';
+  if (regime) {
+    html += '<div style="padding:8px 16px;background:rgba(46,125,82,0.06);border-bottom:1px solid var(--border);font-size:11.5px;color:var(--text-sec);">Current macro regime: <strong style="color:var(--navy);">'+regime+'</strong> — ⭐ rows are the groups the cycle playbook favors right now. (Regime comes from the Macro Regime Analysis scorecard.)</div>';
+  } else {
+    html += '<div style="padding:8px 16px;background:rgba(139,105,20,0.06);border-bottom:1px solid var(--border);font-size:11.5px;color:var(--text-sec);">Visit <a href="javascript:navigateTo(\'macro\')" style="color:var(--navy);font-weight:600;">Macro Regime Analysis</a> first to load the current regime — then ⭐ markers will show which groups the playbook favors.</div>';
+  }
+  html += sectionTable('SECTORS — 11 GICS sectors via SPDR ETFs', d.sectors || [], false);
+  html += sectionTable('ASSET CLASSES — equity, duration, credit, real assets, cash', d.assetClasses || [], false);
+  html += sectionTable('PORTFOLIO THEMES — curated secular baskets (hover ⓘ for thesis)', d.themes || [], true);
+  el.innerHTML = html;
+}
+
 function rqShowTab(name) {
   _toggleTabs('#page-research', 'data-rqtab', name, 'rqtab-');
+  if (name === 'baseline' && typeof loadMarketBaseline === 'function') loadMarketBaseline(false);
   // Lazy-load content when tab first visited (if data already loaded)
   var d = window._lastSecData, tk = window._lastSecTicker;
   if (name === 'financials' && d && tk) {
@@ -23986,6 +24317,20 @@ var RISK_PROFILES = {
   }
 };
 
+// Restore persisted risk profile on load (survives refresh — the optimizer,
+// rebalancer, and drift model all read window._riskProfile).
+try {
+  var _savedRiskProfile = localStorage.getItem('perry_risk_profile');
+  if (_savedRiskProfile && RISK_PROFILES[_savedRiskProfile]) {
+    window._riskProfile = _savedRiskProfile;
+    setTimeout(function() {
+      var p = RISK_PROFILES[_savedRiskProfile];
+      var badge = document.getElementById('riskProfileBadge');
+      if (badge && p) { badge.style.display = ''; badge.style.background = p.color; badge.textContent = p.emoji + ' ' + p.label; }
+    }, 500);
+  }
+} catch(e) {}
+
 // Simple dropdown risk-profile selector (replaces the 5-question questionnaire)
 window.showRiskQuestionnaire = function() {
   if (document.getElementById('riskQuizModal')) return;
@@ -24023,6 +24368,7 @@ window.submitRiskQuestionnaire = function() {
   var profile = RISK_PROFILES[profileKey];
   if (!profile) return;
   window._riskProfile = profileKey;
+  try { localStorage.setItem('perry_risk_profile', profileKey); } catch(e) {}
   var driftSel = document.getElementById('driftModel');
   if (driftSel) { driftSel.value = profile.driftModel; if (typeof driftRender === 'function') driftRender(); }
   var badge = document.getElementById('riskProfileBadge');
@@ -24031,6 +24377,10 @@ window.submitRiskQuestionnaire = function() {
     badge.style.background = profile.color;
     badge.textContent = profile.emoji + ' ' + profile.label;
   }
+  var poeBadge = document.getElementById('poeProfileBadge');
+  if (poeBadge) poeBadge.innerHTML = '<span style="color:'+profile.color+';">'+profile.emoji+' '+profile.label+'</span>';
+  var rebCtx = document.getElementById('rebalanceContextPanel');
+  if (rebCtx && typeof loadRebalanceContext === 'function') loadRebalanceContext(true);
   var modal = document.getElementById('riskQuizModal');
   if (modal) modal.remove();
 };
@@ -26439,6 +26789,178 @@ var HELP_CONTENT = {
     body: 'Selling a position at a loss to offset capital gains elsewhere in your portfolio, reducing your tax bill. You can then buy a similar (but not identical) investment to maintain your market exposure.',
     formula: null,
     action: 'IRS wash-sale rule: wait 30 days before buying back the same security after harvesting a loss, or the loss will be disallowed.'
+  },
+  // ── Portfolio visualizations (added 2026-07) ─────────────
+  allocation: {
+    title: 'Portfolio Allocation',
+    body: 'Shows how your money is split across sectors, asset classes, and accounts. Allocation — not stock picking — explains roughly 90% of the variation in a portfolio\'s returns over time (Brinson, Hood & Beebower 1986). This is the single most important picture of your portfolio.',
+    formula: 'Weight = Position Market Value ÷ Total Portfolio Value',
+    action: 'Check this against your risk profile\'s target mix. If any slice looks dramatically bigger than you intended, that\'s your portfolio drifting — markets moved it, not you.'
+  },
+  contribution: {
+    title: 'Contribution to Return',
+    body: 'Breaks your total portfolio return into the piece each holding was responsible for. A stock that\'s up 50% but is only 1% of your portfolio contributes less than a stock up 8% that\'s 30% of your portfolio. This separates "what went up" from "what actually made you money."',
+    formula: 'Contribution = Holding Weight × Holding Return',
+    action: 'If one position drives most of your gains, your results depend on one bet — consider whether that concentration is intentional.'
+  },
+  brinson: {
+    title: 'Brinson-Fachler Attribution',
+    body: 'The institutional standard for answering: did you beat the benchmark because you picked the right SECTORS (allocation effect) or the right STOCKS within sectors (selection effect)? Each sector gets scored on both dimensions.',
+    formula: 'Allocation = (wₚ − w_b) × (R_b,sector − R_b,total) · Selection = w_b × (Rₚ,sector − R_b,sector)',
+    action: 'Consistently negative allocation effect means your sector tilts are hurting you — the Macro Regime page is designed to fix exactly that.'
+  },
+  marginalVar: {
+    title: 'Marginal VaR — Risk Contributors',
+    body: 'Shows which holdings contribute the most to your total portfolio risk — not just which are the biggest. A volatile position that\'s correlated with everything else can contribute far more risk than its dollar weight suggests.',
+    formula: 'Marginal VaR ≈ Weight × Covariance(Holding, Portfolio) ÷ Portfolio Volatility',
+    action: 'If one holding contributes 40%+ of total risk, trimming it is the fastest single way to de-risk the whole portfolio.'
+  },
+  correlationMatrix: {
+    title: 'Correlation Matrix',
+    body: 'Shows how much each pair of holdings moves together, from −1 (perfect opposites) to +1 (identical movement). Diversification only works when correlations are LOW — owning 10 stocks that all move together is really owning one big bet.',
+    formula: 'ρ(A,B) = Covariance(A,B) ÷ (σ_A × σ_B)',
+    action: 'Pairs above +0.8 are effectively the same position. In a crash, correlations rise toward 1 — so build in diversifiers (bonds, gold) BEFORE stress hits.'
+  },
+  // ── Macro page visualizations ─────────────────────────────
+  quadMap: {
+    title: 'Business Cycle Quad Map',
+    body: 'A 2×2 grid classifying the economy by whether GROWTH is accelerating or slowing (x-axis) and whether INFLATION is accelerating or slowing (y-axis). The four quadrants — Goldilocks, Overheat, Stagflation, Deflation — each historically favor different assets. The dot shows where live FRED data places the economy today.',
+    formula: 'Growth axis: Industrial Production MoM trend · Inflation axis: Core PCE YoY trend',
+    action: 'Position for the quadrant we\'re IN, not the one you hope comes next. The Quad Playbook panel lists exactly which sectors historically led in each quadrant.'
+  },
+  macroDashboard: {
+    title: 'Macro Indicator Dashboard',
+    body: '24 live indicators from the Federal Reserve\'s FRED database, organized into 6 pillars (Growth, Labor, Inflation, Monetary Policy, Fiscal, Global Liquidity). Each indicator scores +1 (expansionary), 0 (neutral), or −1 (contractionary) against a defined threshold, and the total score determines the macro regime phase. Click the ⓘ on any indicator row for what it measures and why it matters.',
+    formula: 'Regime Score = Σ indicator scores · Phase = score vs. thresholds (with ±2pt hysteresis buffer)',
+    action: 'Don\'t react to any single indicator — the whole point of a 24-indicator scorecard is that the WEIGHT of evidence, not one data point, defines the regime.'
+  },
+  businessCycle: {
+    title: 'Business Cycle Curve',
+    body: 'The classic 4-phase economic cycle from the CFA curriculum: Early Expansion → Mid Expansion → Late Expansion/Peak → Contraction. The dot shows where the regime scorecard currently places the US economy. Each phase historically favors different sectors — early expansion favors financials and discretionary; late cycle favors energy and staples; contraction favors bonds and utilities.',
+    formula: null,
+    action: 'The biggest portfolio mistakes happen at phase TRANSITIONS. When the dot approaches a boundary, that\'s when to review your sector tilts — see Sector & Macro Alignment.'
+  },
+  cycleBreakdown: {
+    title: 'Economic Cycle Breakdown',
+    body: 'Where is cycle pressure building? Each category (Consumer, Business, Real Estate, Supply Chain, Labor Breadth) contains FRED indicators scored into one of five phases: Recovery, Expansion, Neutral, Slowdown, or Contraction. This granular view often catches sector-level stress the headline regime score smooths over — e.g., housing can be contracting while the consumer still expands.',
+    formula: 'Level-based: value vs. expansion/contraction thresholds · Trend-based: 3M and 12M % change',
+    action: 'Categories in Slowdown/Contraction flag sectors to underweight; categories in Recovery often mark where the NEXT cycle\'s winners are forming. Click each indicator\'s ⓘ for its specific meaning.'
+  },
+  lic: {
+    title: 'Leading Indicator Composite',
+    body: 'Combines forward-looking indicators (building permits, yield curve, claims, manufacturing hours, credit spreads) into one composite designed to turn BEFORE the overall economy does. Leading indicators typically peak 6–12 months ahead of recessions.',
+    formula: 'Composite = weighted average of standardized leading indicator z-scores',
+    action: 'Three consecutive months of composite decline has historically been an early-warning signal — time to review equity exposure, not necessarily exit.'
+  },
+  // ── Research / valuation visualizations ──────────────────
+  incomeStatement: {
+    title: 'Income Statement (5-Year)',
+    body: 'The company\'s profit engine, straight from audited SEC 10-K filings: Revenue at the top, then costs subtracted layer by layer down to Net Income and EPS. The 5-year view reveals the TREND — is the growth story accelerating or decaying? Are margins expanding (pricing power) or compressing (competition)?',
+    formula: 'Revenue − COGS = Gross Profit · − OpEx = Operating Income · − Interest & Tax = Net Income',
+    action: 'Revenue growth with EXPANDING margins is the highest-quality combination. Revenue growth with shrinking margins means the company is buying growth.'
+  },
+  balanceSheet: {
+    title: 'Balance Sheet (5-Year)',
+    body: 'A snapshot of what the company OWNS (assets), OWES (liabilities), and what\'s left for shareholders (equity), from SEC filings. The balance sheet determines whether a company survives bad times — earnings are opinion, balance sheets are fact.',
+    formula: 'Assets = Liabilities + Shareholders\' Equity · Current Ratio = Current Assets ÷ Current Liabilities',
+    action: 'Watch debt trends vs. cash trends. Rising debt + falling cash while buying back stock is how quality companies quietly become fragile ones.'
+  },
+  cashFlow: {
+    title: 'Cash Flow Statement (5-Year)',
+    body: 'Follows actual CASH — the hardest number to fake in accounting. Operating cash flow shows what the business generates; capex shows what it must reinvest; what remains (free cash flow) funds dividends, buybacks, and acquisitions.',
+    formula: 'Free Cash Flow = Operating Cash Flow − Capital Expenditures',
+    action: 'Net income growing while operating cash flow stagnates is the classic earnings-quality red flag — profits are being manufactured on paper.'
+  },
+  analystEstimates: {
+    title: 'Analyst Estimates & Price Targets',
+    body: 'Wall Street consensus: the high, mean, median, and low 12-month price targets, plus the distribution of Buy/Hold/Sell ratings. Useful as a sentiment gauge — but remember analysts herd, anchor to current prices, and are systematically optimistic.',
+    formula: null,
+    action: 'The SPREAD between high and low targets is often more informative than the mean — a wide spread means genuine disagreement, i.e., higher uncertainty and higher potential mispricing.'
+  },
+  scenarioOutlook: {
+    title: 'Bear / Base / Bull Scenarios',
+    body: 'Mechanical 3-year projections: the Base case extends the company\'s trailing growth rate; Bear assumes growth slows to 40% of trend; Bull assumes 160% of trend. These are NOT analyst forecasts — they\'re disciplined brackets around "what if the trend bends."',
+    formula: 'Base = trailing 3Y CAGR · Bear = 0.4 × CAGR · Bull = 1.6 × CAGR',
+    action: 'Ask yourself: if the BEAR case played out, would I still want to own this at today\'s price? That answer tells you whether the position is sized correctly.'
+  },
+  peerComparison: {
+    title: 'Peer Comparison',
+    body: 'Lines up the stock against its closest sector/industry competitors on valuation (P/E, P/S, EV/EBITDA), profitability (margins, ROE), growth (revenue CAGR), and balance-sheet strength — all pulled fresh from SEC EDGAR and FMP. No metric means anything in isolation; a 30× P/E is cheap for a company growing 40%/yr and absurd for one growing 5%/yr.',
+    formula: null,
+    action: 'Look for the outlier and ask WHY: the cheapest stock in a peer group is either the opportunity or the one the market knows is broken. The financials usually tell you which.'
+  },
+  ddm: {
+    title: 'Dividend Discount Model (DDM)',
+    body: 'Values a stock as the sum of all its future dividends, discounted to today. Best suited to mature, stable dividend payers (utilities, staples, banks) — meaningless for non-payers or hypergrowth names.',
+    formula: 'Value = D₁ ÷ (r − g)   [Gordon Growth: next dividend ÷ (required return − dividend growth rate)]',
+    action: 'The model is hypersensitive to the (r − g) gap. Always test a range: if the stock only looks cheap when g is within 1% of r, the "value" is an artifact.'
+  },
+  forwardPE: {
+    title: 'Forward P/E',
+    body: 'Price divided by NEXT year\'s expected earnings (vs. trailing P/E which uses last year\'s actuals). It bakes in growth expectations — but those expectations are analyst estimates that get revised, usually downward, ~60% of the time.',
+    formula: 'Forward P/E = Current Price ÷ Consensus Next-Twelve-Months EPS',
+    action: 'A stock whose forward P/E is far below its trailing P/E implies big expected earnings growth — verify you believe the estimate before you trust the multiple.'
+  },
+  optionsChain: {
+    title: 'Options Chain & Implied Volatility',
+    body: 'Live options market data: what traders are paying for the right to buy (calls) or sell (puts) the stock at various strike prices. The prices imply a forecast of how much the stock will move — implied volatility (IV). Options markets are where sophisticated investors express views, making this a window into "smart money" expectations.',
+    formula: 'IV−HV spread = Implied Volatility − 20-day Historical Volatility (positive = options expensive vs. recent reality)',
+    action: 'High IV percentile (>70%) = options are expensive — favors selling premium. Low IV (<30%) = cheap insurance — favors buying protection.'
+  },
+  maxPain: {
+    title: 'Max Pain',
+    body: 'The strike price where the total value of all expiring options is MINIMIZED — i.e., where option buyers collectively lose the most and option sellers (often dealers) keep the most premium. Prices sometimes gravitate toward this level near expiry due to dealer hedging flows.',
+    formula: 'Max Pain = strike K that minimizes Σ call OI × max(0, S−K) + Σ put OI × max(0, K−S)',
+    action: 'Treat it as a magnet hypothesis near expiration weeks, not a prediction — the effect is real but weak, and disappears in strong trends.'
+  },
+  putCallRatio: {
+    title: 'Put/Call Ratio',
+    body: 'The volume (or open interest) of bearish puts relative to bullish calls. Extremes are CONTRARIAN signals: when everyone owns puts (ratio > ~1.2), fear is peaking and bottoms form; when nobody wants protection (< ~0.6), complacency reigns.',
+    formula: 'P/C Ratio = Put Volume ÷ Call Volume',
+    action: 'Use extremes only. A P/C ratio in the middle of its range tells you nothing — this is a sentiment thermometer, not a timing system.'
+  },
+  regimeBacktest: {
+    title: 'Regime Backtest — Forward Returns by VIX Level',
+    body: 'Splits history by what the VIX (fear index) was at each entry point, then shows what the stock did over the following period. It answers: "When fear was THIS high before, was buying rewarded?" For most quality assets, high-VIX entries have produced above-average forward returns — fear compensates buyers.',
+    formula: 'Group entries by VIX bucket (<15, 15-20, 20-30, >30) → compute forward return distribution per bucket',
+    action: 'If the stock\'s high-VIX forward returns are POOR, it\'s a fragile asset that gets hurt worse in stress — size it accordingly.'
+  },
+  levETF: {
+    title: 'Leveraged ETF Signals',
+    body: 'Leveraged ETFs (TQQQ, UPRO, SOXL…) deliver 2-3× the DAILY index move — not the long-term move. Daily rebalancing means chop erodes them (volatility decay) while smooth trends compound them beautifully. These signals assess whether the current regime favors holding them.',
+    formula: 'Decay ≈ −(L² − L) × σ²/2 per period (L = leverage, σ = daily volatility)',
+    action: 'Leveraged ETFs are trend vehicles, not buy-and-hold-forever assets. The signal matters most on EXIT: in high-VIX chop, decay accelerates dramatically.'
+  },
+  // ── Optimization / rebalance (rebuilt 2026-07) ───────────
+  optimization: {
+    title: 'Portfolio Optimization — Regime & Risk-Profile Conditioned',
+    body: 'Solves for the weight mix with the best risk-adjusted return (max Sharpe ratio) using Markowitz mean-variance optimization — then constrains the answer by YOUR risk profile: hard caps on single positions, leveraged ETFs, and sector concentration, plus a defensive-asset floor. It also pulls fresh regime research (live sector momentum + cycle playbook) on every run so recommendations reflect today\'s market, not a stale snapshot.',
+    formula: 'max_w (w·μ − r_f) ÷ √(wᵀΣw)  subject to: Σw=1, 0 ≤ wᵢ ≤ profile caps',
+    action: 'Run it after any regime change or profile change. The "what to buy" panel shows candidates OUTSIDE your current holdings — the optimizer can only re-weight what you own; the research panel shows what you\'re missing.'
+  },
+  driftBlotter: {
+    title: 'Sector Drift & Rebalance Blotter',
+    body: 'Compares your current sector weights to your target model and flags any sector outside the tolerance band (±3% is the institutional convention). The blotter converts gaps into a concrete trade list — dollars to buy/sell per sector — without executing anything. Your risk profile sets the target model; the current macro regime tells you which direction to lean within the band.',
+    formula: 'Drift = Current Sector Weight − Target Weight · Trade $ = Drift × Portfolio Value',
+    action: 'Rebalancing is a discipline, not a market call: it systematically sells what ran up and buys what lagged. Do it on a schedule (quarterly) or on tolerance breach — not on emotion.'
+  },
+  rebalanceContext: {
+    title: 'Rebalance Context — Regime + Profile',
+    body: 'Before acting on any rebalance recommendation, you need three facts: (1) WHAT regime we\'re in (drives which sectors to favor), (2) WHAT risk profile you\'ve set (drives the target mix and caps), and (3) WHAT the live market is doing (momentum confirms or challenges the playbook). This panel pulls all three fresh so every trade recommendation is traceable to its inputs.',
+    formula: null,
+    action: 'If the regime playbook and live momentum DISAGREE (e.g., playbook says defensives but momentum favors tech), reduce trade size — conflicting signals mean lower conviction, not zero action.'
+  },
+  baseline: {
+    title: 'Market Baseline — Sectors, Asset Classes & Themes',
+    body: 'The top-down starting point for stock research: before picking a stock, decide which SECTORS, ASSET CLASSES, and THEMES deserve your money in the current regime. Each row shows fresh momentum data (1M/3M/6M/1Y returns, volatility, 200-day trend) for the group\'s ETF plus a curated set of baseline stocks to use as comparison anchors. Data refreshes from Yahoo Finance on every request.',
+    formula: 'Momentum Score = mean(1M, 3M, 6M return) · Trend = price vs. 200-day moving average',
+    action: 'Work top-down: pick 2-3 groups aligned with the regime AND showing positive momentum, THEN research individual names within them. A great stock in a collapsing sector still usually loses.'
+  },
+  sectorMomentum: {
+    title: 'Live Sector Momentum',
+    body: 'Ranks the 11 sector ETFs plus core asset classes by recent momentum (average of 1, 3, and 6-month returns). Momentum is one of the most robust return factors ever documented (Jegadeesh & Titman 1993) — sectors that led over 3-6 months tend to keep leading over the next 1-3 months.',
+    formula: 'Momentum Score = (R_1M + R_3M + R_6M) ÷ 3',
+    action: 'The strongest signal is AGREEMENT: when a sector is favored by the regime playbook AND ranks top-3 in live momentum, that\'s where conviction positions belong.'
   }
 };
 
@@ -26459,14 +26981,33 @@ function initHelpPopovers() {
   var closeBtn = document.getElementById('helpPopoverClose');
   if (closeBtn) closeBtn.addEventListener('click', function(e){ e.stopPropagation(); hideHelpPopover(); });
 
-  // Click on any help-icon with data-help attribute
+  // Click on ANY help-icon. Priority: (1) curated HELP_CONTENT entry via
+  // data-help, (2) fallback — render the icon's title attribute in the same
+  // rich popover, using the parent card's title as the heading. This
+  // guarantees every "?" on the site opens a readable explanation instead
+  // of relying on the browser's tiny hover tooltip.
   document.addEventListener('click', function(e) {
-    var icon = e.target.closest('.help-icon[data-help]');
+    var icon = e.target.closest('.help-icon');
     if (icon) {
       e.stopPropagation();
       var key = icon.getAttribute('data-help');
-      var data = HELP_CONTENT[key];
-      if (!data) { hideHelpPopover(); return; }
+      var data = key ? HELP_CONTENT[key] : null;
+      if (!data) {
+        var titleText = icon.getAttribute('title') || icon.getAttribute('data-title') || '';
+        if (!titleText) { hideHelpPopover(); return; }
+        // Derive a heading from the nearest card title / label context
+        var heading = icon.getAttribute('data-heading') || 'What is this?';
+        var cardTitle = icon.closest('.card-title');
+        var label = icon.closest('label');
+        var src = icon.getAttribute('data-heading') ? null : (cardTitle || label);
+        if (src) {
+          var clone = src.cloneNode(true);
+          var icons = clone.querySelectorAll('.help-icon, button, select, input, .btn, .btn-sm, .btn-outline');
+          for (var ci = 0; ci < icons.length; ci++) icons[ci].remove();
+          heading = (clone.textContent || '').replace(/\s+/g, ' ').trim() || heading;
+        }
+        data = { title: heading, body: titleText, formula: null, action: null };
+      }
       showHelpPopover(icon, data);
       return;
     }
