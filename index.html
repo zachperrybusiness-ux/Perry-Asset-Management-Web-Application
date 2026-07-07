@@ -1204,13 +1204,85 @@ body.view-mobile .btn-group {
   gap: 6px !important;
 }
 
-/* ── Charts: taller on mobile for readability ────────────────── */
+/* ── Charts: taller + horizontally scrollable on mobile ───────── */
+/* Dense time-series charts become unreadable squeezed into 360px.
+   The wrapper scrolls sideways while the canvas keeps a readable
+   minimum width — swipe the chart to pan, exactly like a table. */
 body.view-mobile .chart-wrap {
-  height: 280px !important;
-  min-height: 280px !important;
+  height: 300px !important;
+  min-height: 300px !important;
+  overflow-x: auto !important;
+  overflow-y: hidden !important;
+  -webkit-overflow-scrolling: touch !important;
+  position: relative;
 }
-body.view-mobile .chart-wrap canvas {
-  max-width: 100% !important;
+body.view-mobile .chart-wrap > canvas {
+  min-width: 560px !important;
+  max-width: none !important;
+  height: 100% !important;
+}
+/* Charts in generic height-styled divs (position:relative wrappers) */
+body.view-mobile div[style*="height:420px"],
+body.view-mobile div[style*="height:380px"],
+body.view-mobile div[style*="height:360px"],
+body.view-mobile div[style*="height:340px"],
+body.view-mobile div[style*="height:300px"] {
+  overflow-x: auto !important;
+  -webkit-overflow-scrolling: touch !important;
+}
+body.view-mobile div[style*="height:420px"] > canvas,
+body.view-mobile div[style*="height:380px"] > canvas,
+body.view-mobile div[style*="height:360px"] > canvas {
+  min-width: 540px !important;
+  max-width: none !important;
+}
+/* Hint that a chart pans (fades after interaction isn't tracked — subtle) */
+body.view-mobile .zoom-hint { display: none !important; }
+
+/* ── Help popover → bottom sheet on mobile (thumb-reachable, tap-out
+      or tap-icon-again to dismiss, scrolls if content is long) ────── */
+body.view-mobile #helpPopover {
+  left: 8px !important;
+  right: 8px !important;
+  width: auto !important;
+  max-width: none !important;
+  top: auto !important;
+  bottom: 68px !important;
+  max-height: 55vh;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  box-shadow: 0 -4px 24px rgba(0,0,0,0.25) !important;
+  border-radius: 12px 12px 8px 8px !important;
+}
+body.view-mobile .help-icon {
+  font-size: 14px !important;
+  padding: 4px !important;             /* ≥28px tap target */
+  margin: -4px !important;
+}
+
+/* ── Sector heatmap chips: 2-col grid instead of overflow row ── */
+body.view-mobile #sectorsHeatmapWrap {
+  display: grid !important;
+  grid-template-columns: repeat(3, 1fr) !important;
+  gap: 5px !important;
+}
+body.view-mobile #sectorsHeatmapWrap .sector-chip {
+  min-width: 0 !important;
+  padding: 6px 4px !important;
+}
+body.view-mobile #sectorsHeatmapWrap .sector-chip > div:first-child {
+  font-size: 9.5px !important;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+
+/* ── Story strips / chip clouds wrap cleanly ─────────────────── */
+body.view-mobile .ss-two-col { grid-template-columns: 1fr !important; }
+body.view-mobile .theme-panel-grid { grid-template-columns: 1fr !important; }
+
+/* ── Canvas inside fixed-height card bodies (gap chart etc.) ── */
+body.view-mobile .card-body[style*="height:380px"] {
+  height: 320px !important;
+  overflow-x: auto !important;
 }
 
 /* ── Tables: horizontal scroll wrapper ──────────────────────── */
@@ -3338,7 +3410,7 @@ body.view-mobile #mobileBottomBar {
               </div>
             </div>
           </div>
-          <p style="font-size:12px;color:var(--text-sec);margin-bottom:14px;">Apply historical crisis returns to your <strong>current</strong> portfolio positions. This answers: "If this crisis repeated today with my exact holdings, how would my portfolio perform?" Uses real per-ticker returns from each crisis window; if a ticker didn't exist in that window, its sector-proxy ETF return is used.</p>
+          <p style="font-size:12px;color:var(--text-sec);margin-bottom:14px;">Apply historical crisis returns to your <strong>current</strong> portfolio positions. Every symbol's full daily history is pulled once through the data layer (memory → Firestore <code>price_history</code> → worker) and referenced in the calculation. Priority per holding: <strong>(1)</strong> the ticker's own actual decline over the window; <strong>(2)</strong> for leveraged ETFs that didn't exist yet (TQQQ in 2008, FNGU in COVID…), a <strong>daily-compounded simulation</strong> — leverage × the base index's actual daily returns, net of expenses — exactly how daily-reset funds behave (a −28% index window ≠ −84% for a 3×; the path matters); <strong>(3)</strong> the sector proxy ETF's actual window return; <strong>(4)</strong> static sector table as last resort. The Source column shows which path each holding used.</p>
           <div class="btn-group" id="stressScenarioBtns">
             <button class="btn-outline active" data-scenario="2008_gfc">2008 GFC<br><span style="font-size:10px;opacity:.85;">Oct '07 – Mar '09</span></button>
             <button class="btn-outline" data-scenario="2020_covid">COVID Crash<br><span style="font-size:10px;opacity:.85;">Feb – Mar '20</span></button>
@@ -5760,9 +5832,11 @@ body.view-mobile #mobileBottomBar {
               <thead>
                 <tr>
                   <th>Sector</th>
+                  <th style="min-width:140px;">Current vs Target</th>
                   <th style="text-align:right;">Current %</th>
                   <th style="text-align:right;">Target %</th>
                   <th style="text-align:right;">Gap %</th>
+                  <th style="text-align:right;">Gap $</th>
                   <th style="text-align:center;">Action</th>
                 </tr>
               </thead>
@@ -5855,7 +5929,7 @@ body.view-mobile #mobileBottomBar {
           <div class="card-body">
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;font-size:11px;">
               <div style="padding:6px 10px;background:rgba(46,125,82,.1);border-radius:4px;border-left:3px solid var(--success);"><strong style="color:var(--success);">Leading</strong> — Strong RS, Positive Momentum</div>
-              <div style="padding:6px 10px;background:rgba(139,105,20,.1);border-radius:4px;border-left:3px solid #8B6914;"><strong style="color:#8B6914);">Weakening</strong> — Strong RS, Negative Momentum</div>
+              <div style="padding:6px 10px;background:rgba(139,105,20,.1);border-radius:4px;border-left:3px solid #8B6914;"><strong style="color:#8B6914;">Weakening</strong> — Strong RS, Negative Momentum</div>
               <div style="padding:6px 10px;background:rgba(139,42,42,.1);border-radius:4px;border-left:3px solid var(--danger);"><strong style="color:var(--danger);">Lagging</strong> — Weak RS, Negative Momentum</div>
               <div style="padding:6px 10px;background:rgba(0,120,215,.1);border-radius:4px;border-left:3px solid var(--blue);"><strong style="color:var(--blue);">Improving</strong> — Weak RS, Positive Momentum</div>
             </div>
@@ -5863,7 +5937,7 @@ body.view-mobile #mobileBottomBar {
             <div style="position:relative;height:420px;"><canvas id="rrgChart"></canvas></div>
             <div id="rrgSectorList" style="margin-top:14px;font-size:12px;display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:6px;"></div>
           </div>
-          <div class="card-sources"><strong>Calculation:</strong> RS-Ratio = Sector ETF / SPY (52-week window). RS-Momentum = 14-day EMA of RS-Ratio minus 28-day EMA. Normalized to 100. Method: Julius de Kempenaer (2014). Data: Yahoo Finance via Cloudflare proxy. Weekly intervals.</div>
+          <div class="card-sources"><strong>Calculation (corrected 2026-07):</strong> RS-Ratio = 100 × (sector÷SPY price ratio today) ÷ 63-day average of that ratio — so 100 means the sector is tracking its own recent relative trend, above 100 means it's gaining on SPY. RS-Momentum = 15-day % change of the RS-Ratio. Quadrants per Julius de Kempenaer's RRG method. It is <em>normal</em> for the four quadrants to be populated unevenly — in strong risk-on tapes most sectors cluster in Leading/Weakening; in narrow markets one or two sectors lead while the rest lag. Data: 1 year of daily closes, date-aligned, Yahoo Finance via Cloudflare proxy.</div>
         </div>
       </div>
 
@@ -5879,10 +5953,12 @@ body.view-mobile #mobileBottomBar {
                 <thead>
                   <tr>
                     <th>Sector</th>
-                    <th style="background:rgba(46,125,82,.12);">Early Expansion</th>
-                    <th style="background:rgba(91,155,213,.12);">Mid Expansion</th>
-                    <th style="background:rgba(139,105,20,.12);">Late / Peak</th>
-                    <th style="background:rgba(139,42,42,.12);">Contraction</th>
+                    <!-- Light tinted headers need DARK text — the global th rule
+                         is white-on-navy, which was invisible on these tints -->
+                    <th style="background:rgba(46,125,82,.15);color:#1A5C38;border-bottom:2px solid var(--success);">Early Expansion</th>
+                    <th style="background:rgba(91,155,213,.15);color:#003C71;border-bottom:2px solid var(--blue);">Mid Expansion</th>
+                    <th style="background:rgba(139,105,20,.15);color:#5C4500;border-bottom:2px solid #8B6914;">Late / Peak</th>
+                    <th style="background:rgba(139,42,42,.15);color:#5C0000;border-bottom:2px solid var(--danger);">Contraction</th>
                     <th>Top ETF</th>
                   </tr>
                 </thead>
@@ -6516,6 +6592,48 @@ body.view-mobile #mobileBottomBar {
       console.warn("SEC cache write error:", e);
     }
   };
+
+  // ═══ PRICE HISTORY CACHE (Firestore) ═══
+  // Full daily close history per ticker in compact columnar form
+  // ({ d: [dates], c: [closes] }). Written once, refreshed after 24h.
+  // This is the persistence layer behind window.PerryData — the same
+  // series feeds the stress test, performance, and quant calculations,
+  // so every symbol is "called once, stored, referenced everywhere."
+  const HIST_CACHE_HOURS = 24;
+
+  window._getHistCache = async function(ticker) {
+    try {
+      const ref = doc(db, "price_history", ticker.toUpperCase());
+      const snap = await getDoc(ref);
+      if (!snap.exists()) return null;
+      const data = snap.data();
+      if (data.cachedAt) {
+        const age = (Date.now() - new Date(data.cachedAt).getTime()) / (1000 * 60 * 60);
+        if (age > HIST_CACHE_HOURS) return null; // stale — refetch and overwrite
+      }
+      if (!data.d || !data.c || data.d.length !== data.c.length) return null;
+      return { d: data.d, c: data.c };
+    } catch (e) {
+      console.warn("History cache read error:", e);
+      return null;
+    }
+  };
+
+  window._setHistCache = async function(ticker, dates, closes) {
+    try {
+      // Firestore doc limit is 1MB; even 30y of daily data fits (~250KB),
+      // but guard anyway by thinning ultra-long series to weekly before 1990.
+      const ref = doc(db, "price_history", ticker.toUpperCase());
+      await setDoc(ref, {
+        ticker: ticker.toUpperCase(),
+        d: dates, c: closes,
+        points: dates.length,
+        cachedAt: new Date().toISOString()
+      });
+    } catch (e) {
+      console.warn("History cache write error:", e);
+    }
+  };
 </script>
 
 <!-- ═══════════ APP LOGIC ═══════════ -->
@@ -6531,10 +6649,24 @@ const C = {
 };
 const PALETTE = [C.navy, C.blue, C.blueLight, C.success, C.warning, C.danger, C.highlightGray, "#6A4C93", "#3A7CA5", "#D4A373"];
 
-// Mobile helpers
-function isMobile() { return window.innerWidth < 768; }
+// Mobile helpers — honors BOTH a narrow window AND the explicit
+// "Mobile" view toggle (body.view-mobile). Previously only width was
+// checked, so toggling Mobile on a desktop kept desktop chart styling.
+function isMobile() { return document.body.classList.contains('view-mobile') || window.innerWidth < 768; }
 function legendPos() { return isMobile() ? 'bottom' : 'top'; }
 function chartFontSize() { return isMobile() ? 9 : 11; }
+// Apply Chart.js global defaults for the current view (called on toggle)
+function applyChartViewDefaults() {
+  try {
+    if (typeof Chart === 'undefined') return;
+    var m = isMobile();
+    Chart.defaults.font.size = m ? 10 : 12;
+    if (Chart.defaults.plugins && Chart.defaults.plugins.legend) {
+      Chart.defaults.plugins.legend.position = legendPos();
+      if (Chart.defaults.plugins.legend.labels) Chart.defaults.plugins.legend.labels.boxWidth = m ? 10 : 40;
+    }
+  } catch(e) {}
+}
 
 // Chart.js defaults — wrapped in guard in case CDN load is slow or partial
 try {
@@ -6622,6 +6754,125 @@ async function fetchSearch(q) {
   return d;
 }
 window.fetchQuote = fetchQuote;
+
+// ═══════════════════════════════════════════════════════════════════
+// PERRY DATA LAYER — unified per-ticker market data access.
+// Flow per symbol: in-memory → Firestore price_history cache (24h TTL)
+// → Cloudflare worker (Yahoo, full 'max' daily history) → written back
+// to Firestore. Every consumer (stress test, performance, quant) reads
+// the SAME series, so a symbol is fetched once and referenced everywhere.
+// ═══════════════════════════════════════════════════════════════════
+window.PerryData = {
+  _mem: {},
+  _pending: {},
+  // Full daily history: { dates: ['YYYY-MM-DD',...], closes: [Number,...] }
+  getHistory: function(ticker) {
+    var self = this;
+    var t = String(ticker || '').toUpperCase();
+    if (!t) return Promise.reject(new Error('No ticker'));
+    if (self._mem[t]) return Promise.resolve(self._mem[t]);
+    if (self._pending[t]) return self._pending[t];
+    self._pending[t] = (async function() {
+      // 1) Firestore cache (available when signed in)
+      try {
+        if (window._getHistCache) {
+          var cached = await window._getHistCache(t);
+          if (cached && cached.d && cached.d.length > 30) {
+            var hc = { dates: cached.d, closes: cached.c, source: 'firestore' };
+            self._mem[t] = hc;
+            return hc;
+          }
+        }
+      } catch(e) {}
+      // 2) Worker fetch with one retry (Yahoo can rate-limit bursts)
+      var d = null, lastErr = null;
+      for (var attempt = 0; attempt < 2 && !d; attempt++) {
+        try { d = await fetchChart(t, 'max', '1d'); }
+        catch(e) { lastErr = e; await new Promise(function(r){ setTimeout(r, 800 + Math.random()*600); }); }
+      }
+      if (!d || !d.points || !d.points.length) throw (lastErr || new Error('No history for ' + t));
+      var dates = [], closes = [];
+      d.points.forEach(function(p) {
+        if (p.close != null) { dates.push(p.date.slice(0, 10)); closes.push(p.close); }
+      });
+      var h = { dates: dates, closes: closes, source: 'worker' };
+      self._mem[t] = h;
+      // 3) Persist to Firestore in background (non-blocking)
+      try { if (window._setHistCache) window._setHistCache(t, dates, closes); } catch(e) {}
+      return h;
+    })();
+    return self._pending[t].finally(function(){ delete self._pending[t]; });
+  },
+  // Fetch many with limited concurrency. Returns { TICKER: hist|null }.
+  getMany: async function(tickers, concurrency) {
+    var self = this;
+    var uniq = []; var seen = {};
+    (tickers || []).forEach(function(t) { t = String(t||'').toUpperCase(); if (t && !seen[t]) { seen[t] = 1; uniq.push(t); } });
+    var out = {}; var idx = 0; var conc = concurrency || 3;
+    async function next() {
+      while (idx < uniq.length) {
+        var t = uniq[idx++];
+        try { out[t] = await self.getHistory(t); }
+        catch(e) { out[t] = null; }
+      }
+    }
+    var workers = []; for (var i = 0; i < conc; i++) workers.push(next());
+    await Promise.all(workers);
+    return out;
+  },
+  // Does the series cover [start, end]? First data point must be within
+  // `tolDays` (default 10) calendar days after `start`.
+  covers: function(hist, start, end, tolDays) {
+    if (!hist || !hist.dates || !hist.dates.length) return false;
+    var tol = tolDays == null ? 10 : tolDays;
+    var s = new Date(start); s.setDate(s.getDate() + tol);
+    var firstOk = hist.dates[0] <= s.toISOString().slice(0, 10);
+    var lastOk = hist.dates[hist.dates.length - 1] >= end || hist.dates[hist.dates.length - 1] >= start;
+    return firstOk && lastOk;
+  },
+  // Total return over [start, end] using actual closes. Null if not covered.
+  windowReturn: function(hist, start, end) {
+    if (!this.covers(hist, start, end)) return null;
+    var startPx = null, endPx = null;
+    for (var i = 0; i < hist.dates.length; i++) {
+      var dt = hist.dates[i];
+      if (startPx == null && dt >= start) startPx = hist.closes[i];
+      if (dt <= end) endPx = hist.closes[i];
+      if (dt > end) break;
+    }
+    if (startPx == null || endPx == null || startPx <= 0) return null;
+    return (endPx - startPx) / startPx;
+  },
+  // Array of daily simple returns strictly inside [start, end].
+  windowDailyReturns: function(hist, start, end) {
+    if (!hist || !hist.dates) return [];
+    var rets = [];
+    var prev = null;
+    for (var i = 0; i < hist.dates.length; i++) {
+      var dt = hist.dates[i];
+      if (dt < start) { prev = hist.closes[i]; continue; }
+      if (dt > end) break;
+      if (prev != null && prev > 0) rets.push(hist.closes[i] / prev - 1);
+      prev = hist.closes[i];
+    }
+    return rets;
+  },
+  // Leveraged product path simulation: compound lev × base daily returns,
+  // net of the fund's expense drag (default 0.95%/yr, the standard for 3x
+  // products). This is how TQQQ/FNGU actually work — daily reset — so a
+  // -28% index window does NOT mean -84%; path matters.
+  leveragedWindowReturn: function(baseHist, start, end, lev, annualExpense) {
+    var rets = this.windowDailyReturns(baseHist, start, end);
+    if (!rets.length) return null;
+    var dailyDrag = (annualExpense == null ? 0.0095 : annualExpense) / 252;
+    var equity = 1;
+    for (var i = 0; i < rets.length; i++) {
+      equity *= (1 + lev * rets[i] - dailyDrag);
+      if (equity <= 0) return -1; // fund wiped out (circuit-breaker approximation)
+    }
+    return equity - 1;
+  }
+};
 
 // ═══ CLASSIFICATION DATABASES ═══
 const ETF_DB = {
@@ -7148,6 +7399,7 @@ function toggleView() {
   var label = document.getElementById('viewToggleLabel');
   if (icon)  icon.innerHTML  = isMobile ? '&#128241;' : '&#128187;';
   if (label) label.textContent = isMobile ? 'Mobile' : 'Laptop';
+  if (typeof applyChartViewDefaults === 'function') applyChartViewDefaults();
   // Add viewport meta for mobile if not present
   if (isMobile) {
     var meta = document.querySelector('meta[name="viewport"]');
@@ -12261,79 +12513,128 @@ async function runStressTest() {
     }
     var allH = window._holdings || [];
     if (!allH.length) throw new Error('No holdings. Add positions first.');
-    var af = document.getElementById('portfolioAccountFilter').value || 'all';
+    // Use the Scenarios tab's own account filter (was incorrectly reading the
+    // Snapshot tab's filter), falling back to the global one.
+    var afEl = document.getElementById('scenarioAccountFilter') || document.getElementById('portfolioAccountFilter');
+    var af = (afEl && afEl.value) || 'all';
     var holdings = af === 'all' ? allH : allH.filter(function(h){ return (h.accountType||'Individual') === af; });
     if (!holdings.length) throw new Error('No holdings in this account filter.');
 
+    // ── Manual factor overrides (previously rendered but never consumed) ──
+    function _ovr(id) { var el2 = document.getElementById(id); if (!el2 || el2.value === '') return null; var n = parseFloat(el2.value); return isNaN(n) ? null : n / 100; }
+    var ovrEquity = _ovr('scenarioEquityDrop');
+    var ovrDuration = _ovr('scenarioDurationRally');
+    var ovrGold = _ovr('scenarioGoldReturn');
+
+    // ── Sector → liquid proxy ETF (actual history preferred over static table) ──
+    var SECTOR_PROXY_ETF = { 'Technology':'XLK', 'Information Technology':'XLK', 'Financials':'XLF', 'Energy':'XLE', 'Health Care':'XLV', 'Healthcare':'XLV', 'Industrials':'XLI', 'Consumer Discretionary':'XLY', 'Consumer Staples':'XLP', 'Materials':'XLB', 'Utilities':'XLU', 'Real Estate':'XLRE', 'Communication Services':'XLC', 'Broad Market':'SPY', 'Fixed Income':'AGG' };
+    // Base index proxy for leveraged products, parsed from ETF_DB lev string
+    // (e.g. "3x Long QQQ" → QQQ; FANG+ has no investable index ticker → QQQ).
+    function _parseLevBase(levStr) {
+      if (!levStr) return null;
+      var m = String(levStr).match(/^\d+(?:\.\d+)?x\s*(?:Long|Short)\s+(.+)$/i);
+      if (!m) return null;
+      var base = m[1].trim().toUpperCase();
+      var BASE_MAP = { 'FANG+': 'QQQ', 'FANG': 'QQQ', 'NASDAQ-100': 'QQQ', 'S&P 500': 'SPY' };
+      return BASE_MAP[base] || base;
+    }
+
+    // ── Resolve every symbol this run needs, then fetch ALL history through
+    //    the PerryData layer (memory → Firestore → worker) with limited
+    //    concurrency. One pull per symbol, cached for every other page. ──
+    var neededSyms = ['SPY'];
+    holdings.forEach(function(h) {
+      var isCashH = h.assetClass === 'Cash' || h.assetClass === 'Money Market' || h.assetClass === 'CD' || h.assetClass === 'Bond Position';
+      if (isCashH) return;
+      neededSyms.push(h.ticker);
+      var eE = ETF_DB[h.ticker];
+      var lm = eE ? _parseLevMultiplier(eE.lev) : null;
+      if (lm !== null) { var lb = _parseLevBase(eE.lev); if (lb) neededSyms.push(lb); }
+      var pxy = SECTOR_PROXY_ETF[h.sector]; if (pxy) neededSyms.push(pxy);
+    });
+    resultsEl.innerHTML = '<div style="padding:16px;color:var(--text-sec);"><span class="spinner"></span> Pulling full daily history for ' + [...new Set(neededSyms)].length + ' symbols through the data layer (Firestore-cached after first pull)…</div>';
+    var HIST = await PerryData.getMany(neededSyms, 3);
+
+    // Custom windows: benchmark against SPY's ACTUAL return in that window
+    if (scenario.spy_ret == null && HIST.SPY) {
+      var spyWin = PerryData.windowReturn(HIST.SPY, scenario.start, scenario.end);
+      if (spyWin != null) scenario.spy_ret = spyWin;
+    }
+
     var stressResults = [];
     var sectorProxies = key !== 'custom' ? STRESS_SECTOR_PROXIES[key] : null;
+    var failedSyms = [];
     for (var i=0;i<holdings.length;i++) {
       var h = holdings[i];
       var isCash = h.assetClass === 'Cash' || h.assetClass === 'Money Market' || h.assetClass === 'CD' || h.assetClass === 'Bond Position';
       var ret = null; var source = '';
-      // Determine leverage multiplier for leveraged/inverse ETFs
       var etfEntry = ETF_DB[h.ticker];
       var levMult = etfEntry ? _parseLevMultiplier(etfEntry.lev) : null;
+      var levBase = etfEntry ? _parseLevBase(etfEntry.lev) : null;
+      var hist = HIST[String(h.ticker).toUpperCase()] || null;
+      var proxyEtf = SECTOR_PROXY_ETF[h.sector] || null;
+      var isBondLike = (etfEntry && etfEntry.s === 'Fixed Income') || /bond|treasur|fixed income/i.test(h.sector || '') || (levBase === 'TLT');
+      var isGold = /^(GLD|IAU|GLDM|SGOL|AAAU|PHYS)$/.test(String(h.ticker).toUpperCase());
+
       if (isCash) {
         ret = 0; source = 'Cash-like (zero decline assumed)';
-      } else {
-        try {
-          // Pull price history spanning scenario window
-          var d = await fetchChart(h.ticker, 'max', '1d');
-          var pts = (d.points || []).filter(function(p){ return p.close != null; }).map(function(p){ return { date: p.date.slice(0,10), close: p.close }; });
-          // Find first price >= scenario.start and last price <= scenario.end
-          var startPx = null, endPx = null;
-          for (var j=0;j<pts.length;j++) {
-            if (!startPx && pts[j].date >= scenario.start) startPx = pts[j].close;
-            if (pts[j].date <= scenario.end) endPx = pts[j].close;
-          }
-          if (startPx && endPx && startPx > 0) {
-            ret = (endPx - startPx) / startPx;
-            source = 'Actual ticker return '+scenario.start+' to '+scenario.end;
-          } else if (sectorProxies && h.sector && sectorProxies[h.sector] != null) {
-            var baseRet = sectorProxies[h.sector];
-            if (levMult !== null) {
-              ret = _stressLeveragedReturn(baseRet, levMult, key);
-              source = 'Ticker didn\'t exist; '+etfEntry.lev+' applied to '+h.sector+' sector proxy ('+((baseRet*100).toFixed(0))+'% × '+levMult+'x, vol-drag adjusted)';
-            } else {
-              ret = baseRet;
-              source = 'Ticker didn\'t exist; using '+h.sector+' sector proxy';
-            }
-          } else if (sectorProxies) {
-            var spyBase = scenario.spy_ret || -0.30;
-            if (levMult !== null) {
-              ret = _stressLeveragedReturn(spyBase, levMult, key);
-              source = 'Ticker didn\'t exist; '+etfEntry.lev+' applied to SPY proxy ('+((spyBase*100).toFixed(0))+'% × '+levMult+'x, vol-drag adjusted)';
-            } else {
-              ret = spyBase;
-              source = 'Ticker didn\'t exist; using SPY proxy';
-            }
-          } else {
-            ret = 0;
-            source = 'No historical data for custom window';
-          }
-        } catch(e) {
-          if (sectorProxies && h.sector && sectorProxies[h.sector] != null) {
-            var baseRet2 = sectorProxies[h.sector];
-            if (levMult !== null) {
-              ret = _stressLeveragedReturn(baseRet2, levMult, key);
-              source = 'Fetch failed; '+etfEntry.lev+' applied to '+h.sector+' sector proxy (vol-drag adjusted)';
-            } else {
-              ret = baseRet2;
-              source = 'Fetch failed; using '+h.sector+' sector proxy';
-            }
-          } else {
-            var spyBase2 = scenario.spy_ret || -0.30;
-            if (levMult !== null) {
-              ret = _stressLeveragedReturn(spyBase2, levMult, key);
-              source = 'Fetch failed; '+etfEntry.lev+' applied to SPY proxy (vol-drag adjusted)';
-            } else {
-              ret = spyBase2;
-              source = 'Fetch failed; using SPY proxy';
-            }
-          }
+      }
+      // 1) Manual overrides beat everything — that's their purpose
+      else if (ovrGold != null && isGold) {
+        ret = ovrGold; source = 'Manual gold override';
+      }
+      else if (ovrDuration != null && isBondLike) {
+        ret = levMult !== null ? Math.max(-0.99, levMult * ovrDuration) : ovrDuration;
+        source = 'Manual duration override' + (levMult !== null ? ' × ' + levMult + 'x leverage' : '');
+      }
+      else if (ovrEquity != null && !isBondLike && !isGold) {
+        ret = levMult !== null ? _stressLeveragedReturn(ovrEquity, levMult, key) : ovrEquity;
+        source = 'Manual equity override' + (levMult !== null ? ' × ' + levMult + 'x (vol-drag adjusted)' : '');
+      }
+      // 2) The ticker's OWN full history covers the window → use actual decline
+      else if (hist && PerryData.windowReturn(hist, scenario.start, scenario.end) != null) {
+        ret = PerryData.windowReturn(hist, scenario.start, scenario.end);
+        source = 'Actual ' + h.ticker + ' price history ' + scenario.start + ' → ' + scenario.end;
+      }
+      // 3) Leveraged product without history → DAILY-COMPOUNDED simulation on
+      //    the base index (how these funds actually work: leverage resets daily)
+      else if (levMult !== null && levBase && HIST[levBase]) {
+        var simRet = PerryData.leveragedWindowReturn(HIST[levBase], scenario.start, scenario.end, levMult);
+        if (simRet != null) {
+          ret = simRet;
+          source = 'Simulated: ' + levMult + '× ' + levBase + ' daily returns compounded through the window, net 0.95%/yr expense (' + etfEntry.lev + ')';
         }
       }
+      // 4) Non-leveraged without history → sector proxy ETF's ACTUAL window return
+      if (ret == null && proxyEtf && HIST[proxyEtf]) {
+        if (levMult !== null) {
+          var simRet2 = PerryData.leveragedWindowReturn(HIST[proxyEtf], scenario.start, scenario.end, levMult);
+          if (simRet2 != null) { ret = simRet2; source = 'Simulated: ' + levMult + '× ' + proxyEtf + ' (sector proxy) daily returns compounded'; }
+        } else {
+          var pRet = PerryData.windowReturn(HIST[proxyEtf], scenario.start, scenario.end);
+          if (pRet != null) { ret = pRet; source = h.ticker + ' didn\'t trade then — actual ' + proxyEtf + ' sector-proxy return'; }
+        }
+      }
+      // 5) Static sector table (named scenarios only; e.g. XLC/XLRE pre-inception)
+      if (ret == null && !isCash && sectorProxies && h.sector && sectorProxies[h.sector] != null) {
+        var baseRet = sectorProxies[h.sector];
+        if (levMult !== null) { ret = _stressLeveragedReturn(baseRet, levMult, key); source = 'Static ' + h.sector + ' proxy × ' + levMult + 'x (vol-drag approx — no daily data available)'; }
+        else { ret = baseRet; source = 'Static ' + h.sector + ' sector proxy table'; }
+      }
+      // 6) Last resort: SPY (actual if we have it)
+      if (ret == null && !isCash) {
+        var spyBase = (HIST.SPY ? PerryData.windowReturn(HIST.SPY, scenario.start, scenario.end) : null);
+        if (spyBase == null) spyBase = scenario.spy_ret != null ? scenario.spy_ret : -0.30;
+        if (levMult !== null) {
+          var simSpy = HIST.SPY ? PerryData.leveragedWindowReturn(HIST.SPY, scenario.start, scenario.end, levMult) : null;
+          ret = simSpy != null ? simSpy : _stressLeveragedReturn(spyBase, levMult, key);
+          source = 'SPY fallback × ' + levMult + 'x daily-compounded';
+        } else {
+          ret = spyBase; source = 'SPY fallback (no ticker/sector history for this window)';
+        }
+        failedSyms.push(h.ticker);
+      }
+
       var mv = (h.currentPrice || h.costBasis) * h.quantity;
       var newMv = mv * (1 + ret);
       var impact = newMv - mv;
@@ -12491,6 +12792,18 @@ async function runStressTest() {
   btnEl.disabled = false; btnEl.innerHTML = 'Run Stress Test';
 }
 window.runStressTest = runStressTest;
+
+// Re-run hook used by the account filter and factor-override controls.
+// (These controls previously called stressRerun(), which was never defined —
+// clicking Apply/Reset threw a silent ReferenceError. Fixed 2026-07.)
+function stressRerun() {
+  var resultsEl = document.getElementById('stressResults');
+  // Only auto-rerun if a test has already been displayed at least once
+  if (resultsEl && resultsEl.dataset.hasRun === '1') { runStressTest(); return; }
+  if (resultsEl) resultsEl.dataset.hasRun = '1';
+  runStressTest();
+}
+window.stressRerun = stressRerun;
 
 // ═══════════════════════════════════════════════════════
 // ═══════════ PORTFOLIO STATE FRAMEWORK ═════════════════
@@ -21848,12 +22161,11 @@ async function themeCompareRun() {
   // Sector composition for each theme (using ETF_DB / STOCK_DB)
   var sectorDonutHtml = '';
   if (themesToRun.length) {
-    sectorDonutHtml = '<div style="margin-top:20px;"><div style="font-weight:700;font-size:12px;color:var(--navy);margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px;">Sector Composition</div>'
-      + '<div style="display:flex;gap:16px;flex-wrap:wrap;">';
+    sectorDonutHtml = '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px;align-items:start;">';
     themesToRun.forEach(function(theme, ti) {
-      sectorDonutHtml += '<div style="flex:1;min-width:220px;max-width:300px;"><div style="font-size:11px;font-weight:700;color:'+themeColors[ti%themeColors.length]+';margin-bottom:6px;">'+theme.name+'</div><div style="height:180px;"><canvas id="themeSectorDonut'+ti+'"></canvas></div></div>';
+      sectorDonutHtml += '<div style="text-align:center;"><div style="font-size:11px;font-weight:700;color:'+themeColors[ti%themeColors.length]+';margin-bottom:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">'+theme.name+'</div><div style="height:170px;position:relative;"><canvas id="themeSectorDonut'+ti+'"></canvas></div></div>';
     });
-    sectorDonutHtml += '</div></div>';
+    sectorDonutHtml += '</div>';
   }
 
   // How-to walkthrough (collapsible)
@@ -21873,28 +22185,40 @@ async function themeCompareRun() {
       + '</div></div>';
   }
 
-  document.getElementById('themeCmpTable').innerHTML = statsRows
-    + '<div style="margin-top:20px;">'
-    + '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;" id="themeChartTypeRow">'
-    + '<button class="btn-outline btn-sm active" data-theme-chart="sharpe" onclick="themeSetChartType(\'sharpe\',this)">Rolling Sharpe</button>'
-    + '<button class="btn-outline btn-sm" data-theme-chart="drawdown" onclick="themeSetChartType(\'drawdown\',this)">Drawdown</button>'
-    + '<button class="btn-outline btn-sm" data-theme-chart="cumulative" onclick="themeSetChartType(\'cumulative\',this)">Cumulative Return</button>'
+  // ── Assemble the below-chart area as a coherent panel grid ──
+  // (Was previously a loose stack of headings, floating donuts and toggle
+  //  charts; now each element has a framed panel and a fixed place.)
+  function _themePanel(headerHtml, bodyHtml) {
+    return '<div style="border:1px solid var(--border);border-radius:6px;overflow:hidden;background:#fff;">'
+      + '<div style="background:var(--navy);color:#fff;padding:7px 14px;font-size:12px;font-weight:700;letter-spacing:.3px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px;">'+headerHtml+'</div>'
+      + '<div style="padding:12px 14px;">'+bodyHtml+'</div></div>';
+  }
+  document.getElementById('themeCmpTable').innerHTML =
+    _themePanel('<span>Head-to-Head Statistics <span class="help-icon" data-help="sharpe" style="font-size:11px;">ⓘ</span></span>', statsRows)
+    + '<div class="theme-panel-grid" style="display:grid;grid-template-columns:1.25fr 1fr;gap:14px;margin-top:14px;align-items:start;">'
+    +   _themePanel(
+          '<span>Risk Lens <span class="help-icon" title="Three views of the same series: Rolling Sharpe (risk-adjusted consistency — above 1.0 is strong), Drawdown (peak-to-trough losses you would have lived through), and Cumulative Return (total growth rebased to 100). Use the buttons to switch." data-heading="Risk Lens" style="font-size:11px;">ⓘ</span></span>'
+          + '<span id="themeChartTypeRow" style="display:flex;gap:6px;flex-wrap:wrap;">'
+          + '<button class="btn-outline btn-sm active" style="background:rgba(255,255,255,0.12);color:#fff;border-color:rgba(255,255,255,0.4);" data-theme-chart="sharpe" onclick="themeSetChartType(\'sharpe\',this)">Rolling Sharpe</button>'
+          + '<button class="btn-outline btn-sm" style="background:transparent;color:#fff;border-color:rgba(255,255,255,0.4);" data-theme-chart="drawdown" onclick="themeSetChartType(\'drawdown\',this)">Drawdown</button>'
+          + '<button class="btn-outline btn-sm" style="background:transparent;color:#fff;border-color:rgba(255,255,255,0.4);" data-theme-chart="cumulative" onclick="themeSetChartType(\'cumulative\',this)">Cumulative</button>'
+          + '</span>',
+          '<div id="themeRollingSharpeChartWrap">'
+          + '<div style="font-size:11px;color:var(--text-sec);margin-bottom:8px;">Rolling 90-day Sharpe — higher and more stable = better risk-adjusted consistency.</div>'
+          + '<div style="height:240px;position:relative;"><canvas id="themeRollingSharpeChart"></canvas></div>'
+          + '</div>'
+          + '<div id="themeDrawdownChartWrap" style="display:none;">'
+          + '<div style="font-size:11px;color:var(--text-sec);margin-bottom:8px;">Peak-to-trough losses over the window — the pain you would have sat through.</div>'
+          + '<div style="height:240px;position:relative;"><canvas id="themeDrawdownChart"></canvas></div>'
+          + '</div>'
+          + '<div id="themeCumulChartWrap" style="display:none;">'
+          + '<div style="font-size:11px;color:var(--text-sec);margin-bottom:8px;">Total growth of 100 invested at window start.</div>'
+          + '<div style="height:240px;position:relative;"><canvas id="themeCumulChart"></canvas></div>'
+          + '</div>'
+        )
+    +   (sectorDonutHtml ? _themePanel('<span>Sector Composition <span class="help-icon" title="What each theme basket is actually made of at the sector level. Two themes with similar returns can carry very different sector risk — a theme that is 80% Technology adds concentration, not diversification, to a tech-heavy portfolio." data-heading="Sector Composition" style="font-size:11px;">ⓘ</span></span>', sectorDonutHtml) : '')
     + '</div>'
-    + '<div id="themeRollingSharpeChartWrap">'
-    + '<div style="font-weight:700;font-size:12px;color:var(--navy);margin-bottom:4px;text-transform:uppercase;letter-spacing:.5px;">Rolling 90-Day Sharpe Ratio <span class="help-icon" title="Sharpe ratio calculated on a rolling 90-trading-day window. Above 1.0 = strong risk-adjusted performance for that period. Below 0 = returns not compensating for risk taken.">&#9432;</span></div>'
-    + '<div style="font-size:11px;color:var(--text-sec);margin-bottom:8px;">Higher and more stable = better risk-adjusted return consistency over time.</div>'
-    + '<div style="height:220px;border:1px solid var(--border);border-radius:6px;padding:10px;"><canvas id="themeRollingSharpeChart"></canvas></div>'
-    + '</div>'
-    + '<div id="themeDrawdownChartWrap" style="display:none;">'
-    + '<div style="font-weight:700;font-size:12px;color:var(--navy);margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px;">Drawdown Comparison <span class="help-icon" data-help="maxDrawdown" title="Click for plain-English explanation">&#9432;</span></div>'
-    + '<div style="height:220px;border:1px solid var(--border);border-radius:6px;padding:10px;"><canvas id="themeDrawdownChart"></canvas></div>'
-    + '</div>'
-    + '<div id="themeCumulChartWrap" style="display:none;">'
-    + '<div style="font-weight:700;font-size:12px;color:var(--navy);margin-bottom:8px;text-transform:uppercase;letter-spacing:.5px;">Cumulative Return (Rebased to 100)</div>'
-    + '<div style="height:220px;border:1px solid var(--border);border-radius:6px;padding:10px;"><canvas id="themeCumulChart"></canvas></div>'
-    + '</div>'
-    + '</div>'
-    + sectorDonutHtml + walkHtml;
+    + walkHtml;
 
   // Populate theme holdings panel for first selected theme
   var themeHoldingsPanelEl = document.getElementById('themeHoldingsPanel');
@@ -23087,40 +23411,70 @@ async function renderPerformanceTab() {
     var allValues = pfSeries.values;
     var filteredPairs = [];
     for (var fi = 0; fi < allDates.length; fi++) {
-      if (allDates[fi] >= cutStr && allValues[fi] != null && allValues[fi] > 0) filteredPairs.push({ date: allDates[fi], value: allValues[fi] });
+      if (allDates[fi] >= cutStr && allValues[fi] != null && allValues[fi] > 0) filteredPairs.push({ date: allDates[fi], value: allValues[fi], twr: (pfSeries.twrValues && pfSeries.twrValues[fi] != null && pfSeries.twrValues[fi] > 0) ? pfSeries.twrValues[fi] : null });
     }
     if (filteredPairs.length < 5) { if (kpiEl) kpiEl.innerHTML = '<span style="color:var(--text-sec);font-size:12px;">Not enough history for selected period.</span>'; return; }
     var dates = filteredPairs.map(function(p){ return p.date; });
     var values = filteredPairs.map(function(p){ return p.value; });
+    // ── All PERFORMANCE math runs on the TWR (time-weighted) series when
+    //    available. The raw dollar series jumps when you deposit or buy —
+    //    which previously counted contributions as "returns". TWR strips
+    //    cash-flow effects (GIPS standard). Falls back to raw values. ──
+    var twrArr = filteredPairs.map(function(p){ return p.twr; });
+    var perf = twrArr.every(function(v){ return v != null; }) ? twrArr : values;
     var startVal = values[0], endVal = values[values.length-1];
-    var totalReturn = (endVal - startVal) / startVal;
+    var totalReturn = (perf[perf.length-1] - perf[0]) / perf[0];
     var dailyRets = [];
-    for (var i = 1; i < values.length; i++) { if (values[i-1] > 0) dailyRets.push((values[i]-values[i-1])/values[i-1]); }
+    for (var i = 1; i < perf.length; i++) { if (perf[i-1] > 0) dailyRets.push((perf[i]-perf[i-1])/perf[i-1]); }
     var avgDaily = dailyRets.reduce(function(s,r){ return s+r; },0) / (dailyRets.length||1);
     var varDaily = dailyRets.reduce(function(s,r){ return s+(r-avgDaily)*(r-avgDaily); },0) / (dailyRets.length||1);
     var stdDaily = Math.sqrt(varDaily);
     var annVol = stdDaily * Math.sqrt(252);
     var annRet = Math.pow(1+totalReturn, 252/(dailyRets.length||252)) - 1;
+    // Annualizing very short windows produces absurd extrapolations
+    // (a +4% month becomes "+60% annualized"). Only meaningful ≥ ~6 months.
+    var annRetMeaningful = dailyRets.length >= 120;
     var rf = 0.05/252;
     var sharpe = stdDaily > 0 ? (avgDaily - rf) / stdDaily * Math.sqrt(252) : 0;
-    var peak = values[0], maxDD = 0;
-    values.forEach(function(v){ if (v>peak) peak=v; var dd=(peak-v)/peak; if (dd>maxDD) maxDD=dd; });
+    var peak = perf[0], maxDD = 0;
+    perf.forEach(function(v){ if (v>peak) peak=v; var dd=(peak-v)/peak; if (dd>maxDD) maxDD=dd; });
+    // ── Benchmarks: aligned to the PORTFOLIO's date array by date lookup
+    //    with carry-forward. (Previously plotted positionally — different
+    //    array lengths made the lines drift and dates go wonky.) ──
+    function alignBenchmark(chartResp) {
+      var m = {};
+      (chartResp.points || []).forEach(function(p){ if (p.close != null) m[p.date.slice(0,10)] = p.close; });
+      var lastPx = null;
+      var aligned = dates.map(function(d){ if (m[d] != null) lastPx = m[d]; return lastPx; });
+      var fIdx = -1;
+      for (var ai2 = 0; ai2 < aligned.length; ai2++) { if (aligned[ai2] != null) { fIdx = ai2; break; } }
+      if (fIdx < 0) return null;
+      var base = aligned[fIdx];
+      return dates.map(function(d, i2){ return { date: d, val: aligned[i2] != null ? (aligned[i2]/base)*startVal : null }; });
+    }
     var spyData = null, qqqData = null;
     try {
-      var spyR = await fetchChart('SPY', range === 'ytd' ? '1y' : range, '1d');
-      var spyPts = (spyR.points||[]).filter(function(p){ return p.date && p.close && p.date >= cutStr; });
-      if (spyPts.length) { var s0 = spyPts[0].close; spyData = spyPts.map(function(p){ return { date:p.date, val:(p.close/s0)*startVal }; }); }
-      var qqqR = await fetchChart('QQQ', range === 'ytd' ? '1y' : range, '1d');
-      var qqqPts = (qqqR.points||[]).filter(function(p){ return p.date && p.close && p.date >= cutStr; });
-      if (qqqPts.length) { var q0 = qqqPts[0].close; qqqData = qqqPts.map(function(p){ return { date:p.date, val:(p.close/q0)*startVal }; }); }
+      var frange = range === 'ytd' ? '1y' : range;
+      var spyR = await fetchChart('SPY', frange, '1d');
+      spyData = alignBenchmark(spyR);
+      var qqqR = await fetchChart('QQQ', frange, '1d');
+      qqqData = alignBenchmark(qqqR);
     } catch(e2) {}
-    var spyReturn = spyData ? (spyData[spyData.length-1].val - startVal)/startVal : null;
+    var spyReturn = (spyData && spyData[spyData.length-1].val != null) ? (spyData[spyData.length-1].val - startVal)/startVal : null;
     var alpha = spyReturn !== null ? totalReturn - spyReturn : null;
+    // Short, readable x-axis dates ("Mar 25") — used by every chart below
+    var MONTHS3 = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    function perfTickFmt(isoOrIdx, labels) {
+      var iso = typeof isoOrIdx === 'string' ? isoOrIdx : (labels && labels[isoOrIdx]) || '';
+      if (!iso || iso.length < 7) return iso;
+      return MONTHS3[parseInt(iso.slice(5,7),10)-1] + " '" + iso.slice(2,4);
+    }
+    var perfXTicks = { maxTicksLimit: 8, font: { size: 10 }, maxRotation: 0, callback: function(v){ return perfTickFmt(this.getLabelForValue(v)); } };
     var fmt2 = function(v){ return (v>=0?'+':'')+((v||0)*100).toFixed(1)+'%'; };
     if (kpiEl) {
       kpiEl.innerHTML = [
-        { l:'Total Return', v:fmt2(totalReturn), c:totalReturn>=0?'var(--success)':'var(--danger)' },
-        { l:'Ann. Return', v:fmt2(annRet), c:annRet>=0?'var(--success)':'var(--danger)' },
+        { l:'Total Return (TWR)', v:fmt2(totalReturn), c:totalReturn>=0?'var(--success)':'var(--danger)' },
+        { l:'Ann. Return', v:annRetMeaningful?fmt2(annRet):'— (<6mo)', c:annRetMeaningful?(annRet>=0?'var(--success)':'var(--danger)'):'var(--text-sec)' },
         { l:'Ann. Volatility', v:((annVol||0)*100).toFixed(1)+'%', c:'var(--text)' },
         { l:'Sharpe Ratio', v:(sharpe||0).toFixed(2), c:sharpe>1?'var(--success)':sharpe>0?'var(--warning)':'var(--danger)' },
         { l:'Max Drawdown', v:'-'+((maxDD||0)*100).toFixed(1)+'%', c:'var(--danger)' },
@@ -23138,30 +23492,31 @@ async function renderPerformanceTab() {
     var ctx1 = document.getElementById('perfCumulChart');
     if (ctx1) {
       if (window._perfCumulChart) window._perfCumulChart.destroy();
-      var pfNorm = values.map(function(v){ return (v/startVal-1)*100; });
-      var ds = [{ label:'Portfolio', data:pfNorm, borderColor:C.navy, backgroundColor:'rgba(0,60,113,0.08)', fill:true, tension:0.3, pointRadius:0, borderWidth:2 }];
-      if (spyData) ds.push({ label:'SPY', data:spyData.map(function(p){ return (p.val/startVal-1)*100; }), borderColor:C.blue, borderWidth:1.5, pointRadius:0, tension:0.3, fill:false });
-      if (qqqData) ds.push({ label:'QQQ', data:qqqData.map(function(p){ return (p.val/startVal-1)*100; }), borderColor:C.success, borderWidth:1.5, pointRadius:0, tension:0.3, fill:false });
+      var pfNorm = perf.map(function(v){ return (v/perf[0]-1)*100; });
+      var ds = [{ label:'Portfolio (TWR)', data:pfNorm, borderColor:C.navy, backgroundColor:'rgba(0,60,113,0.08)', fill:true, tension:0.25, pointRadius:0, borderWidth:2 }];
+      if (spyData) ds.push({ label:'SPY', data:spyData.map(function(p){ return p.val!=null?(p.val/startVal-1)*100:null; }), borderColor:C.blue, borderWidth:1.5, pointRadius:0, tension:0.25, fill:false, spanGaps:true });
+      if (qqqData) ds.push({ label:'QQQ', data:qqqData.map(function(p){ return p.val!=null?(p.val/startVal-1)*100:null; }), borderColor:C.success, borderWidth:1.5, pointRadius:0, tension:0.25, fill:false, spanGaps:true });
       window._perfCumulChart = new Chart(ctx1.getContext('2d'), { type:'line', data:{ labels:dates, datasets:ds },
-        options:{ responsive:true, maintainAspectRatio:false, plugins:{ legend:{ position:'top' }, tooltip:{ callbacks:{ label:function(c){ return c.dataset.label+': '+(c.parsed.y>=0?'+':'')+c.parsed.y.toFixed(1)+'%'; } } } },
-          scales:{ x:{ ticks:{ maxTicksLimit:8, font:{size:10} }, grid:{display:false} }, y:{ ticks:{ callback:function(v){ return v.toFixed(0)+'%'; }, font:{size:10} } } } }
+        options:{ responsive:true, maintainAspectRatio:false, animation:false, interaction:{mode:'index',intersect:false},
+          plugins:{ legend:{ position:'top', labels:{font:{size:11}} }, tooltip:{ callbacks:{ label:function(c){ return c.dataset.label+': '+(c.parsed.y>=0?'+':'')+c.parsed.y.toFixed(1)+'%'; } } } },
+          scales:{ x:{ ticks:perfXTicks, grid:{display:false} }, y:{ ticks:{ callback:function(v){ return v.toFixed(0)+'%'; }, font:{size:10} } } } }
       });
     }
     var ctx2 = document.getElementById('perfRollingChart');
-    if (ctx2 && values.length > 20) {
+    if (ctx2 && perf.length > 20) {
       if (window._perfRollingChart) window._perfRollingChart.destroy();
       var roll = [], rollDates = [];
-      var window12 = Math.min(252, Math.floor(values.length/2));
-      for (var ri = window12; ri < values.length; ri++) { var r12 = (values[ri]-values[ri-window12])/values[ri-window12]*100; roll.push(parseFloat(r12.toFixed(2))); rollDates.push(dates[ri]); }
-      window._perfRollingChart = new Chart(ctx2.getContext('2d'), { type:'bar', data:{ labels:rollDates, datasets:[{ label:'Rolling '+window12+'D Return', data:roll, backgroundColor:roll.map(function(v){ return v>=0?'rgba(46,125,82,0.65)':'rgba(139,42,42,0.65)'; }), borderWidth:0 }] },
-        options:{ responsive:true, maintainAspectRatio:false, plugins:{ legend:{display:false} }, scales:{ x:{ ticks:{ maxTicksLimit:8, font:{size:10} }, grid:{display:false} }, y:{ ticks:{ callback:function(v){ return v.toFixed(0)+'%'; }, font:{size:10} } } } }
+      var window12 = Math.min(252, Math.floor(perf.length/2));
+      for (var ri = window12; ri < perf.length; ri++) { var r12 = (perf[ri]-perf[ri-window12])/perf[ri-window12]*100; roll.push(parseFloat(r12.toFixed(2))); rollDates.push(dates[ri]); }
+      window._perfRollingChart = new Chart(ctx2.getContext('2d'), { type:'line', data:{ labels:rollDates, datasets:[{ label:'Rolling '+window12+'-Day Return', data:roll, borderColor:C.navy, borderWidth:1.5, pointRadius:0, tension:0.25, fill:{target:'origin'}, backgroundColor:'rgba(0,60,113,0.10)' }] },
+        options:{ responsive:true, maintainAspectRatio:false, animation:false, plugins:{ legend:{display:false}, tooltip:{ callbacks:{ label:function(c){ return (c.parsed.y>=0?'+':'')+c.parsed.y.toFixed(1)+'%'; } } } }, scales:{ x:{ ticks:perfXTicks, grid:{display:false} }, y:{ ticks:{ callback:function(v){ return v.toFixed(0)+'%'; }, font:{size:10} } } } }
       });
     }
     var ctx3 = document.getElementById('perfCalYearChart');
     if (ctx3) {
       if (window._perfCalYearChart) window._perfCalYearChart.destroy();
       var yearMap = {};
-      for (var ci = 0; ci < dates.length; ci++) { var yr = dates[ci].slice(0,4); if (!yearMap[yr]) yearMap[yr]=[]; yearMap[yr].push(values[ci]); }
+      for (var ci = 0; ci < dates.length; ci++) { var yr = dates[ci].slice(0,4); if (!yearMap[yr]) yearMap[yr]=[]; yearMap[yr].push(perf[ci]); }
       var yrs = Object.keys(yearMap).sort();
       var yrRets = yrs.map(function(y){ var vs=yearMap[y]; return vs.length>1?((vs[vs.length-1]-vs[0])/vs[0]*100):0; });
       window._perfCalYearChart = new Chart(ctx3.getContext('2d'), { type:'bar', data:{ labels:yrs, datasets:[{ label:'Annual Return %', data:yrRets, backgroundColor:yrRets.map(function(v){ return v>=0?'rgba(46,125,82,0.72)':'rgba(139,42,42,0.72)'; }), borderWidth:0 }] },
@@ -23183,7 +23538,7 @@ async function renderPerformanceTab() {
     if (tbEl) {
       var periods = ['Day','Week','Month']; var windows = [1,5,21];
       tbEl.innerHTML = periods.map(function(p,pi){ var w=windows[pi]; var rets=[];
-        for (var ki=w;ki<values.length;ki++) { var r=(values[ki]-values[ki-w])/values[ki-w]; rets.push({r:r,d:dates[ki]}); }
+        for (var ki=w;ki<perf.length;ki++) { var r=(perf[ki]-perf[ki-w])/perf[ki-w]; rets.push({r:r,d:dates[ki]}); }
         if (!rets.length) return '';
         rets.sort(function(a,b){ return b.r-a.r; }); var best=rets[0],worst=rets[rets.length-1];
         return '<tr><td style="font-weight:600;">Best/Worst '+p+'</td><td style="color:var(--success);font-weight:700;">'+(best.r*100).toFixed(1)+'%</td><td style="font-size:11px;">'+best.d+'</td><td style="color:var(--danger);font-weight:700;">'+(worst.r*100).toFixed(1)+'%</td><td style="font-size:11px;">'+worst.d+'</td></tr>';
@@ -26990,6 +27345,11 @@ function initHelpPopovers() {
     var icon = e.target.closest('.help-icon');
     if (icon) {
       e.stopPropagation();
+      // Tap the same icon again to close (mobile-friendly un-tap)
+      if (_helpPopoverEl && _helpPopoverEl.classList.contains('visible') && window._helpAnchorEl === icon) {
+        hideHelpPopover(); window._helpAnchorEl = null; return;
+      }
+      window._helpAnchorEl = icon;
       var key = icon.getAttribute('data-help');
       var data = key ? HELP_CONTENT[key] : null;
       if (!data) {
@@ -27036,6 +27396,13 @@ function showHelpPopover(anchor, data) {
 
   _helpPopoverEl.classList.add('visible');
 
+  // Mobile: CSS pins the popover as a bottom sheet — skip JS positioning
+  // (and clear any stale inline coords so the CSS wins).
+  if (typeof isMobile === 'function' && isMobile()) {
+    _helpPopoverEl.style.left = '';
+    _helpPopoverEl.style.top = '';
+    return;
+  }
   // Position near the anchor
   var rect = anchor.getBoundingClientRect();
   var pw = 340, ph = _helpPopoverEl.offsetHeight || 200;
@@ -27163,45 +27530,158 @@ async function renderSectorsContent() {
   if (!wrap) return;
   var mode = window._sectorsMode || 'spy';
   if (mode==='spy')            await renderSectorStocksPanel(wrap);
-  else if (mode==='nasdaq')    await renderTickerListPanel(wrap, NASDAQ_TOP_STOCKS, 'Nasdaq 100 Top Stocks');
-  else if (mode==='crypto')    await renderTickerGridPanel(wrap, CRYPTO_TICKERS,    function(t){ return t.replace('-USD',''); });
-  else if (mode==='commodities') await renderTickerGridPanel(wrap, COMMODITY_TICKERS, function(t){ return COMMODITY_NAMES[t]||t; });
-  else if (mode==='indicators')  await renderTickerGridPanel(wrap, INDICATOR_TICKERS, function(t){ return INDICATOR_NAMES[t]||t; });
+  else if (mode==='nasdaq')    await renderSnapshotPanel(wrap, NASDAQ_TOP_STOCKS, 'Nasdaq 100 — Top Stocks', null);
+  else if (mode==='crypto')    await renderSnapshotPanel(wrap, CRYPTO_TICKERS, 'Crypto — Major Assets', function(t){ return t.replace('-USD',''); });
+  else if (mode==='commodities') await renderSnapshotPanel(wrap, COMMODITY_TICKERS, 'Commodities — Front-Month Futures', function(t){ return COMMODITY_NAMES[t]||t; });
+  else if (mode==='indicators')  await renderSnapshotPanel(wrap, INDICATOR_TICKERS, 'Macro Indicators — Rates, Credit, Vol & Dollar', function(t){ return INDICATOR_NAMES[t]||t; });
+}
+
+// ── Unified snapshot data + rendering (all 5 tabs share this look) ──
+window._snapshotCache = {};
+async function fetchSnapshotRows(tickers) {
+  var key = tickers.join(',');
+  var hit = window._snapshotCache[key];
+  if (hit && (Date.now() - hit.ts) < 10*60*1000) return hit.map;
+  var r = await fetch(WORKER_URL + '/snapshot?symbols=' + encodeURIComponent(key));
+  var d = await r.json();
+  if (d.error) throw new Error(d.error);
+  var map = {};
+  (d.quotes || []).forEach(function(q){ map[q.ticker] = q; });
+  window._snapshotCache[key] = { ts: Date.now(), map: map };
+  return map;
+}
+
+function _ssPct(v, digits) {
+  if (v == null) return '<span style="color:var(--text-sec);">—</span>';
+  var c = v >= 0 ? 'var(--success)' : 'var(--danger)';
+  return '<span style="color:'+c+';font-weight:600;font-family:monospace;">'+(v>=0?'+':'')+v.toFixed(digits==null?1:digits)+'%</span>';
+}
+function _ssMc(mc) {
+  if (!mc) return '<span style="color:var(--text-sec);">—</span>';
+  return mc>=1e12 ? '$'+(mc/1e12).toFixed(2)+'T' : mc>=1e9 ? '$'+(mc/1e9).toFixed(1)+'B' : '$'+(mc/1e6).toFixed(0)+'M';
+}
+function _heldTickerSet() {
+  var set = {};
+  (window._holdings||[]).forEach(function(h){ if (h.ticker) set[String(h.ticker).toUpperCase()] = 1; });
+  return set;
+}
+
+// Story strip: leaders, laggards, what's hot this week, trend breadth, portfolio overlap
+function snapshotStoryStrip(rows, groupLabel) {
+  var withM = rows.filter(function(r){ return r.chg1m != null; });
+  if (!withM.length) return '';
+  var byM = withM.slice().sort(function(a,b){ return b.chg1m - a.chg1m; });
+  var byW = withM.filter(function(r){ return r.chg1w != null; }).sort(function(a,b){ return Math.abs(b.chg1w) - Math.abs(a.chg1w); });
+  var leaders = byM.slice(0,3), laggards = byM.slice(-3).reverse();
+  var hot = byW.slice(0,3);
+  var trendable = rows.filter(function(r){ return r.above200dma != null; });
+  var up = trendable.filter(function(r){ return r.above200dma; }).length;
+  var held = _heldTickerSet();
+  var heldRows = rows.filter(function(r){ return held[r.ticker]; });
+  function chips(arr, useW) {
+    return arr.map(function(r){
+      var v = useW ? r.chg1w : r.chg1m;
+      var c = v >= 0 ? 'var(--success)' : 'var(--danger)';
+      return '<span style="display:inline-block;background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:2px 9px;margin:1px 2px;font-size:11px;cursor:pointer;" onclick="resNavToTicker(\''+r.ticker+'\')"><strong style="color:var(--navy);">'+r.ticker+'</strong> <span style="color:'+c+';font-weight:600;">'+(v>=0?'+':'')+v.toFixed(1)+'%</span></span>';
+    }).join('');
+  }
+  var breadthPct = trendable.length ? Math.round(up/trendable.length*100) : null;
+  var breadthColor = breadthPct == null ? 'var(--text-sec)' : breadthPct >= 60 ? 'var(--success)' : breadthPct <= 40 ? 'var(--danger)' : '#8B6914';
+  return '<div style="background:var(--panel);border:1px solid var(--border);border-radius:6px;padding:10px 14px;margin-bottom:12px;font-size:12px;">'
+    + '<div style="display:flex;gap:18px;flex-wrap:wrap;align-items:flex-start;">'
+    + '<div><div style="font-size:10px;text-transform:uppercase;letter-spacing:.5px;font-weight:700;color:var(--success);margin-bottom:2px;">Leading (1M)</div>'+chips(leaders)+'</div>'
+    + '<div><div style="font-size:10px;text-transform:uppercase;letter-spacing:.5px;font-weight:700;color:var(--danger);margin-bottom:2px;">Lagging (1M)</div>'+chips(laggards)+'</div>'
+    + '<div><div style="font-size:10px;text-transform:uppercase;letter-spacing:.5px;font-weight:700;color:#8B6914;margin-bottom:2px;">Biggest 1W Moves</div>'+chips(hot, true)+'</div>'
+    + '<div style="min-width:130px;"><div style="font-size:10px;text-transform:uppercase;letter-spacing:.5px;font-weight:700;color:var(--navy);margin-bottom:2px;">Trend Breadth</div>'
+    +   '<span style="font-size:16px;font-weight:800;color:'+breadthColor+';">'+(breadthPct==null?'—':breadthPct+'%')+'</span> <span style="color:var(--text-sec);font-size:11px;">above 200-day avg</span></div>'
+    + (heldRows.length ? '<div><div style="font-size:10px;text-transform:uppercase;letter-spacing:.5px;font-weight:700;color:var(--blue);margin-bottom:2px;">In Your Portfolio ('+heldRows.length+')</div>'+chips(heldRows.slice(0,5))+'</div>' : '')
+    + '</div></div>';
+}
+
+function buildSnapshotTable(rows, title, labelFn, showMc) {
+  var held = _heldTickerSet();
+  var h = '<div class="card" style="margin:0 0 14px;"><div class="card-header"><span class="card-title">'+title+'</span></div>'
+    + '<div style="overflow-x:auto;-webkit-overflow-scrolling:touch;"><table style="width:100%;border-collapse:collapse;font-size:12.5px;min-width:640px;">'
+    + '<thead><tr style="border-bottom:2px solid var(--border);background:var(--panel);">'
+    + '<th style="text-align:left;padding:7px 8px;color:var(--text-sec);font-weight:600;">Ticker</th>'
+    + '<th style="text-align:left;padding:7px 8px;color:var(--text-sec);font-weight:600;">Name</th>'
+    + '<th style="text-align:right;padding:7px 8px;color:var(--text-sec);font-weight:600;">Price</th>'
+    + '<th style="text-align:right;padding:7px 8px;color:var(--text-sec);font-weight:600;">1D%</th>'
+    + '<th style="text-align:right;padding:7px 8px;color:var(--text-sec);font-weight:600;">1W%</th>'
+    + '<th style="text-align:right;padding:7px 8px;color:var(--text-sec);font-weight:600;">1M%</th>'
+    + '<th style="text-align:right;padding:7px 8px;color:var(--text-sec);font-weight:600;">52W%</th>'
+    + '<th style="text-align:center;padding:7px 8px;color:var(--text-sec);font-weight:600;" title="Price vs. 200-day moving average">Trend</th>'
+    + (showMc ? '<th style="text-align:right;padding:7px 8px;color:var(--text-sec);font-weight:600;">Mkt Cap</th>' : '')
+    + '</tr></thead><tbody>';
+  rows.forEach(function(r) {
+    var label = labelFn ? labelFn(r.ticker) : (r.name || '');
+    var nm = labelFn ? (r.name || '') : label;
+    var display = labelFn ? label : r.ticker;
+    var nameCell = labelFn ? label : ((r.name||'').length > 24 ? (r.name||'').slice(0,22)+'…' : (r.name||''));
+    var priceStr = r.price == null ? '—' : (r.price < 1 ? '$'+r.price.toFixed(4) : '$'+r.price.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2}));
+    var trend = r.above200dma == null ? '<span style="color:var(--text-sec);">—</span>' : (r.above200dma ? '<span style="color:var(--success);font-weight:700;">▲</span>' : '<span style="color:var(--danger);font-weight:700;">▼</span>');
+    var heldBadge = held[r.ticker] ? ' <span style="font-size:8.5px;background:rgba(91,155,213,0.18);color:var(--navy);padding:1px 5px;border-radius:3px;font-weight:700;vertical-align:middle;">HELD</span>' : '';
+    h += '<tr style="border-bottom:1px solid var(--border);cursor:pointer;" onclick="resNavToTicker(\''+r.ticker+'\');">'
+      + '<td style="padding:7px 8px;font-weight:700;color:var(--blue);white-space:nowrap;">'+r.ticker+heldBadge+'</td>'
+      + '<td style="padding:7px 8px;color:var(--text-sec);font-size:11px;max-width:150px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="'+(nm||'')+'">'+(nameCell||'—')+'</td>'
+      + '<td style="padding:7px 8px;text-align:right;font-family:monospace;">'+priceStr+'</td>'
+      + '<td style="padding:7px 8px;text-align:right;">'+_ssPct(r.chg1d, 2)+'</td>'
+      + '<td style="padding:7px 8px;text-align:right;">'+_ssPct(r.chg1w)+'</td>'
+      + '<td style="padding:7px 8px;text-align:right;">'+_ssPct(r.chg1m)+'</td>'
+      + '<td style="padding:7px 8px;text-align:right;">'+_ssPct(r.chg1y)+'</td>'
+      + '<td style="padding:7px 8px;text-align:center;">'+trend+'</td>'
+      + (showMc ? '<td style="padding:7px 8px;text-align:right;color:var(--text-sec);">'+_ssMc(r.marketCap)+'</td>' : '')
+      + '</tr>';
+  });
+  h += '</tbody></table></div></div>';
+  return h;
+}
+
+async function renderSnapshotPanel(wrap, tickers, title, labelFn) {
+  wrap.innerHTML = '<div style="text-align:center;padding:40px 0;color:var(--text-sec);"><div class="spinner" style="margin:0 auto 10px;"></div>Loading '+title+'…</div>';
+  try {
+    var map = await fetchSnapshotRows(tickers);
+    var rows = tickers.map(function(t){ return map[t] || { ticker: t, price: null }; });
+    // Sort by market cap when available, else by 1M momentum
+    var haveMc = rows.some(function(r){ return r.marketCap; });
+    rows.sort(function(a,b){ return haveMc ? (b.marketCap||0)-(a.marketCap||0) : (b.chg1m||-999)-(a.chg1m||-999); });
+    wrap.innerHTML = snapshotStoryStrip(rows, title) + buildSnapshotTable(rows, title, labelFn, haveMc);
+  } catch(e) {
+    wrap.innerHTML = '<div style="padding:24px;text-align:center;color:var(--danger);">Failed to load: '+e.message+' <button class="btn btn-sm" onclick="renderSectorsContent()">Retry</button></div>';
+  }
 }
 
 async function renderSectorStocksPanel(wrap) {
   var etf    = window._sectorsSel || 'XLK';
   var sector = SPY_SECTORS.find(function(s){ return s.etf===etf; }) || SPY_SECTORS[0];
   var data   = SPY_SECTOR_STOCKS[etf] || SPY_SECTOR_STOCKS['XLK'];
-  var tickers = data.stocks.concat(data.etfs);
+  var tickers = [etf].concat(data.stocks).concat(data.etfs);
   wrap.innerHTML = '<div style="text-align:center;padding:40px 0;color:var(--text-sec);"><div class="spinner" style="margin:0 auto 10px;"></div>Loading '+(sector?sector.name:etf)+'…</div>';
-  var results = {};
-  await Promise.allSettled(tickers.map(async function(t){ try { results[t]=await fetchQuoteWithCache(t); } catch(e){ results[t]=null; } }));
-  function buildTable(tickerList, title, isEtf) {
-    var rows = tickerList.map(function(t){ var q=results[t]; var rawP=q?(q.current||q.price||null):null; return { t:t, price:typeof rawP==='number'&&rawP>0?rawP:null, pct:q&&typeof q.changePct==='number'?q.changePct:(q&&typeof q.changePercent==='number'?q.changePercent:null), name:q?(q.shortName||q.name||q.longName||''):'', mc:q&&q.marketCap?q.marketCap:null }; });
-    var h = '<div class="card" style="margin:0;"><div class="card-header"><span class="card-title">'+title+'</span></div>'
-      + '<div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;font-size:13px;">'
-      + '<thead><tr style="border-bottom:1px solid var(--border);"><th style="text-align:left;padding:6px 8px;color:var(--text-sec);font-weight:600;">Ticker</th><th style="text-align:left;padding:6px 8px;color:var(--text-sec);font-weight:600;">Name</th><th style="text-align:right;padding:6px 8px;color:var(--text-sec);font-weight:600;">Price</th><th style="text-align:right;padding:6px 8px;color:var(--text-sec);font-weight:600;">1D%</th>'
-      + (isEtf?'':'<th style="text-align:right;padding:6px 8px;color:var(--text-sec);font-weight:600;">Mkt Cap</th>')+'</tr></thead><tbody>';
-    rows.forEach(function(r) {
-      var pctStr=r.pct===null?'—':(r.pct>=0?'+':'')+r.pct.toFixed(2)+'%', pctColor=r.pct===null?'var(--text-sec)':r.pct>=0?'var(--success)':'var(--danger)';
-      var priceStr=r.price===null?'—':(r.price<1?'$'+r.price.toFixed(4):'$'+r.price.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2}));
-      var mcStr=r.mc?(r.mc>=1e12?'$'+(r.mc/1e12).toFixed(2)+'T':r.mc>=1e9?'$'+(r.mc/1e9).toFixed(1)+'B':'$'+(r.mc/1e6).toFixed(0)+'M'):'—';
-      var nm=(r.name||''); var nameShort=nm.length>22?nm.slice(0,20)+'…':nm;
-      h+='<tr style="border-bottom:1px solid var(--border);cursor:pointer;" onclick="resNavToTicker(\''+r.t+'\');">'
-        +'<td style="padding:7px 8px;font-weight:700;color:var(--blue);">'+r.t+'</td>'
-        +'<td style="padding:7px 8px;color:var(--text-sec);font-size:11px;max-width:140px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="'+nm+'">'+nameShort+'</td>'
-        +'<td style="padding:7px 8px;text-align:right;font-family:monospace;">'+priceStr+'</td>'
-        +'<td style="padding:7px 8px;text-align:right;font-weight:600;color:'+pctColor+';">'+pctStr+'</td>'
-        +(isEtf?'':'<td style="padding:7px 8px;text-align:right;color:var(--text-sec);">'+mcStr+'</td>')
-        +'</tr>';
-    });
-    h+='</tbody></table></div></div>'; return h;
+  try {
+    var map = await fetchSnapshotRows(tickers);
+    var stockRows = data.stocks.map(function(t){ return map[t] || { ticker:t, price:null }; })
+      .sort(function(a,b){ return (b.marketCap||0)-(a.marketCap||0); });
+    var etfRows = data.etfs.map(function(t){ return map[t] || { ticker:t, price:null }; });
+    var secRow = map[etf];
+    // Sector context banner: the sector ETF's own momentum anchors the story
+    var banner = '';
+    if (secRow) {
+      banner = '<div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;background:'+(sector?sector.color:'#003C71')+'10;border:1px solid '+(sector?sector.color:'#003C71')+'40;border-radius:6px;padding:10px 14px;margin-bottom:12px;">'
+        + '<div><span style="font-size:15px;font-weight:800;color:var(--navy);">'+(sector?sector.name:etf)+' ('+etf+')</span>'
+        + (secRow.price!=null?' <span style="font-family:monospace;font-size:13px;">$'+secRow.price.toFixed(2)+'</span>':'')+'</div>'
+        + '<div style="font-size:12px;">1W '+_ssPct(secRow.chg1w)+' &middot; 1M '+_ssPct(secRow.chg1m)+' &middot; 52W '+_ssPct(secRow.chg1y)
+        + ' &middot; Trend '+(secRow.above200dma==null?'—':(secRow.above200dma?'<span style="color:var(--success);font-weight:700;">▲ above 200d</span>':'<span style="color:var(--danger);font-weight:700;">▼ below 200d</span>'))+'</div>'
+        + '</div>';
+    }
+    wrap.innerHTML = banner
+      + snapshotStoryStrip(stockRows, sector?sector.name:etf)
+      + '<div style="display:grid;grid-template-columns:1.4fr 1fr;gap:16px;" class="ss-two-col">'
+      + '<div>'+buildSnapshotTable(stockRows,(sector?sector.name:etf)+' — Top Stocks', null, true)+'</div>'
+      + '<div>'+buildSnapshotTable(etfRows,  (sector?sector.name:etf)+' — Related ETFs', null, false)+'</div>'
+      + '</div>';
+  } catch(e) {
+    wrap.innerHTML = '<div style="padding:24px;text-align:center;color:var(--danger);">Failed to load: '+e.message+' <button class="btn btn-sm" onclick="renderSectorsContent()">Retry</button></div>';
   }
-  wrap.innerHTML='<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">'
-    +'<div>'+buildTable(data.stocks,(sector?sector.name:etf)+' — Top Stocks',false)+'</div>'
-    +'<div>'+buildTable(data.etfs,  (sector?sector.name:etf)+' — Sector ETFs',true)+'</div>'
-    +'</div>';
 }
 
 function resNavToTicker(ticker) {
@@ -27426,7 +27906,9 @@ window.renderPerformanceTab = async function() {
     var filtPairs = [];
     for (var fi=0;fi<pfSeries.dates.length;fi++) {
       if (pfSeries.dates[fi]>=cutStr && pfSeries.values[fi]!=null && pfSeries.values[fi]>0)
-        filtPairs.push({date:pfSeries.dates[fi], value:pfSeries.values[fi]});
+        filtPairs.push({date:pfSeries.dates[fi],
+          // Prefer TWR series — deposits/purchases don't register as gains
+          value:(pfSeries.twrValues && pfSeries.twrValues[fi]!=null && pfSeries.twrValues[fi]>0) ? pfSeries.twrValues[fi] : pfSeries.values[fi]});
     }
     if (filtPairs.length < 5) return;
     var dates = filtPairs.map(function(p){return p.date;});
@@ -28183,21 +28665,20 @@ function loadRRG(force) {
   if (status) status.textContent = 'Fetching sector price data…';
   if (sectorList) sectorList.innerHTML = '';
 
-  // Fetch SPY and all 11 sector ETFs in parallel (3 months of daily closes)
-  // Uses /chart?symbol=XLK&range=3mo&interval=1d → { points: [{date, close, ...}] }
+  // Fetch SPY and all 11 sector ETFs in parallel — 1 YEAR of daily closes,
+  // keyed by DATE so series align even when one ETF misses a session.
   var tickers = SECTOR_ETFS.concat(['SPY']);
   var fetchFns = tickers.map(function(t) {
-    return fetch(WORKER_URL + '/chart?symbol=' + t + '&range=3mo&interval=1d')
+    return fetch(WORKER_URL + '/chart?symbol=' + t + '&range=1y&interval=1d')
       .then(function(r) { return r.json(); })
       .then(function(d) {
-        // Extract array of close prices (most recent first for consistency)
-        var closes = [];
+        var byDate = {};
         if (d && d.points && d.points.length) {
-          closes = d.points.map(function(p) { return p.close; }).filter(function(v) { return v != null; });
+          d.points.forEach(function(p) { if (p.close != null) byDate[p.date.slice(0,10)] = p.close; });
         }
-        return { ticker: t, closes: closes };
+        return { ticker: t, byDate: byDate, closes: Object.keys(byDate).sort().map(function(k){ return byDate[k]; }) };
       })
-      .catch(function() { return { ticker: t, closes: [] }; });
+      .catch(function() { return { ticker: t, byDate: {}, closes: [] }; });
   });
 
   Promise.all(fetchFns).then(function(results) {
@@ -28233,52 +28714,53 @@ function loadRRG(force) {
 }
 
 function computeRRG(byTicker, spy) {
-  var spyCloses = spy.closes || [];
+  // ── FIXED 2026-07. The previous version computed sector_price ÷ SPY_price
+  // × 100 (≈37 for XLK, ≈8 for XLF — a share-price artifact, not relative
+  // strength) and then required ≥100 for "strong RS". Since no sector ETF's
+  // share price exceeds SPY's, EVERY sector was classified weak-RS and
+  // "Leading"/"Weakening" could never occur. Correct JdK method: normalize
+  // each sector's price RATIO against its own trailing average, so 100 =
+  // performing in line with its own recent relative trend.
+  //   RS-Ratio    = 100 × (sector/SPY ratio today) ÷ SMA₆₃(sector/SPY ratio)
+  //   RS-Momentum = % change of RS-Ratio over the last 15 trading days
   var results = [];
+  var spyDates = Object.keys(spy.byDate || {}).sort();
+  if (spyDates.length < 80) return results;
 
   SECTOR_ETFS.forEach(function(ticker) {
     var d = byTicker[ticker];
-    if (!d || !d.closes || d.closes.length < 30) return;
-    var closes = d.closes;
-    // Align length to shortest series
+    if (!d || !d.byDate) return;
+    // Date-intersected ratio series (sector/SPY on common trading days)
+    var ratios = [];
+    spyDates.forEach(function(dt) {
+      var sc = d.byDate[dt], py = spy.byDate[dt];
+      if (sc != null && py != null && py > 0) ratios.push(sc / py);
+    });
+    if (ratios.length < 80) return;
 
-    var n = Math.min(closes.length, spyCloses.length);
-    if (n < 30) return;
-
-    // RS-Ratio: sector / SPY, normalized to 100
-    var rsRatios = [];
-    for (var i = 0; i < n; i++) {
-      rsRatios.push(closes[i] / spyCloses[i] * 100);
+    function sma(arr, w, idx) {
+      var s = 0, cnt = 0;
+      for (var j = Math.max(0, idx - w + 1); j <= idx; j++) { s += arr[j]; cnt++; }
+      return cnt ? s / cnt : null;
     }
-
-    // EMA helper
-    function ema(arr, period) {
-      var k = 2 / (period + 1), emaArr = [arr[0]];
-      for (var j = 1; j < arr.length; j++) {
-        emaArr.push(arr[j] * k + emaArr[j-1] * (1 - k));
-      }
-      return emaArr;
+    // RS-Ratio series over the last ~40 sessions (enough for the momentum leg)
+    var rsSeries = [];
+    for (var i = ratios.length - 40; i < ratios.length; i++) {
+      var base = sma(ratios, 63, i);
+      rsSeries.push(base ? 100 * ratios[i] / base : null);
     }
-
-    var ema14 = ema(rsRatios, 14);
-    var ema28 = ema(rsRatios, 28);
-    var rsMomArr = ema14.map(function(v, i) { return v - ema28[i]; });
-
-    // Use most recent values, normalized
-    var currentRS = ema14[ema14.length - 1];
-    var currentMom = rsMomArr[rsMomArr.length - 1];
-
-    // Normalize RS around 100, Mom around 0
-    var rsNorm = ((currentRS - 100) / 3) * 100 + 100;  // shift to 100-centered
-    var momNorm = currentMom / 0.05 * 10; // scale momentum
+    var rsNow = rsSeries[rsSeries.length - 1];
+    var rsThen = rsSeries[rsSeries.length - 1 - 15] != null ? rsSeries[rsSeries.length - 1 - 15] : rsSeries[0];
+    if (rsNow == null || rsThen == null || rsThen === 0) return;
+    var momNow = ((rsNow / rsThen) - 1) * 100;  // % change of RS-Ratio, 0-centered
 
     var quadrant;
-    if (rsNorm >= 100 && momNorm >= 0)      quadrant = 'Leading';
-    else if (rsNorm >= 100 && momNorm < 0)  quadrant = 'Weakening';
-    else if (rsNorm < 100 && momNorm < 0)   quadrant = 'Lagging';
-    else                                     quadrant = 'Improving';
+    if (rsNow >= 100 && momNow >= 0)      quadrant = 'Leading';
+    else if (rsNow >= 100 && momNow < 0)  quadrant = 'Weakening';
+    else if (rsNow < 100 && momNow < 0)   quadrant = 'Lagging';
+    else                                  quadrant = 'Improving';
 
-    results.push({ ticker: ticker, rsRatio: rsNorm, rsMom: momNorm, quadrant: quadrant });
+    results.push({ ticker: ticker, rsRatio: rsNow, rsMom: momNow, quadrant: quadrant });
   });
   return results;
 }
@@ -28479,22 +28961,64 @@ function loadGapAnalysis(force) {
   // Render bar chart
   renderGapChart(rows);
 
-  // Render detail table
+  // Render detail table — visual current-vs-target bars + dollar impact so
+  // the row reads as a sentence: "you're X, playbook says Y, move $Z".
   var tbody = document.getElementById('gapDetailBody');
   if (tbody) {
+    var maxPct = Math.max(8, Math.max.apply(null, rows.map(function(r){ return Math.max(r.current, r.target); })));
     var h = '';
     rows.forEach(function(r) {
-      var gc = r.gap > 0 ? '#2E7D52' : r.gap < 0 ? '#8B2A2A' : '#5A6A7A';
-      var action = Math.abs(r.gap) < 1 ? '—' : r.gap > 0 ? 'Trim' : 'Add';
+      // OVERWEIGHT (gap>0) = trim = red action; UNDERWEIGHT = add = green
+      var gc = Math.abs(r.gap) < 1 ? '#5A6A7A' : (r.gap > 0 ? '#8B2A2A' : '#2E7D52');
+      var action = Math.abs(r.gap) < 1 ? '— in line' : (r.gap > 0 ? '▼ Trim' : '▲ Add');
+      var gapDollars = totalMV > 0 ? Math.abs(r.gap) / 100 * totalMV : null;
+      var curW = Math.min(100, r.current / maxPct * 100), tgtW = Math.min(100, r.target / maxPct * 100);
+      var bar = '<div style="position:relative;height:16px;background:var(--panel);border-radius:3px;overflow:hidden;min-width:120px;" title="Blue bar = current weight, dark marker = playbook target">'
+        + '<div style="position:absolute;left:0;top:2px;bottom:2px;width:' + curW + '%;background:rgba(91,155,213,0.55);border-radius:2px;"></div>'
+        + '<div style="position:absolute;left:' + tgtW + '%;top:0;bottom:0;width:2.5px;background:var(--navy);"></div>'
+        + '</div>';
       h += '<tr>' +
            '<td style="font-weight:600;padding:7px 12px;">' + r.sector + '</td>' +
+           '<td style="padding:7px 12px;">' + bar + '</td>' +
            '<td style="text-align:right;padding:7px 12px;">' + r.current.toFixed(1) + '%</td>' +
-           '<td style="text-align:right;padding:7px 12px;">' + r.target.toFixed(1) + '%</td>' +
+           '<td style="text-align:right;padding:7px 12px;color:var(--text-sec);">' + r.target.toFixed(1) + '%</td>' +
            '<td style="text-align:right;padding:7px 12px;font-weight:700;color:' + gc + ';">' + (r.gap >= 0 ? '+' : '') + r.gap.toFixed(1) + '%</td>' +
-           '<td style="text-align:center;padding:7px 12px;font-weight:600;color:' + gc + ';">' + action + '</td>' +
+           '<td style="text-align:right;padding:7px 12px;color:' + gc + ';">' + (gapDollars != null && Math.abs(r.gap) >= 1 ? '$' + Math.round(gapDollars).toLocaleString() : '—') + '</td>' +
+           '<td style="text-align:center;padding:7px 12px;font-weight:600;color:' + gc + ';white-space:nowrap;">' + action + '</td>' +
            '</tr>';
     });
-    tbody.innerHTML = h || '<tr><td colspan="5" style="text-align:center;color:var(--text-sec);padding:16px;">Add holdings to see gap analysis.</td></tr>';
+    tbody.innerHTML = h || '<tr><td colspan="7" style="text-align:center;color:var(--text-sec);padding:16px;">Add holdings to see gap analysis.</td></tr>';
+  }
+
+  // ── Rebalancing Actions card (was stuck on a permanent spinner — never
+  //    populated). Now: shows concrete trades ONLY when drift exceeds the
+  //    3% tolerance band; otherwise states clearly that no action is needed. ──
+  var rebEl = document.getElementById('gapRebalanceSuggestions');
+  if (rebEl) {
+    var needsRebal2 = drift > 3;
+    if (!equityHoldings.length) {
+      rebEl.innerHTML = '<div style="color:var(--text-sec);padding:6px;">Add holdings to generate rebalancing actions.</div>';
+    } else if (!needsRebal2) {
+      rebEl.innerHTML = '<div style="display:flex;align-items:center;gap:10px;padding:6px;">'
+        + '<span style="font-size:22px;">✅</span>'
+        + '<div><strong style="color:var(--success);">No rebalancing required.</strong> '
+        + '<span style="color:var(--text-sec);">Portfolio drift is ' + drift.toFixed(1) + '% — inside the ±3% institutional tolerance band vs. the ' + (quadLabel || 'SPY') + ' playbook targets. Rebalancing now would only generate trading costs and taxable events. Recheck after the next regime change or quarterly.</span></div></div>';
+    } else {
+      var actions = rows.filter(function(r){ return Math.abs(r.gap) >= 1.5; }).slice(0, 6);
+      var items = actions.map(function(r) {
+        var dollars = totalMV > 0 ? Math.abs(r.gap) / 100 * totalMV : 0;
+        var isTrim = r.gap > 0;
+        return '<div style="display:flex;align-items:center;gap:10px;padding:7px 10px;border:1px solid var(--border);border-radius:5px;margin-bottom:6px;background:' + (isTrim ? 'rgba(139,42,42,0.05)' : 'rgba(46,125,82,0.05)') + ';">'
+          + '<span style="font-weight:800;color:' + (isTrim ? 'var(--danger)' : 'var(--success)') + ';min-width:52px;">' + (isTrim ? '▼ TRIM' : '▲ ADD') + '</span>'
+          + '<span style="font-weight:600;min-width:150px;">' + r.sector + '</span>'
+          + '<span style="color:var(--text-sec);">' + r.current.toFixed(1) + '% → ' + r.target.toFixed(1) + '%</span>'
+          + '<span style="margin-left:auto;font-weight:700;color:' + (isTrim ? 'var(--danger)' : 'var(--success)') + ';">' + (isTrim ? '−' : '+') + '$' + Math.round(dollars).toLocaleString() + '</span>'
+          + '</div>';
+      }).join('');
+      rebEl.innerHTML = '<div style="margin-bottom:8px;color:var(--text-sec);">Drift of <strong style="color:var(--danger);">' + drift.toFixed(1) + '%</strong> exceeds the 3% band. Closing the largest gaps vs. the <strong>' + (quadLabel || 'SPY') + '</strong> playbook:</div>'
+        + items
+        + '<div style="font-size:11px;color:var(--text-sec);margin-top:8px;">Dollar amounts = gap × portfolio equity value ($' + Math.round(totalMV).toLocaleString() + '). Use the Rebalancer for a per-ticker trade blotter with your risk-profile constraints applied.</div>';
+    }
   }
 
   // Show no-holdings message if needed
