@@ -1220,6 +1220,9 @@ body.view-mobile .chart-wrap > canvas {
   min-width: 560px !important;
   max-width: none !important;
   height: 100% !important;
+  /* Let swipe gestures scroll/pan instead of being captured by the
+     chart's drag-zoom plugin — fixes the "stuck" wonky feel on touch */
+  touch-action: pan-x pan-y !important;
 }
 /* Charts in generic height-styled divs (position:relative wrappers) */
 body.view-mobile div[style*="height:420px"],
@@ -3328,11 +3331,15 @@ body.view-mobile #mobileBottomBar {
         </div>
 
         <div class="card">
-          <div class="card-title">Top Holdings Correlation Heatmap</div>
-          <div class="card-body">
-            <div id="riskHeatmapWrap" style="overflow-x:auto;"></div>
-            <div style="font-size:10.5px;color:var(--text-sec);margin-top:6px;">Red = highly correlated (concentration risk) · Blue = negative correlation (diversification benefit). Based on 1-year daily returns.</div>
+          <div class="card-title">Portfolio vs. Market — Correlation Over Time
+            <span class="help-icon" title="Rolling 63-day correlation between your whole portfolio's daily returns and SPY / QQQ. Near +1.0 = your portfolio IS the market (index risk without index simplicity). Falling correlation = your specific holdings are driving results — for better or worse. The insight boxes show whether your high-correlation periods actually earned better returns than your low-correlation periods." data-heading="Correlation Over Time" >ⓘ</span>
           </div>
+          <div class="card-body">
+            <div id="riskCorrInsight" style="margin-bottom:10px;font-size:12px;color:var(--text-sec);"><span class="spinner"></span> Computing rolling correlation vs SPY and QQQ…</div>
+            <div class="chart-wrap" style="height:280px;"><canvas id="riskCorrChart"></canvas></div>
+            <div id="riskHeatmapWrap" style="display:none;"></div>
+          </div>
+          <div class="card-sources"><strong>Method:</strong> Rolling 63-trading-day Pearson correlation of daily portfolio returns (TWR series — deposits stripped) vs. SPY and QQQ daily returns, date-aligned. Insight split: months where trailing correlation vs SPY was above / below 0.80. Data via PerryData layer (Firestore-cached).</div>
         </div>
       </div>
 
@@ -3641,6 +3648,7 @@ body.view-mobile #mobileBottomBar {
             <option value="Designated Beneficiary">Designated Beneficiary</option>
           </select>
           <button class="btn btn-sm" onclick="holdingsShowTab('import')" style="white-space:nowrap;">+ Add Holding</button>
+          <button class="btn-outline btn-sm" onclick="enrichHoldingsMetadata()" style="white-space:nowrap;" title="Auto-fill missing Sector, Industry, Asset type, and Yield for every holding from the ETF database, FMP profile, and SEC data — fixes rows showing —">🪄 Auto-Fill Missing Data</button>
         </div>
       </div>
       <!-- Tab Bar -->
@@ -3676,6 +3684,19 @@ body.view-mobile #mobileBottomBar {
 
       <!-- ═══ TAB 2: Analysis ═══ -->
       <div class="pf-tab-content" id="htab-analysis">
+        <!-- Account-by-Account Comparison (added 2026-07) -->
+        <div class="card" style="margin-bottom:16px;">
+          <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
+            <span>Account-by-Account Comparison
+              <span class="help-icon" title="Compares every account side by side: size and unrealized performance (bars), sector mix (stacked columns — spot the account that is secretly one giant tech bet), overlap (how many tickers each pair of accounts share — high overlap means your accounts rise and fall together), and each account's underperforming positions flagged for review." data-heading="Account Comparison">ⓘ</span>
+            </span>
+            <button class="btn btn-sm" onclick="renderAccountComparison(true)">🔄 Refresh</button>
+          </div>
+          <div class="card-body" id="acctCompareBody">
+            <div style="text-align:center;padding:16px;color:var(--text-sec);"><span class="spinner"></span> Comparing accounts…</div>
+          </div>
+          <div class="card-sources"><strong>Method:</strong> Value & unrealized G/L from cost basis vs. live price. Sector mix value-weighted per account. Overlap = shared tickers between account pairs. Underperformer flag: unrealized loss worse than −5% AND below the portfolio's median position return.</div>
+        </div>
         <!-- Story Cards -->
         <div class="hld-story-strip" id="hldStoryStrip">
           <div class="hld-story-card info">
@@ -4121,6 +4142,24 @@ body.view-mobile #mobileBottomBar {
             <div id="resAnalystForecasts"></div>
           </div>
           <div class="card-sources"><strong>Source:</strong> Financial Modeling Prep (FMP) analyst consensus via Cloudflare Worker.</div>
+        </div>
+        <!-- Line Item Explorer (added 2026-07): trend + projection for ANY
+             statement line, with one-click peer overlay -->
+        <div class="card" style="margin-bottom:14px;">
+          <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
+            <span>Line Item Explorer — Trend, 3-Year Projection & Peer Comparison
+              <span class="help-icon" title="Pick ANY financial statement line item to see its 5-year actual trend plus a 3-year projection (trailing-CAGR based, dashed). Toggle the peer overlay to see the same line for the auto-detected peer group — is the company growing revenue faster than its rivals, or losing ground? Peer overlay is available for income-statement items (revenue, profits, EPS); balance/cash-flow items chart the company alone." data-heading="Line Item Explorer">ⓘ</span>
+            </span>
+            <span style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+              <select id="liExplorerItem" onchange="liExplorerRender()" style="font-size:11px;padding:3px 8px;"></select>
+              <label style="font-size:11px;color:#fff;display:flex;align-items:center;gap:4px;"><input type="checkbox" id="liExplorerPeers" onchange="liExplorerRender()"> Peer overlay</label>
+            </span>
+          </div>
+          <div class="card-body">
+            <div id="liExplorerNote" style="font-size:11.5px;color:var(--text-sec);margin-bottom:8px;">Analyze a ticker to load line items.</div>
+            <div class="chart-wrap" style="height:300px;"><canvas id="liExplorerChart"></canvas></div>
+          </div>
+          <div class="card-sources"><strong>Method:</strong> Actuals from SEC EDGAR 10-K/20-F (IFRS-aware); gaps auto-backfilled from FMP statements. Projection = trailing CAGR of available years extended 3 years (dashed) — a mechanical baseline, not guidance. Peer data via <code>/peer-financials</code>.</div>
         </div>
         <!-- Bear / Base / Bull scenarios -->
         <div class="card" style="margin-bottom:14px;" id="resScenarioCard" style="display:none;">
@@ -6370,31 +6409,60 @@ body.view-mobile #mobileBottomBar {
     document.body.appendChild(m);
   };
 
+  // UPGRADED 2026-07: a sale now (1) credits the proceeds to a Cash position
+  // in the SAME account (merging into an existing cash row when present),
+  // and (2) writes a permanent record to the Firestore `transactions` log —
+  // sold shares no longer simply vanish from the books.
   window.confirmSell = async function(docId, curQty) {
     const sq = parseFloat(document.getElementById('sellQtyInput').value);
     if (!sq || sq <= 0) { alert('Enter shares to sell.'); return; }
     if (sq > curQty + 0.0001) { alert('Cannot sell more than you own (' + curQty + ').'); return; }
     document.querySelector('.modal-overlay').remove();
-
-    if (Math.abs(sq - curQty) < 0.0001) {
-      // Selling all = delete
-      if (confirm('Selling all shares removes this holding. Continue?')) {
-        await deleteHolding(docId);
+    const h = (window._holdings || []).find(x => x.id === docId);
+    if (!h) return;
+    const px = h.currentPrice || h.costBasis || 0;
+    const proceeds = Math.round(sq * px * 100) / 100;
+    const acct = h.accountType || 'Individual';
+    const realizedGL = Math.round(sq * (px - (h.costBasis || 0)) * 100) / 100;
+    try {
+      // 1) Reduce or remove the position
+      if (Math.abs(sq - curQty) < 0.0001) {
+        await deleteDoc(doc(db, "holdings", docId));
+      } else {
+        await updateHoldingDoc(docId, { quantity: Math.round((curQty - sq) * 10000) / 10000, lastUpdated: new Date().toISOString() });
       }
-    } else {
-      // Partial sell
-      try {
-        await updateHoldingDoc(docId, {
-          quantity: Math.round((curQty - sq) * 10000) / 10000,
-          lastUpdated: new Date().toISOString()
+      // 2) Credit proceeds to Cash in the same account (merge if cash row exists)
+      const cashRow = (window._holdings || []).find(x =>
+        x.id !== docId && x.assetClass === 'Cash' && (x.accountType || 'Individual') === acct);
+      if (cashRow) {
+        const curCash = (cashRow.costBasis || 0) * (cashRow.quantity || 1);
+        await updateHoldingDoc(cashRow.id, { costBasis: Math.round((curCash + proceeds) * 100) / 100, quantity: 1, lastUpdated: new Date().toISOString() });
+      } else {
+        await addDoc(collection(db, "holdings"), {
+          uid: window._currentUser ? window._currentUser.uid : null,
+          ticker: 'CASH', companyName: 'Cash (sale proceeds)',
+          quantity: 1, costBasis: proceeds, currentPrice: null,
+          yieldPct: null, accountType: acct, sector: 'Cash', industry: 'Cash',
+          assetClass: 'Cash', datePurchased: new Date().toISOString().slice(0,10),
+          createdAt: new Date().toISOString()
         });
-        showStatus('holdingsStatus',
-          '&#10003; Sold ' + sq + ' shares. Remaining: ' + (curQty - sq).toFixed(4),
-          'success');
-        await loadHoldings();
-      } catch(e) {
-        alert(e.message);
       }
+      // 3) Permanent transaction record
+      try {
+        await addDoc(collection(db, "transactions"), {
+          uid: window._currentUser ? window._currentUser.uid : null,
+          type: 'SELL', ticker: h.ticker, shares: sq, price: px,
+          proceeds: proceeds, realizedGainLoss: realizedGL,
+          costBasisPerShare: h.costBasis || null, account: acct,
+          ts: new Date().toISOString()
+        });
+      } catch(e2) { console.warn('Transaction log write failed:', e2); }
+      showStatus('holdingsStatus',
+        '&#10003; Sold ' + sq + ' ' + h.ticker + ' @ $' + px.toFixed(2) + ' — $' + proceeds.toLocaleString() + ' credited to Cash (' + acct + '). Realized ' + (realizedGL >= 0 ? 'gain' : 'loss') + ': $' + Math.abs(realizedGL).toLocaleString() + '. Logged to transactions.',
+        'success');
+      await loadHoldings();
+    } catch(e) {
+      alert(e.message);
     }
   };
 
@@ -7784,7 +7852,8 @@ function renderHoldingsTable(holdings) {
       '<td style="white-space:nowrap;">' +
         (canUndo ? '<button class="btn-outline btn-sm" onclick="undoEdit(\'' + h.id + '\')" title="Undo last edit" style="margin-right:2px;">&#8617;</button>' : '') +
         '<button class="btn btn-sm" onclick="editHolding(\'' + h.id + '\')" style="margin-right:3px;">Edit</button>' +
-        '<button class="btn btn-danger btn-sm" onclick="deleteHolding(\'' + h.id + '\')">&#10005;</button>' +
+        (isCash ? '' : '<button class="btn-outline btn-sm" onclick="sellShares(\'' + h.id + '\')" title="Sell shares — proceeds are credited to a Cash position in the same account and logged" style="margin-right:3px;">Sell</button>') +
+        '<button class="btn btn-danger btn-sm" onclick="deleteHolding(\'' + h.id + '\')" title="Remove without recording a sale (data correction)">&#10005;</button>' +
       '</td></tr>';
   });
   // Total row
@@ -7941,6 +8010,7 @@ function _toggleTabs(scope, dataAttr, name, contentIdPrefix) {
 function holdingsShowTab(name) {
   _toggleTabs('#page-holdings', 'data-htab', name, 'htab-');
   if (name === 'rebalance' && typeof loadRebalanceContext === 'function') loadRebalanceContext(false);
+  if (name === 'analysis' && typeof renderAccountComparison === 'function') setTimeout(function(){ renderAccountComparison(false); }, 100);
   var h = window._holdings || [];
   if (name === 'analysis') {
     if (!_hldTabInit.analysis) { _hldTabInit.analysis = true; if (h.length) renderHoldingsAnalysis(h); }
@@ -17256,7 +17326,7 @@ async function resMoatRun() {
     if (profile.ceo) execBody += '<div style="background:var(--panel);border:1px solid var(--border);border-left:4px solid var(--navy);border-radius:4px;padding:10px 14px;min-width:160px;"><div style="font-size:10px;color:var(--text-sec);text-transform:uppercase;">CEO</div><div style="font-weight:700;font-size:13px;">' + profile.ceo + '</div></div>';
     execBody += '<div style="font-size:12px;color:var(--text-sec);padding:10px;">Full leadership table unavailable — worker endpoint may not be deployed yet.</div></div>';
   }
-  html += section('Leadership Team', '👔', execBody);
+  var _secLeadership = section('Leadership Team', '👔', execBody);  // deferred — appended after the decision sections (reordered 2026-07)
 
   // ── 2. Revenue Quality & Profitability ───────────────────────
   var profBody = '<table style="width:100%;border-collapse:collapse;font-size:12px;"><thead><tr style="background:var(--panel);"><th style="padding:5px 10px;text-align:left;">Metric</th><th style="padding:5px 10px;text-align:left;">Value</th><th style="padding:5px 10px;text-align:left;">Signal</th></tr></thead><tbody>';
@@ -17270,7 +17340,7 @@ async function resMoatRun() {
   profBody += metric('Stock-Based Comp %', sbcPct, pct, 0.05, true);
   profBody += '</tbody></table>';
   profBody += '<div style="font-size:11px;color:var(--text-sec);margin-top:8px;">FCF Conversion >0.8x = high-quality earnings. SBC >5% = dilution risk. R&D intensity signals innovation investment.</div>';
-  html += section('Revenue Quality & Profitability Signals','📈', profBody);
+  var _secRevQuality = section('Revenue Quality & Profitability Signals','📈', profBody);  // deferred
 
   // ── 3. Competitive Moat Signals ─────────────────────────────
   var moatSignals = [
@@ -17288,8 +17358,8 @@ async function resMoatRun() {
       +'<span style="font-size:11px;font-weight:600;">'+s.name+'</span>'
       +pill(s.pass?'✓ Pass':'✗ Fail', s.pass?C.success:C.danger)
       +'</div>'
-      +'<div style="font-size:12px;font-weight:700;font-family:monospace;">'+s.val+'</div>'
-      +'<div style="font-size:10px;color:var(--text-sec);margin-top:2px;">'+s.note+'</div>'
+      +'<div style="font-size:17px;font-weight:800;font-family:monospace;color:'+(s.pass?C.success:C.danger)+';">'+s.val+'</div>'
+      +'<div style="font-size:10.5px;color:var(--text-sec);margin-top:2px;">'+s.note+'</div>'
       +'</div>';
   });
   moatBody += '</div>';
@@ -17314,7 +17384,7 @@ async function resMoatRun() {
   var levCol = de!=null ? (de<1.5?C.success:de<3.0?'#8B6914':C.danger) : C.textSec;
   levBody += '<div style="margin-top:10px;background:var(--panel);border:1px solid var(--border);border-left:4px solid '+levCol+';border-radius:4px;padding:8px 12px;font-size:12px;">'
     +'<strong>Leverage Assessment:</strong> D/E = '+(de!=null?de.toFixed(2)+'x':'N/A')+' → <span style="color:'+levCol+';font-weight:700;">'+levSignal+'</span></div>';
-  html += section('Balance Sheet & Leverage','💰', levBody);
+  var _secBalance = section('Balance Sheet & Leverage','💰', levBody);  // deferred
 
   // ── 5. Analyst Consensus & Market Positioning ────────────────
   var analBody = '<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin-bottom:12px;">';
@@ -17351,6 +17421,10 @@ async function resMoatRun() {
     targetBody += '<div style="font-size:10px;color:var(--text-sec);margin-top:4px;padding:0 8px;">Bar spans analyst low to 5% above high. Orange = current price · Red = bear target · Blue = mean target · Green = bull target.</div>';
     html += section('Where Could This Stock Go?', '🎯', targetBody);
   }
+
+  // Reordered 2026-07 per review: decision sections first (Overview → Moat
+  // Signals → Analyst Consensus → Where Could This Go), supporting detail after.
+  html += _secRevQuality + _secBalance + _secLeadership;
 
   // ── 7. Macro Sensitivity ────────────────────────────────────────
   var MACRO_IMPACT = {
@@ -21473,6 +21547,107 @@ function renderMarketBaseline(d) {
   el.innerHTML = html;
 }
 
+// ═══════════════════════════════════════════════════════════════════
+// LINE ITEM EXPLORER — any statement line: 5y actuals + 3y CAGR
+// projection + optional peer overlay (income items). Added 2026-07.
+// ═══════════════════════════════════════════════════════════════════
+var _liExplorerChart = null;
+var LI_ITEMS = [
+  { key:'revenue',        label:'Revenue',              stmt:'incomeStatement',  peer:'revenue' },
+  { key:'grossProfit',    label:'Gross Profit',         stmt:'incomeStatement',  peer:'grossProfit' },
+  { key:'operatingIncome',label:'Operating Income',     stmt:'incomeStatement',  peer:'operatingIncome' },
+  { key:'netIncome',      label:'Net Income',           stmt:'incomeStatement',  peer:'netIncome' },
+  { key:'eps',            label:'EPS (Diluted)',        stmt:'incomeStatement',  peer:'eps' },
+  { key:'researchAndDev', label:'R&D Expense',          stmt:'incomeStatement',  peer:null },
+  { key:'totalAssets',    label:'Total Assets',         stmt:'balanceSheet',     peer:null },
+  { key:'totalLiabilities',label:'Total Liabilities',   stmt:'balanceSheet',     peer:null },
+  { key:'stockholdersEquity',label:'Shareholders’ Equity', stmt:'balanceSheet', peer:null },
+  { key:'cash',           label:'Cash & Equivalents',   stmt:'balanceSheet',     peer:null },
+  { key:'longTermDebt',   label:'Long-Term Debt',       stmt:'balanceSheet',     peer:null },
+  { key:'operatingCashFlow',label:'Operating Cash Flow',stmt:'cashFlowStatement',peer:null },
+  { key:'capitalExpenditures',label:'Capital Expenditures',stmt:'cashFlowStatement',peer:null },
+  { key:'stockRepurchases',label:'Share Buybacks',      stmt:'cashFlowStatement',peer:null }
+];
+function liExplorerInit() {
+  var sel = document.getElementById('liExplorerItem');
+  if (!sel) return;
+  if (!sel.options.length) {
+    sel.innerHTML = LI_ITEMS.map(function(it){ return '<option value="'+it.key+'">'+it.label+'</option>'; }).join('');
+  }
+  liExplorerRender();
+}
+async function liExplorerRender() {
+  var d = window._lastSecData, tk = window._lastSecTicker;
+  var note = document.getElementById('liExplorerNote');
+  var canvas = document.getElementById('liExplorerChart');
+  if (!canvas || !d || !tk) return;
+  var key = (document.getElementById('liExplorerItem')||{}).value || 'revenue';
+  var wantPeers = !!(document.getElementById('liExplorerPeers')||{}).checked;
+  var item = LI_ITEMS.find(function(i){ return i.key === key; }) || LI_ITEMS[0];
+  // Anchor series from SEC; FMP backfill for income items when SEC came back thin
+  var series = ((d[item.stmt]||{})[item.key]) || [];
+  var pts = series.map(function(s){ return { year: s.year, value: s.value }; }).filter(function(p){ return p.value != null; });
+  var usedFmp = false;
+  if (pts.length < 3 && item.peer) {
+    try {
+      var fb = await fetch(WORKER_URL + '/peer-financials?symbols=' + encodeURIComponent(tk)).then(function(r){ return r.json(); });
+      var inc = fb && fb.peers && fb.peers[0] && fb.peers[0].income;
+      if (inc && inc.length) { pts = inc.map(function(r){ return { year: r.year, value: r[item.peer] }; }).filter(function(p){ return p.value != null; }); usedFmp = true; }
+    } catch(e) {}
+  }
+  if (pts.length < 2) { if (note) note.innerHTML = '<span style="color:#8B6914;">Not enough history for '+item.label+' on '+tk+' — SEC and FMP both returned fewer than 2 annual points.</span>'; return; }
+  // 3-year projection from trailing CAGR (guards: needs positive endpoints)
+  var years = pts.map(function(p){ return p.year; });
+  var vals = pts.map(function(p){ return p.value; });
+  var n = vals.length;
+  var cagr = (vals[0] > 0 && vals[n-1] > 0) ? Math.pow(vals[n-1]/vals[0], 1/(n-1)) - 1 : null;
+  var projYears = [], projVals = [];
+  if (cagr != null) {
+    var lastY = parseInt(years[n-1], 10), lastV = vals[n-1];
+    for (var pi = 1; pi <= 3; pi++) { projYears.push(String(lastY+pi)+'E'); lastV = lastV*(1+cagr); projVals.push(+lastV.toFixed(4)); }
+  }
+  var labels = years.concat(projYears);
+  var actualData = vals.concat(projYears.map(function(){ return null; }));
+  var projData = years.map(function(){ return null; }); projData[years.length-1] = vals[n-1]; projData = projData.concat(projVals);
+  var datasets = [
+    { label: tk + ' (actual'+(usedFmp?' — FMP':'')+')', data: actualData, borderColor: C.navy, backgroundColor: 'rgba(0,60,113,0.08)', borderWidth: 2.5, pointRadius: 3, tension: 0.15, fill: false },
+    { label: tk + ' projection ('+(cagr!=null?(cagr>=0?'+':'')+(cagr*100).toFixed(1)+'%/yr':'n/a')+')', data: projData, borderColor: C.navy, borderDash: [6,4], borderWidth: 2, pointRadius: 3, pointStyle: 'rectRot', tension: 0.15, fill: false }
+  ];
+  var peerNote = '';
+  if (wantPeers && item.peer) {
+    try {
+      var peerStr = (document.getElementById('resPeerTickers')||{}).value || '';
+      var peers = peerStr.split(',').map(function(p){ return p.trim().toUpperCase(); }).filter(Boolean).slice(0, 5);
+      if (peers.length) {
+        var pk = await fetch(WORKER_URL + '/peer-financials?symbols=' + encodeURIComponent(peers.join(','))).then(function(r){ return r.json(); });
+        (pk.peers || []).forEach(function(p, i2) {
+          if (!p.income || !p.income.length) return;
+          var m = {}; p.income.forEach(function(r){ if (r[item.peer] != null) m[r.year] = r[item.peer]; });
+          var dta = labels.map(function(y){ return m[String(y).replace('E','')] != null && String(y).indexOf('E') < 0 ? m[y] : null; });
+          if (dta.some(function(v){ return v != null; })) datasets.push({ label: p.symbol, data: dta, borderColor: PALETTE[(i2+3) % PALETTE.length], borderWidth: 1.4, pointRadius: 2, tension: 0.15, fill: false, spanGaps: true });
+        });
+        peerNote = ' Peer overlay: ' + peers.join(', ') + ' (from the Peer Comparison list — edit it on the Stock vs. Peers tab).';
+      } else {
+        peerNote = ' <span style="color:#8B6914;">No peers listed — run Auto-Detect on the Stock vs. Peers tab first.</span>';
+      }
+    } catch(e) { peerNote = ' <span style="color:var(--danger);">Peer overlay failed: '+e.message+'</span>'; }
+  } else if (wantPeers && !item.peer) {
+    peerNote = ' <span style="color:#8B6914;">Peer overlay is available for income-statement items only.</span>';
+  }
+  if (note) note.innerHTML = '<strong>'+item.label+'</strong> — '+n+' years of actuals'+(usedFmp?' (SEC thin; using FMP statements)':'')+', 3-year mechanical projection at trailing CAGR.'+peerNote;
+  if (_liExplorerChart) { try { _liExplorerChart.destroy(); } catch(e){} }
+  var isEps = item.key === 'eps';
+  _liExplorerChart = new Chart(canvas.getContext('2d'), {
+    type: 'line',
+    data: { labels: labels, datasets: datasets },
+    options: { responsive: true, maintainAspectRatio: false, animation: false, interaction: { mode: 'index', intersect: false },
+      plugins: { legend: { position: 'top', labels: { font: { size: 10 }, boxWidth: 12 } },
+        tooltip: Object.assign({}, chartTooltip, { callbacks: { label: function(c){ var v = c.parsed.y; if (v == null) return null; return c.dataset.label+': '+(isEps ? '$'+v.toFixed(2) : '$'+(Math.abs(v)>=1e9?(v/1e9).toFixed(1)+'B':(v/1e6).toFixed(0)+'M')); } } }) },
+      scales: { x: { grid: { display: false }, ticks: { font: { size: 10 } } },
+                y: { grid: chartGrid, ticks: { font: { size: 10 }, callback: function(v){ return isEps ? '$'+v : (Math.abs(v)>=1e9?'$'+(v/1e9).toFixed(0)+'B':'$'+(v/1e6).toFixed(0)+'M'); } } } } }
+  });
+}
+
 function rqShowTab(name) {
   _toggleTabs('#page-research', 'data-rqtab', name, 'rqtab-');
   if (name === 'baseline' && typeof loadMarketBaseline === 'function') loadMarketBaseline(false);
@@ -21481,6 +21656,7 @@ function rqShowTab(name) {
   if (name === 'financials' && d && tk) {
     // Always re-render to ensure latest data is shown
     resRenderFinancials(tk, d);
+    setTimeout(liExplorerInit, 150);
     // Ensure RCR card is visible in this tab
     var rcrC = document.getElementById('rcrCard');
     if (rcrC) rcrC.style.display = '';
@@ -24189,22 +24365,76 @@ async function pfRenderRisk() {
       var annArithMean2 = (mean + variance/2) * 252;
       sortinoVal = downSigma > 0 ? (annArithMean2 - 0.045) / (downSigma * Math.sqrt(252)) : 0;
 
-      var metrics = [
-        { label:'Sharpe Ratio', val: sharpeVal.toFixed(2), isGood: sharpeVal >= 1, help:'sharpe' },
-        { label:'Sortino Ratio', val: sortinoVal.toFixed(2), isGood: sortinoVal >= 1, help:'sharpe' },
-        { label:'Max Drawdown', val: '-'+maxDDPct.toFixed(1)+'%', isGood: maxDDPct <= 10, help:'maxDrawdown' },
-        { label:'VaR (95%, 1-day)', val: var95PctVal.toFixed(2)+'%', isGood: var95PctVal <= 2, help:'var95' },
-        { label:'Ann. Volatility', val: volAnnVal.toFixed(1)+'%', isGood: volAnnVal <= 15, help:'sharpe' },
-        { label:'Beta vs SPY', val: betaVal.toFixed(2), isGood: betaVal <= 1.2, help:'beta' }
-      ];
-      rmdEl.innerHTML = metrics.map(function(m) {
-        var color = m.isGood ? 'var(--success)' : 'var(--warning)';
-        return '<div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--border);flex-wrap:wrap;">'
-          +'<div style="min-width:180px;font-size:12px;font-weight:600;color:var(--navy);">'+m.label+' <span class="help-icon" data-help="'+(m.help||'sharpe')+'">ⓘ</span></div>'
-          +'<div style="flex:1;min-width:120px;height:8px;background:var(--border);border-radius:4px;"><div style="height:100%;border-radius:4px;background:'+color+';width:40%;"></div></div>'
-          +'<div style="min-width:80px;text-align:right;font-size:13px;font-weight:700;color:'+color+';">'+m.val+'</div>'
-          +'</div>';
-      }).join('');
+      // Comparative render: same metrics computed for SPY and QQQ over the
+      // same 1-year window, side by side — a number means nothing without
+      // its benchmark (redesigned 2026-07).
+      rmdEl.innerHTML = '<div style="color:var(--text-sec);font-size:12px;"><span class="spinner"></span> Comparing against SPY and QQQ…</div>';
+      (async function renderRmdComparison() {
+        var pfM = { sharpe: sharpeVal, sortino: sortinoVal, maxDD: maxDDPct, var95: var95PctVal, vol: volAnnVal, beta: betaVal };
+        var idxM = { SPY: null, QQQ: null };
+        try {
+          var HISTc = await PerryData.getMany(['SPY','QQQ'], 2);
+          ['SPY','QQQ'].forEach(function(sym) {
+            var hh = HISTc[sym]; if (!hh || hh.closes.length < 260) return;
+            var cl = hh.closes.slice(-253);
+            var rr = []; for (var q = 1; q < cl.length; q++) rr.push(cl[q]/cl[q-1]-1);
+            var mn = rr.reduce(function(s,v){return s+v;},0)/rr.length;
+            var vr = rr.reduce(function(s,v){return s+(v-mn)*(v-mn);},0)/(rr.length-1);
+            var sd = Math.sqrt(vr);
+            var dn = rr.filter(function(v){return v<0;});
+            var dnSd = Math.sqrt(dn.length>1 ? dn.reduce(function(s,v){return s+v*v;},0)/dn.length : 0);
+            var pk = cl[0], mdd = 0;
+            cl.forEach(function(v){ if (v>pk) pk=v; var dd=(pk-v)/pk; if (dd>mdd) mdd=dd; });
+            idxM[sym] = {
+              sharpe: sd>0 ? (mn - 0.05/252)/sd*Math.sqrt(252) : 0,
+              sortino: dnSd>0 ? ((mn*252) - 0.045)/(dnSd*Math.sqrt(252)) : 0,
+              maxDD: mdd*100, var95: 1.645*sd*100, vol: sd*Math.sqrt(252)*100,
+              beta: sym === 'SPY' ? 1.0 : null
+            };
+          });
+          // QQQ beta vs SPY
+          if (HISTc.QQQ && HISTc.SPY && idxM.QQQ) {
+            var qc = HISTc.QQQ.closes.slice(-253), sc = HISTc.SPY.closes.slice(-253);
+            var n2 = Math.min(qc.length, sc.length);
+            var qr=[], sr=[];
+            for (var w2=1; w2<n2; w2++){ qr.push(qc[w2]/qc[w2-1]-1); sr.push(sc[w2]/sc[w2-1]-1); }
+            var mq=qr.reduce(function(s,v){return s+v;},0)/qr.length, ms=sr.reduce(function(s,v){return s+v;},0)/sr.length;
+            var cv=0, vs=0;
+            for (var w3=0; w3<qr.length; w3++){ cv+=(qr[w3]-mq)*(sr[w3]-ms); vs+=(sr[w3]-ms)*(sr[w3]-ms); }
+            idxM.QQQ.beta = vs>0 ? cv/vs : null;
+          }
+        } catch(e) {}
+        var defs = [
+          { key:'sharpe', label:'Sharpe Ratio', fmt:function(v){return v.toFixed(2);}, higher:true, help:'sharpe' },
+          { key:'sortino', label:'Sortino Ratio', fmt:function(v){return v.toFixed(2);}, higher:true, help:'sharpe' },
+          { key:'vol', label:'Ann. Volatility', fmt:function(v){return v.toFixed(1)+'%';}, higher:false, help:'sharpe' },
+          { key:'maxDD', label:'Max Drawdown', fmt:function(v){return '-'+v.toFixed(1)+'%';}, higher:false, help:'maxDrawdown' },
+          { key:'var95', label:'VaR (95%, 1-day)', fmt:function(v){return v.toFixed(2)+'%';}, higher:false, help:'var95' },
+          { key:'beta', label:'Beta vs SPY', fmt:function(v){return v.toFixed(2);}, higher:null, help:'beta' }
+        ];
+        var hh2 = '<div style="overflow-x:auto;"><table style="width:100%;border-collapse:collapse;font-size:12px;">'
+          + '<thead><tr><th style="padding:8px 10px;text-align:left;">Metric</th><th style="padding:8px 10px;text-align:right;">Your Portfolio</th><th style="padding:8px 10px;text-align:right;">SPY</th><th style="padding:8px 10px;text-align:right;">QQQ</th><th style="padding:8px 10px;text-align:left;">Read</th></tr></thead><tbody>';
+        defs.forEach(function(d) {
+          var pv = pfM[d.key], sv = idxM.SPY ? idxM.SPY[d.key] : null, qv = idxM.QQQ ? idxM.QQQ[d.key] : null;
+          var verdict = '', vc = 'var(--text-sec)';
+          if (d.higher !== null && pv != null && sv != null) {
+            var better = d.higher ? pv > sv : pv < sv;
+            verdict = better ? 'Better than SPY' : 'Worse than SPY';
+            vc = better ? 'var(--success)' : 'var(--danger)';
+          } else if (d.key === 'beta' && pv != null) {
+            verdict = pv > 1.2 ? 'Amplified market risk' : pv < 0.8 ? 'Defensive vs market' : 'Market-like';
+            vc = pv > 1.2 ? '#8B6914' : 'var(--text-sec)';
+          }
+          hh2 += '<tr style="border-bottom:1px solid var(--border);">'
+            + '<td style="padding:7px 10px;font-weight:600;color:var(--navy);">'+d.label+' <span class="help-icon" data-help="'+d.help+'">ⓘ</span></td>'
+            + '<td style="padding:7px 10px;text-align:right;font-family:monospace;font-weight:700;">'+(pv!=null?d.fmt(pv):'—')+'</td>'
+            + '<td style="padding:7px 10px;text-align:right;font-family:monospace;color:var(--text-sec);">'+(sv!=null?d.fmt(sv):'—')+'</td>'
+            + '<td style="padding:7px 10px;text-align:right;font-family:monospace;color:var(--text-sec);">'+(qv!=null?d.fmt(qv):'—')+'</td>'
+            + '<td style="padding:7px 10px;font-size:11px;font-weight:600;color:'+vc+';">'+verdict+'</td></tr>';
+        });
+        hh2 += '</tbody></table></div><div style="font-size:10.5px;color:var(--text-sec);margin-top:6px;">All figures computed over the same trailing 1-year daily window. SPY/QQQ series via the PerryData layer.</div>';
+        rmdEl.innerHTML = hh2;
+      })();
     }
 
     // Render correlation heatmap
@@ -24215,51 +24445,107 @@ async function pfRenderRisk() {
   }
 }
 
-// ────────── Risk Heatmap ──────────
+// ────────── Portfolio vs Market Rolling Correlation (redesigned 2026-07) ──
+// Replaces the pairwise top-holdings heatmap (which double-counted the same
+// ticker held in multiple accounts). Answers: is my portfolio becoming more
+// or less correlated with the market over time — and did high correlation
+// pay me better or worse returns?
+var _riskCorrChart = null;
 async function renderRiskHeatmap() {
-  var heatWrap = document.getElementById('riskHeatmapWrap');
-  if (!heatWrap) return;
-  heatWrap.innerHTML = '<span class="spinner"></span> Computing correlations...';
-  var holdings = window._holdings || [];
-  var top8 = holdings.filter(function(h){ return h.assetClass!=='Cash'&&h.assetClass!=='Money Market'; })
-    .sort(function(a,b){ return (b.currentPrice||0)*b.quantity-(a.currentPrice||0)*a.quantity; }).slice(0,8);
-  if (top8.length < 2) { heatWrap.innerHTML = '<span style="color:var(--text-sec);font-size:12px;">Need at least 2 non-cash holdings for correlation heatmap.</span>'; return; }
+  var insightEl = document.getElementById('riskCorrInsight');
+  var canvasEl = document.getElementById('riskCorrChart');
+  if (!canvasEl) return;
   try {
-    var seriesMap = {};
-    await Promise.all(top8.map(async function(h) {
-      try {
-        var d = await fetchChart(h.ticker,'1y','1d');
-        var pts = (d.points||[]).filter(function(p){ return p.close; });
-        var rets = [];
-        for (var i=1;i<pts.length;i++) rets.push((pts[i].close-pts[i-1].close)/pts[i-1].close);
-        seriesMap[h.ticker] = rets;
-      } catch(e) { seriesMap[h.ticker] = []; }
-    }));
-    var tickers = top8.map(function(h){ return h.ticker; });
-    function corrCalc(a, b) {
-      var n = Math.min(a.length, b.length); if (n<5) return 0;
-      var ma=0,mb=0; for(var i=0;i<n;i++){ma+=a[i];mb+=b[i];} ma/=n;mb/=n;
-      var num=0,da=0,db=0; for(var i=0;i<n;i++){num+=(a[i]-ma)*(b[i]-mb);da+=(a[i]-ma)*(a[i]-ma);db+=(b[i]-mb)*(b[i]-mb);}
-      return (da>0&&db>0)?num/Math.sqrt(da*db):0;
+    var pf = await pfBuildValueSeries('1y');
+    if (!pf || !pf.dates || pf.dates.length < 90) {
+      if (insightEl) insightEl.innerHTML = '<span style="color:var(--text-sec);">Need ~4 months of portfolio history for rolling correlation.</span>';
+      return;
     }
-    var matrix = tickers.map(function(a){ return tickers.map(function(b){ return corrCalc(seriesMap[a]||[],seriesMap[b]||[]); }); });
-    var sz = 52;
-    var tbl = '<table style="border-collapse:collapse;font-size:10px;">'
-      +'<tr><td style="width:'+sz+'px;height:'+sz+'px;"></td>'
-      +tickers.map(function(t){ return '<td style="width:'+sz+'px;height:20px;text-align:center;font-weight:700;font-size:10px;padding:2px;writing-mode:vertical-lr;transform:rotate(180deg);">'+t+'</td>'; }).join('')+'</tr>';
-    matrix.forEach(function(row,ri){
-      tbl += '<tr><td style="font-weight:700;font-size:10px;padding:2px 4px;white-space:nowrap;">'+tickers[ri]+'</td>';
-      row.forEach(function(v){
-        var r=Math.round(((v+1)/2)*255),b=Math.round((1-(v+1)/2)*255);
-        var bg='rgb('+r+','+Math.round(255-(r+b)/2)+','+b+')';
-        var fg=r+b>300?'#000':'#fff';
-        tbl+='<td style="width:'+sz+'px;height:'+sz+'px;background:'+bg+';color:'+fg+';text-align:center;font-weight:600;font-size:11px;border:1px solid rgba(255,255,255,0.3);">'+v.toFixed(2)+'</td>';
-      });
-      tbl += '</tr>';
+    // Portfolio daily returns from the TWR series (deposit-proof)
+    var perfSeries = (pf.twrValues && pf.twrValues.length === pf.values.length && pf.twrValues.every(function(v){return v!=null&&v>0;})) ? pf.twrValues : pf.values;
+    var pfRetByDate = {};
+    for (var i = 1; i < pf.dates.length; i++) {
+      if (perfSeries[i] != null && perfSeries[i-1] != null && perfSeries[i-1] > 0) pfRetByDate[pf.dates[i]] = perfSeries[i]/perfSeries[i-1] - 1;
+    }
+    var HIST = await PerryData.getMany(['SPY','QQQ'], 2);
+    function idxRets(h) {
+      var m = {};
+      if (!h) return m;
+      for (var j = 1; j < h.dates.length; j++) { if (h.closes[j-1] > 0) m[h.dates[j]] = h.closes[j]/h.closes[j-1] - 1; }
+      return m;
+    }
+    var spyRet = idxRets(HIST.SPY), qqqRet = idxRets(HIST.QQQ);
+    // Common dates
+    var dates = pf.dates.filter(function(d){ return pfRetByDate[d] != null && spyRet[d] != null; });
+    if (dates.length < 90) { if (insightEl) insightEl.innerHTML = '<span style="color:var(--text-sec);">Not enough overlapping history.</span>'; return; }
+    var pfArr = dates.map(function(d){ return pfRetByDate[d]; });
+    var spyArr = dates.map(function(d){ return spyRet[d]; });
+    var qqqArr = dates.map(function(d){ return qqqRet[d] != null ? qqqRet[d] : 0; });
+    function rollCorr(a, b, w, idx) {
+      var s = idx - w + 1; if (s < 0) return null;
+      var ma=0, mb=0; for (var k=s;k<=idx;k++){ ma+=a[k]; mb+=b[k]; } ma/=w; mb/=w;
+      var num=0, da=0, db=0;
+      for (var k2=s;k2<=idx;k2++){ var xa=a[k2]-ma, xb=b[k2]-mb; num+=xa*xb; da+=xa*xa; db+=xb*xb; }
+      return (da>0&&db>0) ? num/Math.sqrt(da*db) : null;
+    }
+    var W = 63;
+    var corrSpy = [], corrQqq = [], labels = [];
+    for (var ci = W-1; ci < dates.length; ci++) {
+      labels.push(dates[ci]);
+      corrSpy.push(rollCorr(pfArr, spyArr, W, ci));
+      corrQqq.push(rollCorr(pfArr, qqqArr, W, ci));
+    }
+    if (_riskCorrChart) { try { _riskCorrChart.destroy(); } catch(e){} }
+    var MO3b = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    _riskCorrChart = new Chart(canvasEl.getContext('2d'), {
+      type: 'line',
+      data: { labels: labels, datasets: [
+        { label: 'Correlation vs SPY', data: corrSpy, borderColor: C.navy, borderWidth: 2, pointRadius: 0, tension: 0.25, fill: false },
+        { label: 'Correlation vs QQQ', data: corrQqq, borderColor: C.blue, borderWidth: 1.5, borderDash: [4,3], pointRadius: 0, tension: 0.25, fill: false }
+      ]},
+      options: { responsive: true, maintainAspectRatio: false, animation: false, interaction: { mode: 'index', intersect: false },
+        plugins: { legend: { position: 'top', labels: { font: { size: 11 } } },
+          tooltip: Object.assign({}, chartTooltip, { callbacks: { label: function(c){ return c.dataset.label+': '+(c.parsed.y!=null?c.parsed.y.toFixed(2):'—'); } } }) },
+        scales: { x: { grid: { display: false }, ticks: { maxTicksLimit: 8, maxRotation: 0, font: { size: 10 }, callback: function(v){ var d=this.getLabelForValue(v)||''; return d.length>=7?MO3b[parseInt(d.slice(5,7),10)-1]+" '"+d.slice(2,4):d; } } },
+                  y: { min: -0.2, max: 1, grid: chartGrid, ticks: { font: { size: 10 } } } } }
     });
-    tbl += '</table>';
-    heatWrap.innerHTML = tbl;
-  } catch(e) { heatWrap.innerHTML = '<span style="color:var(--danger);font-size:12px;">Error computing correlations: '+e.message+'</span>'; }
+    // ── Insight: did high correlation pay? Split days by trailing corr regime ──
+    var hi = { pf: [], spy: [] }, lo = { pf: [], spy: [] };
+    for (var di = 0; di < corrSpy.length; di++) {
+      var cval = corrSpy[di];
+      if (cval == null) continue;
+      var dayIdx = di + W - 1;
+      if (dayIdx + 1 >= dates.length) break;
+      // NEXT day's return, classified by today's correlation regime (no lookahead)
+      var bucket = cval >= 0.8 ? hi : lo;
+      bucket.pf.push(pfArr[dayIdx + 1]); bucket.spy.push(spyArr[dayIdx + 1]);
+    }
+    function annRetOf(arr) { if (!arr.length) return null; var c = 1; arr.forEach(function(r){ c *= (1+r); }); return (Math.pow(c, 252/arr.length) - 1) * 100; }
+    var hiPf = annRetOf(hi.pf), hiSpy = annRetOf(hi.spy), loPf = annRetOf(lo.pf), loSpy = annRetOf(lo.spy);
+    var curCorr = corrSpy[corrSpy.length-1];
+    var trend = corrSpy.length > 21 && corrSpy[corrSpy.length-22] != null ? curCorr - corrSpy[corrSpy.length-22] : null;
+    function box(title, ret, alpha, n) {
+      return '<div style="flex:1;min-width:200px;border:1px solid var(--border);border-radius:6px;padding:10px 14px;">'
+        + '<div style="font-size:10px;text-transform:uppercase;letter-spacing:.5px;font-weight:700;color:var(--text-sec);">'+title+'</div>'
+        + '<div style="font-size:17px;font-weight:800;color:'+(ret!=null&&ret>=0?'var(--success)':'var(--danger)')+';">'+(ret!=null?(ret>=0?'+':'')+ret.toFixed(1)+'% ann.':'—')+'</div>'
+        + '<div style="font-size:11px;color:var(--text-sec);">'+(alpha!=null?('vs SPY same days: '+(alpha>=0?'+':'')+alpha.toFixed(1)+'pp'):'')+' · '+n+' days</div></div>';
+    }
+    if (insightEl) {
+      insightEl.innerHTML = '<div style="margin-bottom:8px;">Current correlation vs SPY: <strong style="color:var(--navy);font-size:14px;">'+(curCorr!=null?curCorr.toFixed(2):'—')+'</strong>'
+        + (trend!=null ? ' <span style="color:'+(trend>=0?'#8B6914':'var(--success)')+';font-weight:600;">('+(trend>=0?'▲ rising':'▼ falling')+' '+Math.abs(trend).toFixed(2)+' over the last month)</span>' : '')
+        + (curCorr!=null && curCorr>0.9 ? ' — <span style="color:#8B6914;">you are effectively holding the index with extra steps; your stock picks are adding risk but little differentiation.</span>' : '')
+        + '</div>'
+        + '<div style="display:flex;gap:10px;flex-wrap:wrap;">'
+        + box('When correlation was HIGH (>0.80)', hiPf, hiPf!=null&&hiSpy!=null?hiPf-hiSpy:null, hi.pf.length)
+        + box('When correlation was LOWER (<0.80)', loPf, loPf!=null&&loSpy!=null?loPf-loSpy:null, lo.pf.length)
+        + '</div>'
+        + '<div style="font-size:11px;color:var(--text-sec);margin-top:6px;">'
+        + ((hiPf!=null&&loPf!=null) ? (loPf>hiPf ? 'Your differentiated (lower-correlation) stretches have OUTPERFORMED your index-hugging stretches — your active bets are earning their risk.' : 'Your index-hugging stretches have outperformed your differentiated ones — your active bets have cost you money vs. simply holding the index.') : 'Not enough days in one of the regimes for a fair comparison yet.')
+        + '</div>';
+    }
+  } catch(e) {
+    if (insightEl) insightEl.innerHTML = '<span style="color:var(--danger);">Correlation analysis failed: '+e.message+'</span>';
+  }
 }
 
 // ────────── Characteristics tab ──────────
@@ -24433,7 +24719,12 @@ function driftRender() {
     cur[k] = (cur[k]||0) + (x.currentPrice||0)*x.quantity;
   });
   const allKeys = [...new Set([...Object.keys(target), ...Object.keys(cur)])];
-  let html = '<div class="drift-row header"><div>Sector</div><div>Drift</div><div class="drift-col-target">Target</div><div>Current</div></div>';
+  // Sort modes cycle via the Drift header: |drift| desc → drift desc → drift asc
+  const sortMode = window._driftSort || 'absdesc';
+  const sortArrow = sortMode === 'absdesc' ? '↕' : sortMode === 'desc' ? '▼' : '▲';
+  let html = '<div class="drift-row header"><div>Sector</div>'
+    + '<div onclick="driftToggleSort()" style="cursor:pointer;user-select:none;" title="Click to sort: largest absolute drift → most overweight → most underweight">Drift <span style="font-size:10px;">'+sortArrow+'</span></div>'
+    + '<div class="drift-col-target" title="Click any target value to edit it — the model switches to Custom and everything recalculates">Target ✎</div><div>Current</div></div>';
   let breaches = 0;
   const driftRows = [];
   allKeys.forEach(k => {
@@ -24444,7 +24735,9 @@ function driftRender() {
     if (isBreach) breaches++;
     driftRows.push({ sector: k, c, t, d, breach: isBreach });
   });
-  driftRows.sort((a,b) => Math.abs(b.d) - Math.abs(a.d));
+  if (sortMode === 'desc') driftRows.sort((a,b) => b.d - a.d);
+  else if (sortMode === 'asc') driftRows.sort((a,b) => a.d - b.d);
+  else driftRows.sort((a,b) => Math.abs(b.d) - Math.abs(a.d));
   driftRows.forEach(r => {
     // Bar centered at 50%; left for under, right for over; max scale ±10%
     const maxScale = Math.max(10, tol * 2);
@@ -24456,14 +24749,206 @@ function driftRender() {
     html += '<div class="drift-row">'+
       '<div style="font-weight:700;color:var(--navy);">'+r.sector+(r.breach?' <span style="color:var(--warning,#8B6914);font-size:11px;">●</span>':'')+'</div>'+
       '<div class="drift-bar"><div class="drift-bar-center"></div><div class="drift-bar-fill '+cls+'" style="left:'+left+'%;width:'+w+'%;"></div></div>'+
-      '<div class="drift-col-target drift-status" style="color:var(--text-sec);">'+r.t.toFixed(1)+'%</div>'+
+      '<div class="drift-col-target drift-status"><input type="number" value="'+r.t.toFixed(1)+'" min="0" max="100" step="0.5" '+
+        'style="width:58px;font-size:11px;padding:2px 4px;border:1px dashed var(--border);border-radius:3px;background:transparent;color:var(--text-sec);text-align:right;" '+
+        'title="Edit target weight — switches model to Custom" onchange="driftSetTarget(\''+r.sector.replace(/'/g,"\\'")+'\', this.value)">%</div>'+
       '<div class="drift-status" style="color:'+(r.breach?'var(--warning,#8B6914)':'var(--navy)')+';">'+r.c.toFixed(1)+'% <span style="font-size:10px;color:'+(r.d>=0?'var(--success)':'var(--danger)')+';">'+(r.d>=0?'+':'')+r.d.toFixed(1)+'</span></div>'+
       '</div>';
   });
-  html += '<p style="font-size:11px;color:var(--text-sec);margin-top:10px;line-height:1.5;"><strong>'+breaches+' sector(s)</strong> outside ±'+tol+'% tolerance band. Click <strong>Propose Rebalance Trades</strong> above to generate the order list.</p>';
+  const targetSum = driftRows.reduce((s,r) => s + r.t, 0);
+  html += '<p style="font-size:11px;color:var(--text-sec);margin-top:10px;line-height:1.5;"><strong>'+breaches+' sector(s)</strong> outside ±'+tol+'% tolerance band. Targets are editable in-line (switches model to Custom). '
+    + (Math.abs(targetSum - 100) > 0.5 ? '<strong style="color:#8B6914;">⚠ Targets sum to '+targetSum.toFixed(1)+'% — <a href="javascript:driftNormalizeTargets()" style="color:var(--blue);">normalize to 100%</a>.</strong> ' : '')
+    + 'Click <strong>Propose Rebalance</strong> above to generate the order list.</p>';
   el.innerHTML = html;
   window._driftRows = driftRows;
   window._driftTol = tol;
+  window._driftTargetMap = target;
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// HOLDINGS METADATA ENRICHMENT (added 2026-07)
+// Backfills missing Sector / Industry / Asset type / Yield per holding:
+// 1) local ETF_DB classification, 2) FMP profile via /fundamentals
+// (sector, industry, type, last dividend → yield). Writes fixes back to
+// Firestore so the table stays clean permanently.
+// ═══════════════════════════════════════════════════════════════════
+async function enrichHoldingsMetadata() {
+  var hs = window._holdings || [];
+  if (!hs.length) return;
+  var isCashE = function(x){ return ['Cash','Money Market','CD','Bond Position'].includes(x.assetClass); };
+  var fixed = 0, checked = 0;
+  if (typeof showStatus === 'function') showStatus('holdingsStatus', '<span class="spinner"></span> Scanning holdings for missing metadata…', 'info');
+  for (var i = 0; i < hs.length; i++) {
+    var x = hs[i];
+    if (isCashE(x)) continue;
+    var needSector = !x.sector || x.sector === '—' || x.sector === 'Other' || x.sector === '';
+    var needInd    = !x.industry || x.industry === '—' || x.industry === '';
+    var needAsset  = !x.assetClass || x.assetClass === '—' || x.assetClass === '';
+    var needYield  = x.yieldPct == null || x.yieldPct === '';
+    if (!(needSector || needInd || needAsset || needYield)) continue;
+    checked++;
+    var upd = {};
+    var e = ETF_DB[String(x.ticker).toUpperCase()];
+    if (e) {
+      if (needSector && e.s) { upd.sector = e.s; needSector = false; }
+      if (needInd && e.i)    { upd.industry = e.i; needInd = false; }
+      if (needAsset && e.a)  { upd.assetClass = e.a; needAsset = false; }
+    }
+    if (needSector || needInd || needAsset || needYield) {
+      try {
+        var d = await fetch(WORKER_URL + '/fundamentals?symbol=' + encodeURIComponent(x.ticker)).then(function(r){ return r.json(); });
+        var p = d && d.profile ? d.profile : null;
+        if (p) {
+          if (needSector && p.sector)   upd.sector = p.sector;
+          if (needInd && p.industry)    upd.industry = p.industry;
+          if (needAsset)                upd.assetClass = p.type === 'ETF' ? 'ETF' : (p.type === 'FUND' ? 'Mutual Fund' : 'Equity');
+          if (needYield && p.lastDividend && x.currentPrice > 0) upd.yieldPct = +((p.lastDividend / x.currentPrice) * 100).toFixed(2);
+        }
+      } catch(e2) {}
+    }
+    if (Object.keys(upd).length) {
+      upd.lastUpdated = new Date().toISOString();
+      try { await updateHoldingDoc(x.id, upd); fixed++; } catch(e3) {}
+    }
+  }
+  if (typeof loadHoldings === 'function') await loadHoldings();
+  if (typeof showStatus === 'function') showStatus('holdingsStatus', '&#10003; Auto-fill complete: ' + fixed + ' of ' + checked + ' incomplete holdings enriched (sector / industry / asset / yield).', 'success');
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// ACCOUNT-BY-ACCOUNT COMPARISON (added 2026-07)
+// Size + unrealized performance bars · sector mix stacked columns ·
+// pairwise holdings overlap · underperformer flags per account.
+// ═══════════════════════════════════════════════════════════════════
+var _acctCmpCharts = [];
+function renderAccountComparison(force) {
+  var el = document.getElementById('acctCompareBody');
+  if (!el) return;
+  if (el.dataset.rendered === '1' && !force) return;
+  var all = window._holdings || [];
+  if (!all.length) { el.innerHTML = '<div style="color:var(--text-sec);padding:10px;">Add holdings to compare accounts.</div>'; return; }
+  el.dataset.rendered = '1';
+  var isCashX = function(x){ return ['Cash','Money Market','CD','Bond Position'].includes(x.assetClass); };
+  // Group by account
+  var accts = {};
+  all.forEach(function(h) {
+    var a = h.accountType || 'Individual';
+    if (!accts[a]) accts[a] = { name: a, mv: 0, cost: 0, positions: [], sectors: {} };
+    var mv = isCashX(h) ? (h.costBasis||0)*(h.quantity||1) : (h.currentPrice||0)*h.quantity;
+    var cost = (h.costBasis||0)*(h.quantity||1);
+    accts[a].mv += mv;
+    if (!isCashX(h)) {
+      accts[a].cost += cost;
+      var glp = h.costBasis > 0 && h.currentPrice ? (h.currentPrice/h.costBasis - 1)*100 : null;
+      accts[a].positions.push({ ticker: h.ticker, mv: mv, glp: glp });
+      var s = (typeof normSector === 'function' ? normSector(h.sector||'Other') : (h.sector||'Other'));
+      accts[a].sectors[s] = (accts[a].sectors[s]||0) + mv;
+    }
+  });
+  var names = Object.keys(accts);
+  if (names.length < 1) { el.innerHTML = '<div style="color:var(--text-sec);">No accounts found.</div>'; return; }
+  // Median position return across the whole portfolio (underperformer baseline)
+  var allGlp = [];
+  names.forEach(function(a){ accts[a].positions.forEach(function(p){ if (p.glp != null) allGlp.push(p.glp); }); });
+  allGlp.sort(function(x,y){ return x-y; });
+  var medGlp = allGlp.length ? allGlp[Math.floor(allGlp.length/2)] : 0;
+  // Pairwise overlap
+  var overlapHtml = '';
+  if (names.length > 1) {
+    var pairs = [];
+    for (var i = 0; i < names.length; i++) for (var j = i+1; j < names.length; j++) {
+      var setA = {}; accts[names[i]].positions.forEach(function(p){ setA[p.ticker]=1; });
+      var shared = accts[names[j]].positions.filter(function(p){ return setA[p.ticker]; }).map(function(p){ return p.ticker; });
+      var uniq = [...new Set(shared)];
+      if (uniq.length) pairs.push({ a: names[i], b: names[j], n: uniq.length, t: uniq.slice(0,6).join(', ') });
+    }
+    pairs.sort(function(x,y){ return y.n-x.n; });
+    overlapHtml = pairs.length
+      ? '<div style="font-size:11px;font-weight:700;color:var(--navy);text-transform:uppercase;letter-spacing:.4px;margin:12px 0 4px;">Holdings Overlap Between Accounts</div>'
+        + pairs.slice(0,5).map(function(p){ return '<div style="font-size:12px;padding:3px 0;border-bottom:1px dashed var(--border);"><strong>'+p.a+'</strong> ↔ <strong>'+p.b+'</strong>: '+p.n+' shared ticker'+(p.n>1?'s':'')+' <span style="color:var(--text-sec);">('+p.t+')</span></div>'; }).join('')
+        + '<div style="font-size:10.5px;color:var(--text-sec);margin-top:4px;">High overlap = the accounts move together; a drawdown hits all of them at once.</div>'
+      : '<div style="font-size:11px;color:var(--text-sec);margin-top:10px;">No overlapping tickers between accounts — good structural diversification.</div>';
+  }
+  // Underperformers per account
+  var underHtml = '';
+  names.forEach(function(a) {
+    var under = accts[a].positions.filter(function(p){ return p.glp != null && p.glp < -5 && p.glp < medGlp; })
+      .sort(function(x,y){ return x.glp-y.glp; }).slice(0,4);
+    if (under.length) {
+      underHtml += '<div style="font-size:12px;padding:4px 0;"><strong style="color:var(--navy);">'+a+':</strong> '
+        + under.map(function(p){ return '<span style="display:inline-block;background:rgba(139,42,42,0.07);border:1px solid rgba(139,42,42,0.3);border-radius:10px;padding:1px 8px;margin:1px;font-size:11px;"><strong>'+p.ticker+'</strong> <span style="color:var(--danger);font-weight:600;">'+p.glp.toFixed(1)+'%</span></span>'; }).join(' ') + '</div>';
+    }
+  });
+  el.innerHTML =
+    '<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;" class="acct-cmp-grid">'
+    + '<div><div style="font-size:11px;font-weight:700;color:var(--navy);text-transform:uppercase;letter-spacing:.4px;margin-bottom:6px;">Value & Unrealized Return by Account</div><div style="height:240px;position:relative;"><canvas id="acctValueChart"></canvas></div></div>'
+    + '<div><div style="font-size:11px;font-weight:700;color:var(--navy);text-transform:uppercase;letter-spacing:.4px;margin-bottom:6px;">Sector Mix by Account (100% stacked)</div><div style="height:240px;position:relative;"><canvas id="acctSectorChart"></canvas></div></div>'
+    + '</div>'
+    + overlapHtml
+    + (underHtml ? '<div style="font-size:11px;font-weight:700;color:var(--danger);text-transform:uppercase;letter-spacing:.4px;margin:12px 0 4px;">Underperforming Positions to Review (< −5% and below portfolio median)</div>'+underHtml : '<div style="font-size:11px;color:var(--success);margin-top:10px;">✓ No positions flagged as underperformers right now.</div>');
+  // Charts
+  _acctCmpCharts.forEach(function(c){ try { c.destroy(); } catch(e){} });
+  _acctCmpCharts = [];
+  var vEl = document.getElementById('acctValueChart');
+  if (vEl) {
+    var glpPerAcct = names.map(function(a){ var A=accts[a]; var secMv=A.positions.reduce(function(s,p){return s+p.mv;},0); return A.cost>0 ? (secMv/A.cost-1)*100 : 0; });
+    _acctCmpCharts.push(new Chart(vEl.getContext('2d'), {
+      data: { labels: names, datasets: [
+        { type: 'bar', label: 'Market Value ($)', data: names.map(function(a){ return +accts[a].mv.toFixed(0); }), backgroundColor: 'rgba(0,60,113,0.7)', yAxisID: 'y', borderRadius: 3 },
+        { type: 'line', label: 'Unrealized Return (%)', data: glpPerAcct.map(function(v){ return +v.toFixed(1); }), borderColor: '#2E7D52', backgroundColor: '#2E7D52', yAxisID: 'y1', pointRadius: 4, borderWidth: 2 }
+      ]},
+      options: { responsive: true, maintainAspectRatio: false, animation: false,
+        plugins: { legend: { position: 'top', labels: { font: { size: 10 } } } },
+        scales: { y: { ticks: { callback: function(v){ return '$'+Math.round(v/1000)+'K'; }, font:{size:10} } },
+                  y1: { position: 'right', grid: { display: false }, ticks: { callback: function(v){ return v+'%'; }, font:{size:10} } },
+                  x: { ticks: { font:{size:10} }, grid: { display: false } } } }
+    }));
+  }
+  var sEl = document.getElementById('acctSectorChart');
+  if (sEl) {
+    var allSectors = [...new Set(names.reduce(function(arr,a){ return arr.concat(Object.keys(accts[a].sectors)); }, []))];
+    var ds = allSectors.map(function(s, i) {
+      return { label: s, data: names.map(function(a){ var tot = Object.values(accts[a].sectors).reduce(function(x,y){return x+y;},0); return tot>0 ? +((accts[a].sectors[s]||0)/tot*100).toFixed(1) : 0; }), backgroundColor: PALETTE[i % PALETTE.length] };
+    });
+    _acctCmpCharts.push(new Chart(sEl.getContext('2d'), {
+      type: 'bar',
+      data: { labels: names, datasets: ds },
+      options: { responsive: true, maintainAspectRatio: false, animation: false,
+        plugins: { legend: { position: 'bottom', labels: { font: { size: 9 }, boxWidth: 10 } },
+          tooltip: { callbacks: { label: function(c){ return c.dataset.label+': '+c.parsed.y+'%'; } } } },
+        scales: { x: { stacked: true, ticks: { font:{size:10} }, grid: { display: false } },
+                  y: { stacked: true, max: 100, ticks: { callback: function(v){ return v+'%'; }, font:{size:10} } } } }
+    }));
+  }
+}
+
+// ── In-line target editing + drift sorting (added 2026-07) ──
+function driftToggleSort() {
+  var m = window._driftSort || 'absdesc';
+  window._driftSort = m === 'absdesc' ? 'desc' : m === 'desc' ? 'asc' : 'absdesc';
+  driftRender();
+}
+function driftSetTarget(sector, val) {
+  var v = parseFloat(val);
+  if (isNaN(v) || v < 0) return;
+  // Seed the custom map from whatever model is currently displayed
+  if (!window._customDriftTarget) window._customDriftTarget = Object.assign({}, window._driftTargetMap || SPY_SECTOR_WEIGHTS);
+  window._customDriftTarget[sector] = v;
+  var sel = document.getElementById('driftModel');
+  if (sel) sel.value = 'custom';
+  driftRender();
+  if (typeof renderHldRebalanceChart === 'function') renderHldRebalanceChart();
+}
+function driftNormalizeTargets() {
+  var map = window._customDriftTarget || Object.assign({}, window._driftTargetMap || SPY_SECTOR_WEIGHTS);
+  var sum = Object.keys(map).reduce(function(s,k){ return s + (map[k]||0); }, 0);
+  if (sum <= 0) return;
+  Object.keys(map).forEach(function(k){ map[k] = +(map[k] / sum * 100).toFixed(1); });
+  window._customDriftTarget = map;
+  var sel = document.getElementById('driftModel');
+  if (sel) sel.value = 'custom';
+  driftRender();
+  if (typeof renderHldRebalanceChart === 'function') renderHldRebalanceChart();
 }
 function driftProposeRebalance() {
   const rows = window._driftRows || [];
@@ -27426,6 +27911,167 @@ if (document.readyState === 'loading') {
 }
 
 // ═══════════════════════════════════════════════════════════════════
+// GLOBAL 3-STATE TABLE SORTING — click any column header to sort
+// descending; click again for ascending; a third click restores the
+// original order. Works on every table site-wide via event delegation.
+// Skips: tables with data-nosort, headers with their own onclick,
+// grouped tables (rowspan), and clicks on controls inside headers.
+// ═══════════════════════════════════════════════════════════════════
+(function initGlobalTableSort() {
+  function cellSortValue(td) {
+    if (!td) return { n: null, s: '' };
+    var t = (td.textContent || '').replace(/−/g, '-').trim();
+    if (!t || t === '—' || t === '-' || /^n\/a$/i.test(t)) return { n: null, s: '' };
+    // Suffixed magnitudes: $3.2T / 45.1B / 320M / 12K
+    var m = t.match(/(-?[\d.,]+)\s*([TBMK])\b/);
+    if (m) {
+      var mult = { T: 1e12, B: 1e9, M: 1e6, K: 1e3 }[m[2]];
+      var base = parseFloat(m[1].replace(/,/g, ''));
+      if (!isNaN(base)) return { n: base * mult, s: t.toLowerCase() };
+    }
+    var num = parseFloat(t.replace(/[$,%+]/g, '').replace(/,/g, ''));
+    if (!isNaN(num) && /[\d]/.test(t)) return { n: num, s: t.toLowerCase() };
+    return { n: null, s: t.toLowerCase() };
+  }
+  document.addEventListener('click', function(e) {
+    if (e.target.closest('.help-icon, button, select, input, a')) return;
+    var th = e.target.closest('th');
+    if (!th || th.getAttribute('onclick')) return;
+    var table = th.closest('table');
+    if (!table || table.hasAttribute('data-nosort')) return;
+    var tbody = table.tBodies && table.tBodies[0];
+    if (!tbody || tbody.rows.length < 3) return;
+    if (tbody.querySelector('td[rowspan], th[rowspan]')) return; // grouped layout — row order is structural
+    var headRow = th.parentNode;
+    var idx = Array.prototype.indexOf.call(headRow.children, th);
+    var rows = Array.prototype.slice.call(tbody.rows);
+    rows.forEach(function(r, i) { if (!r.dataset.gsOrig) r.dataset.gsOrig = String(i + 1); });
+    // Cycle: (none) → desc → asc → original
+    var prev = th.dataset.gsState || '';
+    var state = prev === 'desc' ? 'asc' : prev === 'asc' ? 'orig' : 'desc';
+    Array.prototype.forEach.call(headRow.children, function(x) {
+      if (x !== th) { x.dataset.gsState = ''; var ar = x.querySelector('.gsort'); if (ar) ar.textContent = ''; }
+    });
+    th.dataset.gsState = state === 'orig' ? '' : state;
+    var arrow = th.querySelector('.gsort');
+    if (!arrow) { arrow = document.createElement('span'); arrow.className = 'gsort'; arrow.style.cssText = 'margin-left:4px;font-size:9px;'; th.appendChild(arrow); }
+    arrow.textContent = state === 'desc' ? '▼' : state === 'asc' ? '▲' : '';
+    var sorted;
+    if (state === 'orig') {
+      sorted = rows.slice().sort(function(a, b) { return (+a.dataset.gsOrig) - (+b.dataset.gsOrig); });
+    } else {
+      var dir = state === 'desc' ? -1 : 1;
+      sorted = rows.slice().sort(function(a, b) {
+        var va = cellSortValue(a.cells[idx]), vb = cellSortValue(b.cells[idx]);
+        // Nulls always sink to the bottom regardless of direction
+        if (va.n == null && vb.n == null) return dir * va.s.localeCompare(vb.s);
+        if (va.n == null) return 1;
+        if (vb.n == null) return -1;
+        return dir * (va.n - vb.n);
+      });
+    }
+    sorted.forEach(function(r) { tbody.appendChild(r); });
+  });
+})();
+
+// ═══════════════════════════════════════════════════════════════════
+// UNIFIED MACRO + CROSS-ASSET PAGE (2026-07)
+// The Cross-Asset Analysis page is relocated INSIDE the Macro Regime
+// page as a "Cross-Asset Analysis" sub-tab. Nothing is deleted — the
+// entire #page-markets DOM (with all its own sub-tabs: Top-Line, Movers,
+// Business Cycle, Regime, Credit, Yield Curve, Breadth, Momentum, Sector
+// Rotation…) moves under the macro tab strip, and every existing loader
+// (caShowTab/caAutoLoad, scoped to #page-markets by id) keeps working.
+// navigateTo('markets') now routes to the unified page's Cross-Asset tab.
+// ═══════════════════════════════════════════════════════════════════
+(function mergeCrossAssetIntoMacro() {
+  function doMerge() {
+    try {
+      var macroTabs = document.querySelector('#page-macro .pf-tabs');
+      var macroWrap = document.querySelector('#page-macro .content-wrap');
+      var marketsPage = document.getElementById('page-markets');
+      if (!macroTabs || !macroWrap || !marketsPage || document.getElementById('macrotab-crossasset')) return;
+
+      // 1) New sub-tab button on the macro strip
+      var btn = document.createElement('button');
+      btn.className = 'pf-tab';
+      btn.setAttribute('data-macrotab', 'crossasset');
+      btn.setAttribute('onclick', "macroShowTab('crossasset')");
+      btn.innerHTML = '🌍 Cross-Asset Analysis';
+      macroTabs.appendChild(btn);
+
+      // 2) Container panel + relocate the whole markets page inside it.
+      //    Keep the #page-markets id (caShowTab selectors depend on it) but
+      //    strip the .page class so the router no longer treats it as a page.
+      var panel = document.createElement('div');
+      panel.className = 'pf-tab-content';
+      panel.id = 'macrotab-crossasset';
+      macroWrap.appendChild(panel);
+      marketsPage.classList.remove('page', 'active');
+      marketsPage.style.display = 'block';
+      // Slim down the relocated hero so it reads as a section header
+      var mHero = marketsPage.querySelector('.hero');
+      if (mHero) { mHero.style.padding = '18px 24px'; }
+      panel.appendChild(marketsPage);
+
+      // 3) Bridge note on both Business Cycle views (same question, two lenses)
+      var bizTab = document.getElementById('macrotab-biz');
+      if (bizTab) {
+        var note = document.createElement('div');
+        note.style.cssText = 'background:#E8F4FD;border-left:4px solid #5B9BD5;padding:8px 14px;margin-bottom:12px;border-radius:4px;font-size:12px;color:#1A2733;';
+        note.innerHTML = '<strong>Two lenses, one question.</strong> This view places the cycle using FRED <em>economic</em> data (the Macro Regime Scorecard). The <a href="javascript:macroShowTab(\'crossasset\')" style="color:var(--navy);font-weight:600;">Cross-Asset tab</a> has a companion Business Cycle view driven by <em>market prices</em> — markets lead the economy by 6–12 months, so when the two disagree, markets are usually voting on what FRED will print next quarter.';
+        bizTab.insertBefore(note, bizTab.firstChild);
+      }
+
+      // 4) Wrap macroShowTab: initialize the cross-asset engine on first open
+      var _origMacroShowTab = window.macroShowTab;
+      window.macroShowTab = function(name) {
+        _origMacroShowTab(name);
+        if (name === 'crossasset') {
+          if (typeof caShowTab === 'function' && !window._caMergedShown) { window._caMergedShown = true; caShowTab('topline'); }
+          if (!window._snapshotLoaded) {
+            window._snapshotLoaded = true;
+            setTimeout(function() {
+              if (typeof snapshotLoad === 'function') snapshotLoad();
+              if (typeof topLineRefreshAll === 'function') setTimeout(topLineRefreshAll, 400);
+              var seq = [['movers',2000],['bizycle',3000],['regime',5000],['credit',7000],['yieldcurve',9000],['breadth',11000],['momentum',13000],['sectors',16000]];
+              seq.forEach(function(s){ setTimeout(function(){ if (typeof caAutoLoad === 'function') caAutoLoad(s[0]); }, s[1]); });
+              setTimeout(function() {
+                if (!window._mktInitialized && typeof mktInit === 'function') { mktInit(); window._mktInitialized = true; }
+                var endEl = document.getElementById('mktEndDate');
+                if (endEl && !endEl.value) endEl.value = new Date().toISOString().slice(0, 10);
+                if (typeof mktLoadAll === 'function') mktLoadAll().catch(function(){});
+              }, 20000);
+            }, 100);
+          } else if (typeof topLineRefreshAll === 'function' && !window._tlPillars) {
+            topLineRefreshAll();
+          }
+        }
+      };
+
+      // 5) Route all 'markets' navigation to the unified page (outermost wrapper)
+      var _origNavMerged = window.navigateTo;
+      window.navigateTo = function(p) {
+        if (p === 'markets') {
+          _origNavMerged('macro');
+          setTimeout(function(){ window.macroShowTab('crossasset'); }, 60);
+          return;
+        }
+        _origNavMerged(p);
+      };
+
+      // 6) Nav label: reflect the unification
+      document.querySelectorAll('.nav-child[data-page="macro"]').forEach(function(el){ el.textContent = 'Macro & Cross-Asset Analysis'; });
+      document.querySelectorAll('.nav-child[data-page="markets"]').forEach(function(el){ el.innerHTML = 'Cross-Asset Analysis <span style="font-size:9px;opacity:.7;">(now a tab)</span>'; });
+      var macroHeroP = document.querySelector('#page-macro .hero p');
+      if (macroHeroP) macroHeroP.textContent = 'CFA-based macro regime scoring across 6 pillars using real-time Federal Reserve data — now unified with the full Cross-Asset Analysis workspace (market-price lens) as a sub-tab. One page: economy AND markets.';
+    } catch(e) { console.warn('Cross-asset merge failed:', e); }
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', doMerge);
+  else doMerge();
+})();
+
+// ═══════════════════════════════════════════════════════════════════
 // B4 — SECTORS & STOCKS TAB
 // ═══════════════════════════════════════════════════════════════════
 
@@ -27526,14 +28172,95 @@ async function fetchQuoteWithCache(ticker) {
 }
 
 async function renderSectorsContent() {
-  var wrap = document.getElementById('sectorsContentWrap');
-  if (!wrap) return;
+  var outer = document.getElementById('sectorsContentWrap');
+  if (!outer) return;
   var mode = window._sectorsMode || 'spy';
+  // Money-flow comparison chart sits ABOVE the table for every tab —
+  // see all groups move together instead of clicking through one by one.
+  outer.innerHTML = '<div id="ssFlowCard" style="margin-bottom:14px;"></div><div id="ssPanelBody"></div>';
+  var wrap = document.getElementById('ssPanelBody');
+  var flowCfgs = {
+    spy:         { syms: SPY_SECTORS.map(function(s){return s.etf;}), names: SPY_SECTORS.reduce(function(m,s){ m[s.etf]=s.name; return m; },{}), colors: SPY_SECTORS.reduce(function(m,s){ m[s.etf]=s.color; return m; },{}), title: 'Sector Money Flow — all 11 GICS sectors' },
+    nasdaq:      { syms: ['QQQ','AAPL','MSFT','NVDA','AMZN','META','GOOGL','AVGO'], names: {}, title: 'Nasdaq Leaders vs QQQ — where is the money flowing?' },
+    crypto:      { syms: CRYPTO_TICKERS.slice(0,6), names: {}, title: 'Major Crypto Assets — relative flows' },
+    commodities: { syms: COMMODITY_TICKERS.slice(0,6), names: COMMODITY_NAMES, title: 'Commodity Complex — relative flows' },
+    indicators:  { syms: ['^VIX','^TNX','UUP','TLT','HYG','GLD'], names: INDICATOR_NAMES, title: 'Macro Indicators — rates, vol, dollar, credit, gold' }
+  };
+  window._lastFlowCfg = flowCfgs[mode];
+  renderSsFlowChart(window._lastFlowCfg); // async — renders independently of the table
   if (mode==='spy')            await renderSectorStocksPanel(wrap);
   else if (mode==='nasdaq')    await renderSnapshotPanel(wrap, NASDAQ_TOP_STOCKS, 'Nasdaq 100 — Top Stocks', null);
   else if (mode==='crypto')    await renderSnapshotPanel(wrap, CRYPTO_TICKERS, 'Crypto — Major Assets', function(t){ return t.replace('-USD',''); });
   else if (mode==='commodities') await renderSnapshotPanel(wrap, COMMODITY_TICKERS, 'Commodities — Front-Month Futures', function(t){ return COMMODITY_NAMES[t]||t; });
   else if (mode==='indicators')  await renderSnapshotPanel(wrap, INDICATOR_TICKERS, 'Macro Indicators — Rates, Credit, Vol & Dollar', function(t){ return INDICATOR_NAMES[t]||t; });
+}
+
+// ── Money-flow chart: every symbol in the group rebased to 0% over the
+//    selected window, drawn on one axis. Data flows through PerryData
+//    (Firestore-cached full history) so switching ranges is instant. ──
+window._flowRange = window._flowRange || '3mo';
+var _ssFlowChart = null;
+function ssFlowSetRange(r) { window._flowRange = r; renderSsFlowChart(window._lastFlowCfg); }
+async function renderSsFlowChart(cfg) {
+  var card = document.getElementById('ssFlowCard');
+  if (!card || !cfg) return;
+  var ranges = [['1mo','1M'],['3mo','3M'],['6mo','6M'],['1y','1Y']];
+  var btns = ranges.map(function(r){
+    var active = window._flowRange === r[0];
+    return '<button class="btn-outline btn-sm'+(active?' active':'')+'" style="'+(active?'background:rgba(255,255,255,0.18);':'background:transparent;')+'color:#fff;border-color:rgba(255,255,255,0.4);" onclick="ssFlowSetRange(\''+r[0]+'\')">'+r[1]+'</button>';
+  }).join('');
+  card.innerHTML = '<div class="card" style="margin:0;">'
+    + '<div class="card-title" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">'
+    + '<span>'+cfg.title+' <span class="help-icon" title="Every line is rebased to 0% at the window start, so the vertical spread IS the money flow: lines climbing the panel are attracting capital, lines sinking are losing it. Use the range buttons to see whether leadership is new (1M) or established (1Y)." data-heading="Money Flow" style="font-size:11px;">ⓘ</span></span>'
+    + '<span style="display:flex;gap:6px;">'+btns+'</span></div>'
+    + '<div class="card-body"><div id="ssFlowNote" style="font-size:11.5px;color:var(--text-sec);margin-bottom:8px;"><span class="spinner"></span> Loading comparison…</div>'
+    + '<div class="chart-wrap" style="height:320px;"><canvas id="ssFlowChart"></canvas></div></div></div>';
+  try {
+    var days = { '1mo':22, '3mo':64, '6mo':127, '1y':253 }[window._flowRange] || 64;
+    var HIST = await PerryData.getMany(cfg.syms, 4);
+    // Master date axis: longest available series' last N dates
+    var master = null;
+    cfg.syms.forEach(function(s){ var h = HIST[s.toUpperCase()]; if (h && (!master || h.dates.length > master.dates.length)) master = h; });
+    if (!master) { document.getElementById('ssFlowNote').innerHTML = '<span style="color:var(--danger);">No history available.</span>'; return; }
+    var labels = master.dates.slice(-days);
+    var finals = [];
+    var datasets = [];
+    cfg.syms.forEach(function(s, i) {
+      var h = HIST[s.toUpperCase()];
+      if (!h) return;
+      var map = {}; h.dates.forEach(function(d, j){ map[d] = h.closes[j]; });
+      var lastPx = null;
+      var aligned = labels.map(function(d){ if (map[d] != null) lastPx = map[d]; return lastPx; });
+      var fIdx = -1; for (var k = 0; k < aligned.length; k++) { if (aligned[k] != null) { fIdx = k; break; } }
+      if (fIdx < 0) return;
+      var base = aligned[fIdx];
+      var pct = aligned.map(function(v){ return v != null ? +(((v/base)-1)*100).toFixed(2) : null; });
+      var label = (cfg.names && cfg.names[s]) ? cfg.names[s] : s;
+      var color = (cfg.colors && cfg.colors[s]) ? cfg.colors[s] : PALETTE[i % PALETTE.length];
+      finals.push({ label: label, v: pct[pct.length-1] });
+      datasets.push({ label: label, data: pct, borderColor: color, borderWidth: 1.6, pointRadius: 0, tension: 0.2, fill: false, spanGaps: true });
+    });
+    if (_ssFlowChart) { try { _ssFlowChart.destroy(); } catch(e){} }
+    var ctxEl = document.getElementById('ssFlowChart');
+    if (!ctxEl) return;
+    var MO3 = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    _ssFlowChart = new Chart(ctxEl.getContext('2d'), {
+      type: 'line',
+      data: { labels: labels, datasets: datasets },
+      options: { responsive: true, maintainAspectRatio: false, animation: false, interaction: { mode: 'index', intersect: false },
+        plugins: { legend: { position: isMobile()?'bottom':'top', labels: { font: { size: 10 }, boxWidth: 10 } },
+          tooltip: Object.assign({}, chartTooltip, { callbacks: { label: function(c){ return c.dataset.label+': '+(c.parsed.y>=0?'+':'')+(c.parsed.y||0).toFixed(1)+'%'; } } }) },
+        scales: { x: { grid: { display: false }, ticks: { maxTicksLimit: 8, maxRotation: 0, font: { size: 10 }, callback: function(v){ var d = this.getLabelForValue(v)||''; return d.length>=7 ? MO3[parseInt(d.slice(5,7),10)-1]+" '"+d.slice(2,4) : d; } } },
+                  y: { grid: chartGrid, ticks: { font: { size: 10 }, callback: function(v){ return (v>=0?'+':'')+v+'%'; } } } } }
+    });
+    finals.sort(function(a,b){ return (b.v||-999)-(a.v||-999); });
+    var top = finals.slice(0,3).map(function(f){ return '<strong style="color:var(--success);">'+f.label+' '+(f.v>=0?'+':'')+(f.v||0).toFixed(1)+'%</strong>'; }).join(' · ');
+    var bot = finals.slice(-2).map(function(f){ return '<strong style="color:var(--danger);">'+f.label+' '+(f.v>=0?'+':'')+(f.v||0).toFixed(1)+'%</strong>'; }).join(' · ');
+    document.getElementById('ssFlowNote').innerHTML = 'Money is flowing INTO: '+top+' &nbsp;·&nbsp; OUT OF: '+bot+' <span style="color:var(--text-sec);">('+({'1mo':'1-month','3mo':'3-month','6mo':'6-month','1y':'1-year'}[window._flowRange])+' window)</span>';
+  } catch(e) {
+    var note = document.getElementById('ssFlowNote');
+    if (note) note.innerHTML = '<span style="color:var(--danger);">Flow chart failed: '+e.message+'</span>';
+  }
 }
 
 // ── Unified snapshot data + rendering (all 5 tabs share this look) ──
