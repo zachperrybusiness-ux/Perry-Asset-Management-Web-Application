@@ -2426,9 +2426,12 @@ window.renderPortfolioChart = async function() {
           fill: false, tension: .3, spanGaps: true, yAxisID: 'y1',
           hidden: !!window._benchmarksHidden
         });
-        // Rebased benchmark for direct visual comparison on left axis
+        // Rebased benchmark for direct visual comparison on left axis.
+        // 2026-07: only rendered in TWR mode (or % axis mode, which is the
+        // same normalized concept). In plain dollar view the chart now shows
+        // ONLY the benchmark's actual historical price on the right axis.
         const bmValidIdx = cd.findIndex(d => pm[d] != null);
-        if (bmValidIdx >= 0) {
+        if (bmValidIdx >= 0 && (window._twrModeOnly || window._pctAxisMode)) {
           const bmStartPrice = pm[cd[bmValidIdx]];
           // In pct mode: rebase benchmark to 100 so it shares the same Y axis as portfolio
           // In dollar mode: scale to match portfolio starting value

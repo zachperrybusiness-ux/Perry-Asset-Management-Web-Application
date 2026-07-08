@@ -11194,3 +11194,82 @@ function gapExportCSV() {
   URL.revokeObjectURL(url);
 }
 
+
+// ═══════════════════════════════════════════════════════════════════
+// CONSOLIDATED TAB VIEWS (2026-07) — Performance, Attribution and Risk
+// were long vertical scrolls of stacked cards. Each tab's cards are now
+// panels inside ONE card with a toggle bar (same pattern as the
+// Account-by-Account Comparison). Nothing is removed: every chart,
+// table and renderer keeps its original element id and logic — panels
+// are just shown/hidden, and Chart.js auto-resizes on reveal.
+// ═══════════════════════════════════════════════════════════════════
+function consolidateTabViews(tabId, keepN, title, labels) {
+  var tab = document.getElementById(tabId);
+  if (!tab || tab.dataset.viewsDone) return;
+  var kids = Array.prototype.slice.call(tab.children).filter(function(n){ return n.nodeType === 1; });
+  var rest = kids.slice(keepN);
+  if (rest.length < 2) return;
+  tab.dataset.viewsDone = '1';
+
+  var host = document.createElement('div');
+  host.className = 'card';
+  var hdr = document.createElement('div');
+  hdr.className = 'card-title';
+  hdr.style.cssText = 'display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;';
+  var titleSpan = document.createElement('span');
+  titleSpan.textContent = title;
+  var btnWrap = document.createElement('span');
+  btnWrap.style.cssText = 'display:flex;gap:6px;flex-wrap:wrap;';
+  hdr.appendChild(titleSpan);
+  hdr.appendChild(btnWrap);
+  var body = document.createElement('div');
+  body.className = 'card-body';
+  body.style.padding = '12px 14px';
+  host.appendChild(hdr);
+  host.appendChild(body);
+  tab.appendChild(host);
+
+  var panels = [];
+  rest.forEach(function(el, i) {
+    var pane = document.createElement('div');
+    pane.style.display = i === 0 ? 'block' : 'none';
+    body.appendChild(pane);
+    pane.appendChild(el);
+    el.style.marginBottom = '0';
+    panels.push(pane);
+    var label = (labels && labels[i]) || (function() {
+      var t = el.querySelector && el.querySelector('.card-title');
+      var txt = t ? t.textContent : 'View ' + (i + 1);
+      return txt.replace(/[ⓘ?📖🌊📅]/g, '').replace(/\s+/g, ' ').trim().slice(0, 26);
+    })();
+    var b = document.createElement('button');
+    b.className = 'tabview-btn' + (i === 0 ? ' active' : '');
+    b.textContent = label;
+    b.onclick = function() {
+      panels.forEach(function(p, j) { p.style.display = j === i ? 'block' : 'none'; });
+      btnWrap.querySelectorAll('.tabview-btn').forEach(function(x) { x.classList.remove('active'); });
+      b.classList.add('active');
+      // Chart.js recomputes dimensions when a hidden canvas becomes visible
+      setTimeout(function() { window.dispatchEvent(new Event('resize')); }, 60);
+    };
+    btnWrap.appendChild(b);
+  });
+}
+
+(function initConsolidatedTabs() {
+  function run() {
+    try {
+      // Performance: keep period selector + KPI bar + summary visible;
+      // everything else becomes a toggled panel.
+      consolidateTabViews('pftab-performance', 3, 'Performance Explorer',
+        ['Returns vs Benchmarks', 'Calendar & Distribution', 'Best & Worst Periods', 'Drawdown', 'Monthly Heatmap', 'vs Benchmark Scorecard']);
+      // Attribution: keep account filter + contributor cards + insight text.
+      consolidateTabViews('pftab-attribution', 3, 'Attribution Explorer', null);
+      // Risk: keep the KPI strip; VaR/factor/correlation views toggle.
+      consolidateTabViews('pftab-risk', 1, 'Risk Explorer',
+        ['Marginal VaR Contributors', 'Factor Risk Decomposition', 'Risk Metrics vs SPY & QQQ', 'Factor Return Attribution', 'Correlation Over Time']);
+    } catch (e) { console.warn('tab consolidation failed:', e); }
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', run);
+  else run();
+})();
