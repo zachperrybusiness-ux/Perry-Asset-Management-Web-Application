@@ -514,41 +514,133 @@ function _movQuadStatic(q) {
   else setTimeout(run, 300);
 })();
 
-// ── 7) ROUND 8: ONE WINDOW PER SUB-TAB (Performance / Attribution / Risk) ──
-// The explorers existed, but the period selector, KPI strip, summary text and
-// pinned scorecards still sat ABOVE them as separate stacked windows. This
-// absorbs every pinned element INTO the explorer card as an always-visible
-// summary band at the top of the window — so each sub-tab renders as exactly
-// ONE card: band on top, toggled visualization panes below. No data removed;
-// every element keeps its id and renderer.
-(function absorbPinnedIntoExplorers() {
-  function absorb(tabId) {
+// ═══════════════════════════════════════════════════════════════════
+// 7) ROUND 9 — DETERMINISTIC single-window rebuild for the Portfolio
+// Performance / Attribution / Risk sub-tabs. Unlike the previous patch
+// approach, this gathers every element BY ID from wherever it currently
+// sits, moves it into a brand-new single card (summary band on top,
+// toggled panes below), then hides everything else in the tab. The
+// visual outcome cannot depend on what earlier shims did or didn't do.
+// A "v9" build tag renders in each header so a stale cached file is
+// instantly recognizable.
+// ═══════════════════════════════════════════════════════════════════
+(function rebuildPortfolioTabsV9() {
+  function topOf(el, tab) {           // el's ancestor that is a direct child of tab
+    while (el && el.parentElement && el.parentElement !== tab) el = el.parentElement;
+    return el && el.parentElement === tab ? el : null;
+  }
+  function grab(tab, id) {            // top-level block containing #id — or the element itself wherever it lives
+    var el = document.getElementById(id);
+    if (!el) return null;
+    return topOf(el, tab) || el.closest('.card') || el;
+  }
+  function grabCardByTitle(scopeEl, re) {
+    var cards = scopeEl.querySelectorAll('.card');
+    for (var i = 0; i < cards.length; i++) {
+      var t = cards[i].querySelector('.card-title');
+      if (t && re.test(t.textContent)) return cards[i];
+    }
+    return null;
+  }
+  function build(tabId, title, bandParts, panes) {
     var tab = document.getElementById(tabId);
-    if (!tab || tab.dataset.absorbed || !tab.dataset.viewsDone) return false;
-    var kids = Array.prototype.slice.call(tab.children).filter(function(n){ return n.nodeType === 1; });
-    if (kids.length < 2) return false;
-    var host = kids[kids.length - 1];                       // the Explorer card (appended last)
-    if (!host.classList || !host.classList.contains('card')) return false;
-    var body = null;
-    for (var i = 0; i < host.children.length; i++) { if (host.children[i].classList && host.children[i].classList.contains('card-body')) { body = host.children[i]; break; } }
-    if (!body) return false;
+    if (!tab || tab.dataset.r9) return;
+    tab.dataset.r9 = '1';
+    var card = document.createElement('div');
+    card.className = 'card r9-window';
+    var hdr = document.createElement('div');
+    hdr.className = 'card-title';
+    hdr.style.cssText = 'display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;';
+    hdr.innerHTML = '<span>' + title + ' <span style="font-size:8px;opacity:.55;font-weight:400;">v9</span></span>';
+    var btnWrap = document.createElement('span');
+    btnWrap.style.cssText = 'display:flex;gap:6px;flex-wrap:wrap;';
+    hdr.appendChild(btnWrap);
+    var body = document.createElement('div');
+    body.className = 'card-body';
+    body.style.padding = '12px 14px';
+    card.appendChild(hdr); card.appendChild(body);
+
+    // Summary band — always visible
     var band = document.createElement('div');
     band.className = 'explorer-summary-band';
-    body.insertBefore(band, body.firstChild);
-    kids.slice(0, -1).forEach(function(el) {
-      band.appendChild(el);
-      el.classList.add('band-item');
+    body.appendChild(band);
+    bandParts.forEach(function(el) { if (el) { band.appendChild(el); el.classList.add('band-item'); el.style.display = ''; } });
+
+    // Toggled panes
+    var paneEls = [];
+    panes.forEach(function(p, i) {
+      if (!p.el) return;
+      var pane = document.createElement('div');
+      pane.style.display = paneEls.length === 0 ? 'block' : 'none';
+      body.appendChild(pane); pane.appendChild(p.el);
+      p.el.style.display = ''; p.el.style.marginBottom = '0';
+      paneEls.push(pane);
+      var b = document.createElement('button');
+      b.className = 'tabview-btn' + (paneEls.length === 1 ? ' active' : '');
+      b.textContent = p.label;
+      (function(idx) {
+        b.onclick = function() {
+          paneEls.forEach(function(x, j){ x.style.display = j === idx ? 'block' : 'none'; });
+          btnWrap.querySelectorAll('.tabview-btn').forEach(function(x){ x.classList.remove('active'); });
+          b.classList.add('active');
+          setTimeout(function(){ window.dispatchEvent(new Event('resize')); }, 60);
+        };
+      })(paneEls.length - 1);
+      btnWrap.appendChild(b);
     });
-    tab.dataset.absorbed = '1';
-    return true;
+
+    tab.appendChild(card);
+    // Decisive: hide EVERYTHING else at the top level — all value has been
+    // moved into the new window, leftovers are empty husks from old shims.
+    Array.prototype.slice.call(tab.children).forEach(function(c) {
+      if (c !== card && c.nodeType === 1) c.style.display = 'none';
+    });
   }
-  var tries = 0;
   function run() {
-    tries++;
-    var done = ['pftab-performance', 'pftab-attribution', 'pftab-risk'].map(absorb);
-    // Retry until the consolidator has built all three explorers (max ~20s)
-    if (done.indexOf(false) >= 0 && tries < 40) setTimeout(run, 500);
+    var tab, ok = true;
+    try {
+      // ── PERFORMANCE ──
+      tab = document.getElementById('pftab-performance');
+      if (tab && !tab.dataset.r9 && document.getElementById('perfKPIBar')) {
+        build('pftab-performance', 'Performance',
+          [ grab(tab, 'perfAccountSel') || grab(tab, 'perfTimeframeBtns'),
+            document.getElementById('perfKPIBar'),
+            document.getElementById('perfSummaryCard'),
+            (function(){ var e = document.getElementById('perfBenchScorecard'); return e ? (e.closest('.card') || e) : null; })() ],
+          [ { el: (function(){ var e = document.getElementById('perfCumulChart'); return e ? (e.closest('.grid-2') || e.closest('.card')) : null; })(), label: 'Returns vs Benchmarks' },
+            { el: (function(){ var e = document.getElementById('perfCalYearChart'); return e ? (e.closest('.grid-2') || e.closest('.card')) : null; })(), label: 'Calendar & Distribution' },
+            { el: (function(){ var e = document.getElementById('perfBestWorstTable'); return e ? e.closest('.card') : null; })(), label: 'Best & Worst' },
+            { el: (function(){ var e = document.getElementById('perfUnderwaterChart'); return e ? e.closest('.card') : null; })(), label: 'Drawdown' },
+            { el: (function(){ var e = document.getElementById('perfMonthlyHeatmap'); return e ? e.closest('.card') : null; })(), label: 'Monthly Heatmap' } ]);
+      }
+      // ── ATTRIBUTION ──
+      tab = document.getElementById('pftab-attribution');
+      if (tab && !tab.dataset.r9 && document.getElementById('attrContribCards')) {
+        build('pftab-attribution', 'Attribution',
+          [ (function(){ var e = document.getElementById('attrAccountFilter'); return e ? (e.closest('.card') || e) : null; })(),
+            document.getElementById('attrContribCards'),
+            document.getElementById('attrInsightCard') ],
+          [ { el: grabCardByTitle(tab, /Brinson/i), label: 'Brinson-Fachler' },
+            { el: (function(){ var e = document.getElementById('attrContribChart'); return e ? e.closest('.card') : null; })(), label: 'Contribution by Holding' },
+            { el: (function(){ var e = document.getElementById('attrSectorTable'); return e ? e.closest('.card') : null; })(), label: 'Sector Attribution' } ]);
+      }
+      // ── RISK ──
+      tab = document.getElementById('pftab-risk');
+      if (tab && !tab.dataset.r9 && document.getElementById('kpiVaR95')) {
+        build('pftab-risk', 'Risk',
+          [ topOf(document.getElementById('kpiVaR95'), tab) || (function(){ var e = document.getElementById('kpiVaR95'); return e ? e.parentElement.parentElement : null; })(),
+            (function(){ var e = document.getElementById('factorRiskBox'); return e ? (e.closest('.card') || e) : null; })(),
+            (function(){ var e = document.getElementById('riskMetricsDetail'); return e ? (e.closest('.card') || e) : null; })() ],
+          [ { el: (function(){ var e = document.getElementById('mvarTable'); return e ? e.closest('.card') : null; })(), label: 'Marginal VaR' },
+            { el: (function(){ var e = document.getElementById('riskFactorChart'); return e ? e.closest('.card') : null; })(), label: 'Factor Attribution' },
+            { el: (function(){ var e = document.getElementById('riskCorrChart'); return e ? e.closest('.card') : null; })(), label: 'Correlation Over Time' } ]);
+      }
+      ok = !!(document.getElementById('pftab-performance') || {}).dataset;
+    } catch(e) { console.warn('r9 rebuild:', e); }
+    // Retry while the app boots (elements appear as data loads)
+    if ((!document.getElementById('pftab-performance') || !document.getElementById('pftab-performance').dataset.r9) && (window._r9Tries = (window._r9Tries || 0) + 1) < 30) setTimeout(run, 700);
   }
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', function(){ setTimeout(run, 600); });
-  else setTimeout(run, 600);
+  console.log('[Perry] app3 build v9 loaded — portfolio single-window rebuild active');
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', function(){ setTimeout(run, 400); });
+  else setTimeout(run, 400);
 })();
