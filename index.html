@@ -392,6 +392,11 @@
           <!-- Watchlist / Trial Portfolio row -->
           <div style="background:var(--panel);border:1px solid var(--border);border-radius:5px;padding:8px 12px;margin-bottom:10px;">
             <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+              <span style="font-size:11px;font-weight:700;color:var(--navy);text-transform:uppercase;letter-spacing:.4px;">Accounts:</span>
+              <select id="pfChartAccountSel" style="font-size:11px;padding:3px 8px;" title="Show the value series for all accounts in aggregate, or a single account type" onchange="window._pfChartAccount=this.value;renderPortfolioChart();">
+                <option value="all">All Accounts (Aggregate)</option>
+              </select>
+              <span style="height:20px;width:1px;background:var(--border);"></span>
               <span style="font-size:11px;font-weight:700;color:var(--navy);text-transform:uppercase;letter-spacing:.4px;">Trial Portfolio / Watchlist</span>
               <select id="watchlistSelect" onchange="watchlistLoad()" style="font-size:11px;padding:3px 7px;">
                 <option value="">— Off (Current Portfolio Only) —</option>
@@ -563,6 +568,10 @@
         <!-- Period selector for performance tab -->
         <div class="card" style="padding:10px 16px;">
           <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+            <span style="font-size:12px;font-weight:700;color:var(--navy);text-transform:uppercase;letter-spacing:.4px;">Account:</span>
+            <select id="perfAccountSel" style="font-size:11px;padding:3px 8px;" title="Every metric, chart and heatmap on this tab recomputes for the selected account" onchange="window._perfAccount=this.value;renderPerformanceTab();">
+              <option value="all">All Accounts (Aggregate)</option>
+            </select>
             <span style="font-size:12px;font-weight:700;color:var(--navy);text-transform:uppercase;letter-spacing:.4px;">Performance Period:</span>
             <div class="btn-group" id="perfTimeframeBtns" style="margin:0;">
               <button class="btn-outline" data-perf-range="1mo">1M</button>
@@ -1069,7 +1078,7 @@
             <option value="Designated Beneficiary">Designated Beneficiary</option>
           </select>
           <button class="btn btn-sm" onclick="holdingsShowTab('import')" style="white-space:nowrap;">+ Add Holding</button>
-          <button class="btn-outline btn-sm" onclick="enrichHoldingsMetadata()" style="white-space:nowrap;" title="Auto-fill missing Sector, Industry, Asset type, and Yield for every holding from the ETF database, FMP profile, and SEC data — fixes rows showing —">🪄 Auto-Fill Missing Data</button>
+          <button class="btn-outline btn-sm" onclick="enrichHoldingsMetadata()" style="white-space:nowrap;" title="Full rescan of EVERY holding — re-pulls sector, industry, asset classification and dividend yield from the ETF database + FMP profiles, overriding anything marked Other/Unknown or previously mis-pulled">🪄 Rescan & Fix All Data</button>
         </div>
       </div>
       <!-- Tab Bar -->
@@ -4108,6 +4117,26 @@
     }
   };
 
+  // ═══ ANALYTICS CACHE (Firestore) ═══ generic per-user analytic results
+  // (e.g. the Risk tab's rolling correlation) stored PERMANENTLY under
+  // analytics/{uid}_{key} so views paint instantly and survive refreshes.
+  window._getAnalyticsCache = async function(key, maxAgeHours) {
+    try {
+      const uid = window._currentUser ? window._currentUser.uid : 'anon';
+      const snap = await getDoc(doc(db, "analytics", uid + "_" + key));
+      if (!snap.exists()) return null;
+      const data = snap.data();
+      if (maxAgeHours && data.cachedAt && (Date.now() - new Date(data.cachedAt).getTime()) / 36e5 > maxAgeHours) return { stale: true, payload: data.payload };
+      return { stale: false, payload: data.payload };
+    } catch (e) { return null; }
+  };
+  window._setAnalyticsCache = async function(key, payload) {
+    try {
+      const uid = window._currentUser ? window._currentUser.uid : 'anon';
+      await setDoc(doc(db, "analytics", uid + "_" + key), { key, payload, cachedAt: new Date().toISOString() });
+    } catch (e) { console.warn("analytics cache write:", e); }
+  };
+
   window._setHistCache = async function(ticker, dates, closes) {
     try {
       // Firestore doc limit is 1MB; even 30y of daily data fits (~250KB),
@@ -4129,5 +4158,6 @@
 <!-- App logic split into two parts (GitHub 1MB web-editor limit); load order matters -->
 <script src="app.js"></script>
 <script src="app2.js"></script>
+<script src="app3.js"></script>
 </body>
 </html>

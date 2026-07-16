@@ -3380,7 +3380,7 @@ async function themeCompareRun() {
   });
   // ── Stats table (plain-number arrays — NOT {x,y} objects) ──
   var pfData = datasets[0] ? datasets[0].data : [];
-  var statsRows = '<table style="width:100%;border-collapse:collapse;font-size:12px;font-family:Arial;margin-top:10px;">';
+  var statsRows = '<table style="width:100%;border-collapse:collapse;font-size:13px;font-family:Arial;margin-top:6px;line-height:1.5;">';
   statsRows += '<thead><tr style="background:var(--navy);color:#fff;">'
     + '<th style="padding:7px 10px;text-align:left;">Series</th>'
     + '<th style="padding:7px;text-align:right;">Period Return</th>'
@@ -3492,7 +3492,7 @@ async function themeCompareRun() {
   }
   document.getElementById('themeCmpTable').innerHTML =
     _themePanel('<span>Head-to-Head Statistics <span class="help-icon" data-help="sharpe" style="font-size:11px;">ⓘ</span></span>', statsRows)
-    + '<div class="theme-panel-grid" style="display:grid;grid-template-columns:1.25fr 1fr;gap:14px;margin-top:14px;align-items:start;">'
+    + '<div class="theme-panel-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:14px;align-items:stretch;">'
     +   _themePanel(
           '<span>Risk Lens <span class="help-icon" title="Three views of the same series: Rolling Sharpe (risk-adjusted consistency — above 1.0 is strong), Drawdown (peak-to-trough losses you would have lived through), and Cumulative Return (total growth rebased to 100). Use the buttons to switch." data-heading="Risk Lens" style="font-size:11px;">ⓘ</span></span>'
           + '<span id="themeChartTypeRow" style="display:flex;gap:6px;flex-wrap:wrap;">'
@@ -3652,7 +3652,9 @@ async function themeCompareRun() {
       new Chart(ctx2, { type:'doughnut',
         data:{labels:sl,datasets:[{data:sv,backgroundColor:donutPalette.slice(0,sl.length),borderWidth:1}]},
         options:{responsive:true,maintainAspectRatio:false,animation:false,
-          plugins:{legend:{position:'right',labels:{font:{size:10},color:'#1A2733',boxWidth:10,padding:6,filter:function(item){ return item.index < 8; }}},
+          // Legend bubbles removed (2026-07) — they crowded every donut and
+          // repeated across themes. Hover any slice for sector + weight.
+          plugins:{legend:{display:false},
             tooltip:{callbacks:{label:function(ctx){return ctx.label+': '+ctx.parsed.toFixed(1)+'%';}}}}}
       });
     });
@@ -4693,9 +4695,9 @@ async function renderPerformanceTab() {
   var summaryTextEl = document.getElementById('perfSummaryText');
   if (kpiEl) kpiEl.innerHTML = '<span class="spinner"></span> Computing...';
   try {
-    var pfSeries = await pfBuildValueSeries(range);
+    var pfSeries = await pfBuildValueSeries(range, window._perfAccount);
     if (!pfSeries || !pfSeries.dates || pfSeries.dates.length < 5) {
-      if (kpiEl) kpiEl.innerHTML = '<span style="color:var(--text-sec);font-size:12px;">Not enough history for selected period. Add holdings and try again.</span>';
+      if (kpiEl) kpiEl.innerHTML = '<span style="color:var(--text-sec);font-size:12px;">Not enough history for selected period'+(window._perfAccount && window._perfAccount!=='all' ? ' in the '+window._perfAccount+' account' : '')+'. Add holdings and try again.</span>';
       return;
     }
     var now = new Date();
@@ -4946,9 +4948,23 @@ function renderAttributionTab() {
     var topSec=secKeys.slice().sort(function(a,b){return sectorMap[b].contrib-sectorMap[a].contrib;})[0];
     var botSec=secKeys.slice().sort(function(a,b){return sectorMap[a].contrib-sectorMap[b].contrib;})[0];
     var topH=contributions[0],botH=contributions[contributions.length-1];
+    // Enriched 2026-07: same footprint, four extra decision stats —
+    // hit rate, concentration of return, weight-vs-payoff mismatches.
+    var winners = contributions.filter(function(c){ return (c.ret||0) > 0; }).length;
+    var hitRatePct = contributions.length ? (winners/contributions.length*100) : 0;
+    var posContribs = contributions.filter(function(c){ return c.contrib > 0; }).sort(function(a,b){ return b.contrib-a.contrib; });
+    var totPos = posContribs.reduce(function(s,c){ return s+c.contrib; }, 0);
+    var top3Share = totPos > 0 ? posContribs.slice(0,3).reduce(function(s,c){ return s+c.contrib; },0)/totPos*100 : 0;
+    // Biggest mismatch: large weight, weak payoff
+    var mismatch = contributions.slice().filter(function(c){ return c.weight > 0.03; }).sort(function(a,b){ return (a.contrib/Math.max(a.weight,1e-6)) - (b.contrib/Math.max(b.weight,1e-6)); })[0];
     insightTextEl.innerHTML=(topSec?'<strong>'+topSec+'</strong> contributed the most to returns (<strong style="color:var(--success)">+'+(sectorMap[topSec].contrib*100).toFixed(2)+'%</strong>), led by <strong>'+topH.ticker+'</strong>. ':'')
       +(botSec&&botSec!==topSec?'<strong>'+botSec+'</strong> was the biggest drag (<strong style="color:var(--danger)">'+(sectorMap[botSec].contrib*100>=0?'+':'')+((sectorMap[botSec].contrib||0)*100).toFixed(2)+'%</strong>), driven by <strong>'+botH.ticker+'</strong>. ':'')
-      +'Total portfolio gain/loss from current positions: <strong style="color:'+(totalContrib>=0?'var(--success)':'var(--danger)')+';">'+(totalContrib*100>=0?'+':'')+((totalContrib||0)*100).toFixed(2)+'%</strong>.';
+      +'Total portfolio gain/loss from current positions: <strong style="color:'+(totalContrib>=0?'var(--success)':'var(--danger)')+';">'+(totalContrib*100>=0?'+':'')+((totalContrib||0)*100).toFixed(2)+'%</strong>.'
+      +'<div style="display:flex;gap:14px;flex-wrap:wrap;margin-top:8px;padding-top:8px;border-top:1px dashed var(--border);font-size:12px;">'
+      +'<span><strong style="color:var(--navy);">Hit rate:</strong> '+hitRatePct.toFixed(0)+'% of positions positive'+(hitRatePct<50?' <span style="color:#8B6914;">(fewer than half your picks are working — returns rely on a few big winners)</span>':'')+'</span>'
+      +'<span><strong style="color:var(--navy);">Return concentration:</strong> top 3 winners = '+top3Share.toFixed(0)+'% of all positive contribution'+(top3Share>70?' <span style="color:#8B6914;">(one stumble changes the story)</span>':'')+'</span>'
+      +(mismatch && mismatch.contrib/Math.max(mismatch.weight,1e-6) < 0 ? '<span><strong style="color:var(--navy);">Capital misallocation:</strong> <strong>'+mismatch.ticker+'</strong> holds '+(mismatch.weight*100).toFixed(1)+'% of capital but contributes '+((mismatch.contrib||0)*100).toFixed(2)+'% — your largest weight-vs-payoff mismatch</span>' : '')
+      +'</div>';
   }
   var attrCtx=document.getElementById('attrContribChart');
   if (attrCtx) {
@@ -5009,9 +5025,12 @@ function chartLogReturns(points) {
   }
   return r;
 }
-async function pfBuildValueSeries(range) {
+async function pfBuildValueSeries(range, acctFilter) {
+  // Optional account scoping (2026-07): when acctFilter is set and not 'all',
+  // the series is reconstructed from that account's positions only.
   // Reconstruct daily portfolio dollar-value series
-  const h = window._holdings || [];
+  let h = window._holdings || [];
+  if (acctFilter && acctFilter !== 'all') h = h.filter(x => (x.accountType || 'Individual') === acctFilter);
   const isCashFn = x => ['Cash','Money Market','CD','Bond Position'].includes(x.assetClass);
   const securities = h.filter(x => !isCashFn(x));
   const cashHoldings = h.filter(isCashFn);
@@ -5582,6 +5601,15 @@ async function renderRiskHeatmap() {
   var canvasEl = document.getElementById('riskCorrChart');
   if (!canvasEl || _riskCorrBusy) return;
   _riskCorrBusy = true;
+  // v3 (2026-07): computed SERVER-SIDE by the worker /portfolio-correlation
+  // endpoint and persisted to Firestore — one GET, no client-side data
+  // assembly to fail. The v2 client path below remains only as a fallback.
+  if (typeof renderRiskCorrV3 === 'function') {
+    try { await renderRiskCorrV3(insightEl, canvasEl); }
+    catch (e3) { if (insightEl) insightEl.innerHTML = '<span style="color:var(--danger);">Correlation failed: ' + e3.message + ' <button class="btn btn-sm" onclick="renderRiskHeatmap()">Retry</button></span>'; }
+    _riskCorrBusy = false;
+    return;
+  }
   if (insightEl) insightEl.innerHTML = '<span class="spinner"></span> Computing rolling correlation vs SPY and QQQ…';
   try {
     if (!window._holdings || !window._holdings.length) {
@@ -5973,35 +6001,39 @@ async function enrichHoldingsMetadata() {
   for (var i = 0; i < hs.length; i++) {
     var x = hs[i];
     if (isCashE(x)) continue;
-    var needSector = !x.sector || GENERIC[x.sector];
-    var needInd    = !x.industry || GENERIC[x.industry];
-    var needAsset  = !x.assetClass || GENERIC_ASSET[x.assetClass];
-    var needYield  = x.yieldPct == null || x.yieldPct === '';
-    if (!(needSector || needInd || needAsset || needYield)) continue;
+    // FULL RESCAN (2026-07): every non-cash holding is re-examined — not just
+    // blanks. Fresh profile data OVERRIDES anything generic or previously
+    // mis-pulled; yield is always recomputed from the latest dividend + price.
+    var needSector = true;
+    var needInd    = true;
+    var needAsset  = true;
+    var needYield  = true;
     checked++;
     var upd = {};
     var tU = String(x.ticker).toUpperCase();
     var e = ETF_DB[tU];
     var profile = null;
-    if (e) {
-      if (needSector && e.s && !GENERIC[e.s]) { upd.sector = e.s; needSector = false; }
-      if (needInd && e.i)                     { upd.industry = e.i; needInd = false; }
-    }
-    if (needSector || needInd || needYield || needAsset) {
-      try {
-        var d = await fetch(WORKER_URL + '/fundamentals?symbol=' + encodeURIComponent(x.ticker)).then(function(r){ return r.json(); });
-        profile = d && d.profile ? d.profile : null;
-        if (profile) {
-          if (needSector && profile.sector && !GENERIC[profile.sector]) upd.sector = profile.sector;
-          if (needInd && profile.industry) upd.industry = profile.industry;
-          if (needYield && profile.lastDividend && x.currentPrice > 0) upd.yieldPct = +((profile.lastDividend / x.currentPrice) * 100).toFixed(2);
-        }
-      } catch(e2) {}
-    }
-    if (needAsset) {
-      var cls = classifyAssetType(tU, e, profile);
-      if (cls && cls !== x.assetClass) upd.assetClass = cls;
-    }
+    // Curated ETF_DB is the most trusted source — apply first
+    var bestSector = (e && e.s && !GENERIC[e.s]) ? e.s : null;
+    var bestInd = (e && e.i) ? e.i : null;
+    try {
+      var d = await fetch(WORKER_URL + '/fundamentals?symbol=' + encodeURIComponent(x.ticker)).then(function(r){ return r.json(); });
+      profile = d && d.profile ? d.profile : null;
+      if (profile) {
+        if (!bestSector && profile.sector && !GENERIC[profile.sector]) bestSector = profile.sector;
+        if (!bestInd && profile.industry) bestInd = profile.industry;
+        // Yield: ALWAYS recompute on rescan. Crypto/no-dividend → explicit 0.
+        var isCrypto = tU.endsWith('-USD') || (d.assetType === 'CRYPTO');
+        var newYield = isCrypto ? 0
+          : (profile.lastDividend && x.currentPrice > 0 ? +((profile.lastDividend / x.currentPrice) * 100).toFixed(2)
+          : (profile.lastDividend === 0 || profile.lastDividend == null ? 0 : null));
+        if (newYield != null && newYield !== x.yieldPct) upd.yieldPct = newYield;
+      }
+    } catch(e2) {}
+    if (bestSector && bestSector !== x.sector) upd.sector = bestSector;
+    if (bestInd && bestInd !== x.industry) upd.industry = bestInd;
+    var cls = classifyAssetType(tU, e, profile);
+    if (cls && cls !== x.assetClass) upd.assetClass = cls;
     if (Object.keys(upd).length) {
       upd.lastUpdated = new Date().toISOString();
       try { await updateHoldingDoc(x.id, upd); fixed++; } catch(e3) {}
@@ -6089,8 +6121,8 @@ function renderAccountComparison(force) {
   };
   el.innerHTML = toggles
     + '<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;" class="acct-cmp-grid">'
-    + '<div><div style="font-size:11px;font-weight:700;color:var(--navy);text-transform:uppercase;letter-spacing:.4px;margin-bottom:6px;">'+TITLES[view][0]+'</div><div style="height:240px;position:relative;"><canvas id="acctValueChart"></canvas></div></div>'
-    + '<div><div style="font-size:11px;font-weight:700;color:var(--navy);text-transform:uppercase;letter-spacing:.4px;margin-bottom:6px;">'+TITLES[view][1]+'</div><div style="height:240px;position:relative;"><canvas id="acctSectorChart"></canvas></div></div>'
+    + '<div><div style="font-size:11px;font-weight:700;color:var(--navy);text-transform:uppercase;letter-spacing:.4px;margin-bottom:6px;">'+TITLES[view][0]+'</div><div style="height:310px;position:relative;"><canvas id="acctValueChart"></canvas></div></div>'
+    + '<div><div style="font-size:11px;font-weight:700;color:var(--navy);text-transform:uppercase;letter-spacing:.4px;margin-bottom:6px;">'+TITLES[view][1]+'</div><div style="height:310px;position:relative;"><canvas id="acctSectorChart"></canvas></div></div>'
     + '</div>'
     + overlapHtml
     + (underHtml ? '<div style="font-size:11px;font-weight:700;color:var(--danger);text-transform:uppercase;letter-spacing:.4px;margin:12px 0 4px;">Underperforming Positions to Review (< −5% and below portfolio median)</div>'+underHtml : '<div style="font-size:11px;color:var(--success);margin-top:10px;">✓ No positions flagged as underperformers right now.</div>');
@@ -6153,6 +6185,18 @@ function renderAccountComparison(force) {
       options: baseOpts({ scales: { y: { ticks: { callback: function(v){ return v+'%'; }, font:{size:10} } }, y1: { position: 'right', grid: { display: false }, ticks: { font:{size:10} } }, x: { ticks: { font:{size:10} }, grid: { display: false } } } }) };
     cfg2 = barConfig('Cash Buffer (%)', names.map(function(a){ return +stats[a].cashPct.toFixed(1); }), function(v){ return v+'%'; }, 'rgba(46,125,82,0.65)');
   } else { // income
+    var anyYield = names.some(function(a){ return stats[a].yieldPct > 0.01; });
+    if (!anyYield) {
+      // No yield data yet — show an explicit empty state instead of blank bars,
+      // with the one-click fix (the holdings rescan populates dividend yields).
+      var grid = el.querySelector('.acct-cmp-grid');
+      if (grid) grid.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:40px 20px;color:var(--text-sec);font-size:13px;line-height:1.7;">'
+        + '<div style="font-size:26px;">💤</div>'
+        + '<strong style="color:var(--navy);">No dividend yields on file yet.</strong><br>'
+        + 'The Income view charts weighted yield and projected annual dollars per account — it needs each holding\'s dividend yield.<br>'
+        + '<button class="btn btn-sm" style="margin-top:10px;" onclick="enrichHoldingsMetadata().then(function(){renderAccountComparison(true);})">🪄 Rescan holdings to pull yields</button></div>';
+      return;
+    }
     cfg1 = barConfig('Weighted Yield (%)', names.map(function(a){ return +stats[a].yieldPct.toFixed(2); }), function(v){ return v+'%'; }, 'rgba(46,125,82,0.7)');
     cfg2 = barConfig('Projected Annual Income ($)', names.map(function(a){ return +stats[a].incomeDol.toFixed(0); }), function(v){ return '$'+Math.round(v).toLocaleString(); });
   }
@@ -9355,7 +9399,9 @@ if (document.readyState === 'loading') {
       var bizBtn = macroTabs.querySelector('[data-macrotab="biz"]'); if (bizBtn) bizBtn.textContent = 'Business Cycle';
 
       // ── 7) Loader wiring: opening a merged tab fires its cross-asset loader ──
-      var CA_LOAD_MAP = { dashboard: ['regime'], biz: ['bizycle'], yieldcurve: ['yieldcurve'], cabreadth: ['breadth'], cacredit: ['credit'], camomentum: ['momentum'], casectors: ['sectors'] };
+      // cabreadth also fires the sectors + momentum loaders: the Sector
+      // Momentum Scorecard on that tab is populated by those engines (2026-07)
+      var CA_LOAD_MAP = { dashboard: ['regime'], biz: ['bizycle'], yieldcurve: ['yieldcurve'], cabreadth: ['breadth', 'sectors', 'momentum'], cacredit: ['credit'], camomentum: ['momentum'], casectors: ['sectors'] };
       function waitForMacroData(cb, tries) {
         if (window._lastMacroData) { cb(); return; }
         if ((tries || 0) > 40) return;
@@ -9527,10 +9573,10 @@ async function renderSectorsContent() {
   var mode = window._sectorsMode || 'spy';
   // Money-flow comparison chart sits ABOVE the table for every tab —
   // see all groups move together instead of clicking through one by one.
-  outer.innerHTML = '<div id="ssFlowCard" style="margin-bottom:14px;"></div><div id="ssPanelBody"></div>';
+  outer.innerHTML = '<div id="ssBreadthCards" style="margin-bottom:12px;"></div><div id="ssFlowCard" style="margin-bottom:14px;"></div><div id="ssPanelBody"></div>';
   var wrap = document.getElementById('ssPanelBody');
   var flowCfgs = {
-    spy:         { syms: SPY_SECTORS.map(function(s){return s.etf;}), names: SPY_SECTORS.reduce(function(m,s){ m[s.etf]=s.name; return m; },{}), colors: SPY_SECTORS.reduce(function(m,s){ m[s.etf]=s.color; return m; },{}), title: 'Sector Money Flow — all 11 GICS sectors' },
+    spy:         { syms: SPY_SECTORS.map(function(s){return s.etf;}), names: SPY_SECTORS.reduce(function(m,s){ m[s.etf]=s.name; return m; },{}), colors: SPY_SECTORS.reduce(function(m,s){ m[s.etf]=s.color; return m; },{}), title: 'Sector Money Flow — all 11 GICS sectors', style: 'bars' },
     nasdaq:      { syms: ['QQQ','AAPL','MSFT','NVDA','AMZN','META','GOOGL','AVGO'], names: {}, title: 'Nasdaq Leaders vs QQQ — where is the money flowing?' },
     crypto:      { syms: CRYPTO_TICKERS.slice(0,6), names: {}, title: 'Major Crypto Assets — relative flows' },
     commodities: { syms: COMMODITY_TICKERS.slice(0,6), names: COMMODITY_NAMES, title: 'Commodity Complex — relative flows' },
@@ -9559,6 +9605,10 @@ function ssFlowSetRange(r) { window._flowRange = r; renderSsFlowChart(window._la
 async function renderSsFlowChart(cfg) {
   var card = document.getElementById('ssFlowCard');
   if (!card || !cfg) return;
+  // 11 overlapping lines were unreadable for the S&P sectors — that tab uses
+  // sorted return BARS instead (defined in app3.js); line style stays for
+  // smaller groups like Nasdaq/crypto where it reads well.
+  if (cfg.style === 'bars' && typeof renderSsFlowBars === 'function') { renderSsFlowBars(cfg); return; }
   var ranges = [['1mo','1M'],['3mo','3M'],['6mo','6M'],['1y','1Y']];
   var btns = ranges.map(function(r){
     var active = window._flowRange === r[0];
@@ -9727,6 +9777,7 @@ async function renderSnapshotPanel(wrap, tickers, title, labelFn) {
     // Sort by market cap when available, else by 1M momentum
     var haveMc = rows.some(function(r){ return r.marketCap; });
     rows.sort(function(a,b){ return haveMc ? (b.marketCap||0)-(a.marketCap||0) : (b.chg1m||-999)-(a.chg1m||-999); });
+    if (typeof renderSsBreadthCards === 'function') renderSsBreadthCards(rows, title);
     wrap.innerHTML = snapshotStoryStrip(rows, title) + buildSnapshotTable(rows, title, labelFn, haveMc);
   } catch(e) {
     wrap.innerHTML = '<div style="padding:24px;text-align:center;color:var(--danger);">Failed to load: '+e.message+' <button class="btn btn-sm" onclick="renderSectorsContent()">Retry</button></div>';
@@ -9973,7 +10024,7 @@ window.renderPerformanceTab = async function() {
     if (!holdings.length) return;
     var rangeBtn = document.querySelector('#perfTimeframeBtns .btn-outline.active');
     var range = rangeBtn ? rangeBtn.getAttribute('data-perf-range') : '1y';
-    var pfSeries = await pfBuildValueSeries(range);
+    var pfSeries = await pfBuildValueSeries(range, window._perfAccount);
     if (!pfSeries || !pfSeries.dates || pfSeries.dates.length < 5) return;
     var now = new Date();
     var cutoff = new Date(now);
@@ -11202,74 +11253,4 @@ function gapExportCSV() {
 // Account-by-Account Comparison). Nothing is removed: every chart,
 // table and renderer keeps its original element id and logic — panels
 // are just shown/hidden, and Chart.js auto-resizes on reveal.
-// ═══════════════════════════════════════════════════════════════════
-function consolidateTabViews(tabId, keepN, title, labels) {
-  var tab = document.getElementById(tabId);
-  if (!tab || tab.dataset.viewsDone) return;
-  var kids = Array.prototype.slice.call(tab.children).filter(function(n){ return n.nodeType === 1; });
-  var rest = kids.slice(keepN);
-  if (rest.length < 2) return;
-  tab.dataset.viewsDone = '1';
-
-  var host = document.createElement('div');
-  host.className = 'card';
-  var hdr = document.createElement('div');
-  hdr.className = 'card-title';
-  hdr.style.cssText = 'display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;';
-  var titleSpan = document.createElement('span');
-  titleSpan.textContent = title;
-  var btnWrap = document.createElement('span');
-  btnWrap.style.cssText = 'display:flex;gap:6px;flex-wrap:wrap;';
-  hdr.appendChild(titleSpan);
-  hdr.appendChild(btnWrap);
-  var body = document.createElement('div');
-  body.className = 'card-body';
-  body.style.padding = '12px 14px';
-  host.appendChild(hdr);
-  host.appendChild(body);
-  tab.appendChild(host);
-
-  var panels = [];
-  rest.forEach(function(el, i) {
-    var pane = document.createElement('div');
-    pane.style.display = i === 0 ? 'block' : 'none';
-    body.appendChild(pane);
-    pane.appendChild(el);
-    el.style.marginBottom = '0';
-    panels.push(pane);
-    var label = (labels && labels[i]) || (function() {
-      var t = el.querySelector && el.querySelector('.card-title');
-      var txt = t ? t.textContent : 'View ' + (i + 1);
-      return txt.replace(/[ⓘ?📖🌊📅]/g, '').replace(/\s+/g, ' ').trim().slice(0, 26);
-    })();
-    var b = document.createElement('button');
-    b.className = 'tabview-btn' + (i === 0 ? ' active' : '');
-    b.textContent = label;
-    b.onclick = function() {
-      panels.forEach(function(p, j) { p.style.display = j === i ? 'block' : 'none'; });
-      btnWrap.querySelectorAll('.tabview-btn').forEach(function(x) { x.classList.remove('active'); });
-      b.classList.add('active');
-      // Chart.js recomputes dimensions when a hidden canvas becomes visible
-      setTimeout(function() { window.dispatchEvent(new Event('resize')); }, 60);
-    };
-    btnWrap.appendChild(b);
-  });
-}
-
-(function initConsolidatedTabs() {
-  function run() {
-    try {
-      // Performance: keep period selector + KPI bar + summary visible;
-      // everything else becomes a toggled panel.
-      consolidateTabViews('pftab-performance', 3, 'Performance Explorer',
-        ['Returns vs Benchmarks', 'Calendar & Distribution', 'Best & Worst Periods', 'Drawdown', 'Monthly Heatmap', 'vs Benchmark Scorecard']);
-      // Attribution: keep account filter + contributor cards + insight text.
-      consolidateTabViews('pftab-attribution', 3, 'Attribution Explorer', null);
-      // Risk: keep the KPI strip; VaR/factor/correlation views toggle.
-      consolidateTabViews('pftab-risk', 1, 'Risk Explorer',
-        ['Marginal VaR Contributors', 'Factor Risk Decomposition', 'Risk Metrics vs SPY & QQQ', 'Factor Return Attribution', 'Correlation Over Time']);
-    } catch (e) { console.warn('tab consolidation failed:', e); }
-  }
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', run);
-  else run();
-})();
+// ═══════════════════════

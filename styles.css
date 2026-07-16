@@ -2609,3 +2609,63 @@ body.view-mobile #ffResults, body.view-mobile #pfrResults {
 .tabview-btn { background: transparent; color: #fff; border: 1px solid rgba(255,255,255,0.4); border-radius: 4px; padding: 4px 11px; font-size: 11px; cursor: pointer; white-space: nowrap; }
 .tabview-btn.active { background: rgba(255,255,255,0.18); font-weight: 700; }
 .tabview-btn:hover { background: rgba(255,255,255,0.10); }
+
+/* ═══ ROUND 6 (2026-07) ═══ */
+
+/* Dropdown options were invisible (white-on-white) inside dark-styled selects
+   — force readable option lists everywhere, including the holdings filter. */
+select option { color: #1A2733 !important; background: #ffffff !important; }
+
+/* Macro page 3-column overview: equal width, equal height, centered titles */
+#macroOverviewGrid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  align-items: stretch;
+  margin: 0 16px 14px;
+}
+#macroOverviewGrid .macro-ovr-col { margin: 0; display: flex; flex-direction: column; }
+#macroOverviewGrid .macro-ovr-col .card-body { flex: 1; overflow-y: auto; max-height: 560px; padding: 10px 12px; }
+#macroOverviewGrid table { margin-left: auto; margin-right: auto; }
+/* Quad map compressed for the middle column: stack panels, shrink canvas */
+#movCol2Body .quad-map-wrap { display: grid !important; grid-template-columns: 1fr !important; gap: 10px !important; }
+#movCol2Body .quad-map-canvas-wrap { height: 230px !important; }
+#movCol2Body .card { margin: 0 0 8px; }
+/* Verdict inside col1: tighten */
+#movCol1Body .card { margin: 0; }
+#movCol1Body .card-title { font-size: 11.5px; padding: 7px 12px; }
+#movCol3Body .card { margin: 0 0 8px; }
+body.view-mobile #macroOverviewGrid { grid-template-columns: 1fr !important; }
+@media (max-width: 1000px) { #macroOverviewGrid { grid-template-columns: 1fr; } }
+
+/* Morningstar style box: let it FILL its card (was a small floating grid) */
+#mstar-card .mstar-grid { width: 100% !important; max-width: 460px; margin: 0 auto; }
+#mstar-card .mstar-cell { min-height: 74px !important; font-size: 12px !important; }
+#mstar-card .mstar-container { justify-content: center; }
+#mstar-card { text-align: center; }
+
+/* Pinned summary cards (Risk / Performance) — slimmed */
+.slim-pinned .card-body { padding: 8px 12px !important; }
+.slim-pinned .metric-card { padding: 7px 8px !important; }
+.slim-pinned .card-title { font-size: 11.5px !important; padding: 6px 12px !important; }
+.slim-pinned table { font-size: 11.5px !important; }
+.slim-pinned td, .slim-pinned th { padding: 5px 8px !important; }
+
+/* Portfolio Value chart — PORTRAIT phone fix: fit the screen width (no
+   sideways scroll for this one), taller, axis labels readable */
+body.view-mobile #portfolioChartWrap {
+  height: 340px !important;
+  min-height: 340px !important;
+  overflow-x: hidden !important;
+}
+body.view-mobile #portfolioChartWrap > canvas {
+  min-width: 100% !important;
+  width: 100% !important;
+}
+
+/* Theme panels: equal halves, equal chart heights */
+.theme-panel-grid > div { display: flex; flex-direction: column; }
+.theme-panel-grid > div > div:last-child { flex: 1; }
+
+/* Themes-at-a-glance strip cards align nicely on mobile */
+body.view-mobile #themesGlanceStrip .card-body > div { min-width: 100% !important; max-width: none !important; }

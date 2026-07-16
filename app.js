@@ -1076,6 +1076,15 @@ function renderHoldingsTable(holdings) {
   // Group tickers that appear in multiple accounts for visual indicator
   var tickerCounts = {};
   sorted.forEach(function(h){ tickerCounts[h.ticker] = (tickerCounts[h.ticker] || 0) + 1; });
+  // Per-ticker account list (2026-07): replaces the old ×N badge. Primary
+  // account = the one holding the largest market value of that ticker.
+  var tickerAccts = {};
+  sorted.forEach(function(h){
+    var mvA = (h.currentPrice || h.costBasis || 0) * h.quantity;
+    if (!tickerAccts[h.ticker]) tickerAccts[h.ticker] = [];
+    tickerAccts[h.ticker].push({ a: h.accountType || 'Individual', mv: mvA });
+  });
+  Object.keys(tickerAccts).forEach(function(t){ tickerAccts[t].sort(function(x,y){ return y.mv - x.mv; }); });
 
   // Summary bar for tickers across multiple accounts
   var multiAccountTickers = Object.keys(tickerCounts).filter(function(t){ return tickerCounts[t] > 1; });
@@ -1127,9 +1136,14 @@ function renderHoldingsTable(holdings) {
     const canUndo = h.previousVersion && editAge < 24;
     const acct = h.accountType || 'Individual';
     const pctOfAcct = acctTotals[acct] > 0 ? (mvDisplay / acctTotals[acct]) * 100 : 0;
-    var multiBadge = tickerCounts[h.ticker] > 1 ? ' <span title="Also in other accounts" style="background:var(--blue);color:white;font-size:9px;padding:1px 4px;border-radius:2px;font-weight:600;">&#215;'+tickerCounts[h.ticker]+'</span>' : '';
+    var acctList = '';
+    if (tickerCounts[h.ticker] > 1 && tickerAccts[h.ticker]) {
+      acctList = '<div style="font-size:9px;font-weight:500;color:var(--text-sec);line-height:1.3;margin-top:1px;white-space:normal;">'
+        + tickerAccts[h.ticker].map(function(x, xi){ return xi === 0 ? '<strong style="color:var(--navy);" title="Primary account (largest position)">' + x.a + '</strong>' : x.a; }).join(' · ')
+        + '</div>';
+    }
     html += '<tr>' +
-      '<td style="font-weight:700;color:' + C.navy + ';">' + h.ticker + multiBadge + '</td>' +
+      '<td style="font-weight:700;color:' + C.navy + ';">' + h.ticker + acctList + '</td>' +
       '<td>' + h.companyName + '</td>' +
       '<td>' + (isCash ? '—' : h.quantity) + '</td>' +
       '<td>' + (isCash ? fmt(h.costBasis * h.quantity) : fmt(h.costBasis)) + '</td>' +
@@ -1302,7 +1316,15 @@ function _toggleTabs(scope, dataAttr, name, contentIdPrefix) {
 
 function holdingsShowTab(name) {
   _toggleTabs('#page-holdings', 'data-htab', name, 'htab-');
-  if (name === 'rebalance' && typeof loadRebalanceContext === 'function') loadRebalanceContext(false);
+  if (name === 'rebalance') {
+    if (typeof loadRebalanceContext === 'function') loadRebalanceContext(false);
+    // The Current-vs-Target bar chart previously rendered only when the drift
+    // model dropdown CHANGED — on first open the canvas stayed blank (2026-07).
+    setTimeout(function(){
+      try { if (typeof driftRender === 'function') driftRender(); } catch(e) {}
+      try { if (typeof renderHldRebalanceChart === 'function') renderHldRebalanceChart(); } catch(e) {}
+    }, 250);
+  }
   if (name === 'analysis' && typeof renderAccountComparison === 'function') setTimeout(function(){ renderAccountComparison(false); }, 100);
   var h = window._holdings || [];
   if (name === 'analysis') {
@@ -2114,7 +2136,10 @@ let _chartBenchmarkSeries = {};
 window.renderPortfolioChart = async function() {
   const allH = window._holdings || [];
   if (!allH.length) return;
-  const af = document.getElementById('portfolioAccountFilter')?.value || 'all';
+  // Account scope: the chart's own dropdown (Accounts:) wins; falls back to
+  // the page-level filter. 'all' = aggregate of every account type.
+  const afChart = window._pfChartAccount || document.getElementById('pfChartAccountSel')?.value;
+  const af = (afChart && afChart !== '') ? afChart : (document.getElementById('portfolioAccountFilter')?.value || 'all');
   const holdings = af === 'all' ? allH : allH.filter(h => (h.accountType || 'Individual') === af);
   if (!holdings.length) return;
 
