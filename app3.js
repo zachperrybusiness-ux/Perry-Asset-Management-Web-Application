@@ -513,3 +513,42 @@ function _movQuadStatic(q) {
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', function(){ setTimeout(run, 300); });
   else setTimeout(run, 300);
 })();
+
+// ── 7) ROUND 8: ONE WINDOW PER SUB-TAB (Performance / Attribution / Risk) ──
+// The explorers existed, but the period selector, KPI strip, summary text and
+// pinned scorecards still sat ABOVE them as separate stacked windows. This
+// absorbs every pinned element INTO the explorer card as an always-visible
+// summary band at the top of the window — so each sub-tab renders as exactly
+// ONE card: band on top, toggled visualization panes below. No data removed;
+// every element keeps its id and renderer.
+(function absorbPinnedIntoExplorers() {
+  function absorb(tabId) {
+    var tab = document.getElementById(tabId);
+    if (!tab || tab.dataset.absorbed || !tab.dataset.viewsDone) return false;
+    var kids = Array.prototype.slice.call(tab.children).filter(function(n){ return n.nodeType === 1; });
+    if (kids.length < 2) return false;
+    var host = kids[kids.length - 1];                       // the Explorer card (appended last)
+    if (!host.classList || !host.classList.contains('card')) return false;
+    var body = null;
+    for (var i = 0; i < host.children.length; i++) { if (host.children[i].classList && host.children[i].classList.contains('card-body')) { body = host.children[i]; break; } }
+    if (!body) return false;
+    var band = document.createElement('div');
+    band.className = 'explorer-summary-band';
+    body.insertBefore(band, body.firstChild);
+    kids.slice(0, -1).forEach(function(el) {
+      band.appendChild(el);
+      el.classList.add('band-item');
+    });
+    tab.dataset.absorbed = '1';
+    return true;
+  }
+  var tries = 0;
+  function run() {
+    tries++;
+    var done = ['pftab-performance', 'pftab-attribution', 'pftab-risk'].map(absorb);
+    // Retry until the consolidator has built all three explorers (max ~20s)
+    if (done.indexOf(false) >= 0 && tries < 40) setTimeout(run, 500);
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', function(){ setTimeout(run, 600); });
+  else setTimeout(run, 600);
+})();

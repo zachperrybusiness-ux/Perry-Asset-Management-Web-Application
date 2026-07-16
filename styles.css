@@ -2682,3 +2682,40 @@ body.view-mobile #themesGlanceStrip .card-body > div { min-width: 100% !importan
 #movQtrSlot .card-title { font-size: 10px !important; padding: 5px 10px !important; }
 #movQtrSlot table { font-size: 10px !important; }
 #movQtrSlot td, #movQtrSlot th { padding: 3px 6px !important; }
+
+/* ═══ ROUND 8 — explorer summary bands: everything in ONE window ═══ */
+.explorer-summary-band {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 8px 12px 4px;
+  margin: 0 0 12px;
+}
+/* Absorbed cards flatten into the band — no double frames or shadows */
+.explorer-summary-band .band-item { margin: 0 0 8px !important; }
+.explorer-summary-band .band-item.card,
+.explorer-summary-band .band-item .card {
+  box-shadow: none !important;
+  border: none !important;
+  background: transparent !important;
+}
+.explorer-summary-band .card-title {
+  background: transparent !important;
+  color: var(--navy) !important;
+  font-size: 10.5px !important;
+  padding: 2px 0 4px !important;
+  letter-spacing: .4px;
+}
+.explorer-summary-band .card-title .help-icon { color: var(--navy) !important; }
+.explorer-summary-band .card-body { padding: 0 0 4px !important; }
+.explorer-summary-band .card-sources { display: none !important; }   /* footnotes hidden in band; full detail in panes */
+.explorer-summary-band .chart-stats { margin: 0 0 6px !important; gap: 6px !important; }
+.explorer-summary-band .chart-stat-box { padding: 6px 10px !important; }
+.explorer-summary-band .chart-stat-value { font-size: 15px !important; }
+.explorer-summary-band .chart-stat-label { font-size: 9px !important; }
+/* Risk KPI strip + slim-pinned tables inside the band */
+.explorer-summary-band .risk-kpi { padding: 6px 10px !important; }
+.explorer-summary-band table { font-size: 11px !important; }
+.explorer-summary-band td, .explorer-summary-band th { padding: 4px 7px !important; }
+/* Mobile: band scrolls internally rather than pushing panes off-screen */
+body.view-mobile .explorer-summary-band { max-height: 46vh; overflow-y: auto; }
