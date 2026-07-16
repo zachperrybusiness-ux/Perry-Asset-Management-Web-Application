@@ -2669,3 +2669,16 @@ body.view-mobile #portfolioChartWrap > canvas {
 
 /* Themes-at-a-glance strip cards align nicely on mobile */
 body.view-mobile #themesGlanceStrip .card-body > div { min-width: 100% !important; max-width: none !important; }
+
+/* ═══ ROUND 7 — macro overview: compact, NO internal scroll ═══ */
+#macroOverviewGrid .macro-ovr-col .card-body {
+  overflow-y: visible !important;
+  max-height: none !important;
+  padding: 8px 12px !important;
+}
+#macroOverviewGrid .macro-ovr-col { min-height: 0; }
+#macroOverviewGrid table td { line-height: 1.35; }
+#movQtrSlot .card { box-shadow: none; border: 1px solid var(--border); }
+#movQtrSlot .card-title { font-size: 10px !important; padding: 5px 10px !important; }
+#movQtrSlot table { font-size: 10px !important; }
+#movQtrSlot td, #movQtrSlot th { padding: 3px 6px !important; }

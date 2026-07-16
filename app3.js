@@ -292,7 +292,132 @@ function findCardsByTitle(container, patterns) {
   return found;
 }
 
-// ── 5) MACRO PAGE ROUND-6 RESTRUCTURE ──
+// ── 5) MACRO PAGE OVERVIEW v2 (round 7) — REFORMATTED, not relocated ──
+// Each of the three boxes is BUILT from the underlying data as a compact,
+// no-scroll summary. The old cards those summaries replace are hidden.
+function _movQuadStatic(q) {
+  var M = {
+    'Q1': { label: 'Goldilocks', color: 'var(--success)', favor: 'Tech · Discretionary · Small-Cap · High-Yield', avoid: 'Defensives · Long Duration' },
+    'Q2': { label: 'Overheat', color: '#8B6914', favor: 'Energy · Materials · Industrials · TIPS', avoid: 'Long Bonds · Growth Multiples' },
+    'Q3': { label: 'Stagflation', color: 'var(--danger)', favor: 'Gold · Energy · Short-Duration Bonds', avoid: 'Tech · Duration · Credit' },
+    'Q4': { label: 'Deflation / Recession', color: 'var(--blue)', favor: 'Treasuries · Utilities · Staples · Gold · Cash', avoid: 'Cyclicals · Credit · Small-Cap' }
+  };
+  return M[q] || M['Q1'];
+}
+(function macroOverviewV2() {
+  var TR = 'padding:3px 8px;border-bottom:1px solid var(--border);';
+  function rowKV(k, v, vColor) {
+    return '<tr><td style="' + TR + 'font-weight:600;color:var(--text-sec);font-size:11px;white-space:nowrap;">' + k + '</td>'
+      + '<td style="' + TR + 'text-align:right;font-weight:700;font-size:11.5px;color:' + (vColor || 'var(--navy)') + ';">' + v + '</td></tr>';
+  }
+  function buildCol1(d) {
+    var body = document.getElementById('movCol1Body');
+    if (!body || !d) return;
+    var phaseColors = { 'Confirmed Expansion': 'var(--success)', 'Mid-Cycle': 'var(--navy)', 'Late Cycle / Transition': '#8B6914', 'Confirmed Contraction': 'var(--danger)' };
+    var pc = phaseColors[d.phase] || 'var(--navy)';
+    var rows = (d.pillarScores || []).map(function(p) {
+      var c = p.score > 0 ? 'var(--success)' : p.score < 0 ? 'var(--danger)' : 'var(--text-sec)';
+      var arrow = p.score > 0 ? '▲' : p.score < 0 ? '▼' : '●';
+      return rowKV(p.name, arrow + ' ' + (p.score >= 0 ? '+' : '') + p.score + ' <span style="color:var(--text-sec);font-weight:400;">/ ' + p.count + '</span>', c);
+    }).join('');
+    body.innerHTML =
+      '<div style="text-align:center;margin-bottom:8px;">'
+      + '<span style="font-size:34px;font-weight:800;color:' + pc + ';line-height:1;">' + d.totalScore + '</span>'
+      + '<span style="font-size:13px;color:var(--text-sec);"> / ' + d.maxScore + '</span>'
+      + '<div style="font-size:14px;font-weight:800;color:' + pc + ';margin-top:2px;">' + d.phase + '</div>'
+      + '<div style="font-size:10.5px;color:var(--text-sec);line-height:1.4;">' + (d.phaseDescription || '') + '</div>'
+      + '</div>'
+      + '<table style="width:100%;border-collapse:collapse;margin:0 auto;">' + rows + '</table>'
+      + '<div style="font-size:9.5px;color:var(--text-sec);text-align:center;margin-top:6px;">24 FRED indicators · click any tab below for detail</div>';
+  }
+  function buildCol2(d) {
+    var body = document.getElementById('movCol2Body');
+    if (!body || !d) return;
+    var q = null;
+    try { if (typeof computeCurrentQuad === 'function') q = computeCurrentQuad(d); } catch(e) {}
+    // Adopt the live canvas ONCE (renderQuadMap keeps drawing into it by id)
+    var canvasWrap = document.getElementById('quadMapWrap');
+    var slot = document.getElementById('movQuadCanvasSlot');
+    if (!slot) {
+      body.innerHTML = '<div id="movQuadCanvasSlot" style="height:210px;position:relative;margin-bottom:8px;"></div><div id="movQuadTable"></div>';
+      slot = document.getElementById('movQuadCanvasSlot');
+    }
+    if (canvasWrap && canvasWrap.parentNode !== slot) { slot.appendChild(canvasWrap); canvasWrap.style.height = '100%'; }
+    var tbl = document.getElementById('movQuadTable');
+    if (tbl) {
+      if (q) {
+        var st = _movQuadStatic(q.quadNum ? 'Q' + String(q.quadNum).replace(/\D/g, '') : (q.quad || 'Q1'));
+        var growthTxt = q.growthDir != null ? (q.growthDir > 0 ? '▲ Accelerating' : '▼ Slowing') : (q.growthLabel || '—');
+        var inflTxt = q.inflDir != null ? (q.inflDir > 0 ? '▲ Accelerating' : '▼ Cooling') : (q.inflLabel || '—');
+        tbl.innerHTML = '<table style="width:100%;border-collapse:collapse;margin:0 auto;">'
+          + rowKV('Quadrant', (q.quadNum || '') + ' — ' + (q.quadLabel || st.label), st.color)
+          + rowKV('Growth', growthTxt, q.growthDir > 0 ? 'var(--success)' : 'var(--danger)')
+          + rowKV('Inflation', inflTxt, q.inflDir > 0 ? '#8B6914' : 'var(--success)')
+          + rowKV('Favors', '<span style="font-weight:600;font-size:10.5px;">' + st.favor + '</span>', 'var(--success)')
+          + rowKV('Avoid', '<span style="font-weight:600;font-size:10.5px;">' + st.avoid + '</span>', 'var(--danger)')
+          + '</table>';
+      } else {
+        tbl.innerHTML = '<div style="font-size:11px;color:var(--text-sec);text-align:center;">Quadrant summary loads with FRED data…</div>';
+      }
+    }
+    // Hide the verbose originals — their content now lives here + in the ⓘ
+    var dashTab = document.getElementById('macrotab-dashboard');
+    if (dashTab && typeof findCardsByTitle === 'function') {
+      findCardsByTitle(dashTab, [/Quad Framework/i, /Current Regime Signal/i, /Quad Playbook Summary/i]).forEach(function(c){ if (c) c.style.display = 'none'; });
+      var qw = dashTab.querySelector('.quad-map-wrap');
+      if (qw) qw.style.display = 'none';
+    }
+  }
+  function buildCol3() {
+    var body = document.getElementById('movCol3Body');
+    if (!body) return;
+    var stateKey = window._briefingState || 'growth';
+    var st = (typeof PS_STATES !== 'undefined' ? PS_STATES : []).find(function(s){ return s.key === stateKey; });
+    if (!st) return;
+    if (!document.getElementById('movStateBlock')) {
+      body.innerHTML = '<div id="movStateBlock"></div><div id="movQtrSlot"></div>';
+    }
+    var blk = document.getElementById('movStateBlock');
+    if (blk) {
+      blk.innerHTML =
+        '<div style="text-align:center;margin-bottom:8px;">'
+        + '<span style="display:inline-block;background:' + st.color + ';color:#fff;font-size:14px;font-weight:800;padding:4px 16px;border-radius:14px;">' + st.name + '</span>'
+        + '<div style="font-size:10.5px;color:var(--text-sec);margin-top:4px;line-height:1.4;">' + st.posture + '</div>'
+        + '</div>'
+        + '<table style="width:100%;border-collapse:collapse;margin:0 auto;">'
+        + rowKV('Trigger', '<span style="font-weight:500;font-size:10px;white-space:normal;">' + st.trigger + '</span>')
+        + rowKV('Instruments', '<span style="font-weight:500;font-size:10px;white-space:normal;">' + st.instruments + '</span>')
+        + rowKV('Cash target', st.cash, st.color)
+        + rowKV('Historical analogues', '<span style="font-weight:500;font-size:10px;white-space:normal;">' + st.historical + '</span>')
+        + '</table>';
+    }
+    // Adopt the Quarterly Regime History block (compact) + hide the big cards
+    var regimePanel = document.getElementById('catab-regime');
+    if (regimePanel && typeof findCardsByTitle === 'function') {
+      var picks = findCardsByTitle(regimePanel, [/Quarterly Regime History/i, /Current Market Regime/i, /Four Portfolio States/i]);
+      var qtrSlot = document.getElementById('movQtrSlot');
+      if (picks[0] && qtrSlot && picks[0].parentNode !== qtrSlot) { qtrSlot.appendChild(picks[0]); picks[0].classList.add('slim-pinned'); picks[0].style.margin = '8px 0 0'; }
+      if (picks[1]) picks[1].style.display = 'none';   // summarized above
+      if (picks[2]) picks[2].style.display = 'none';   // lives in the ⓘ hover
+    }
+  }
+  var lastRendered = 0;
+  function tick() {
+    try {
+      if (!document.getElementById('macroOverviewGrid')) return;   // grid built below
+      var d = window._lastMacroData;
+      if (d && Date.now() - lastRendered > 45000) {
+        lastRendered = Date.now();
+        buildCol1(d); buildCol2(d);
+      }
+      buildCol3._done = buildCol3._done || 0;
+      if (Date.now() - buildCol3._done > 45000) { buildCol3._done = Date.now(); buildCol3(); }
+    } catch(e) {}
+    setTimeout(tick, 2500);
+  }
+  window._macroOverviewTick = tick;
+})();
+
 (function macroRound6() {
   function run() {
     try {
@@ -305,57 +430,33 @@ function findCardsByTitle(container, patterns) {
       var brBtn = macroTabs.querySelector('[data-macrotab="breakdown"]');
       if (brBtn) brBtn.textContent = 'Economic';
 
-      // 5b) THREE-COLUMN OVERVIEW above the tab strip
+      // 5b) THREE-COLUMN OVERVIEW — compact shells; content rendered by
+      // macroOverviewV2 from live data (no scroll, fixed heights)
       var grid = document.createElement('div');
       grid.id = 'macroOverviewGrid';
       grid.innerHTML =
-        '<div class="card macro-ovr-col" id="movCol1"><div class="card-title" style="justify-content:center;text-align:center;display:block;">Macro Regime Verdict</div><div class="card-body" id="movCol1Body"></div></div>'
-        + '<div class="card macro-ovr-col" id="movCol2"><div class="card-title" style="justify-content:center;text-align:center;display:block;">Quad Map <span class="help-icon" id="movQuadHelp" style="font-size:11px;" data-heading="Quad Framework — Quadrant Guide" title="Q1 Goldilocks (growth up, inflation down): best for equities — tech, discretionary, small caps, high yield. Q2 Overheat (growth up, inflation up): commodities and real assets lead — energy, materials, industrials, TIPS. Q3 Stagflation (growth down, inflation up): worst for most assets — gold, energy, short-duration bonds; avoid tech and long duration. Q4 Deflation/Recession (growth down, inflation down): long Treasuries and defensives lead — utilities, staples, gold, cash.">ⓘ</span></div><div class="card-body" id="movCol2Body"></div></div>'
-        + '<div class="card macro-ovr-col" id="movCol3"><div class="card-title" style="justify-content:center;text-align:center;display:block;">Market Regime <span class="help-icon" style="font-size:11px;" data-heading="The Four Portfolio States — Framework Reference" title="LEVERAGED: highest-conviction risk-on — VIX spike reversal from >30, price reclaiming trend; deploy leveraged ETFs with strict exits. GROWTH (non-levered): confirmed uptrend, VIX <20, breadth healthy; full equity exposure, no leverage. NEUTRAL/CAUTIOUS: mixed signals, chop, VIX 20–30; reduce position sizes, raise quality, hold more cash. DRAWDOWN/PRESERVATION: confirmed downtrend or VIX >30 without reversal; defensives, treasuries, gold, cash — capital preservation over return.">ⓘ</span></div><div class="card-body" id="movCol3Body"></div></div>';
+        '<div class="card macro-ovr-col" id="movCol1"><div class="card-title" style="justify-content:center;text-align:center;display:block;">Macro Regime Verdict</div><div class="card-body" id="movCol1Body"><div style="text-align:center;color:var(--text-sec);font-size:11px;padding:20px;"><span class="spinner"></span> Loading FRED scorecard…</div></div></div>'
+        + '<div class="card macro-ovr-col" id="movCol2"><div class="card-title" style="justify-content:center;text-align:center;display:block;">Quad Map <span class="help-icon" style="font-size:11px;" data-heading="Quad Framework — Quadrant Guide" title="Q1 Goldilocks (growth up, inflation down): best for equities — tech, discretionary, small caps, high yield. Q2 Overheat (growth up, inflation up): commodities and real assets lead — energy, materials, industrials, TIPS. Q3 Stagflation (growth down, inflation up): worst for most assets — gold, energy, short-duration bonds; avoid tech and long duration. Q4 Deflation/Recession (growth down, inflation down): long Treasuries and defensives lead — utilities, staples, gold, cash.">ⓘ</span></div><div class="card-body" id="movCol2Body"><div style="text-align:center;color:var(--text-sec);font-size:11px;padding:20px;"><span class="spinner"></span> Loading quad placement…</div></div></div>'
+        + '<div class="card macro-ovr-col" id="movCol3"><div class="card-title" style="justify-content:center;text-align:center;display:block;">Market Regime <span class="help-icon" style="font-size:11px;" data-heading="The Four Portfolio States — Framework Reference" title="LEVERAGED: highest-conviction risk-on — major dip with VIX >30 and risk assets drastically discounted; deploy leveraged ETFs (TQQQ/SOXL/FNGU) with 0–10% cash. NON-LEVERED GROWTH: healthy uptrend, VIX 15–22; normal 1x index exposure with 10–30% dry powder. NEUTRAL: low-growth, elevated VIX, unclear direction; gold, defensives, diversifiers, 30%+ cash. POSITIONED FOR DRAWDOWN: market up 30–50% in under a year, complacent VIX; mostly cash, Treasuries, gold hedges.">ⓘ</span></div><div class="card-body" id="movCol3Body"><div style="text-align:center;color:var(--text-sec);font-size:11px;padding:20px;"><span class="spinner"></span> Loading regime state…</div></div></div>';
       macroWrap.insertBefore(grid, macroTabs);
 
-      // Col 1: the existing verdict banner element (renders itself on load)
+      // The old full-width verdict banner is superseded by column 1
       var verdict = document.getElementById('macroRegimeVerdict');
-      if (verdict) { document.getElementById('movCol1Body').appendChild(verdict); verdict.style.display = 'block'; }
+      if (verdict) verdict.style.setProperty('display', 'none', 'important');
 
-      // Col 2: the quad map + merged signal/playbook panels + framework card → help icon
-      var dashTab = document.getElementById('macrotab-dashboard');
-      var quadWrap = dashTab ? dashTab.querySelector('.quad-map-wrap') : null;
-      if (quadWrap) document.getElementById('movCol2Body').appendChild(quadWrap);
-      // Remove the separate quadrant-guide card (its content now lives in the ⓘ)
-      if (dashTab) {
-        findCardsByTitle(dashTab, [/Quad Framework/i]).forEach(function(c){ if (c) c.style.display = 'none'; });
-      }
-
-      // Col 3: the Market Regime card (with quarterly history inside) from the
-      // relocated cross-asset regime panel; framework-reference card → ⓘ above
-      var regimePanel = document.getElementById('catab-regime');
-      if (regimePanel) {
-        var cards = findCardsByTitle(regimePanel, [/Current Market Regime/i, /Four Portfolio States/i, /Quarterly Regime History/i]);
-        if (cards[0]) document.getElementById('movCol3Body').appendChild(cards[0]);
-        if (cards[1]) cards[1].style.display = 'none';
-        // If quarterly history is its own card, bring it along
-        if (cards[2]) document.getElementById('movCol3Body').appendChild(cards[2]);
-        // The rest of the regime panel (QQQ fib chart, Bayesian) stays in the
-        // Macro Regime tab below — analysis preserved, summary lives up top.
-      }
-
-      // 5c) BUSINESS CYCLE: market-price lens + composite pillar first; drop
-      // the two duplicative history/breakdown charts
+      // 5c) BUSINESS CYCLE: market-price lens first; duplicative charts hidden
       var bizTab = document.getElementById('macrotab-biz');
       var caBiz = document.getElementById('catab-bizycle');
       if (bizTab && caBiz) {
-        // Move the CA section header (inserted by the v2 merge) + panel to top
-        var hdrs = bizTab.querySelectorAll('div');
         var caHdr = null;
-        hdrs.forEach(function(d){ if (!caHdr && /Business Cycle — Market-Price Lens/.test(d.textContent) && d.childElementCount === 0) caHdr = d; });
+        bizTab.querySelectorAll('div').forEach(function(d){ if (!caHdr && /Business Cycle — Market-Price Lens/.test(d.textContent) && d.childElementCount === 0) caHdr = d; });
         bizTab.insertBefore(caBiz, bizTab.firstChild);
         if (caHdr) bizTab.insertBefore(caHdr, caBiz);
         findCardsByTitle(caBiz, [/Phase\s*&(amp;)?\s*Score History/i, /Pillar Score Breakdown/i]).forEach(function(c){ if (c) c.style.display = 'none'; });
       }
 
-      // 5d) YIELD CURVE: cross-asset view + pillar scorecard first; hide the
-      // CA duplicate of the full curve (the FRED "Full Yield Curve" card stays)
+      // 5d) YIELD CURVE: cross-asset view + pillar scorecard first; CA's
+      // duplicate full-curve chart hidden (FRED "Full Yield Curve" stays)
       var ycTab = document.getElementById('macrotab-yieldcurve');
       var caYc = document.getElementById('catab-yieldcurve');
       if (ycTab && caYc) {
@@ -366,8 +467,7 @@ function findCardsByTitle(container, patterns) {
         findCardsByTitle(caYc, [/Full Treasury Yield Curve/i]).forEach(function(c){ if (c) c.style.display = 'none'; });
       }
 
-      // 5e) BREADTH: rally-broadening card pinned first & always on; two
-      // grouped switchers replace seven stacked cards
+      // 5e) BREADTH: rally card pinned; grouped switcher windows
       var caBr = document.getElementById('catab-breadth');
       if (caBr) {
         var picks = findCardsByTitle(caBr, [
@@ -377,17 +477,39 @@ function findCardsByTitle(container, patterns) {
         ]);
         var rally = picks[0];
         if (rally) caBr.insertBefore(rally, caBr.firstChild);
-        var anchor = rally ? rally.nextSibling : caBr.firstChild;
         var anchorEl = document.createElement('div');
-        caBr.insertBefore(anchorEl, anchor);
+        caBr.insertBefore(anchorEl, rally ? rally.nextSibling : caBr.firstChild);
         makeCardSwitcher([picks[1], picks[2], picks[3], picks[4]], 'Breadth & Momentum Explorer', anchorEl);
         var anchorEl2 = document.createElement('div');
         anchorEl.parentNode.insertBefore(anchorEl2, anchorEl.nextSibling);
         makeCardSwitcher([picks[5], picks[6], picks[7]], 'Additional Analysis — Liquidity · Regime Signals · Quantamental', anchorEl2);
       }
-    } catch(e) { console.warn('macro round6 restructure failed:', e); }
+
+      // Start the live overview renderer
+      if (typeof window._macroOverviewTick === 'function') window._macroOverviewTick();
+    } catch(e) { console.warn('macro round7 restructure failed:', e); }
   }
-  // Runs AFTER app2's merge shim (script order guarantees it)
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', run);
   else run();
+})();
+
+// ── 6) PORTFOLIO PAGE: same consolidation treatment as the Macro page ──
+// Every remaining multi-card sub-tab folds into one switcher window.
+(function portfolioRound7() {
+  function run() {
+    try {
+      if (typeof consolidateTabViews !== 'function') { setTimeout(run, 500); return; }
+      // SNAPSHOT: keep the analytics rails + Portfolio Value chart pinned;
+      // Holdings table and the Optimization engine become switcher views.
+      consolidateTabViews('pftab-snapshot', 2, 'Portfolio Explorer',
+        ['Holdings Table', 'Optimization — Regime & Risk-Profile Weights']);
+      // THEMES sub-tab: three stacked cards → one window, three views.
+      consolidateTabViews('pftab-themes', 0, 'Themes Workspace',
+        ['Compare vs Theme Baskets', 'Theme Holdings', 'Create Custom Theme']);
+      // CHARACTERISTICS: two cards → one window, two views.
+      consolidateTabViews('pftab-characteristics', 0, 'Characteristics Explorer', null);
+    } catch(e) { console.warn('portfolio round7 consolidation failed:', e); }
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', function(){ setTimeout(run, 300); });
+  else setTimeout(run, 300);
 })();
