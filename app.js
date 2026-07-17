@@ -8780,7 +8780,10 @@ async function mktLoadOmega() {
 function renderPillarHeader(elId, pillarName, score, detail) {
   var el = document.getElementById(elId);
   if (!el) return;
-  var col = score >= 65 ? C.success : score >= 45 ? C.navy : score >= 30 ? '#8B6914' : C.danger;
+  // FIXED 2026-07: the banner background is navy, and mid-range scores
+  // (45–64) were colored NAVY — invisible text. All tiers now use bright
+  // variants that read clearly on the dark banner.
+  var col = score >= 65 ? '#7BE2A8' : score >= 45 ? '#A8C8E8' : score >= 30 ? '#F0CE7D' : '#F1948A';
   el.innerHTML = '<div style="background:var(--navy);color:#fff;border-radius:4px;padding:10px 18px;display:flex;align-items:center;gap:20px;margin-bottom:6px;">'
     + '<div><div style="font-size:10px;text-transform:uppercase;letter-spacing:.8px;opacity:.7;">Composite Pillar Score</div>'
     + '<div style="font-size:11px;opacity:.8;margin-top:2px;">' + pillarName + '</div></div>'

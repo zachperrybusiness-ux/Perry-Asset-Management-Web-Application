@@ -2719,3 +2719,9 @@ body.view-mobile #themesGlanceStrip .card-body > div { min-width: 100% !importan
 .explorer-summary-band td, .explorer-summary-band th { padding: 4px 7px !important; }
 /* Mobile: band scrolls internally rather than pushing panes off-screen */
 body.view-mobile .explorer-summary-band { max-height: 46vh; overflow-y: auto; }
+
+/* ═══ ROUND 10 — verdict banner retired (replaced by the pillar Overview).
+   !important beats the data loader's inline display:block re-show. ═══ */
+#macroRegimeVerdict { display: none !important; }
+body.view-mobile #macroPillarOverview .card-body > div { gap: 6px !important; }
+body.view-mobile #macroPillarOverview .card-body > div > div { min-width: 44% !important; }

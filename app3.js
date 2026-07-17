@@ -644,3 +644,85 @@ function _movQuadStatic(q) {
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', function(){ setTimeout(run, 400); });
   else setTimeout(run, 400);
 })();
+
+// ═══════════════════════════════════════════════════════════════════
+// 8) ROUND 10 — PILLAR OVERVIEW strip (replaces the "Macro Regime
+// Verdict" banner, which duplicated the left overview column). One row,
+// same footprint: the composite score of EVERY sub-tab — Business Cycle,
+// Economic, Yield Curve, Breadth, Credit, Cross-Asset Momentum, Sector
+// Rotation — each clickable to jump to its tab. Scores come from the
+// cross-asset pillar engine (auto-triggered) and the FRED breakdown.
+// ═══════════════════════════════════════════════════════════════════
+(function macroPillarOverview() {
+  var TABMAP = {
+    'Business Cycle': 'biz', 'Economic': 'breakdown', 'Yield Curve': 'yieldcurve',
+    'Breadth': 'cabreadth', 'Credit': 'cacredit', 'Cross-Asset Momentum': 'camomentum', 'Sector Rotation': 'casectors'
+  };
+  var PILLAR_SRC = {  // display name → _tlPillars name
+    'Business Cycle': 'Business Cycle', 'Yield Curve': 'Yield Curve', 'Breadth': 'Breadth (Fear/Greed)',
+    'Credit': 'Credit Conditions', 'Cross-Asset Momentum': 'Cross-Asset Momentum', 'Sector Rotation': 'Sector Rotation'
+  };
+  function scoreColor(s) { return s == null ? 'var(--text-sec)' : s >= 65 ? 'var(--success)' : s >= 45 ? 'var(--navy)' : s >= 30 ? '#8B6914' : 'var(--danger)'; }
+  function scoreWord(s)  { return s == null ? 'loading' : s >= 65 ? 'Bullish' : s >= 45 ? 'Neutral+' : s >= 30 ? 'Caution' : 'Bearish'; }
+  function economicScore() {
+    var d = window._breakdownData;
+    if (!d || !d.categories) return null;
+    var pos = 0, tot = 0;
+    d.categories.forEach(function(cat) {
+      (cat.indicators || []).forEach(function(ind) {
+        if (!ind.phase || ind.phase === 'N/A') return;
+        tot++;
+        if (ind.phase === 'Expansion' || ind.phase === 'Recovery') pos++;
+        else if (ind.phase === 'Neutral') pos += 0.5;
+      });
+    });
+    return tot ? Math.round(pos / tot * 100) : null;
+  }
+  function render() {
+    var host = document.getElementById('macroPillarOverview');
+    if (!host) return;
+    var tl = {};
+    (window._tlPillars || []).forEach(function(p){ tl[p.name] = p; });
+    var cards = Object.keys(TABMAP).map(function(name) {
+      var s = null, lbl = '';
+      if (name === 'Economic') { s = economicScore(); lbl = s != null ? (s >= 55 ? 'Expanding' : s >= 40 ? 'Mixed' : 'Contracting') : ''; }
+      else { var p = tl[PILLAR_SRC[name]]; if (p && p.score != null) { s = Math.round(p.score); lbl = p.label || p.detail || ''; } }
+      var c = scoreColor(s);
+      return '<div onclick="macroShowTab(\'' + TABMAP[name] + '\')" title="Open the ' + name + ' tab" '
+        + 'style="flex:1;min-width:105px;background:#fff;border:1px solid var(--border);border-top:3px solid ' + c + ';border-radius:6px;padding:7px 8px;text-align:center;cursor:pointer;">'
+        + '<div style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--text-sec);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + name + '</div>'
+        + '<div style="font-size:22px;font-weight:800;color:' + c + ';line-height:1.15;">' + (s != null ? s : '—') + '</div>'
+        + '<div style="font-size:9px;color:' + c + ';font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + (String(lbl).slice(0, 18) || scoreWord(s)) + '</div>'
+        + '</div>';
+    }).join('');
+    var comp = window._tlComposite;
+    host.innerHTML = '<div class="card" style="margin:0 16px 12px;">'
+      + '<div class="card-title" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">'
+      + '<span>Overview — Composite Scores by Pillar <span class="help-icon" title="Each card is the 0–100 composite score of one analysis tab, computed from its live indicators (65+ bullish · 45–64 neutral · 30–44 caution · below 30 bearish). Economic = share of FRED cycle indicators in Expansion/Recovery. Click any card to open its tab for the full detail." data-heading="Pillar Overview" style="font-size:11px;">ⓘ</span></span>'
+      + (comp != null ? '<span style="font-size:11px;font-weight:600;color:rgba(255,255,255,0.85);">Master composite: <strong style="font-size:14px;color:' + (comp >= 65 ? '#7BE2A8' : comp >= 45 ? '#A8C8E8' : comp >= 30 ? '#F0CE7D' : '#F1948A') + ';">' + Math.round(comp) + '</strong> / 100</span>' : '')
+      + '</div>'
+      + '<div class="card-body" style="padding:9px 12px;"><div style="display:flex;gap:8px;flex-wrap:wrap;">' + cards + '</div></div>'
+      + '</div>';
+  }
+  var booted = false;
+  function tick() {
+    var macroWrap = document.querySelector('#page-macro .content-wrap');
+    var grid = document.getElementById('macroOverviewGrid');
+    if (macroWrap && grid && !document.getElementById('macroPillarOverview')) {
+      var host = document.createElement('div');
+      host.id = 'macroPillarOverview';
+      macroWrap.insertBefore(host, grid);
+    }
+    var onMacro = document.getElementById('page-macro') && document.getElementById('page-macro').classList.contains('active');
+    if (onMacro && !booted) {
+      booted = true;
+      // Fire the engines that produce the scores (each has its own dedupe)
+      try { if (!window._tlPillars && typeof topLineRefreshAll === 'function') topLineRefreshAll(); } catch(e) {}
+      try { if (!window._breakdownData && typeof regimeLoadBreakdown === 'function') regimeLoadBreakdown(); } catch(e) {}
+    }
+    if (document.getElementById('macroPillarOverview')) render();
+    setTimeout(tick, 3000);
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', function(){ setTimeout(tick, 500); });
+  else setTimeout(tick, 500);
+})();
