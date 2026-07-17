@@ -9,7 +9,7 @@
 <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2.0.1/dist/chartjs-plugin-zoom.min.js"></script>
 <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-<link rel="stylesheet" href="styles.css?v=10">
+<link rel="stylesheet" href="styles.css?v=11">
 </head>
 <body>
 
@@ -3831,6 +3831,10 @@
           '<input type="number" id="sellQtyInput" placeholder="e.g. 10" ' +
             'min="0.0001" max="' + h.quantity + '" step="any" style="width:100%;">' +
         '</div>' +
+        '<div class="form-group" style="margin-bottom:12px;">' +
+          '<label>Sale Date <span style="font-weight:400;color:#5A6A7A;">(past date = uses that day\'s closing price)</span></label>' +
+          '<input type="date" id="sellDateInput" value="' + new Date().toISOString().slice(0,10) + '" max="' + new Date().toISOString().slice(0,10) + '" style="width:100%;">' +
+        '</div>' +
         '<div class="modal-actions">' +
           '<button class="btn" onclick="confirmSell(\'' + docId + '\',' + h.quantity + ')">Confirm Sale</button>' +
           '<button class="btn-outline" onclick="this.closest(\'.modal-overlay\').remove()">Cancel</button>' +
@@ -3847,10 +3851,21 @@
     const sq = parseFloat(document.getElementById('sellQtyInput').value);
     if (!sq || sq <= 0) { alert('Enter shares to sell.'); return; }
     if (sq > curQty + 0.0001) { alert('Cannot sell more than you own (' + curQty + ').'); return; }
+    // Sale date: today = live price; a past date = that day's closing price
+    const sellDateEl = document.getElementById('sellDateInput');
+    const sellDate = (sellDateEl && sellDateEl.value) ? sellDateEl.value : new Date().toISOString().slice(0,10);
     document.querySelector('.modal-overlay').remove();
     const h = (window._holdings || []).find(x => x.id === docId);
     if (!h) return;
-    const px = h.currentPrice || h.costBasis || 0;
+    let px = h.currentPrice || h.costBasis || 0;
+    const today = new Date().toISOString().slice(0,10);
+    if (sellDate < today) {
+      try {
+        const hr = await fetch('https://perry-finance-proxy.zachperrybusiness.workers.dev/historical-close?symbol=' + encodeURIComponent(h.ticker) + '&date=' + sellDate).then(r => r.json());
+        if (hr && hr.close > 0) px = hr.close;
+        else alert('Could not find a close for ' + sellDate + ' — using the current price instead.');
+      } catch(e) { alert('Price lookup failed for ' + sellDate + ' — using the current price instead.'); }
+    }
     const proceeds = Math.round(sq * px * 100) / 100;
     const acct = h.accountType || 'Individual';
     const realizedGL = Math.round(sq * (px - (h.costBasis || 0)) * 100) / 100;
@@ -3884,6 +3899,7 @@
           type: 'SELL', ticker: h.ticker, shares: sq, price: px,
           proceeds: proceeds, realizedGainLoss: realizedGL,
           costBasisPerShare: h.costBasis || null, account: acct,
+          tradeDate: sellDate,
           ts: new Date().toISOString()
         });
       } catch(e2) { console.warn('Transaction log write failed:', e2); }
@@ -4158,8 +4174,8 @@
 <!-- App logic split into two parts (GitHub 1MB web-editor limit); load order matters -->
 <!-- ?v=N query strings force browsers + the GitHub Pages CDN to fetch fresh
      copies after every deploy. Bump the number when you update these files. -->
-<script src="app.js?v=10"></script>
-<script src="app2.js?v=10"></script>
-<script src="app3.js?v=10"></script>
+<script src="app.js?v=11"></script>
+<script src="app2.js?v=11"></script>
+<script src="app3.js?v=11"></script>
 </body>
 </html>

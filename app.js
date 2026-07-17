@@ -1136,14 +1136,16 @@ function renderHoldingsTable(holdings) {
     const canUndo = h.previousVersion && editAge < 24;
     const acct = h.accountType || 'Individual';
     const pctOfAcct = acctTotals[acct] > 0 ? (mvDisplay / acctTotals[acct]) * 100 : 0;
-    var acctList = '';
+    // Ticker column stays clean; the multi-account note lives in the Account column
+    var acctCellExtra = '';
     if (tickerCounts[h.ticker] > 1 && tickerAccts[h.ticker]) {
-      acctList = '<div style="font-size:9px;font-weight:500;color:var(--text-sec);line-height:1.3;margin-top:1px;white-space:normal;">'
-        + tickerAccts[h.ticker].map(function(x, xi){ return xi === 0 ? '<strong style="color:var(--navy);" title="Primary account (largest position)">' + x.a + '</strong>' : x.a; }).join(' · ')
+      acctCellExtra = '<div style="font-size:9px;font-weight:500;color:var(--text-sec);line-height:1.3;margin-top:1px;white-space:normal;">also in: '
+        + tickerAccts[h.ticker].filter(function(x){ return x.a !== acct; }).map(function(x){ return x.a; }).join(' · ')
+        + (tickerAccts[h.ticker][0] && tickerAccts[h.ticker][0].a === acct ? ' <span title="This row is the primary (largest) position">★</span>' : '')
         + '</div>';
     }
     html += '<tr>' +
-      '<td style="font-weight:700;color:' + C.navy + ';">' + h.ticker + acctList + '</td>' +
+      '<td style="font-weight:700;color:' + C.navy + ';">' + h.ticker + '</td>' +
       '<td>' + h.companyName + '</td>' +
       '<td>' + (isCash ? '—' : h.quantity) + '</td>' +
       '<td>' + (isCash ? fmt(h.costBasis * h.quantity) : fmt(h.costBasis)) + '</td>' +
@@ -1152,7 +1154,7 @@ function renderHoldingsTable(holdings) {
       '<td style="font-weight:600;color:' + C.navy + ';">' + pctOfAcct.toFixed(1) + '%</td>' +
       '<td style="color:' + (isCash ? C.textSec : gc) + ';font-weight:600;">' + (isCash ? '—' : fmtPct(glp)) + '</td>' +
       '<td style="color:' + (h.yieldPct ? C.success : C.textSec) + ';">' + yieldVal + '</td>' +
-      '<td>' + acct + '</td>' +
+      '<td>' + acct + acctCellExtra + '</td>' +
       '<td>' + (h.sector || '—') + '</td>' +
       '<td>' + (h.industry || '—') + '</td>' +
       '<td>' + (h.assetClass || 'Equity') + '</td>' +
