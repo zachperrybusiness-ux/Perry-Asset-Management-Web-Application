@@ -1085,6 +1085,7 @@
       <div class="pf-tabs">
         <button class="pf-tab active" data-htab="holdings" onclick="holdingsShowTab('holdings')">Holdings</button>
         <button class="pf-tab" data-htab="analysis" onclick="holdingsShowTab('analysis')">Analysis</button>
+        <button class="pf-tab" data-htab="advisor" onclick="holdingsShowTab('advisor');if(typeof advisorOnShow==='function')advisorOnShow();">💼 Advisor</button>
         <button class="pf-tab" data-htab="rebalance" onclick="holdingsShowTab('rebalance')">Rebalance</button>
         <button class="pf-tab" data-htab="import" onclick="holdingsShowTab('import')">Import &amp; Add</button>
       </div>
@@ -1172,6 +1173,13 @@
               <canvas id="hldGLBar"></canvas>
             </div>
           </div>
+        </div>
+      </div>
+
+      <!-- ═══ TAB: Advisor (advisor-grade planning suite, added 2026-07) ═══ -->
+      <div class="pf-tab-content" id="htab-advisor">
+        <div id="advisorRoot">
+          <div style="text-align:center;padding:40px;color:var(--text-sec);"><span class="spinner"></span> Loading advisor suite…</div>
         </div>
       </div>
 
@@ -4177,5 +4185,6 @@
 <script src="app.js?v=11"></script>
 <script src="app2.js?v=11"></script>
 <script src="app3.js?v=11"></script>
+<script src="app-advisor.js?v=11"></script>
 </body>
 </html>
