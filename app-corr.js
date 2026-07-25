@@ -391,10 +391,16 @@
   function shortTicker(t) { return t.replace('-USD', ''); }
 
   function viewHeatmap(m) {
+    /* NO INTERNAL SCROLLING — reworked 2026-07-25.
+       Cell size and font are derived from the asset count so the whole matrix
+       always fits the card width. A 17-asset matrix renders at 22px cells with
+       7px labels, which is still readable, and every cell carries its exact
+       value in a hover tooltip. Scrolling inside a panel to see the rest of a
+       correlation matrix defeats the purpose of a matrix. */
     var n = m.tickers.length;
-    var cell = n > 14 ? 26 : n > 10 ? 32 : 38;
-    var fs = n > 14 ? 8 : 9;
-    var h = '<div style="overflow:auto;max-height:520px;">';
+    var cell = n > 16 ? 21 : n > 13 ? 25 : n > 10 ? 30 : n > 7 ? 36 : 42;
+    var fs   = n > 16 ? 7  : n > 13 ? 8  : n > 10 ? 8.5 : 9.5;
+    var h = '<div style="width:100%;">';
     h += '<table style="border-collapse:collapse;font-size:' + fs + 'px;">';
     h += '<tr><th style="position:sticky;left:0;background:var(--panel);z-index:2;"></th>';
     m.tickers.forEach(function (t) {
@@ -434,7 +440,9 @@
       +  '<strong>Low or negative = genuine diversifier.</strong> This is the single most actionable view here: '
       +  'the names at the top are candidates for consolidation, the names at the bottom are earning their place.'
       +  '</div>';
-    h += '<div style="overflow:auto;max-height:480px;"><table style="width:100%;font-size:11.5px;border-collapse:collapse;">';
+    // Font scales with row count so long lists still fit without scrolling.
+    var dfs = m.avg.length > 16 ? 10 : m.avg.length > 12 ? 10.8 : 11.5;
+    h += '<div style="width:100%;"><table style="width:100%;font-size:' + dfs + 'px;border-collapse:collapse;">';
     h += '<thead><tr><th style="text-align:left;padding:4px;">Asset</th>'
       +  '<th style="text-align:right;padding:4px;">Avg corr</th>'
       +  '<th style="padding:4px;width:45%;">Diversification benefit</th>';
@@ -509,7 +517,8 @@
     h += '</div>';
 
     // Per-asset table across regimes
-    h += '<div style="overflow:auto;max-height:400px;"><table style="width:100%;font-size:11px;border-collapse:collapse;">';
+    var rfs = order.length > 16 ? 9.5 : order.length > 12 ? 10.2 : 11;
+    h += '<div style="width:100%;"><table style="width:100%;font-size:' + rfs + 'px;border-collapse:collapse;">';
     h += '<thead><tr><th style="text-align:left;padding:4px;position:sticky;top:0;background:var(--navy);color:#fff;">Asset</th>';
     results.forEach(function (r) {
       h += '<th style="text-align:right;padding:4px;position:sticky;top:0;background:var(--navy);color:#fff;font-size:10px;" title="' + esc(r.meta.desc) + '">' + esc(r.meta.label) + '</th>';

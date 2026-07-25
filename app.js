@@ -660,12 +660,32 @@ Chart.register(priceBubblePlugin);
 let donutCharts = {};
 
 // ═══ NAVIGATION ═══
-const parentMap = { home: 'home', about: 'home', resources: 'home', portfolio: 'portfolio', holdings: 'portfolio', themes: 'portfolio', macro: 'analysis', markets: 'analysis', research: 'analysis' };
+/* `activity` added 2026-07-25 — the Market Activity page is created at runtime
+   by app-consolidate.js from cards moved out of More Cross-Asset. Exposed on
+   window so that module can register further pages without editing this line. */
+const parentMap = { home: 'home', about: 'home', resources: 'home', portfolio: 'portfolio', holdings: 'portfolio', themes: 'portfolio', activity: 'portfolio', macro: 'analysis', markets: 'analysis', research: 'analysis' };
+window.parentMap = parentMap;
 function navigateTo(p) {
-  document.activeElement.blur();
+  if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
+  /* Guard added 2026-07-25. Some pages are created at RUNTIME — Market Activity
+     is assembled by app-consolidate.js about two seconds after load from cards
+     moved out of More Cross-Asset. Clicking its nav entry before then would
+     throw on a null element and abort navigation entirely, leaving the user on
+     a blank screen. Retry once the page exists rather than failing. */
+  var target = document.getElementById('page-' + p);
+  if (!target) {
+    if (!navigateTo._retry) navigateTo._retry = {};
+    if ((navigateTo._retry[p] || 0) < 12) {
+      navigateTo._retry[p] = (navigateTo._retry[p] || 0) + 1;
+      setTimeout(function () { navigateTo(p); }, 300);
+      return;
+    }
+    console.warn('[navigateTo] page-' + p + ' never appeared');
+    return;
+  }
   document.querySelectorAll('.page').forEach(x => x.classList.remove('active'));
   document.querySelectorAll('.nav-parent,.nav-child').forEach(x => x.classList.remove('active'));
-  document.getElementById('page-' + p).classList.add('active');
+  target.classList.add('active');
   const pp = parentMap[p] || p;
   const pe = document.querySelector('.nav-parent[data-page="' + pp + '"]');
   if (pe) pe.classList.add('active');
@@ -1334,6 +1354,22 @@ function holdingsShowTab(name) {
      page. Lazy-initialised on first open: the playbook and gap analysis both
      need holdings plus the FRED macro payload, so running them on page load
      would fire before either is available. */
+  /* Tabs added 2026-07-25 when More Cross-Asset was dissolved. Both hold cards
+     moved from the Macro page; their loaders keyed off element IDs that came
+     with them, so they only need a nudge to (re)draw once visible. */
+  if (name === 'riskopt') {
+    setTimeout(function () {
+      try { if (typeof mktRenderVaR === 'function') mktRenderVaR(); } catch (e) {}
+      try { if (typeof mktRenderRolling === 'function') mktRenderRolling(); } catch (e) {}
+      try { if (typeof mktRenderFrontier === 'function') mktRenderFrontier(); } catch (e) {}
+      window.dispatchEvent(new Event('resize'));
+    }, 150);
+  }
+  if (name === 'correlation') {
+    setTimeout(function () {
+      try { if (window.PerryCorr) { window.PerryCorr._inited = false; window.PerryCorr.init(); } } catch (e) {}
+    }, 120);
+  }
   if (name === 'alignment') {
     if (!_hldTabInit.alignment) {
       _hldTabInit.alignment = true;

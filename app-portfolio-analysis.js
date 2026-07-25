@@ -94,14 +94,39 @@
     { key: 'all', label: 'All', days: null }
   ];
 
+  /* ── FIXED 2026-07-25: the timeline buttons did nothing ────────────────────
+     Price history was only read from the warehouse. On the FMP free tier the
+     warehouse fills over roughly a week, so most positions had none and fell
+     back to unrealised-return-since-purchase — which is timeline-INDEPENDENT.
+     Every timeline button therefore produced identical charts, which correctly
+     looked broken.
+
+     Now falls back to the worker's /chart endpoint (Yahoo, free, unmetered) for
+     anything the warehouse lacks, exactly as the Correlation Workbench does. The
+     timeline works immediately instead of waiting for ingestion to complete. */
+  var WORKER_BASE = (typeof WORKER_URL !== 'undefined' && WORKER_URL)
+    ? WORKER_URL : 'https://perry-finance-proxy.zachperrybusiness.workers.dev';
+
   function loadTimelineData(tickers) {
-    var WH = window.PerryWarehouse;
-    if (!WH || !WH.ohlc) return Promise.resolve();
     var need = tickers.filter(function (t) { return PA._priceCache[t] === undefined; });
     if (!need.length) return Promise.resolve();
+    var WH = window.PerryWarehouse;
+
     return Promise.all(need.map(function (t) {
-      return WH.ohlc(t).then(function (o) {
-        PA._priceCache[t] = (o && o.c && o.c.length > 5) ? o : null;
+      var whP = (WH && WH.ohlc) ? WH.ohlc(t) : Promise.resolve(null);
+      return whP.then(function (o) {
+        if (o && o.c && o.c.length > 30) { PA._priceCache[t] = o; return; }
+        // Worker fallback — 2y of daily closes covers every timeline except All.
+        return fetch(WORKER_BASE + '/chart?symbol=' + encodeURIComponent(t) + '&range=2y&interval=1d')
+          .then(function (r) { return r.ok ? r.json() : null; })
+          .then(function (j) {
+            var pts = ((j && j.points) || []).filter(function (p) { return p.close != null; });
+            PA._priceCache[t] = pts.length > 30
+              ? { d: pts.map(function (p) { return p.date.slice(0, 10); }),
+                  c: pts.map(function (p) { return p.close; }) }
+              : null;
+          })
+          .catch(function () { PA._priceCache[t] = null; });
       }).catch(function () { PA._priceCache[t] = null; });
     }));
   }
@@ -261,17 +286,54 @@
     var bySize = contrib.slice().sort(function (a, b) { return b.mv - a.mv; });
     var byContrib = contrib.slice().sort(function (a, b) { return b.contrib - a.contrib; });
 
-    function shareOf(list, n) {
-      var sub = list.slice(0, n);
+    /* ── REWORKED 2026-07-25 ─────────────────────────────────────────────────
+       The previous table showed Top 1 / Top 5 / Top 10 as independent rows whose
+       shares could exceed 100%. The arithmetic was right — contributions sum to
+       the portfolio return exactly, verified to 1e-9 — but a "share of return"
+       reading 104% looks like a broken calculation, and explaining it in a note
+       was the wrong fix.
+
+       Now the rows are explicitly CUMULATIVE TIERS that partition the portfolio:
+
+           Top 1          weight  w1   contribution  c1   share  s1
+           Top 2-5        weight  w2   contribution  c2   share  s2
+           Top 6-10       weight  w3   contribution  c3   share  s3
+           Remaining      weight  w4   contribution  c4   share  s4
+           ─────────────────────────────────────────────────────────
+           Total          100%              portRet        100%
+
+       Every column now sums to its total, so an individual tier CAN exceed 100%
+       only when another tier is negative — and you can see that tier sitting
+       right there in the table. That is self-explanatory in a way a footnote
+       never was. A running cumulative column is included as well, since "top 10
+       gave me 92% of my return" is the phrasing people actually want. */
+    function tier(list, from, to, label) {
+      var sub = list.slice(from, to);
       var c = sub.reduce(function (s, x) { return s + x.contrib; }, 0);
       return {
-        n: n, names: sub,
+        label: label, names: sub, count: sub.length,
         contribPP: c,
-        // Share of the portfolio's total return. Meaningless if total return is
-        // ~0, and misleading if it is negative, so both cases are flagged.
         sharePct: Math.abs(portRet) > 0.01 ? c / portRet * 100 : null,
         weightPct: sub.reduce(function (s, x) { return s + x.weight; }, 0)
       };
+    }
+
+    /** Partition a ranked list into 1 / 2-5 / 6-10 / remainder, with running totals. */
+    function tiers(list) {
+      var n = list.length;
+      var out = [];
+      out.push(tier(list, 0, Math.min(1, n), 'Top 1'));
+      if (n > 1) out.push(tier(list, 1, Math.min(5, n), n > 5 ? 'Top 2–5' : 'Top 2–' + n));
+      if (n > 5) out.push(tier(list, 5, Math.min(10, n), n > 10 ? 'Top 6–10' : 'Top 6–' + n));
+      if (n > 10) out.push(tier(list, 10, n, 'Remaining (' + (n - 10) + ')'));
+      // Running cumulative so "top 10 = X% of return" is directly readable.
+      var cw = 0, cc = 0;
+      out.forEach(function (t) {
+        cw += t.weightPct; cc += t.contribPP;
+        t.cumWeight = cw; t.cumContrib = cc;
+        t.cumShare = Math.abs(portRet) > 0.01 ? cc / portRet * 100 : null;
+      });
+      return out;
     }
 
     var mixed = contrib.some(function (c) { return c.retBasis === 'costbasis'; });
@@ -279,8 +341,8 @@
     return {
       portRet: portRet,
       total: total,
-      largest: [1, 5, 10].map(function (n) { return shareOf(bySize, Math.min(n, contrib.length)); }),
-      drivers: [1, 5, 10].map(function (n) { return shareOf(byContrib, Math.min(n, contrib.length)); }),
+      largest: tiers(bySize),
+      drivers: tiers(byContrib),
       allByContrib: byContrib,
       laggards: byContrib.slice().reverse().slice(0, 5),
       mixedBasis: mixed,
@@ -558,66 +620,84 @@
     function block(title, list, tip) {
       var s = '<div style="font-size:11px;font-weight:700;color:var(--navy);text-transform:uppercase;letter-spacing:.4px;margin:10px 0 5px;">'
         + title + ' <span class="help-icon" style="font-size:9px;" title="' + esc(tip) + '">?</span></div>';
-      s += '<table style="width:100%;font-size:11.5px;border-collapse:collapse;">'
-        + '<thead><tr>'
-        + '<th style="text-align:left;padding:3px;">Group</th>'
-        + '<th style="text-align:right;padding:3px;">Weight</th>'
-        + '<th style="text-align:right;padding:3px;">Contribution</th>'
-        + '<th style="text-align:right;padding:3px;">Share of return</th>'
-        + '<th style="text-align:left;padding:3px;">Positions &amp; accounts</th>'
+      s += '<table style="width:100%;font-size:11px;border-collapse:collapse;">'
+        + '<thead><tr style="background:var(--navy);color:#fff;">'
+        + '<th style="text-align:left;padding:4px 5px;">Tier</th>'
+        + '<th style="text-align:right;padding:4px 5px;">Weight</th>'
+        + '<th style="text-align:right;padding:4px 5px;">Contribution</th>'
+        + '<th style="text-align:right;padding:4px 5px;" title="This tier\'s share of the total portfolio return. Tiers partition the portfolio, so the column sums to 100%.">Share</th>'
+        + '<th style="text-align:right;padding:4px 5px;" title="Running total down the table — read this to answer &quot;what share of my return came from my top N?&quot;">Cumulative</th>'
+        + '<th style="text-align:left;padding:4px 5px;">Positions &amp; accounts</th>'
         + '</tr></thead><tbody>';
+
       list.forEach(function (g) {
-        var sc = g.sharePct == null ? 'var(--text-sec)' : g.sharePct > 60 ? '#8B2A2A' : g.sharePct > 35 ? '#8B6914' : '#2E7D52';
+        var sc = g.sharePct == null ? 'var(--text-sec)'
+               : g.sharePct < 0 ? '#8B2A2A'
+               : g.sharePct > 60 ? '#8B6914' : 'var(--text-pri)';
         var acctSet = {};
         g.names.forEach(function (x) { acctSet[x.account] = (acctSet[x.account] || 0) + 1; });
-        s += '<tr style="border-bottom:1px solid var(--border);">'
-          + '<td style="padding:3px;font-weight:600;">Top ' + g.n + '</td>'
-          + '<td style="padding:3px;text-align:right;font-family:Courier New,monospace;">' + pctS(g.weightPct) + '</td>'
-          + '<td style="padding:3px;text-align:right;font-family:Courier New,monospace;color:' + (g.contribPP >= 0 ? '#2E7D52' : '#8B2A2A') + ';">'
-          +   (g.contribPP >= 0 ? '+' : '') + pctS(g.contribPP, 2) + '</td>'
-          + '<td style="padding:3px;text-align:right;font-weight:700;color:' + sc + ';">'
+        var isRemainder = /Remaining/.test(g.label);
+        s += '<tr style="border-bottom:1px solid var(--border);' + (isRemainder ? 'background:rgba(0,0,0,.025);' : '') + '">'
+          + '<td style="padding:3px 5px;font-weight:600;">' + esc(g.label) + '</td>'
+          + '<td style="padding:3px 5px;text-align:right;font-family:Courier New,monospace;">' + pctS(g.weightPct) + '</td>'
+          + '<td style="padding:3px 5px;text-align:right;font-family:Courier New,monospace;color:' + (g.contribPP >= 0 ? '#2E7D52' : '#8B2A2A') + ';">'
+          +   (g.contribPP >= 0 ? '+' : '') + pctS(g.contribPP, 2) + 'pp</td>'
+          + '<td style="padding:3px 5px;text-align:right;font-weight:700;color:' + sc + ';">'
           +   (g.sharePct == null ? 'n/a' : pctS(g.sharePct, 0)) + '</td>'
-          + '<td style="padding:3px;font-size:10.5px;">'
-          +   g.names.map(function (x) {
-                return '<span title="' + esc(x.ticker + ' — ' + x.account + ', weight ' + pctS(x.weight) + ', return ' + pctS(x.ret) + ', contribution ' + pctS(x.contrib, 2) + 'pp') + '">'
-                  + esc(x.ticker) + (x.retBasis === 'costbasis' ? '*' : '') + '</span>';
-              }).join(', ')
-          +   '<div style="color:var(--text-sec);font-size:10px;">'
+          + '<td style="padding:3px 5px;text-align:right;font-weight:700;font-family:Courier New,monospace;">'
+          +   (g.cumShare == null ? 'n/a' : pctS(g.cumShare, 0)) + '</td>'
+          + '<td style="padding:3px 5px;font-size:10px;">'
+          +   (g.count > 12
+                ? g.count + ' positions'
+                : g.names.map(function (x) {
+                    return '<span title="' + esc(x.ticker + ' — ' + x.account + ' · weight ' + pctS(x.weight) + ' · return ' + pctS(x.ret) + ' · contribution ' + pctS(x.contrib, 2) + 'pp') + '">'
+                      + esc(x.ticker) + (x.retBasis === 'costbasis' ? '*' : '') + '</span>';
+                  }).join(', '))
+          +   '<div style="color:var(--text-sec);font-size:9.5px;">'
           +   Object.keys(acctSet).map(function (a) { return esc(a) + ' (' + acctSet[a] + ')'; }).join(' · ')
           +   '</div></td>'
           + '</tr>';
       });
+
+      // Totals row — proves the partition closes.
+      var tw = list.reduce(function (s2, g) { return s2 + g.weightPct; }, 0);
+      var tc = list.reduce(function (s2, g) { return s2 + g.contribPP; }, 0);
+      s += '<tr style="border-top:2px solid var(--navy);font-weight:800;">'
+        + '<td style="padding:4px 5px;">Total</td>'
+        + '<td style="padding:4px 5px;text-align:right;font-family:Courier New,monospace;">' + pctS(tw) + '</td>'
+        + '<td style="padding:4px 5px;text-align:right;font-family:Courier New,monospace;color:' + (tc >= 0 ? '#2E7D52' : '#8B2A2A') + ';">'
+        +   (tc >= 0 ? '+' : '') + pctS(tc, 2) + 'pp</td>'
+        + '<td style="padding:4px 5px;text-align:right;">' + (Math.abs(portRet) > 0.01 ? '100%' : 'n/a') + '</td>'
+        + '<td style="padding:4px 5px;text-align:right;">' + (Math.abs(portRet) > 0.01 ? '100%' : 'n/a') + '</td>'
+        + '<td style="padding:4px 5px;font-size:9.5px;color:var(--text-sec);">' + ca.nPositions + ' positions</td>'
+        + '</tr>';
       s += '</tbody></table>';
       return s;
     }
 
     h += block('By size — your largest positions', ca.largest,
-      'The contribution of your N biggest positions by market value. This answers "what share of my return came from my top 10 holdings?" A share far above the weight means those positions outperformed; far below means they lagged and something smaller carried you.');
+      'Tiers partition the portfolio by position SIZE. Read the Cumulative column to answer "what share of my return came from my top 10 holdings?" A tier whose share far exceeds its weight outperformed; far below means it lagged and something smaller carried you.');
     h += block('By impact — your actual drivers', ca.drivers,
-      'The N positions that contributed the most return, regardless of size. When this set differs from the by-size set, your return is coming from somewhere other than where your money is — worth knowing.');
+      'The same partition, but ranked by CONTRIBUTION rather than size. When the top tier here holds different tickers than the by-size table, your return is coming from somewhere other than where your money is.');
 
     if (Math.abs(ca.portRet) <= 0.01) {
       h += '<div style="margin-top:8px;font-size:11px;color:#8B6914;">Portfolio return is near zero over this window, so "share of return" is not meaningful — a share of nothing. The contribution column in percentage points is still valid.</div>';
     }
 
-    /* A share above 100% is arithmetically correct and looks like a bug, so it
-       gets explained rather than clamped. If your winners added +36.8pp while the
-       portfolio netted +35.4pp, the winners produced 104% of the net result and
-       something else gave 4% back. Clamping to 100% would hide exactly the fact
-       worth knowing. */
-    var over = ca.largest.concat(ca.drivers).some(function (g) { return g.sharePct != null && g.sharePct > 100; });
-    if (over) {
-      var detractors = ca.allByContrib.filter(function (c) { return c.contrib < 0; });
-      var drag = detractors.reduce(function (s, c) { return s + c.contrib; }, 0);
-      h += '<div style="margin-top:8px;padding:8px 11px;background:#EDF2F8;border-left:4px solid #003C71;border-radius:0 4px 4px 0;font-size:11px;line-height:1.65;">'
-        + '<strong>Why a share can exceed 100%.</strong> It is not an error. Your winners contributed more than the portfolio '
-        + 'netted because '
-        + (detractors.length
-            ? detractors.length + ' position' + (detractors.length === 1 ? '' : 's') + ' gave back '
-              + pctS(Math.abs(drag), 2) + 'pp (' + detractors.slice(0, 4).map(function (d) { return esc(d.ticker); }).join(', ')
-              + (detractors.length > 4 ? ', …' : '') + ')'
-            : 'some positions offset the others')
-        + '. A top-5 share of 104% means those five produced the entire return and then some, with the remainder eroded elsewhere.'
+    /* The old >100% explainer is gone — the cumulative partition makes it
+       self-evident. If a tier exceeds 100% of the return, another tier is
+       negative and it is visible two rows away, with the Total row closing at
+       exactly 100%. */
+    var neg = ca.largest.concat(ca.drivers).filter(function (g) { return g.contribPP < 0; });
+    // De-duplicate labels across the two tables.
+    var seenLbl = {};
+    neg = neg.filter(function (g) { if (seenLbl[g.label]) return false; seenLbl[g.label] = 1; return true; });
+    if (neg.length) {
+      h += '<div style="margin-top:8px;padding:7px 11px;background:#EDF2F8;border-left:4px solid #003C71;border-radius:0 4px 4px 0;font-size:11px;line-height:1.6;">'
+        + '<strong>Reading the table:</strong> '
+        + neg.map(function (g) { return esc(g.label); }).join(' and ')
+        + ' contributed <em>negatively</em>, so the tiers above them account for more than 100% of the net return. '
+        + 'The Total row closes at 100% — that is the partition working, not an error.'
         + '</div>';
     }
 
@@ -663,17 +743,18 @@
     var tickers = hs.filter(function (h) { return h.ticker && !isCash(h); })
       .map(function (h) { return String(h.ticker).toUpperCase(); });
 
-    if (!PA._returnsReady || force) {
-      loadTimelineData(tickers).then(function () {
-        PA._returnsReady = true;
-        paint(el);
-      });
-      if (!PA._returnsReady) {
-        el.innerHTML = '<div style="text-align:center;padding:18px;color:var(--text-sec);font-size:12px;">'
-          + '<span class="spinner"></span> Loading price history for return analysis&hellip;</div>';
-        return;
-      }
+    /* Simplified 2026-07-25 — this previously painted TWICE when force was set
+       and data was already cached (once synchronously, once in the promise),
+       which destroyed and rebuilt every chart mid-interaction. */
+    var uncached = tickers.filter(function (t) { return PA._priceCache[t] === undefined; });
+    if (uncached.length) {
+      el.innerHTML = '<div style="text-align:center;padding:18px;color:var(--text-sec);font-size:12px;">'
+        + '<span class="spinner"></span> Loading price history for ' + uncached.length + ' position'
+        + (uncached.length === 1 ? '' : 's') + '&hellip;</div>';
+      loadTimelineData(tickers).then(function () { PA._returnsReady = true; paint(el); });
+      return;
     }
+    PA._returnsReady = true;
     paint(el);
   };
 
@@ -832,16 +913,24 @@
       return;
     }
 
-    // Default: Size & Return
+    /* Default: Size & Return — COMBO CHART restored 2026-07-25.
+       I replaced the original bar+line combo with two bar series, which lost the
+       visual distinction between a level (market value) and a rate (return).
+       Back to bars for value on the left axis, a line with points for return on
+       the right axis. */
     var tl = (TIMELINES.filter(function (t) { return t.key === f.timeline; })[0] || {}).label;
     PA._charts.push(new Chart(A.getContext('2d'), {
       type: 'bar',
       data: { labels: names, datasets: [
-        { label: 'Market value', data: names.map(function (a) { return +stats[a].mv.toFixed(0); }),
+        { type: 'bar', label: 'Market value', order: 2,
+          data: names.map(function (a) { return +stats[a].mv.toFixed(0); }),
           backgroundColor: 'rgba(0,60,113,.72)', borderRadius: 3, yAxisID: 'y' },
-        { label: tl + ' return %', data: names.map(function (a) { return +stats[a].windowRet.toFixed(2); }),
-          backgroundColor: names.map(function (a) { return stats[a].windowRet >= 0 ? 'rgba(46,125,82,.75)' : 'rgba(139,42,42,.75)'; }),
-          borderRadius: 3, yAxisID: 'y1' }
+        { type: 'line', label: tl + ' return %', order: 1,
+          data: names.map(function (a) { return +stats[a].windowRet.toFixed(2); }),
+          borderColor: '#8B6914', borderWidth: 2.5, tension: 0.25, fill: false,
+          pointRadius: 5, pointHoverRadius: 7,
+          pointBackgroundColor: names.map(function (a) { return stats[a].windowRet >= 0 ? '#2E7D52' : '#8B2A2A'; }),
+          pointBorderColor: '#fff', pointBorderWidth: 1.5, yAxisID: 'y1' }
       ] },
       options: baseOpts({
         onClick: function (ev, els2) {

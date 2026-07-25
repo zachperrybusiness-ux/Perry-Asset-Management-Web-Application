@@ -1,55 +1,46 @@
 /* ============================================================================
-   Perry Asset Management — "More Cross-Asset" Consolidation  (app-consolidate.js)
-   Added 2026-07-25.  Load LAST, after app3.js and app-corr.js.
+   Perry Asset Management — Structural Migration  (app-consolidate.js)
+   Rewritten 2026-07-25 (second pass).  Load LAST, after app3.js / app-corr.js.
 
    ─────────────────────────────────────────────────────────────────────────────
-   WHY
+   WHAT THIS DOES NOW
    ─────────────────────────────────────────────────────────────────────────────
-   "More Cross-Asset" was a catch-all. mergeCrossAssetIntoMacro() relocated seven
-   Cross-Asset tabs into purpose-built Macro tabs and then dumped whatever was
-   left — the entire Top-Line View plus the Analytics & Models workspace — into a
-   single tab. The result was 16 stacked cards and 13 canvases in one scroll.
+   The first pass grouped cards inside "More Cross-Asset" into switcher windows.
+   That was the wrong call — the tab should not exist at all. Its contents belong
+   with the things they describe:
 
-   Worse, three of those cards now DUPLICATE the Unified View built on 2026-07-24:
+     Risk & Tails          -> Manage Holdings  (portfolio risk)
+     Allocation & Sizing   -> Manage Holdings  (portfolio optimisation)
+     Correlation Workbench -> Manage Holdings  (your holdings' correlations)
+     Market Activity       -> its own page under Portfolio
+     Regime Structure      -> DELETED, genuinely duplicated (see below)
+     Decision Compass etc. -> retired into the Unified View
 
-     Decision Compass — "Where Should Capital Be?"   → the Unified View's posture
-     Macro Headwinds Direction                       → the signal reconciliation table
-     Recommended Portfolio Archetypes                → the regime sector tilt
+   THE REGIME STRUCTURE DUPLICATION, VERIFIED
+   Wasserstein Regime Distance appears in THREE tab panels — catab-breadth,
+   catab-momentum and catab-analytics — and Intermarket Lead/Lag in TWO. The
+   analytics copies are the redundant ones; catab-momentum's "Cross-Asset Regime
+   Distance & RMT Correlation Analysis" covers the same ground and sits with the
+   other cross-asset regime work. So those cards are removed rather than moved.
 
-   Each answered "what should I own?" with its own independent logic and no
-   reconciliation against the others. That is precisely the conflicting-signal
-   problem the Unified View exists to end, so keeping them as rival answers would
-   re-introduce the disease after curing it.
+   ALSO REVERTED FROM PASS ONE
+   Grouping the Sector Rotation and Breadth tabs into switchers made both worse —
+   Sector Rotation's two graphs already filled the page side by side, and Breadth
+   ended up a wall of buttons over nested windows. Both reverted. The only
+   grouping kept is the Yield Curve tab, where two independently-built Treasury
+   curve charts genuinely stack on top of each other.
 
-   WHAT THIS DOES
-   1. Replaces the three duplicated cards with a single pointer to the Unified
-      View, rather than silently deleting them (the user should know where the
-      answer moved, and why there is now only one).
-   2. Folds the 12 Analytics & Models cards into 4 grouped switcher windows, so
-      each is one window with in-place view buttons — the same pattern the
-      Holdings > Analysis tab already uses successfully.
-   3. Leaves the Correlation Workbench pinned and always visible, because it is
-      the tab's primary tool.
-
-   Nothing is deleted. Every card still exists and still renders; it is reached
-   by a button instead of a scroll.
+   Everything here is a DOM MOVE, not a copy — no markup is duplicated, and every
+   existing loader keeps its element IDs and keeps working.
    ============================================================================ */
 
 (function () {
   'use strict';
 
-  /** First card whose title contains `needle`. */
-  function byTitle(root, needle) {
-    return matchesByTitle(root, needle)[0] || null;
-  }
+  /* ══════════════════════════════════════════════════════════════════════════
+     helpers
+     ══════════════════════════════════════════════════════════════════════════ */
 
-  /**
-   * EVERY card whose title contains `needle`.
-   *
-   * Fixed 2026-07-25: this originally returned only the first match, which meant
-   * a genuine duplicate — two cards both titled "Full Treasury Yield Curve" —
-   * left the second copy standalone, defeating the whole point of grouping.
-   */
   function matchesByTitle(root, needle) {
     var out = [], n = needle.toLowerCase();
     (root || document).querySelectorAll('.card').forEach(function (c) {
@@ -58,15 +49,7 @@
     });
     return out;
   }
-
-  /**
-   * Collect cards for a list of needles, flattened and DEDUPLICATED.
-   *
-   * Fixed 2026-07-25: two needles can legitimately match the same card (e.g.
-   * "Sector Rotation Ratio" and "Cyclical vs Defensive" are both in one title),
-   * which previously added that card to the switcher twice and produced a
-   * phantom extra view button pointing at the same pane.
-   */
+  function byTitle(root, needle) { return matchesByTitle(root, needle)[0] || null; }
   function allByTitles(root, needles) {
     var seen = [], out = [];
     needles.forEach(function (n) {
@@ -76,199 +59,259 @@
     });
     return out;
   }
+  function el(id) { return document.getElementById(id); }
+
+  /** Create a Manage Holdings sub-tab (button + panel) before the Advisor tab. */
+  function makeHoldingsTab(id, label, title) {
+    if (el('htab-' + id)) return el('htab-' + id);
+    var page = el('page-holdings');
+    var strip = page ? page.querySelector('.pf-tabs') : null;
+    var advBtn = null;
+    if (strip) {
+      strip.querySelectorAll('button').forEach(function (b) {
+        if (!advBtn && b.getAttribute('data-htab') === 'advisor') advBtn = b;
+      });
+    }
+    var advPanel = el('htab-advisor');
+    if (!strip || !advPanel) return null;
+
+    var b = document.createElement('button');
+    b.className = 'pf-tab';
+    b.setAttribute('data-htab', id);
+    b.setAttribute('onclick', "holdingsShowTab('" + id + "')");
+    b.textContent = label;
+    if (title) b.title = title;
+    strip.insertBefore(b, advBtn);
+
+    var p = document.createElement('div');
+    p.className = 'pf-tab-content';
+    p.setAttribute('id', 'htab-' + id);
+    advPanel.parentNode.insertBefore(p, advPanel);
+    return p;
+  }
 
   /* ══════════════════════════════════════════════════════════════════════════
-     1. RETIRE THE THREE DUPLICATED TOP-LINE CARDS
+     1. RETIRE THE DUPLICATED POSTURE CARDS
      ══════════════════════════════════════════════════════════════════════════ */
 
   function retireDuplicates(root) {
     var dupes = [
-      { needle: 'Decision Compass', why: 'The Unified View states one posture with a gross-exposure target, derived from four signals by a stated hierarchy. Decision Compass answered the same question with separate logic and no reconciliation against the others.' },
-      { needle: 'Macro Headwinds', why: 'Now covered by the Signal Reconciliation table, which shows each signal WITH its horizon and confidence — the context that makes a headwind reading interpretable.' },
-      { needle: 'Recommended Portfolio Archetypes', why: 'Superseded by the regime sector tilt (overweight / underweight per Quad) plus the Holding Quality Ranker, which acts on your actual positions rather than a generic archetype.' }
+      { needle: 'Decision Compass', why: 'The Unified View states one posture with a gross-exposure target, derived from four signals by a stated hierarchy. Decision Compass answered the same question with separate logic and no reconciliation.' },
+      { needle: 'Macro Headwinds', why: 'Now covered by the Signal Reconciliation table, which shows each signal WITH its horizon and confidence.' },
+      { needle: 'Recommended Portfolio Archetypes', why: 'Superseded by the regime sector tilt plus the Holding Quality Ranker, which acts on your actual positions rather than a generic archetype.' }
     ];
-
     var found = [];
-    dupes.forEach(function (d) {
-      var c = byTitle(root, d.needle);
-      if (c) { found.push({ el: c, meta: d }); }
-    });
-    if (!found.length) return 0;
-
-    var notice = document.createElement('div');
-    notice.className = 'card';
-    notice.style.marginBottom = '14px';
-    notice.innerHTML =
-      '<div class="card-title" style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;">' +
-        '<span>Portfolio Posture &mdash; moved to the Unified View' +
-          '<span class="help-icon" title="Three cards that previously lived here each answered &quot;what should I own?&quot; with independent logic and no reconciliation against each other. The Unified View replaced them with a single posture resolved by a stated hierarchy: macro regime sets the sector tilt, market phase sets gross exposure, price trend sets entry timing, and your risk mandate caps everything. Where signals disagree, the conflict is shown rather than averaged away." data-heading="Posture moved">&#9432;</span>' +
-        '</span>' +
-        '<button class="btn btn-sm" onclick="navigateTo(\'home\')" style="font-size:11px;">Open Unified View &rarr;</button>' +
-      '</div>' +
-      '<div class="card-body" style="font-size:12px;line-height:1.75;">' +
-        '<p style="margin:0 0 8px;">These three cards were retired on 2026-07-25 because each produced its own independent ' +
-        '"what should I own" answer, and nothing reconciled them. The Unified View on the Home page now resolves all of it ' +
-        'into <strong>one posture with a gross-exposure target</strong>, and shows any signal conflicts explicitly instead of ' +
-        'averaging them away.</p>' +
-        '<ul style="margin:0 0 8px 18px;padding:0;">' +
-          found.map(function (f) {
-            return '<li style="margin-bottom:5px;"><strong>' + f.meta.needle + '</strong> &mdash; ' + f.meta.why + '</li>';
-          }).join('') +
-        '</ul>' +
-        '<p style="margin:0;font-size:11px;color:var(--text-sec);">Nothing was lost: the underlying signals still drive the ' +
-        'Unified View, and the sector tilt is applied per-position by the Holding Quality Ranker under ' +
-        '<em>Manage Holdings &rsaquo; Analysis</em>.</p>' +
-      '</div>';
-
-    found[0].el.parentNode.insertBefore(notice, found[0].el);
+    dupes.forEach(function (d) { var c = byTitle(root, d.needle); if (c) found.push({ el: c, meta: d }); });
     found.forEach(function (f) { f.el.remove(); });
     return found.length;
   }
 
   /* ══════════════════════════════════════════════════════════════════════════
-     2. GROUP THE ANALYTICS CARDS INTO FOUR SWITCHER WINDOWS
-
-     Grouped by the QUESTION each answers, not by technique — which is why
-     "3D Volatility Surface" sits with VaR (both are "how bad can it get?")
-     rather than with the frontier.
+     2. DELETE THE GENUINELY DUPLICATED REGIME-STRUCTURE CARDS
      ══════════════════════════════════════════════════════════════════════════ */
 
-  var GROUPS = [
-    {
-      title: 'Risk &amp; Tails <span class="help-icon" title="How bad can it get? Value at Risk across three estimation methods, rolling risk metrics, and the implied-volatility surface. Switch views in place — these are three lenses on the same question, not three separate findings." data-heading="Risk and Tails">&#9432;</span>',
-      cards: ['Value at Risk', 'Rolling Risk Metrics', '3D Volatility Surface']
-    },
-    {
-      title: 'Allocation &amp; Sizing <span class="help-icon" title="How much of each? The Markowitz and Omega efficient frontier plus the Omega rebalancing signal. Note these operate on the selected universe — for recommendations against YOUR actual positions, use the Holding Quality Ranker under Manage Holdings > Analysis, which is sized to the Unified View gross target." data-heading="Allocation and Sizing">&#9432;</span>',
-      cards: ['Efficient Frontier', 'Omega Ratio Rebalancing']
-    },
-    {
-      title: 'Regime Structure <span class="help-icon" title="Advanced structural diagnostics: Wasserstein distance between regime return distributions, Random Matrix Theory eigenvalue concentration (how much of the market is one factor), the Cox doubly-stochastic jump model, and intermarket lead/lag. These are research tools rather than daily decision inputs — genuinely interesting, deliberately not part of the posture calculation." data-heading="Regime Structure">&#9432;</span>',
-      cards: ['Wasserstein Regime Distance', 'Cox Doubly-Stochastic', 'Intermarket Lead/Lag']
-    },
-    {
-      /* "What's Moving Today" overlaps the Live Market Pulse on the Home page,
-         but it is a live movers table rather than a competing recommendation, so
-         it is kept and paired with the rebased chart instead of retired. Both
-         answer "what has been happening?" — one intraday, one over the window. */
-      title: 'Market Activity <span class="help-icon" title="What has actually been happening. Today\'s movers and their drivers, plus rebased return comparison for the selected universe with all series starting at 100. Overlaps the Live Market Pulse on the Home page by design — that one is a glance, this one is the detail." data-heading="Market Activity">&#9432;</span>',
-      cards: ['Rebased Return Chart', 'Moving Today']
-    }
-  ];
-
-  function groupAnalytics(root) {
-    if (typeof makeCardSwitcher !== 'function') return 0;
-    var made = 0;
-    GROUPS.forEach(function (g) {
-      var els = allByTitles(root, g.cards);
-      if (els.length < 2) return;                 // single card needs no switcher
-      var anchor = document.createElement('div');
-      els[0].parentNode.insertBefore(anchor, els[0]);
-      try {
-        makeCardSwitcher(els, g.title, anchor);
-        made++;
-      } catch (e) { console.warn('[consolidate] switcher failed:', e); }
-      if (anchor.parentNode) anchor.remove();
-    });
-    return made;
+  function deleteRegimeStructureDupes(root) {
+    // These exist in catab-momentum / catab-breadth as well; the analytics
+    // copies are the redundant ones.
+    var kill = allByTitles(root, ['Wasserstein Regime Distance', 'Cox Doubly-Stochastic', 'Intermarket Lead/Lag']);
+    kill.forEach(function (c) { c.remove(); });
+    return kill.length;
   }
 
   /* ══════════════════════════════════════════════════════════════════════════
-     3. ORDER: workbench first, then the grouped windows
+     3. MOVE RISK + ALLOCATION TO MANAGE HOLDINGS
+
+     These two share the "Universe Selection & Date Range" control — every card
+     in both groups reads the universe it selects. Splitting them into separate
+     tabs would orphan that control in one of them, so they live in one tab with
+     a two-view switcher and the selector pinned above. Same destination, same
+     separation of concerns, without breaking the shared input.
      ══════════════════════════════════════════════════════════════════════════ */
 
-  function reorder(root) {
-    var wb = document.getElementById('corrWorkbench');
-    if (!wb || !wb.parentNode) return;
-    // Universe Selection drives the analytics cards, so it belongs directly
-    // above them and below the workbench (which has its own universe control).
-    var uni = byTitle(root, 'Universe Selection');
-    if (uni && uni.parentNode === wb.parentNode) {
-      wb.parentNode.insertBefore(uni, wb.nextSibling);
-    }
+  function moveRiskAndAllocation(src) {
+    var panel = makeHoldingsTab('riskopt', 'Risk & Optimization',
+      'Portfolio risk and allocation modelling, moved here from the Macro page because both operate on portfolio construction.');
+    if (!panel) return 0;
+
+    var universe = byTitle(src, 'Universe Selection');
+    var risk = allByTitles(src, ['Value at Risk', 'Rolling Risk Metrics', '3D Volatility Surface']);
+    var alloc = allByTitles(src, ['Efficient Frontier', 'Omega Ratio Rebalancing']);
+    if (!risk.length && !alloc.length) return 0;
+
+    var intro = document.createElement('div');
+    intro.style.cssText = 'font-size:11.5px;color:var(--text-sec);line-height:1.6;margin-bottom:10px;';
+    intro.innerHTML = 'Risk and allocation modelling for the universe selected below. '
+      + '<span class="help-icon" title="Moved here from Macro > More Cross-Asset on 2026-07-25. These operate on portfolio construction, so they belong with Manage Holdings. Both groups read the same Universe Selection control, which is why they share a tab rather than sitting in two.">&#9432;</span>';
+    panel.appendChild(intro);
+    if (universe) panel.appendChild(universe);
+
+    var wrap = document.createElement('div');
+    panel.appendChild(wrap);
+
+    if (typeof makeCardSwitcher === 'function' && risk.length >= 2) {
+      var a1 = document.createElement('div'); wrap.appendChild(a1);
+      makeCardSwitcher(risk, 'Risk &amp; Tails <span class="help-icon" title="How bad can it get? Value at Risk across three estimation methods, rolling risk metrics, and the implied-volatility surface — three lenses on the same question." data-heading="Risk and Tails">&#9432;</span>', a1);
+      if (a1.parentNode) a1.remove();
+    } else risk.forEach(function (c) { wrap.appendChild(c); });
+
+    if (typeof makeCardSwitcher === 'function' && alloc.length >= 2) {
+      var a2 = document.createElement('div'); wrap.appendChild(a2);
+      makeCardSwitcher(alloc, 'Allocation &amp; Sizing <span class="help-icon" title="How much of each? Markowitz and Omega efficient frontier plus the Omega rebalancing signal. For recommendations against your ACTUAL positions rather than the selected universe, use the Quality Ranker under Analysis." data-heading="Allocation and Sizing">&#9432;</span>', a2);
+      if (a2.parentNode) a2.remove();
+    } else alloc.forEach(function (c) { wrap.appendChild(c); });
+
+    return risk.length + alloc.length;
   }
 
   /* ══════════════════════════════════════════════════════════════════════════
-     4. OTHER TABS WITH STACKED NEAR-DUPLICATES
-
-     Found by comparing every card title on the site against every other. These
-     are cases where the SAME concept was built twice, independently, and the
-     Cross-Asset merge then stacked both copies into one visible tab:
-
-       • Yield Curve — two Treasury curve cards with different element IDs
-         (ycChart/ycSpreadsChart vs ycCurveChart/yc2s10sChart/yc3m10yChart).
-         Both are useful; only the curve shape itself is redundant. Grouped so
-         the pillar scorecard and spread history remain reachable.
-       • Breadth — "Market Breadth & Composite Fear/Greed" and "Market Breadth:
-         Is the Rally Broadening?" in the same tab, both answering participation.
-       • Sector momentum — "Sector Momentum Scorecard" and "11-Sector Momentum
-         Scorecard" are near-identical names in different tabs.
-       • Intermarket Lead/Lag — built TWICE (lagAssetA vs aLagAssetA). The
-         analytics copy is already inside the Regime Structure group, so the
-         breadth-tab copy is the one folded in here.
+     4. MOVE THE CORRELATION WORKBENCH TO MANAGE HOLDINGS
      ══════════════════════════════════════════════════════════════════════════ */
 
-  var TAB_GROUPS = [
-    { panel: 'macrotab-yieldcurve',
-      title: 'Yield Curve <span class="help-icon" title="Two views of the same curve, built independently before consolidation. The FRED view carries overlay comparison and the spread chart; the Cross-Asset view carries the pillar scorecard plus 2s10s and 3m10y history. Only the curve shape itself was duplicated — switch views rather than scrolling past the same chart twice." data-heading="Yield Curve">&#9432;</span>',
-      cards: ['Full Treasury Yield Curve', 'Yield Curve Pillar'] },
-    { panel: 'macrotab-cabreadth',
-      title: 'Breadth &amp; Participation <span class="help-icon" title="Is the advance broad or narrow? Composite fear/greed, rally-broadening measures, sector momentum, and lead/lag — four lenses on participation, previously four separate stacked cards." data-heading="Breadth and Participation">&#9432;</span>',
-      cards: ['Market Breadth & Composite', 'Market Breadth: Is the Rally', 'Sector Momentum Scorecard', 'Intermarket Lead/Lag'] },
-    { panel: 'macrotab-casectors',
-      title: 'Sector Rotation <span class="help-icon" title="Sector momentum scorecard and rotation ratio in one window." data-heading="Sector Rotation">&#9432;</span>',
-      cards: ['11-Sector Momentum Scorecard', 'Sector Rotation Ratio', 'Cyclical vs Defensive'] }
-  ];
-
-  function groupOtherTabs() {
-    if (typeof makeCardSwitcher !== 'function') return 0;
-    var made = 0;
-    TAB_GROUPS.forEach(function (g) {
-      var panel = document.getElementById(g.panel);
-      if (!panel || panel.getAttribute('data-grouped') === '1') return;
-      var els = allByTitles(panel, g.cards);
-      if (els.length < 2) return;
-      var anchor = document.createElement('div');
-      els[0].parentNode.insertBefore(anchor, els[0]);
-      try { makeCardSwitcher(els, g.title, anchor); made++; panel.setAttribute('data-grouped', '1'); }
-      catch (e) { console.warn('[consolidate] tab group failed for ' + g.panel + ':', e); }
-      if (anchor.parentNode) anchor.remove();
-    });
-    return made;
+  function moveCorrelation(src) {
+    var wb = el('corrWorkbench');
+    if (!wb) return 0;
+    var panel = makeHoldingsTab('correlation', 'Correlation',
+      'Correlation across your holdings, the SPDR sectors, or asset classes — conditioned on market regime.');
+    if (!panel) return 0;
+    panel.appendChild(wb);
+    return 1;
   }
+
+  /* ══════════════════════════════════════════════════════════════════════════
+     5. MARKET ACTIVITY AS ITS OWN PAGE UNDER PORTFOLIO
+     ══════════════════════════════════════════════════════════════════════════ */
+
+  function makeMarketActivityPage(src) {
+    if (el('page-activity')) return 0;
+    var cards = allByTitles(src, ['Rebased Return Chart', 'Moving Today']);
+    if (!cards.length) return 0;
+
+    var homePage = el('page-home');
+    var host = homePage ? homePage.parentNode : null;
+    if (!host) return 0;
+
+    var page = document.createElement('div');
+    page.className = 'page';
+    page.setAttribute('id', 'page-activity');
+    var wrap = document.createElement('div');
+    wrap.className = 'content-wrap';
+    page.appendChild(wrap);
+
+    var hero = document.createElement('div');
+    hero.className = 'hero';
+    hero.style.padding = '26px 34px';
+    hero.innerHTML = '<h1>Market Activity</h1>'
+      + '<p>What has actually been moving — today\'s drivers and rebased performance across the selected universe.</p>';
+    wrap.appendChild(hero);
+    cards.forEach(function (c) { wrap.appendChild(c); });
+    host.appendChild(page);
+
+    // Nav entry under Portfolio — located by scanning .nav-child rather than a
+    // descendant selector, so it does not depend on the nav's exact nesting.
+    var pfDropdown = null;
+    document.querySelectorAll('.nav-child').forEach(function (n) {
+      if (!pfDropdown && n.getAttribute('data-page') === 'themes') pfDropdown = n;
+    });
+    if (pfDropdown && pfDropdown.parentNode) {
+      var d = document.createElement('div');
+      d.className = 'nav-child';
+      d.setAttribute('data-page', 'activity');
+      d.setAttribute('onclick', "navigateTo('activity')");
+      d.textContent = 'Market Activity';
+      pfDropdown.parentNode.insertBefore(d, pfDropdown.nextSibling);
+    }
+    // Mobile drawer.
+    var mob = null;
+    document.querySelectorAll('.mob-nav-item').forEach(function (n) {
+      if (!mob && n.getAttribute('data-mobpage') === 'themes') mob = n;
+    });
+    if (mob && mob.parentNode) {
+      var b = document.createElement('button');
+      b.className = 'mob-nav-item';
+      b.setAttribute('data-mobpage', 'activity');
+      b.setAttribute('onclick', "mobileNav('activity')");
+      b.textContent = 'Market Activity';
+      mob.parentNode.insertBefore(b, mob.nextSibling);
+    }
+    // navigateTo() maps unknown pages to a nav parent; register this one.
+    try { if (window.parentMap) window.parentMap.activity = 'portfolio'; } catch (e) {}
+    return cards.length;
+  }
+
+  /* ══════════════════════════════════════════════════════════════════════════
+     6. REMOVE THE NOW-EMPTY "MORE CROSS-ASSET" TAB
+     ══════════════════════════════════════════════════════════════════════════ */
+
+  function removeMoreTab() {
+    var panel = el('macrotab-camore');
+    if (!panel) return false;
+    // Anything left that we did not explicitly place goes to the Risk tab rather
+    // than being destroyed — losing a card silently would be worse than a stray one.
+    var leftovers = [];
+    panel.querySelectorAll('.card').forEach(function (c) { leftovers.push(c); });
+    if (leftovers.length) {
+      var risk = el('htab-riskopt');
+      if (risk) leftovers.forEach(function (c) { risk.appendChild(c); });
+    }
+    var btn = null;
+    document.querySelectorAll('button').forEach(function (b) {
+      if (!btn && b.getAttribute('data-macrotab') === 'camore') btn = b;
+    });
+    if (btn) btn.remove();
+    panel.remove();
+    // If it was the active tab, fall back to the macro dashboard.
+    try {
+      if (typeof macroShowTab === 'function' && !document.querySelector('#page-macro .pf-tab-content.active')) {
+        macroShowTab('dashboard');
+      }
+    } catch (e) {}
+    return true;
+  }
+
+  /* ══════════════════════════════════════════════════════════════════════════
+     7. YIELD CURVE — the one grouping worth keeping
+     ══════════════════════════════════════════════════════════════════════════ */
+
+  function groupYieldCurve() {
+    if (typeof makeCardSwitcher !== 'function') return 0;
+    var panel = el('macrotab-yieldcurve');
+    if (!panel || panel.getAttribute('data-grouped') === '1') return 0;
+    var els = allByTitles(panel, ['Full Treasury Yield Curve', 'Yield Curve Pillar']);
+    if (els.length < 2) return 0;
+    var anchor = document.createElement('div');
+    els[0].parentNode.insertBefore(anchor, els[0]);
+    makeCardSwitcher(els, 'Yield Curve <span class="help-icon" title="Two Treasury curve views were built independently and the Cross-Asset merge stacks both into this tab. The FRED view carries overlay comparison and the spread chart; the Cross-Asset view carries the pillar scorecard plus 2s10s and 3m10y history. Only the curve shape is duplicated." data-heading="Yield Curve">&#9432;</span>', anchor);
+    if (anchor.parentNode) anchor.remove();
+    panel.setAttribute('data-grouped', '1');
+    return 1;
+  }
+
+  /* ══════════════════════════════════════════════════════════════════════════
+     RUN
+     ══════════════════════════════════════════════════════════════════════════ */
 
   function run() {
-    // makeCardSwitcher lives in app3.js and runs its own deferred restructure;
-    // wait for it so we don't fight over the same nodes.
     if (typeof makeCardSwitcher !== 'function') { setTimeout(run, 600); return; }
+    var src = el('macrotab-camore');
+    if (!src) { groupYieldCurve(); return; }
+    if (src.getAttribute('data-migrated') === '1') return;
+    src.setAttribute('data-migrated', '1');
 
-    var panel = document.getElementById('macrotab-camore');
-    var retired = 0, grouped = 0;
+    var log = {};
+    try { log.retired = retireDuplicates(src); } catch (e) { console.warn('[migrate] retire:', e); }
+    try { log.regimeDeleted = deleteRegimeStructureDupes(src); } catch (e) { console.warn('[migrate] regime:', e); }
+    try { log.riskAlloc = moveRiskAndAllocation(src); } catch (e) { console.warn('[migrate] riskalloc:', e); }
+    try { log.correlation = moveCorrelation(src); } catch (e) { console.warn('[migrate] corr:', e); }
+    try { log.activity = makeMarketActivityPage(src); } catch (e) { console.warn('[migrate] activity:', e); }
+    try { log.tabRemoved = removeMoreTab(); } catch (e) { console.warn('[migrate] remove:', e); }
+    try { log.yieldCurve = groupYieldCurve(); } catch (e) { console.warn('[migrate] yc:', e); }
 
-    if (panel && panel.getAttribute('data-consolidated') !== '1') {
-      try {
-        retired = retireDuplicates(panel);
-        grouped = groupAnalytics(panel);
-        reorder(panel);
-        panel.setAttribute('data-consolidated', '1');
-      } catch (e) { console.warn('[consolidate] camore failed:', e); }
-    }
-
-    var others = 0;
-    try { others = groupOtherTabs(); } catch (e) { console.warn('[consolidate] other tabs failed:', e); }
-
-    if (retired || grouped || others) {
-      console.info('[consolidate] retired ' + retired + ' duplicate posture cards · '
-        + grouped + ' analytics switchers · ' + others + ' cross-tab switchers');
-    }
+    console.info('[migrate] More Cross-Asset dissolved:', JSON.stringify(log));
   }
 
-  /* app3.js restructures on DOMContentLoaded + timers, and
-     mergeCrossAssetIntoMacro() builds #macrotab-camore at load. Run after both
-     have settled, then again on first open of the tab as a safety net. */
-  function schedule() { setTimeout(run, 1800); }
+  function schedule() { setTimeout(run, 2000); }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', schedule);
   else schedule();
 
-  window.PerryConsolidate = { run: run, GROUPS: GROUPS };
+  window.PerryConsolidate = { run: run, makeHoldingsTab: makeHoldingsTab };
 })();

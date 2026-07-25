@@ -6348,7 +6348,17 @@ function renderAccountComparison(force) {
 // Compact the legacy analysis widgets below the comparison card into a
 // collapsible block so the tab keeps the same footprint (2026-07).
 (function compactLegacyAnalysis() {
+  /* DISABLED 2026-07-25.
+
+     This built the "Classic Analysis Widgets" <details> dropdown at runtime and
+     moved everything after the comparison card into it. Those widgets — sector
+     donut, asset-class donut, top-10 bar, unrealised G/L bar — were absorbed
+     into the Portfolio Analysis Workbench as filter-aware views and their markup
+     deleted. With nothing left to move, this function was still creating the
+     collapsible shell, so an EMPTY "Classic Analysis Widgets" dropdown remained
+     on the page. Returning early removes it. */
   function doCompact() {
+    if (true) return;   // retired — see note above
     try {
       var tab = document.getElementById('htab-analysis');
       if (!tab || document.getElementById('legacyAnalysisWrap')) return;
