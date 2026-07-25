@@ -145,10 +145,34 @@ window.PerryData = {
           }
         }
       } catch(e) {}
-      // 2) Worker fetch with one retry (Yahoo can rate-limit bursts)
+      /* ══════════════════════════════════════════════════════════════════════
+         CRITICAL FIX 2026-07-25 — this line was corrupting every risk metric
+         on the site.
+
+         It requested range='max' with interval='1d'. Yahoo SILENTLY IGNORES
+         interval=1d when range=max and returns coarser bars — verified live
+         against the deployed worker:
+
+             SPY  max/1d  ->  1993-02-01, 1993-03-01, 1993-04-01 …  MONTHLY
+             QQQ  max/1d  ->  1999-04-01, 1999-05-01, 1999-06-01 …  MONTHLY
+             SPY  10y/1d  ->  2016-07-26, 07-27, 07-28, 07-29 …     daily (correct)
+
+         Downstream code then annualised those monthly returns with sqrt(252),
+         inflating volatility by sqrt(252/12) = 4.58x:
+             SPY  monthly sigma 4.3% x sqrt(252) = 68.2%   (true ~15%)
+             QQQ  monthly sigma 5.3% x sqrt(252) = 84.6%   (true ~19%)
+         Those are exactly the impossible figures the Risk tab was showing.
+
+         The same corrupted series fed sector money-flow bars, rolling
+         portfolio/SPY correlation, and the historical stress tests — where
+         "253 days" was really 253 MONTHS, i.e. 21 years.
+
+         '10y' is verified to return true daily bars. The guard below makes any
+         future recurrence loud instead of silent.
+         ══════════════════════════════════════════════════════════════════════ */
       var d = null, lastErr = null;
       for (var attempt = 0; attempt < 2 && !d; attempt++) {
-        try { d = await fetchChart(t, 'max', '1d'); }
+        try { d = await fetchChart(t, '10y', '1d'); }
         catch(e) { lastErr = e; await new Promise(function(r){ setTimeout(r, 800 + Math.random()*600); }); }
       }
       if (!d || !d.points || !d.points.length) throw (lastErr || new Error('No history for ' + t));
@@ -156,6 +180,25 @@ window.PerryData = {
       d.points.forEach(function(p) {
         if (p.close != null) { dates.push(p.date.slice(0, 10)); closes.push(p.close); }
       });
+
+      /* GRANULARITY GUARD — never trust the provider's interval silently again.
+         Median spacing of the first 30 bars must look daily (<= 4 calendar days
+         allows for weekends and holidays). Anything coarser is rejected loudly
+         rather than being annualised as if it were daily. */
+      if (dates.length > 5) {
+        var gaps = [];
+        for (var gi = 1; gi < Math.min(dates.length, 31); gi++) {
+          gaps.push((new Date(dates[gi]) - new Date(dates[gi-1])) / 86400000);
+        }
+        gaps.sort(function(a, b){ return a - b; });
+        var medGap = gaps[Math.floor(gaps.length / 2)];
+        if (medGap > 4) {
+          console.error('[PerryData] ' + t + ': provider returned non-daily bars (median gap ' +
+            medGap.toFixed(1) + ' days). Rejecting — annualising these as daily would inflate ' +
+            'volatility by ~' + Math.sqrt(252 / (365 / medGap)).toFixed(1) + 'x.');
+          throw new Error('Non-daily bars returned for ' + t + ' (median gap ' + medGap.toFixed(1) + 'd)');
+        }
+      }
       var h = { dates: dates, closes: closes, source: 'worker' };
       self._mem[t] = h;
       // 3) Persist to Firestore in background (non-blocking)
@@ -1358,12 +1401,29 @@ function holdingsShowTab(name) {
      moved from the Macro page; their loaders keyed off element IDs that came
      with them, so they only need a nudge to (re)draw once visible. */
   if (name === 'riskopt') {
-    setTimeout(function () {
+    /* These cards read window.MKT_STATE, which only exists after mktInit() +
+       mktLoadAll(). That bootstrap used to live in the More Cross-Asset tab;
+       when that tab was removed the cards were left permanently on "Awaiting
+       data". PerryEnsureMarketData (app-consolidate.js) now owns it and is safe
+       to call repeatedly — it loads once and reuses the result. */
+    var paint = function () {
       try { if (typeof mktRenderVaR === 'function') mktRenderVaR(); } catch (e) {}
       try { if (typeof mktRenderRolling === 'function') mktRenderRolling(); } catch (e) {}
       try { if (typeof mktRenderFrontier === 'function') mktRenderFrontier(); } catch (e) {}
+      try { if (typeof mktRenderVolSurface === 'function') mktRenderVolSurface(); } catch (e) {}
+      try { if (typeof aLoadOmega === 'function') aLoadOmega(); } catch (e) {}
       window.dispatchEvent(new Event('resize'));
-    }, 150);
+    };
+    if (typeof window.PerryEnsureMarketData === 'function') window.PerryEnsureMarketData(paint);
+    else setTimeout(paint, 200);
+  }
+  if (name === 'activity') {
+    if (typeof window.PerryEnsureMarketData === 'function') {
+      window.PerryEnsureMarketData(function () {
+        try { if (typeof mktRenderRebased === 'function') mktRenderRebased(); } catch (e) {}
+        try { if (typeof caAutoLoad === 'function') caAutoLoad('movers'); } catch (e) {}
+      });
+    }
   }
   if (name === 'correlation') {
     setTimeout(function () {
@@ -4007,10 +4067,28 @@ async function fetchFundamentals(ticker) {
   var d = await r.json();
   if (d.error) throw new Error(d.error);
 
-  // 3. Store in Firebase cache for next time
-  if (window._setSecCache && d.incomeStatement) {
+  /* 3. Store in Firebase cache for next time.
+
+     GUARD ADDED 2026-07-25. This previously cached ANY response containing an
+     income statement — including responses where the FMP profile call had failed
+     (quota, rate limit). Because the cache TTL is 24 hours, a single lookup
+     during a quota-exhausted window pinned that ticker's blank Company Moat
+     header, missing sector/industry, and broken ETF detection for a FULL DAY,
+     long after FMP recovered. Only cache complete responses. */
+  /* Keep a per-ticker handle on the fundamentals payload so other modules can
+     read profile fields (e.g. lastDividend for the Income view) without issuing
+     another metered FMP call. */
+  window._secCacheByTicker = window._secCacheByTicker || {};
+  window._secCacheByTicker[String(ticker).toUpperCase()] = d;
+
+  var profileOk = d.profile && !d.profile.error && (d.profile.sector || d.profile.name);
+  if (window._setSecCache && d.incomeStatement && profileOk) {
     window._setSecCache(ticker, d); // async, don't await
     console.log("SEC data for " + ticker + " cached to Firebase");
+  } else if (d.incomeStatement && !profileOk) {
+    console.warn("Not caching " + ticker + ": company profile unavailable (" +
+      (d._profileError || "unknown") + "). Statements will render; the profile " +
+      "header will retry on next view rather than caching a blank for 24h.");
   }
 
   return d;
@@ -9603,7 +9681,7 @@ async function ycTabLoad() {
 }
 
 // ── TAB 6: Cross-Asset Momentum ───────────────────────────────────
-var _momCharts = {};
+// (single declaration — see note below)
 var _momScorecardData = {};
 
 function momScorecardTF(btn, days) {
@@ -9638,6 +9716,10 @@ function renderMomScorecard(days) {
   scoreEl.innerHTML = html;
 }
 
+/* Declared ONCE. This was previously declared twice in this file; the second
+   `= {}` replaced the object, orphaning every Chart instance already stored in
+   it. Those charts could then never be destroy()ed, which leaks memory and
+   produces "Canvas is already in use" errors when a tab is re-rendered. */
 var _momCharts = {};
 async function momTabLoad() {
   try {
@@ -9772,7 +9854,7 @@ async function momTabLoad() {
 
 
 // ── TAB 7: Sector Rotation ────────────────────────────────────────
-var _sectorCharts = {};
+// (single declaration — see note below)
 
 // Sector rotation ratio signals definition
 var SECTOR_RATIO_SIGNALS = {
@@ -9801,6 +9883,7 @@ var SECTOR_RATIO_SIGNALS = {
   rsp_spy:      { label: 'Equal-Weight / Cap-Weight (RSP÷SPY)', tickers: ['RSP','SPY'] }
 };
 
+/* Declared ONCE — see the _momCharts note above for why the duplicate mattered. */
 var _sectorCharts = {};
 var _sectorData = {};  // cached: key=signal, {ratio, dates}
 var _sectorStockData = {};
@@ -10600,7 +10683,16 @@ function resRenderFinancials(ticker, d) {
 }
 
 // ── Valuation Header + Ratios ────────────────────────────────────────
-var SECTOR_PE = { 'Technology':28,'Healthcare':22,'Financials':14,'Consumer Discretionary':22,'Consumer Staples':20,'Energy':12,'Industrials':18,'Materials':16,'Real Estate':20,'Utilities':18,'Communication Services':20 };
+/* REMOVED 2026-07-25 — this was a SECOND declaration of SECTOR_PE with DIFFERENT
+   VALUES from the one in app2.js:1691 (Healthcare 22 vs 19, Financials 14 vs 13,
+   Consumer Staples 20 vs 21, Real Estate 20 vs 18 …). Two top-level `var`s of the
+   same name share one binding, so app2.js — which loads second — silently won.
+   Every forward-P/E and DCF benchmark was therefore using app2's table while this
+   one sat here looking authoritative and doing nothing.
+
+   app2.js's version is kept because it maps BOTH the GICS names ("Information
+   Technology", "Health Care") and the legacy short names, so it matches whichever
+   taxonomy a holding carries. This line is deliberately not replaced. */
 
 function resRenderValuationHeader(ticker, d) {
   var valContent = document.getElementById('resValuationContent');
@@ -11375,7 +11467,7 @@ async function resInsiderLoad(ticker) {
 
     // ── Transaction table ──
     if (!transactions.length) {
-      tableEl.innerHTML = '<p style="padding:16px;color:var(--text-sec);">No parsed transactions found in the last 24 months. <a href="https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK='+data.cik+'&type=4&dateb=&owner=include&count=40" target="_blank" style="color:var(--navy);">View on SEC EDGAR</a>.</p>';
+      tableEl.innerHTML = '<p style="padding:16px;color:var(--text-sec);">No parsed transactions found in the last 24 months' + (data.parseErrors ? ' &mdash; <span style="color:#8B2A2A;">' + data.parseErrors + ' of ' + data.parsedAttempted + ' filings failed to parse (SEC rate limit or subrequest cap). Reload in a minute.</span>' : '') + '. <a href="https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK='+data.cik+'&type=4&dateb=&owner=include&count=40" target="_blank" style="color:var(--navy);">View on SEC EDGAR</a>.</p>';
       return;
     }
 
@@ -11432,6 +11524,11 @@ async function resInsiderLoad(ticker) {
 // ═══════════════════════════════════════════════════════════════════
 // PEER COMPARISON — Comprehensive pre-mapped peer groups
 // ═══════════════════════════════════════════════════════════════════
+/* NOTE 2026-07-25: this is the SECOND declaration of SECTOR_PEERS in this file.
+   Top-level `var` re-declaration shares one binding, so this one wins and the
+   earlier block is dead code. Left in place (it is the more complete map) but
+   flagged — the earlier one should be deleted once its contents are confirmed
+   to be a strict subset. */
 var SECTOR_PEERS = {
   'Technology': {
     'Semiconductors': ['NVDA','AMD','AVGO','QCOM','TXN','MU','INTC','AMAT','LRCX','KLAC','MRVL','ON'],

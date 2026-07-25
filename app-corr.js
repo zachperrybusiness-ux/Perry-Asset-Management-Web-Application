@@ -517,7 +517,13 @@
     h += '</div>';
 
     // Per-asset table across regimes
-    var rfs = order.length > 16 ? 9.5 : order.length > 12 ? 10.2 : 11;
+    /* FIXED 2026-07-25: this line referenced `order` before its `var` assignment
+       further down. `var` hoists the declaration but not the value, so `order`
+       was undefined and `.length` threw
+           "Cannot read properties of undefined (reading 'length')"
+       which is exactly what the Regime Compare view reported. Row count now
+       comes from base.avg, which is already in scope here. */
+    var rfs = base.avg.length > 16 ? 9.5 : base.avg.length > 12 ? 10.2 : 11;
     h += '<div style="width:100%;"><table style="width:100%;font-size:' + rfs + 'px;border-collapse:collapse;">';
     h += '<thead><tr><th style="text-align:left;padding:4px;position:sticky;top:0;background:var(--navy);color:#fff;">Asset</th>';
     results.forEach(function (r) {

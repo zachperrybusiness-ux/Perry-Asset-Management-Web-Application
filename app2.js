@@ -5615,9 +5615,15 @@ async function pfRenderRisk() {
       var var95PctVal = sigma > 0 ? Math.abs(var95LogRet) * 100 : 0;
       var volAnnVal = sigma * Math.sqrt(252) * 100;
       var maxDDPct = Math.abs(maxDD) * 100;
-      // Sortino: downside deviation
-      var downRets = rets.filter(function(v){ return v < 0; });
-      var downVar = downRets.length > 1 ? downRets.reduce(function(s,v){ return s + v*v; }, 0) / downRets.length : 0;
+      /* Sortino downside deviation — FIXED 2026-07-25.
+         Was dividing the sum of squared negative returns by downRets.length, i.e.
+         the COUNT OF NEGATIVE RETURNS. Standard downside deviation divides by the
+         TOTAL number of observations; periods above the threshold contribute zero,
+         they are not excluded from the denominator. Dividing by the smaller count
+         inflated the denominator's magnitude and understated Sortino by roughly
+         sqrt(N/N_neg) ~ 1.41x for a typical return series. */
+      var downVar = rets.length > 1
+        ? rets.reduce(function(s,v){ return s + (v < 0 ? v*v : 0); }, 0) / rets.length : 0;
       var downSigma = Math.sqrt(downVar);
       var annArithMean2 = (mean + variance/2) * 252;
       sortinoVal = downSigma > 0 ? (annArithMean2 - 0.045) / (downSigma * Math.sqrt(252)) : 0;
@@ -5638,14 +5644,31 @@ async function pfRenderRisk() {
             var mn = rr.reduce(function(s,v){return s+v;},0)/rr.length;
             var vr = rr.reduce(function(s,v){return s+(v-mn)*(v-mn);},0)/(rr.length-1);
             var sd = Math.sqrt(vr);
-            var dn = rr.filter(function(v){return v<0;});
-            var dnSd = Math.sqrt(dn.length>1 ? dn.reduce(function(s,v){return s+v*v;},0)/dn.length : 0);
+            /* Downside deviation — same fix as the portfolio side above:
+               denominator is the TOTAL observation count, not the negative count. */
+            var dnSd = Math.sqrt(rr.length > 1
+              ? rr.reduce(function(s,v){ return s + (v < 0 ? v*v : 0); }, 0) / rr.length : 0);
             var pk = cl[0], mdd = 0;
             cl.forEach(function(v){ if (v>pk) pk=v; var dd=(pk-v)/pk; if (dd>mdd) mdd=dd; });
+
+            /* VaR — FIXED 2026-07-25. This used a parametric-normal estimate
+               (1.645 x sigma, ignoring the mean) while the PORTFOLIO row on the
+               same table used a historical 5th-percentile. Two different
+               estimators presented side by side as if comparable. Both are now
+               the historical percentile. */
+            var rrSorted = rr.slice().sort(function(a,b){ return a-b; });
+            var vIdx = Math.max(0, Math.floor(rrSorted.length * 0.05));
+            var var95Hist = rrSorted.length ? Math.abs(rrSorted[vIdx]) * 100 : 0;
+
+            /* Risk-free rate — was 0.05 here and 0.045 on the portfolio side of
+               the same table, which made the benchmark Sharpe artificially low.
+               Both now read the single shared constant. */
+            var RF = (window.PerrySignals && window.PerrySignals.CONST.RF_RATE) || 0.045;
+
             idxM[sym] = {
-              sharpe: sd>0 ? (mn - 0.05/252)/sd*Math.sqrt(252) : 0,
-              sortino: dnSd>0 ? ((mn*252) - 0.045)/(dnSd*Math.sqrt(252)) : 0,
-              maxDD: mdd*100, var95: 1.645*sd*100, vol: sd*Math.sqrt(252)*100,
+              sharpe: sd>0 ? (mn - RF/252)/sd*Math.sqrt(252) : 0,
+              sortino: dnSd>0 ? ((mn*252) - RF)/(dnSd*Math.sqrt(252)) : 0,
+              maxDD: mdd*100, var95: var95Hist, vol: sd*Math.sqrt(252)*100,
               beta: sym === 'SPY' ? 1.0 : null
             };
           });
@@ -11167,7 +11190,26 @@ function populateHitRateTable(activeQuadLabel) {
 
 var _rrgLoaded = false;
 var _rrgChart = null;
-var SECTOR_ETFS = ['XLC','XLY','XLP','XLE','XLF','XLV','XLI','XLB','XLRE','XLK','XLU'];
+/* ══════════════════════════════════════════════════════════════════════════
+   DUPLICATE DECLARATION — fixed 2026-07-25.
+
+   `SECTOR_ETFS` was declared TWICE in this file:
+     line ~7509  var SECTOR_ETFS = [{t:'XLK', s:'Technology'}, …]   objects
+     here        var SECTOR_ETFS = ['XLC','XLY', …]                 plain strings
+
+   Two top-level `var`s of the same name in one script are the SAME binding, and
+   the later assignment wins at execution time. So the Sector Momentum Scorecard
+   at ~7541 — which reads `s.t` and `s.s` — got plain strings instead of objects,
+   and every row rendered "undefined (undefined)" with dashes for all returns.
+   That is exactly what the Breadth tab was showing.
+
+   Renamed to SECTOR_ETF_TICKERS. The object array at ~7509 is now the only
+   SECTOR_ETFS, and this consumer gets its own flat list derived from it so the
+   two can never drift apart.
+   ══════════════════════════════════════════════════════════════════════════ */
+var SECTOR_ETF_TICKERS = (typeof SECTOR_ETFS !== 'undefined' && SECTOR_ETFS.length && SECTOR_ETFS[0] && SECTOR_ETFS[0].t)
+  ? SECTOR_ETFS.map(function (x) { return x.t; })
+  : ['XLC','XLY','XLP','XLE','XLF','XLV','XLI','XLB','XLRE','XLK','XLU'];
 
 function loadRRG(force) {
   if (_rrgLoaded && !force) return;
@@ -11178,7 +11220,7 @@ function loadRRG(force) {
 
   // Fetch SPY and all 11 sector ETFs in parallel — 1 YEAR of daily closes,
   // keyed by DATE so series align even when one ETF misses a session.
-  var tickers = SECTOR_ETFS.concat(['SPY']);
+  var tickers = SECTOR_ETF_TICKERS.concat(['SPY']);
   var fetchFns = tickers.map(function(t) {
     return fetch(WORKER_URL + '/chart?symbol=' + t + '&range=1y&interval=1d')
       .then(function(r) { return r.json(); })

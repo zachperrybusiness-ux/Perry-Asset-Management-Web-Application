@@ -1864,7 +1864,11 @@
           <div class="card-sources"><strong>Method:</strong> Actuals from SEC EDGAR 10-K/20-F (IFRS-aware); gaps auto-backfilled from FMP statements. Projection = trailing CAGR of available years extended 3 years (dashed) — a mechanical baseline, not guidance. Peer data via <code>/peer-financials</code>.</div>
         </div>
         <!-- Bear / Base / Bull scenarios -->
-        <div class="card" style="margin-bottom:14px;" id="resScenarioCard" style="display:none;">
+        <!-- style attributes merged 2026-07-25: this element had TWO style attributes.
+     HTML5 keeps the first and discards the rest, so display:none never applied and
+     this card rendered permanently visible with an empty body whenever its data
+     was unavailable. -->
+<div class="card" id="resScenarioCard" style="margin-bottom:14px;display:none;">
           <div class="card-title">3-Year Scenario Outlook — Bear / Base / Bull
             <span class="help-icon" data-help="scenarioOutlook" title="Click for plain-English explanation">ⓘ</span>
           </div>
@@ -1874,7 +1878,11 @@
           <div class="card-sources">Projections based on trailing 3-year CAGR. Bear uses 40%, Bull uses 160% of that growth rate. Not a guarantee.</div>
         </div>
         <!-- Visual charts: Revenue trend, Margin evolution, FCF vs NI -->
-        <div class="card" style="margin-bottom:14px;" id="resRevChartCard" style="display:none;">
+        <!-- style attributes merged 2026-07-25: this element had TWO style attributes.
+     HTML5 keeps the first and discards the rest, so display:none never applied and
+     this card rendered permanently visible with an empty body whenever its data
+     was unavailable. -->
+<div class="card" id="resRevChartCard" style="margin-bottom:14px;display:none;">
           <div class="card-title">Revenue Trend &amp; Projections (5Y Actual + 3Y Estimated)
             <span class="help-icon" title="Bars show actual annual revenue. Shaded bars are projected using the trailing CAGR. The three projections represent Bear (low growth), Base, and Bull (high growth) scenarios.">?</span>
           </div>
@@ -1882,7 +1890,11 @@
             <div style="height:260px;"><canvas id="resRevChart"></canvas></div>
           </div>
         </div>
-        <div class="card" style="margin-bottom:14px;" id="resMarginChartCard" style="display:none;">
+        <!-- style attributes merged 2026-07-25: this element had TWO style attributes.
+     HTML5 keeps the first and discards the rest, so display:none never applied and
+     this card rendered permanently visible with an empty body whenever its data
+     was unavailable. -->
+<div class="card" id="resMarginChartCard" style="margin-bottom:14px;display:none;">
           <div class="card-title">Margin Evolution — Gross / Operating / Net (%)
             <span class="help-icon" title="Tracks how much of each revenue dollar the company keeps at each stage. Widening margins over time = improving efficiency or pricing power. Shrinking margins = cost pressure or competition.">?</span>
           </div>

@@ -54,6 +54,39 @@
   var PALETTE = ['#003C71', '#5B9BD5', '#2E7D52', '#8B6914', '#8B2A2A', '#A23B72',
                  '#4A7C8C', '#6B5B95', '#C47C00', '#5C8A3A', '#8A5C5C', '#3A6B8A'];
 
+  /* ── STABLE COLOURS — added 2026-07-25 ───────────────────────────────────
+     Colours were assigned by ARRAY POSITION. The sector list is rebuilt from
+     whatever positions pass the current filters, so changing the account or
+     top-N filter reordered the array and every sector changed colour. Energy
+     could be navy in one view and red in the next, which makes the stacked
+     bars unreadable and unusable for comparison.
+
+     Colour is now derived from a hash of the category NAME, so a given sector
+     is the same colour in every chart, in every view, forever. Known sectors
+     get hand-picked colours that roughly match convention (Energy amber,
+     Health Care teal, Utilities grey-blue). */
+  var FIXED_COLORS = {
+    'Information Technology': '#003C71', 'Technology': '#003C71',
+    'Health Care': '#4A7C8C', 'Healthcare': '#4A7C8C',
+    'Financials': '#2E7D52', 'Financial Services': '#2E7D52',
+    'Consumer Discretionary': '#5B9BD5', 'Consumer Staples': '#6B5B95',
+    'Consumer Defensive': '#6B5B95',
+    'Energy': '#C47C00', 'Industrials': '#8B6914', 'Materials': '#8A5C5C',
+    'Basic Materials': '#8A5C5C',
+    'Real Estate': '#A23B72', 'Utilities': '#3A6B8A',
+    'Communication Services': '#5C8A3A', 'Communications': '#5C8A3A',
+    'Broad Market': '#7A8B99', 'Cash': '#B0B8C0', 'Money Market': '#B0B8C0',
+    'Unknown': '#9AA5B1', 'Other': '#9AA5B1',
+    'ETF': '#5B9BD5', 'Stock': '#003C71', 'Bond Position': '#4A7C8C',
+    'Leveraged ETF': '#8B2A2A', 'Crypto': '#C47C00', 'CD': '#B0B8C0'
+  };
+  function colorFor(name) {
+    if (FIXED_COLORS[name]) return FIXED_COLORS[name];
+    var h = 0, str = String(name || '');
+    for (var i = 0; i < str.length; i++) { h = ((h << 5) - h + str.charCodeAt(i)) | 0; }
+    return PALETTE[Math.abs(h) % PALETTE.length];
+  }
+
   function isCash(h) { return CASH_CLASSES.indexOf(h.assetClass) >= 0; }
   function acctOf(h) { return h.accountType || h.account || 'Individual'; }
   function mvOf(h) {
@@ -61,6 +94,50 @@
                      : (h.currentPrice || h.costBasis || 0) * (h.quantity || 0);
   }
   function costOf(h) { return (h.costBasis || 0) * (h.quantity || 0); }
+
+  /* ══════════════════════════════════════════════════════════════════════════
+     DIVIDEND YIELD — added 2026-07-25.
+
+     The Income view showed zero for everything because it read `h.yieldPct`,
+     a field NOTHING ever populates. Holdings are created from a manual form or
+     a brokerage CSV import, and neither captures yield.
+
+     Three real sources, in order of quality:
+       1. warehouse metrics/{ticker}.dividend_yield  — computed by the nightly
+          ingest as lastDividend / price from the FMP profile.
+       2. h.dividendYield / h.yieldPct               — if a CSV import supplied it.
+       3. SEC/FMP lastDividend on the cached fundamentals blob, divided by the
+          current price.
+
+     Returns null (not 0) when genuinely unknown, so the UI can distinguish
+     "this pays nothing" from "we don't know" — which is exactly the distinction
+     the old code destroyed by defaulting to 0.
+     ══════════════════════════════════════════════════════════════════════════ */
+  function yieldOf(h) {
+    if (isCash(h)) {
+      // Cash earns the money-market rate; use the live risk-free as the proxy.
+      var rf = (window.PerrySignals && window.PerrySignals.CONST.RF_RATE);
+      return rf != null ? rf * 100 : null;
+    }
+    var t = String(h.ticker || '').toUpperCase();
+
+    var WH = window.PerryWarehouse;
+    if (WH && WH.ready && WH.ready()) {
+      var row = WH.get(t);
+      if (row && row.dividend_yield != null && isFinite(row.dividend_yield)) {
+        return row.dividend_yield * 100;   // stored as a decimal
+      }
+    }
+    var direct = parseFloat(h.dividendYield != null ? h.dividendYield : h.yieldPct);
+    if (isFinite(direct) && direct > 0) return direct > 1 ? direct : direct * 100;
+
+    var sec = window._secCacheByTicker && window._secCacheByTicker[t];
+    var lastDiv = sec && sec.profile && sec.profile.lastDividend;
+    var px = h.currentPrice || h.costBasis;
+    if (isFinite(lastDiv) && lastDiv > 0 && px > 0) return (lastDiv / px) * 100;
+
+    return null;
+  }
   function esc(s) {
     return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) {
       return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c];
@@ -201,6 +278,7 @@
         mv: mvOf(h), cost: costOf(h),
         isCash: isCash(h),
         ret: r.ret, retBasis: r.basis, retLabel: r.label,
+        yieldPct: yieldOf(h),
         gl: mvOf(h) - costOf(h),
         raw: h
       };
@@ -565,7 +643,7 @@
     return {
       type: 'doughnut',
       data: { labels: labels, datasets: [{ data: labels.map(function (k) { return labelMap[k]; }),
-        backgroundColor: labels.map(function (_, i) { return PALETTE[i % PALETTE.length]; }), borderWidth: 1, borderColor: '#fff' }] },
+        backgroundColor: labels.map(function (k) { return colorFor(k); }), borderWidth: 1, borderColor: '#fff' }] },
       options: baseOpts({
         cutout: '55%',
         plugins: { legend: { position: 'right', labels: { font: { size: 10 }, boxWidth: 10 } },
@@ -580,7 +658,7 @@
     var keys = [];
     names.forEach(function (a) { Object.keys(stats[a][key]).forEach(function (k) { if (keys.indexOf(k) < 0) keys.push(k); }); });
     var ds = keys.map(function (k, i) {
-      return { label: k, backgroundColor: PALETTE[i % PALETTE.length],
+      return { label: k, backgroundColor: colorFor(k),
         data: names.map(function (a) {
           var tot = Object.keys(stats[a][key]).reduce(function (s, x) { return s + stats[a][key][x]; }, 0);
           return tot > 0 ? +(((stats[a][key][k] || 0) / tot) * 100).toFixed(1) : 0;
@@ -667,8 +745,12 @@
         + '<td style="padding:4px 5px;text-align:right;font-family:Courier New,monospace;">' + pctS(tw) + '</td>'
         + '<td style="padding:4px 5px;text-align:right;font-family:Courier New,monospace;color:' + (tc >= 0 ? '#2E7D52' : '#8B2A2A') + ';">'
         +   (tc >= 0 ? '+' : '') + pctS(tc, 2) + 'pp</td>'
-        + '<td style="padding:4px 5px;text-align:right;">' + (Math.abs(portRet) > 0.01 ? '100%' : 'n/a') + '</td>'
-        + '<td style="padding:4px 5px;text-align:right;">' + (Math.abs(portRet) > 0.01 ? '100%' : 'n/a') + '</td>'
+        /* FIXED 2026-07-25: referenced `portRet`, which is a local inside
+           contributionAnalysis() and is not in scope here. It threw
+           "portRet is not defined" on every render, so the Contribution view
+           never displayed anything. Read it from the returned object instead. */
+        + '<td style="padding:4px 5px;text-align:right;">' + (Math.abs(ca.portRet) > 0.01 ? '100%' : 'n/a') + '</td>'
+        + '<td style="padding:4px 5px;text-align:right;">' + (Math.abs(ca.portRet) > 0.01 ? '100%' : 'n/a') + '</td>'
         + '<td style="padding:4px 5px;font-size:9.5px;color:var(--text-sec);">' + ca.nPositions + ' positions</td>'
         + '</tr>';
       s += '</tbody></table>';
@@ -892,11 +974,30 @@
     }
 
     if (f.view === 'income') {
+      /* Weighted yield now uses the resolved yieldOf() value and excludes
+         positions with UNKNOWN yield from the denominator, rather than treating
+         them as 0% and dragging the average down. Coverage is reported so a
+         low number can be read as "genuinely low" vs "mostly unknown". */
+      var yieldCoverage = [];
       var yld = names.map(function (a) {
-        var A2 = stats[a], w = 0;
-        A2.positions.forEach(function (p) { w += p.mv * (parseFloat(p.raw.yieldPct) || 0); });
-        return A2.mv > 0 ? +(w / A2.mv).toFixed(2) : 0;
+        var A2 = stats[a], w = 0, known = 0;
+        A2.positions.forEach(function (p) {
+          if (p.yieldPct != null) { w += p.mv * p.yieldPct; known += p.mv; }
+        });
+        yieldCoverage.push(A2.mv > 0 ? known / A2.mv : 0);
+        return known > 0 ? +(w / known).toFixed(2) : 0;
       });
+      var covAvg = yieldCoverage.length
+        ? yieldCoverage.reduce(function (s2, v) { return s2 + v; }, 0) / yieldCoverage.length : 0;
+      if (covAvg < 0.95) {
+        var note = document.createElement('div');
+        note.style.cssText = 'font-size:11px;color:#8B6914;margin-bottom:8px;';
+        note.innerHTML = 'Yield known for ' + Math.round(covAvg * 100) + '% of holdings by value. '
+          + 'Unknown positions are excluded from the weighted average rather than counted as 0%. '
+          + 'Coverage improves as the nightly warehouse ingest fills in — it reads dividend data from the company profile.';
+        var vp = document.getElementById('paViewport');
+        if (vp && vp.firstChild) vp.insertBefore(note, vp.firstChild);
+      }
       PA._charts.push(new Chart(A.getContext('2d'), {
         type: 'bar', data: { labels: names, datasets: [{ label: 'Weighted yield %', data: yld, backgroundColor: 'rgba(46,125,82,.72)', borderRadius: 3 }] },
         options: baseOpts({ plugins: { legend: { display: false } },

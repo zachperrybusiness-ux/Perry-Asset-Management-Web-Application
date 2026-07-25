@@ -128,6 +128,47 @@
      separation of concerns, without breaking the shared input.
      ══════════════════════════════════════════════════════════════════════════ */
 
+  /* ══════════════════════════════════════════════════════════════════════════
+     MARKET-DATA BOOTSTRAP — added 2026-07-25 after the first migration broke it.
+
+     THE BUG: every card moved out of More Cross-Asset (VaR, Rolling Risk, Vol
+     Surface, Efficient Frontier, Omega, Rebased Return) reads window.MKT_STATE,
+     which is populated by mktInit() + mktLoadAll(). Those were called from ONE
+     place — the `camore` branch of macroShowTab — and removing that tab removed
+     the only trigger. Result: the universe grid was never built (so the "primary
+     asset" dropdown was empty) and every dependent card sat on "Awaiting data"
+     forever.
+
+     Now the bootstrap is owned here and fired on first open of whichever tab
+     needs it, so it no longer depends on a tab that no longer exists.
+     ══════════════════════════════════════════════════════════════════════════ */
+  var _mktBooting = false;
+  function ensureMarketData(cb) {
+    if (window._mktLoadedOnce) { if (cb) cb(); return; }
+    if (_mktBooting) { if (cb) setTimeout(function () { ensureMarketData(cb); }, 400); return; }
+    _mktBooting = true;
+    try {
+      if (!window._mktInitialized && typeof mktInit === 'function') {
+        mktInit();
+        window._mktInitialized = true;
+      }
+      var endEl = el('mktEndDate');
+      if (endEl && !endEl.value) endEl.value = new Date().toISOString().slice(0, 10);
+      if (typeof mktLoadAll === 'function') {
+        mktLoadAll().then(function () {
+          window._mktLoadedOnce = true; _mktBooting = false; if (cb) cb();
+        }).catch(function (e) {
+          console.warn('[migrate] mktLoadAll failed:', e);
+          _mktBooting = false; if (cb) cb();
+        });
+      } else { _mktBooting = false; if (cb) cb(); }
+    } catch (e) {
+      console.warn('[migrate] market bootstrap failed:', e);
+      _mktBooting = false; if (cb) cb();
+    }
+  }
+  window.PerryEnsureMarketData = ensureMarketData;
+
   function moveRiskAndAllocation(src) {
     var panel = makeHoldingsTab('riskopt', 'Risk & Optimization',
       'Portfolio risk and allocation modelling, moved here from the Macro page because both operate on portfolio construction.');
