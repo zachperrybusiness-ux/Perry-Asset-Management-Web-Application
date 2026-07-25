@@ -4073,8 +4073,13 @@ async function whatIfRun() {
 // ────────── Regime-Conditional Correlation (Fix #6) ──────────
 window._rccData = null;
 async function rccRun() {
+  /* RETIRED 2026-07-25 — the "Regime-Conditional & Downside Correlation" card was
+     replaced by the Correlation Workbench (app-corr.js). The workbench keeps the
+     same Longin & Solnik downside-asymmetry idea but applies it to a universe you
+     choose, deduplicated across accounts, with a minimum-sample guard. */
   var statusEl = document.getElementById('rccStatus');
   var resultsEl = document.getElementById('rccResults');
+  if (!statusEl || !resultsEl) return;
   statusEl.textContent = 'Loading SPY history + Perry regime classification…';
   resultsEl.innerHTML = '<span class="spinner"></span> Computing regime-conditional correlations…';
   try {
@@ -9555,6 +9560,10 @@ if (document.readyState === 'loading') {
           });
         }
         if (name === 'camore') {
+          /* Correlation Workbench init — added 2026-07-25. Self-guards on the
+             presence of #corrWorkbench and only builds once, so this is safe to
+             call on every tab open. */
+          try { if (window.PerryCorr) window.PerryCorr.init(); } catch (e) { console.warn('[corr] init:', e); }
           if (typeof caShowTab === 'function' && !window._caMergedShown) { window._caMergedShown = true; caShowTab('topline'); }
           if (!window._snapshotLoaded) {
             window._snapshotLoaded = true;

@@ -1413,6 +1413,12 @@ function renderHoldingsKPIs(allH) {
 }
 
 function renderHoldingsAnalysis(allH) {
+  /* RETIRED 2026-07-25 — this filled the "Classic Analysis Widgets" (sector
+     donut, asset-class donut, top-10 bar, unrealised G/L bar), all of which were
+     absorbed into the Portfolio Analysis Workbench as filter-aware views. Its
+     target elements no longer exist, so it returns early rather than throwing on
+     a null canvas. Kept as a stub because holdingsShowTab() calls it directly. */
+  if (!document.getElementById('hldSectorDonut')) return;
   var acctFilter = (document.getElementById('holdingsAccountFilter') || {}).value || 'all';
   var h = acctFilter === 'all' ? allH : allH.filter(function(x){ return x.accountType === acctFilter; });
   var isCashLike = function(x) { return ['Cash','Money Market','CD','Bond Position'].includes(x.assetClass); };
@@ -7554,6 +7560,13 @@ function mktRenderRollingTable() {
 
 // ═══ MODULE 2: CORRELATION HEATMAP ═══
 function mktRenderCorrelation() {
+  /* RETIRED 2026-07-25 — superseded by the Correlation Workbench (app-corr.js),
+     which does everything this did plus account filtering, cross-account
+     deduplication, SPDR-sector and asset-class universes, regime conditioning
+     and cluster detection. Its DOM was removed, so this now returns early
+     rather than throwing on a null element. Kept as a stub because several
+     loaders call it unconditionally; delete once those are cleaned up. */
+  if (!document.getElementById('mktCorrCanvas')) return;
   var matrix = MKT_STATE.logRetMatrix;
   if (!matrix || matrix.tickers.length < 2) {
     document.getElementById('mktCorrEmpty').style.display='block';

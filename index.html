@@ -9,7 +9,7 @@
 <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2.0.1/dist/chartjs-plugin-zoom.min.js"></script>
 <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-<link rel="stylesheet" href="styles.css?v=11">
+<link rel="stylesheet" href="styles.css?v=13">
 </head>
 <body>
 
@@ -39,8 +39,10 @@
       </div>
       <div class="nav-dropdown">
         <div class="nav-child" data-page="holdings" onclick="navigateTo('holdings')">Manage Holdings</div>
-        <!-- Routes to the Manage Holdings > Sector &amp; Macro Alignment tab (moved 2026-07-25). -->
-        <div class="nav-child" data-page="holdings" onclick="navigateTo('holdings');setTimeout(function(){holdingsShowTab('alignment');},60);">Sector &amp; Macro Alignment</div>
+        <!-- "Sector &amp; Macro Alignment" removed from the nav 2026-07-25: it is now a
+             sub-tab inside Manage Holdings, so a separate nav entry pointing at the
+             same page was redundant. navigateTo('sector-macro-alignment') still
+             redirects to that tab for any old bookmark. -->
         <div class="nav-child" data-page="themes" onclick="navigateTo('themes')">Portfolio Themes</div>
       </div>
     </div>
@@ -49,9 +51,12 @@
         Analysis <span class="arrow">&#9660;</span>
       </div>
       <div class="nav-dropdown">
-        <div class="nav-child" data-page="macro" onclick="navigateTo('macro')">Macro Regime Analysis</div>
+        <div class="nav-child" data-page="macro" onclick="navigateTo('macro')">Macro &amp; Cross-Asset Analysis</div>
         <div class="nav-child" data-page="research" onclick="navigateTo('research')">Stock Research &amp; Quant Models</div>
-        <div class="nav-child" data-page="markets" onclick="navigateTo('markets')">Cross-Asset Analysis</div>
+        <!-- "Cross-Asset Analysis" removed from the nav 2026-07-25: mergeCrossAssetIntoMacro()
+             dissolves that page into sub-tabs on the Macro page at load time, so this entry
+             pointed at a page the user can no longer reach on its own.
+             navigateTo('markets') still routes to the merged view. -->
       </div>
     </div>
     <div class="nav-group">
@@ -96,14 +101,14 @@
     <button class="mob-nav-item" data-mobpage="portfolio" onclick="mobileNav('portfolio')" style="font-weight:700;border-left:3px solid rgba(91,155,213,0.6);">📈 Portfolio Overview</button>
     <button class="mob-nav-item" data-mobpage="holdings" onclick="mobileNav('holdings')">💼 Manage Holdings</button>
     <!-- Routes to the Manage Holdings > Sector &amp; Macro Alignment tab (moved 2026-07-25). -->
-    <button class="mob-nav-item" data-mobpage="holdings" onclick="mobileNav('holdings');setTimeout(function(){holdingsShowTab('alignment');},80);">Sector &amp; Macro Alignment</button>
     <button class="mob-nav-item" data-mobpage="themes"   onclick="mobileNav('themes')">🎨 Portfolio Themes</button>
   </div>
   <div class="mob-nav-section">
     <div class="mob-nav-label">Analysis</div>
-    <button class="mob-nav-item" data-mobpage="macro"     onclick="mobileNav('macro')" style="font-weight:700;border-left:3px solid rgba(91,155,213,0.6);">📊 Macro Regime Analysis</button>
+    <!-- Mobile drawer mirrors the desktop nav (2026-07-25): "Sector &amp; Macro Alignment"
+         and "Cross-Asset Analysis" removed because both now live inside other pages. -->
+    <button class="mob-nav-item" data-mobpage="macro"     onclick="mobileNav('macro')" style="font-weight:700;border-left:3px solid rgba(91,155,213,0.6);">📊 Macro &amp; Cross-Asset Analysis</button>
     <button class="mob-nav-item" data-mobpage="research"  onclick="mobileNav('research')">🔬 Stock Research &amp; Quant Models</button>
-    <button class="mob-nav-item" data-mobpage="markets"   onclick="mobileNav('markets')">🌍 Cross-Asset Analysis</button>
   </div>
   <div class="mob-nav-section">
     <div class="mob-nav-label">Backtesting</div>
@@ -1190,75 +1195,26 @@
           <div class="card-sources"><strong>Method:</strong> Value & unrealized G/L from cost basis vs. live price. Sector mix value-weighted per account. Overlap = shared tickers between account pairs. Underperformer flag: unrealized loss worse than −5% AND below the portfolio's median position return.</div>
         </div>
 
-        <!-- ═══ HOLDING QUALITY RANKER ═══
-             Moved below Account-by-Account Comparison and made collapsible
-             on 2026-07-25 at user request. Collapsed by default so the Analysis
-             tab opens to a shorter page; state persists in localStorage. -->
-        <div class="card" style="margin-bottom:16px;">
-          <div class="card-title" id="rankerToggle"
-               style="display:flex;justify-content:space-between;align-items:center;cursor:pointer;user-select:none;"
-               onclick="toggleHoldingRanker()" role="button" tabindex="0"
-               onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();toggleHoldingRanker();}"
-               aria-expanded="false" aria-controls="holdingRankerWrap">
-            <span>Holding Quality Ranker
-              <span class="help-icon" title="Scores every position against its INDUSTRY peers across five factor blocks — value, quality, momentum, growth and low-volatility — using cohort-relative z-scores rather than raw ratios, because a 32x P/E means something different in software than in utilities. Factor weights shift with the macro regime. A random-forest and gradient-boosting ensemble contributes only when it demonstrates out-of-sample skill; otherwise its weight is zero and the ranking runs on the transparent factor model alone." data-heading="Holding Quality Ranker">ⓘ</span>
-            </span>
-            <span style="display:flex;align-items:center;gap:10px;">
-              <span id="rankerSummary" style="font-size:11px;font-weight:400;opacity:.9;"></span>
-              <span id="rankerCaret" style="font-size:13px;">&#9656;</span>
-            </span>
-          </div>
-          <div id="holdingRankerWrap" style="display:none;">
-            <div id="holdingRanker"></div>
-          </div>
-        </div>
+        <!-- HOLDING QUALITY RANKER removed from here 2026-07-25.
+             It was a collapsed card at the bottom of this tab, which read as having
+             been dropped rather than consolidated. It is now the "Quality Ranker"
+             VIEW inside the Portfolio Analysis Workbench above, where it inherits
+             the timeline / account / top-N filters like every other view. -->
+        <!-- ═══ CLASSIFIED ANALYSIS WIDGETS — DELETED 2026-07-25 ═══
+             The four stacked panels here (Sector Allocation, Asset Class Mix,
+             Top 10 Positions, Unrealized G/L by Position) plus the story strip
+             were absorbed into the Portfolio Analysis Workbench above as views:
 
-        <!-- Story Cards -->
-        <div class="hld-story-strip" id="hldStoryStrip">
-          <div class="hld-story-card info">
-            <div class="sc-icon">📊</div>
-            <div class="sc-body">
-              <div class="sc-headline">Analysis Ready</div>
-              <div class="sc-value">—</div>
-              <div class="sc-explain">Load holdings to see analytics</div>
-            </div>
-          </div>
-        </div>
-        <!-- 4 Chart panels -->
-        <div class="hld-analysis-grid">
-          <div class="hld-chart-panel">
-            <div class="hld-chart-panel-header">📂 Sector Allocation</div>
-            <div class="hld-chart-panel-body" style="display:flex;gap:16px;align-items:center;">
-              <div style="position:relative;width:160px;height:160px;flex-shrink:0;">
-                <canvas id="hldSectorDonut" width="160" height="160"></canvas>
-                <div id="hldSectorCount" style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center;font-size:22px;font-weight:800;color:var(--navy);line-height:1;pointer-events:none;"></div>
-              </div>
-              <div id="hldSectorLegend" style="flex:1;font-size:11px;line-height:1.8;overflow:hidden;"></div>
-            </div>
-          </div>
-          <div class="hld-chart-panel">
-            <div class="hld-chart-panel-header">🏦 Asset Class Mix</div>
-            <div class="hld-chart-panel-body" style="display:flex;gap:16px;align-items:center;">
-              <div style="position:relative;width:160px;height:160px;flex-shrink:0;">
-                <canvas id="hldAssetDonut" width="160" height="160"></canvas>
-                <div id="hldAssetCount" style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center;font-size:22px;font-weight:800;color:var(--navy);line-height:1;pointer-events:none;"></div>
-              </div>
-              <div id="hldAssetLegend" style="flex:1;font-size:11px;line-height:1.8;overflow:hidden;"></div>
-            </div>
-          </div>
-          <div class="hld-chart-panel">
-            <div class="hld-chart-panel-header">🏆 Top 10 Positions (% of Portfolio)</div>
-            <div class="hld-chart-panel-body" style="height:220px;position:relative;">
-              <canvas id="hldTopBar"></canvas>
-            </div>
-          </div>
-          <div class="hld-chart-panel">
-            <div class="hld-chart-panel-header">💰 Unrealized G/L by Position</div>
-            <div class="hld-chart-panel-body" style="height:220px;position:relative;">
-              <canvas id="hldGLBar"></canvas>
-            </div>
-          </div>
-        </div>
+               Sector Allocation        -> "Sector" view (donut + per-account stack)
+               Asset Class Mix          -> "Asset Class" view
+               Top 10 Positions         -> the Top-N filter, applied to EVERY view
+               Unrealized G/L by Pos.   -> "Unrealized G/L" view
+
+             They are strictly better there: the workbench versions respect the
+             timeline, account and top-N filters, which the standalone panels never
+             could. Sector mix was also being computed twice — once here as a donut
+             and once in the account comparison as a stacked bar. -->
+        
       </div>
 
       <!-- ═══ TAB: Sector & Macro Alignment ═══
@@ -3241,56 +3197,37 @@
         </div>
       </div>
 
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px;">
-        <!-- Correlation Heatmap -->
-        <div class="card">
-          <div class="card-title">Pairwise Correlation Heatmap</div>
-          <div class="card-body">
-            <div class="btn-group" style="margin-bottom:12px;">
-              <span style="font-size:11px;color:var(--text-sec);font-weight:600;align-self:center;margin-right:6px;">Window:</span>
-              <button class="btn-outline" data-mktwin="21">21D</button>
-              <button class="btn-outline active" data-mktwin="63">63D</button>
-              <button class="btn-outline" data-mktwin="126">126D</button>
-              <button class="btn-outline" data-mktwin="252">252D</button>
-              <button class="btn-outline" data-mktwin="0">Full</button>
-            </div>
-            <div id="mktCorrEmpty" style="text-align:center;padding:24px;color:var(--text-sec);font-size:13px;">Awaiting data.</div>
-            <div style="position:relative;overflow:auto;" id="mktCorrWrap">
-              <canvas id="mktCorrCanvas" style="display:block;"></canvas>
-              <div id="mktCorrTooltip" style="position:absolute;display:none;background:var(--bg);border:1px solid var(--border);box-shadow:0 2px 8px rgba(0,0,0,.12);padding:6px 10px;font-size:11px;pointer-events:none;z-index:5;border-radius:4px;"></div>
-            </div>
-          </div>
-          <div class="card-sources"><strong>Method:</strong> Pearson ρ on daily log returns.</div>
-        </div>
+      <!-- ═══════════════════════════════════════════════════════════════════
+           CORRELATION WORKBENCH — replaced two separate cards on 2026-07-25.
 
-        <!-- Regime-Conditional Correlation -->
-        <div class="card">
-          <div class="card-title">Regime-Conditional &amp; Downside Correlation</div>
-          <div class="card-body">
-            <div class="form-row" style="margin-bottom:10px;">
-              <div class="form-group"><label>View</label>
-                <select id="rccMode" onchange="rccRender()">
-                  <option value="regime" selected>By Perry Regime</option>
-                  <option value="downside">Downside vs. Full Sample</option>
-                  <option value="rolling">Rolling 60D Avg Correlation</option>
-                </select>
-              </div>
-              <div class="form-group"><label>Regime</label>
-                <select id="rccRegime" onchange="rccRender()">
-                  <option value="all" selected>All 4 Regimes</option>
-                  <option value="leveraged">Leveraged</option>
-                  <option value="growth">Growth</option>
-                  <option value="neutral">Neutral</option>
-                  <option value="drawdown">Drawdown</option>
-                </select>
-              </div>
-              <button class="btn btn-sm" onclick="rccRun()">Compute</button>
-            </div>
-            <div id="rccStatus" style="font-size:11px;color:var(--text-sec);margin-bottom:8px;"></div>
-            <div id="rccResults" style="text-align:center;padding:18px;color:var(--text-sec);font-size:13px;">Click <strong>Compute</strong> to run.</div>
-          </div>
-          <div class="card-sources"><strong>Method:</strong> Longin &amp; Solnik (2001) downside correlation asymmetry.</div>
+           WAS: "Pairwise Correlation Heatmap" and "Regime-Conditional & Downside
+           Correlation" side by side, each with its own controls, its own universe,
+           and its own data fetch. Neither could filter by account, neither
+           deduplicated a ticker held in two accounts (which produced a spurious
+           1.00 correlation and overstated diversification), and neither offered
+           the SPDR sector or asset-class universes.
+
+           NOW: one card, one viewport, four control rows. Universe / account /
+           condition / lookback / view all recombine the SAME cached return matrix,
+           so switching repaints in place with no refetch and no scrolling.
+           Rendered by app-corr.js.
+           ═══════════════════════════════════════════════════════════════════ -->
+      <div class="card" id="corrWorkbench" style="margin-bottom:14px;">
+        <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;">
+          <span>Correlation Workbench
+            <span class="help-icon" title="One place for every correlation question. Pick a universe (your deduplicated holdings, the SPDR sectors, or asset classes), optionally narrow to a single account, then condition on a market regime. Correlations are NOT stable across regimes — diversification that only exists in calm markets is not diversification, which is why the SPY down-day and VIX-stress conditions matter more than the all-history baseline. Switch views to see the full matrix, per-asset diversification benefit, a side-by-side regime comparison, or which names are effectively one bet." data-heading="Correlation Workbench">&#9432;</span>
+          </span>
+          <span style="font-size:10px;font-weight:400;opacity:.85;">replaces 5 separate correlation views</span>
         </div>
+        <div class="card-body">
+          <div id="corrControls" style="padding-bottom:9px;border-bottom:1px solid var(--border);margin-bottom:10px;"></div>
+          <div id="corrViewport" style="min-height:300px;">
+            <div style="padding:24px;text-align:center;color:var(--text-sec);font-size:12px;">
+              <span class="spinner"></span> Initialising correlation workbench&hellip;
+            </div>
+          </div>
+        </div>
+        <div class="card-sources"><strong>Method:</strong> Pearson correlation on daily log returns over the common trading-date set, so no series is zero-filled. Regime labels come from the same daily classifier used for Portfolio State site-wide (Accumulate / Risk-On / Neutral / De-Risk), so the conditions here match the rest of the site. Downside conditioning follows Longin &amp; Solnik (2001) on correlation asymmetry. A minimum of 20 matching sessions is required before any correlation is reported &mdash; below that the panel says so instead of printing noise. Holdings are deduplicated by ticker across accounts with market value summed.</div>
       </div>
 
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px;">
@@ -4310,7 +4247,10 @@
 <script src="app-signals.js?v=13"></script>
 <script src="app-ml.js?v=13"></script>
 <script src="app-advisor.js?v=13"></script>
+<script src="app-corr.js?v=13"></script>
 <script src="app-views.js?v=13"></script>
+<script src="app-portfolio-analysis.js?v=13"></script>
+<script src="app-consolidate.js?v=13"></script>
 <script>
 /* ═══════════ UNIFIED SIGNAL BOOTSTRAP — added 2026-07-24 ═══════════
    One place where the warehouse loads and the signal engine resolves. Every
