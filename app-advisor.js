@@ -43,13 +43,36 @@
   };
   var RET_EQUITY_FLOOR = { conservative: 20, moderate: 40, aggressive: 55, speculative: 60 };
 
-  // long-run nominal capital-market assumptions (per asset bucket)
-  var CMA = {
-    stock: { mu: 0.085, sig: 0.16 },
-    bond:  { mu: 0.040, sig: 0.065 },
-    cash:  { mu: 0.030, sig: 0.012 }
-  };
-  var INFLATION = 0.025;
+  /* ── CAPITAL-MARKET ASSUMPTIONS — now shared, not local ──────────────────
+     Updated 2026-07-24. These were hardcoded here at stock μ8.5%/σ16%, while
+     app2.js separately hardcoded regime drifts reaching +28%/yr and the DCF used
+     10Y+5% as a cost of equity. The same portfolio was therefore forecast at
+     three different rates depending on which page you were on.
+
+     All of it now reads from PerrySignals.CONST.CMA, with these literals kept
+     only as a fallback if app-signals.js has not loaded. Cash tracks the live
+     3M T-bill rather than a stale 3.0% literal.                              */
+  function sharedCMA() {
+    var S = window.PerrySignals;
+    if (S && S.CONST && S.CONST.CMA) {
+      return {
+        stock: { mu: S.CONST.CMA.us_equity.mu, sig: S.CONST.CMA.us_equity.sig },
+        bond:  { mu: S.CONST.CMA.us_bond_agg.mu, sig: S.CONST.CMA.us_bond_agg.sig },
+        cash:  { mu: S.CONST.RF_RATE, sig: 0.010 },
+        source: S.CONST.CMA_SOURCE + ' Cash = ' + S.CONST.RF_SOURCE + '.'
+      };
+    }
+    return {
+      stock: { mu: 0.077, sig: 0.160 },
+      bond:  { mu: 0.045, sig: 0.060 },
+      cash:  { mu: 0.0425, sig: 0.012 },
+      source: 'Fallback assumptions — app-signals.js not loaded.'
+    };
+  }
+  var CMA = sharedCMA();
+  function refreshCMA() { CMA = sharedCMA(); return CMA; }
+
+  var INFLATION = (window.PerrySignals && window.PerrySignals.CONST.INFLATION) || 0.025;
 
   var REGIMES = {
     expansion:   { label: 'Expansion / Growth',      tilt: 5,  note: 'Risk-on. Overweight cyclical & growth equity.' },
@@ -723,12 +746,63 @@
    *  RETIREMENT — MONTE CARLO
    * ==================================================================== */
   function portMuSig(a) {
+    refreshCMA();
     var ws = a.s / 100, wb = a.b / 100, wc = a.c / 100;
     var mu = ws * CMA.stock.mu + wb * CMA.bond.mu + wc * CMA.cash.mu;
+    var rho = (window.PerrySignals && window.PerrySignals.CONST.STOCK_BOND_CORR) || 0.15;
     var varr = Math.pow(ws * CMA.stock.sig, 2) + Math.pow(wb * CMA.bond.sig, 2) + Math.pow(wc * CMA.cash.sig, 2)
-      + 2 * 0.15 * (ws * CMA.stock.sig) * (wb * CMA.bond.sig); // mild stock/bond covar
+      + 2 * rho * (ws * CMA.stock.sig) * (wb * CMA.bond.sig);
     return { mu: mu, sig: Math.sqrt(varr) };
   }
+
+  /* ── COMMON RANDOM NUMBERS — the fix that matters most here ───────────────
+     Added 2026-07-24.
+
+     THE BUG: every "lever" scenario (retire later, save more, spend less) called
+     runMonteCarlo() again, and each call drew fresh randoms from Math.random().
+     With N=1,500 the standard error on an 85% success rate is ~0.9pp, so the
+     "+2 pts" deltas the UI displayed were inside sampling noise — and the lever
+     RANKING changed every time you clicked. A planning tool that reorders its
+     own recommendations on reclick is worse than useless.
+
+     THE FIX: one fixed shock matrix, generated once and reused across every
+     scenario. Differences between scenarios are then attributable entirely to
+     the scenario itself, which is the whole point of a lever comparison. This is
+     the standard variance-reduction technique for exactly this problem.
+
+     N is also raised 1,500 → 4,000: with CRN the comparisons are already clean,
+     but the absolute success probability deserves a tighter interval.          */
+  var MC_N = 4000;
+  var MC_MAX_YEARS = 80;
+  var _shockMatrix = null;
+
+  function mulberry32(seed) {
+    var a = seed >>> 0;
+    return function () {
+      a = (a + 0x6D2B79F5) >>> 0;
+      var t = a;
+      t = Math.imul(t ^ (t >>> 15), t | 1);
+      t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+  }
+
+  function shockMatrix() {
+    if (_shockMatrix) return _shockMatrix;
+    var rng = mulberry32(20260724);
+    var m = [];
+    for (var s = 0; s < MC_N; s++) {
+      var row = new Float64Array(MC_MAX_YEARS + 1);
+      for (var y = 0; y <= MC_MAX_YEARS; y++) {
+        var u1 = rng() || 1e-12, u2 = rng();
+        row[y] = Math.sqrt(-2 * Math.log(u1)) * Math.cos(2 * Math.PI * u2);
+      }
+      m.push(row);
+    }
+    _shockMatrix = m;
+    return m;
+  }
+
   function runMonteCarlo(p, over) {
     over = over || {};
     var hs = getHoldings(), pv = totalMV(hs);
@@ -740,26 +814,82 @@
     var yrsRet = Math.max(1, p.lifeExpectancy - retAge);
     var savings = (over.savings != null ? over.savings : p.annualSavings);
     var netSpend = Math.max(0, (over.spend != null ? over.spend : p.annualSpendNeed) - p.socialSecurityAnnual - p.pensionAnnual);
-    var N = 1500, total = yrsAcc + yrsRet, success = 0;
+
+    /* ── TAX DRAG — added 2026-07-24 ───────────────────────────────────────
+       The projection previously drew GROSS withdrawals while a Tax Center tab
+       sat directly beside it, which systematically overstated success. Applies
+       an effective blended rate to the tax-deferred share of withdrawals. */
+    var bal = balancesByTax(hs);
+    var balTotal = (bal.taxable || 0) + (bal.deferred || 0) + (bal.roth || 0) + (bal.hsa || 0) + (bal.college || 0);
+    var deferredShare = balTotal > 0 ? (bal.deferred || 0) / balTotal : 0.5;
+    var effTaxRate = (p.marginalTaxRate != null ? p.marginalTaxRate : 0.22) * 0.85; // effective < marginal
+    var withdrawalGrossUp = 1 + deferredShare * effTaxRate;
+
+    var total = Math.min(yrsAcc + yrsRet, MC_MAX_YEARS);
+    var shocks = shockMatrix();
+    var N = MC_N, success = 0, depletionAges = [], yearsFundedSum = 0;
     var bands = { p10: [], p50: [], p90: [] };
     var yearVals = [];
     for (var y = 0; y <= total; y++) yearVals.push([]);
-    for (var s = 0; s < N; s++) {
-      var v = pv, sp = netSpend; yearVals[0].push(v);
+
+    for (var s2 = 0; s2 < N; s2++) {
+      var v = pv, sp = netSpend * withdrawalGrossUp;
+      var contrib = savings;
+      var depleted = null, yearsFunded = 0;
+      yearVals[0].push(v);
       for (var y2 = 1; y2 <= total; y2++) {
-        var r = ms.mu + ms.sig * gauss();
+        var r = ms.mu + ms.sig * shocks[s2][y2];       // COMMON RANDOM NUMBER
         v = v * (1 + r);
-        if (y2 <= yrsAcc) v += savings; else { v -= sp; sp *= (1 + INFLATION); }
-        if (v < 0) v = 0;
+        if (y2 <= yrsAcc) {
+          v += contrib;
+          // Savings now inflate alongside spending. Previously `savings` stayed
+          // nominal while `sp` grew with inflation, so contributions silently
+          // eroded in real terms and understated success.
+          contrib *= (1 + INFLATION);
+        } else {
+          v -= sp;
+          sp *= (1 + INFLATION);
+          if (v > 0) yearsFunded++;
+        }
+        if (v < 0) { v = 0; if (depleted == null) depleted = age + y2; }
         yearVals[y2].push(v);
       }
       if (v > 0) success++;
+      if (depleted != null) depletionAges.push(depleted);
+      yearsFundedSum += yearsFunded;
     }
+
+    // Richer outcome reporting than a single binary success rate.
+    var medDepletion = depletionAges.length
+      ? depletionAges.slice().sort(function (a, b) { return a - b; })[Math.floor(depletionAges.length / 2)]
+      : null;
+    var avgYearsFunded = yrsRet > 0 ? (yearsFundedSum / N) : 0;
+    var seSuccess = Math.sqrt((success / N) * (1 - success / N) / N);
     for (var y3 = 0; y3 <= total; y3++) {
       var arr = yearVals[y3].sort(function (a, b) { return a - b; });
       bands.p10.push(arr[Math.floor(0.10 * N)]); bands.p50.push(arr[Math.floor(0.50 * N)]); bands.p90.push(arr[Math.floor(0.90 * N)]);
     }
-    return { success: success / N, bands: bands, ages: yearVals.map(function (_, i) { return age + i; }), mu: ms.mu, sig: ms.sig, alloc: alloc, pv: pv, yrsAcc: yrsAcc, yrsRet: yrsRet, retAge: retAge };
+    return {
+      success: success / N, bands: bands,
+      ages: yearVals.map(function (_, i) { return age + i; }),
+      mu: ms.mu, sig: ms.sig, alloc: alloc, pv: pv,
+      yrsAcc: yrsAcc, yrsRet: yrsRet, retAge: retAge,
+      // New outcome detail — binary "ran out or didn't" hides how badly it failed.
+      medianDepletionAge: medDepletion,
+      ruinRate: depletionAges.length / N,
+      avgYearsFunded: avgYearsFunded,
+      yearsNeeded: yrsRet,
+      pctYearsFunded: yrsRet > 0 ? avgYearsFunded / yrsRet : 1,
+      seSuccess: seSuccess,
+      nPaths: N,
+      taxGrossUp: withdrawalGrossUp,
+      deferredShare: deferredShare,
+      effTaxRate: effTaxRate,
+      cmaSource: CMA.source,
+      // Half-width of the 95% CI on the success rate, so the UI can state the
+      // precision instead of implying whole-percent accuracy.
+      successCI95: 1.96 * seSuccess
+    };
   }
   function renderRetire() {
     var p = ADV.profile;
@@ -767,8 +897,17 @@
     if (!totalMV(getHoldings())) return card('Retirement Readiness', '<p class="adv-note">No holdings loaded.</p>');
     var mc = runMonteCarlo(p);
     var base = Math.round(mc.success * 100);
-    // levers
-    var lever = function (lbl, res) { var d = Math.round(res.success * 100) - base; return metric(lbl, Math.round(res.success * 100) + '%', (d >= 0 ? '+' : '') + d + ' pts'); };
+    /* Levers now use common random numbers, so a delta reflects the lever and
+       not the seed. The displayed delta is also checked against Monte Carlo
+       noise: anything inside the noise band is labelled as such rather than
+       being presented as a real improvement. */
+    var noiseBand = Math.round(mc.successCI95 * 100 * 1.42); // ~95% band on a difference
+    var lever = function (lbl, res) {
+      var d = Math.round(res.success * 100) - base;
+      var sub = (d >= 0 ? '+' : '') + d + ' pts';
+      if (Math.abs(d) <= Math.max(1, noiseBand)) sub += ' (within noise)';
+      return metric(lbl, Math.round(res.success * 100) + '%', sub);
+    };
     var save5 = runMonteCarlo(p, { savings: p.annualSavings + 10000 });
     var late2 = runMonteCarlo(p, { retAge: p.retirementAge + 3 });
     var spendLess = runMonteCarlo(p, { spend: p.annualSpendNeed * 0.9 });
@@ -790,20 +929,43 @@
     return card('Retirement Readiness — Monte Carlo',
       '<div style="display:grid;grid-template-columns:200px 1fr;gap:18px;align-items:center;">' +
         '<div style="text-align:center;"><div style="font-size:52px;font-weight:800;color:' + color + ';line-height:1;">' + base + '%</div>' +
-          '<div class="adv-note" style="margin-top:4px;">probability your money lasts to age ' + p.lifeExpectancy + '</div></div>' +
-        '<div class="adv-note">Across <strong>1,500 simulations</strong> of your <strong>' + LEVEL_META[mc.alloc.level].label + '</strong> allocation ' +
-          '(exp. return ' + pct(mc.mu * 100) + ', vol ' + pct(mc.sig * 100) + '). Starting ' + usd(mc.pv) + ', saving ' + usd(p.annualSavings) + '/yr for ' + mc.yrsAcc + ' yrs, then drawing ' + usd(Math.max(0, p.annualSpendNeed - p.socialSecurityAnnual - p.pensionAnnual)) + '/yr (net of SS/pension, inflation-adjusted) for ' + mc.yrsRet + ' yrs.</div>' +
+          '<div class="adv-note" style="margin-top:4px;">chance your money lasts to age ' + p.lifeExpectancy +
+          '<br><span style="font-size:10px;">±' + Math.max(1, Math.round(mc.successCI95 * 100)) + ' pts (simulation error)</span></div></div>' +
+        '<div class="adv-note">Across <strong>' + mc.nPaths.toLocaleString() + ' simulations</strong> of your <strong>' + LEVEL_META[mc.alloc.level].label + '</strong> allocation ' +
+          '(exp. return ' + pct(mc.mu * 100) + ', vol ' + pct(mc.sig * 100) + '). Starting ' + usd(mc.pv) + ', saving ' + usd(p.annualSavings) + '/yr (rising with inflation) for ' + mc.yrsAcc + ' yrs, then drawing ' + usd(Math.max(0, p.annualSpendNeed - p.socialSecurityAnnual - p.pensionAnnual)) + '/yr net of SS/pension for ' + mc.yrsRet + ' yrs, grossed up ' + pct((mc.taxGrossUp - 1) * 100) + ' for tax on the ' + pct(mc.deferredShare * 100) + ' of assets that are tax-deferred.</div>' +
+      '</div>' +
+      /* Binary success hides severity. These three numbers say how a failure
+         actually looks, which is what a plan needs. */
+      '<div class="adv-grid" style="margin-top:14px;">' +
+        metric('Years of spending funded', pct(mc.pctYearsFunded * 100) + ' of ' + mc.yearsNeeded, mc.avgYearsFunded.toFixed(1) + ' yrs on average') +
+        metric('Paths that run dry', pct(mc.ruinRate * 100), mc.medianDepletionAge ? 'median at age ' + mc.medianDepletionAge : 'none') +
+        metric('Shortfall risk window', mc.medianDepletionAge ? 'age ' + mc.medianDepletionAge + '–' + p.lifeExpectancy : 'n/a', mc.medianDepletionAge ? (p.lifeExpectancy - mc.medianDepletionAge) + ' yrs exposed' : 'plan funded throughout') +
       '</div>' +
       '<div style="height:280px;position:relative;margin-top:16px;"><canvas id="advMCChart"></canvas></div>' +
       '<h4 style="margin:16px 0 6px;color:var(--navy);font-size:13px;">What moves the needle</h4>' +
-      '<div class="adv-grid">' + lever('Save +$10k/yr', save5) + lever('Retire 3 yrs later', late2) + lever('Spend 10% less', spendLess) + '</div>',
-      'Monte Carlo with normally-distributed annual returns from long-run capital-market assumptions (stocks μ8.5%/σ16%, bonds μ4%/σ6.5%, cash μ3%). Inflation 2.5%. Simplification: constant allocation, no glide within the sim, mild stock/bond covariance. Success = ending value > 0 at life expectancy.');
+      '<div class="adv-grid">' + lever('Save +$10k/yr', save5) + lever('Retire 3 yrs later', late2) + lever('Spend 10% less', spendLess) + '</div>' +
+      '<p class="adv-note" style="margin-top:8px;">Every scenario above is run on the <strong>same set of simulated market paths</strong> (common random numbers), so a difference reflects the change you made and not the luck of the draw. Deltas smaller than the simulation noise band are marked.</p>',
+      'Monte Carlo with normally-distributed annual returns from the shared capital-market assumptions in PerrySignals.CONST.CMA — stocks μ' + pct(CMA.stock.mu * 100) + '/σ' + pct(CMA.stock.sig * 100) + ', bonds μ' + pct(CMA.bond.mu * 100) + '/σ' + pct(CMA.bond.sig * 100) + ', cash μ' + pct(CMA.cash.mu * 100) + '. ' + CMA.cmaSource + ' Inflation ' + pct(INFLATION * 100) + ' applied to both spending and contributions. ' +
+      'Withdrawals are grossed up for tax on the tax-deferred share. Remaining simplifications, stated plainly: constant allocation with no glide inside the simulation, normally-distributed (not fat-tailed) annual returns, no inflation volatility, and no correlation between inflation and returns — which means this projection cannot fully express a stagflation scenario. Treat it as a planning range, not a forecast.');
   }
 
   /* ==================================================================== *
    *  DECUMULATION
    * ==================================================================== */
-  function balancesByTax(hs) { var o = { taxable: 0, deferred: 0, roth: 0, hsa: 0, college: 0 }; hs.forEach(function (h) { o[h.taxType] += h.mv; }); return o; }
+  /* Hardened 2026-07-24: an unrecognised or missing taxType previously produced
+     NaN (o[undefined] += n), which then propagated silently into the tax
+     gross-up and the RMD calculation. Unknown types now fall back to taxable,
+     which is the conservative assumption. */
+  function balancesByTax(hs) {
+    var o = { taxable: 0, deferred: 0, roth: 0, hsa: 0, college: 0 };
+    (hs || []).forEach(function (h) {
+      var k = h && h.taxType;
+      if (!Object.prototype.hasOwnProperty.call(o, k)) k = 'taxable';
+      var mv = (h && typeof h.mv === 'number' && isFinite(h.mv)) ? h.mv : 0;
+      o[k] += mv;
+    });
+    return o;
+  }
   function renderDecum() {
     var p = ADV.profile, hs = getHoldings(), pv = totalMV(hs), bal = balancesByTax(hs);
     var regKey = currentRegimeKey(), reg = REGIMES[regKey];

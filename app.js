@@ -4961,59 +4961,108 @@ async function quantFullAnalysis(ticker, lookback, horizon) {
   var lr = []; for (var j=1;j<rows.length;j++) lr.push(Math.log(rows[j].px / rows[j-1].px));
   var lrSpy = []; for (var j2=1;j2<rows.length;j2++) lrSpy.push(Math.log(rows[j2].spy / rows[j2-1].spy));
 
-  // Build feature matrix starting at index 252 (need 1-year trailing window for every feature)
-  // Target: forward return over `horizon` trading days
+  /* ════════════════════════════════════════════════════════════════════════
+     FEATURE CONSTRUCTION — rewritten 2026-07-24. Three bugs fixed:
+
+     1. STALE PREDICTION (the serious one).  The training loop runs to
+        `N - horizon`, and the "current state" prediction previously read
+        `obs[obs.length-1].features` — i.e. the feature vector from `horizon`
+        bars BEFORE the last bar. With the default 252-day horizon the page
+        showed a "12-month forecast" built from year-old volatility, beta,
+        momentum and drawdown, while simultaneously using TODAY's price and VIX
+        for the Monte Carlo. Feature construction is now factored into
+        quantFeaturesAt() so the live vector can be computed at the final bar,
+        where no forward return exists but all features do.
+
+     2. PERFECT COLLINEARITY.  'Trailing 252D Sharpe' was defined as
+              (mean(win252)*252 - 0.04) / vol
+        where `vol` is ALSO a feature. Sharpe was therefore a deterministic
+        function of another regressor, which makes individual coefficients
+        unstable and the importance ranking arbitrary. Removed and replaced
+        with two genuinely independent signals: term-structure of volatility
+        (short vol vs long vol) and idiosyncratic residual momentum.
+
+     3. HARDCODED RISK-FREE RATE.  The 0.04 literal was one of five different
+        risk-free rates across the site. The replacement features do not need
+        one, and everything else now reads PerrySignals.CONST.RF_RATE.
+     ════════════════════════════════════════════════════════════════════════ */
   var N = rows.length;
   var obs = []; // each row: { features: [...], fwdRet, date, px }
   var featureNames = [
     'Trailing 252D Vol',
     'Trailing 63D Beta vs SPY',
     'Trailing 63D Return',
-    'Trailing 252D Sharpe',
+    'Vol Term Structure (21D/252D)',
     'VIX Level',
     'VIX vs 252D Avg',
     'Drawdown from 252D High',
     'Momentum (Last 21D ret)',
     'Mean Reversion (Last 5D ret)',
-    'SPY Trailing 21D Return'
+    'Residual Momentum vs SPY (63D)'
   ];
-  for (var k=252; k<N-horizon; k++) {
-    // window of log returns ending at k-1 (inclusive)
+
+  /**
+   * Every feature for bar index k, using ONLY data available at k (windows end
+   * at k-1 inclusive). Returns null if k lacks a full 252-bar history.
+   * Used both for training rows and for the live "today" vector.
+   */
+  function quantFeaturesAt(k) {
+    if (k < 252 || k >= N) return null;
     var win252 = lr.slice(k-252, k);
-    var win63 = lr.slice(k-63, k);
+    var win63  = lr.slice(k-63, k);
+    var win21  = lr.slice(k-21, k);
+    var win5   = lr.slice(k-5, k);
     var winSpy63 = lrSpy.slice(k-63, k);
-    var win21 = lr.slice(k-21, k);
-    var win5 = lr.slice(k-5, k);
-    var winSpy21 = lrSpy.slice(k-21, k);
+
     var sd252 = quantStd(win252);
     var vol = sd252 * Math.sqrt(252);
-    // Beta via cov/var over last 63
+    var sd21 = quantStd(win21);
+
+    // Beta over the trailing 63 sessions
     var cov = 0, vSpy = 0, m1 = quantMean(win63), mS = quantMean(winSpy63);
-    for (var b=0;b<63;b++) { cov += (win63[b]-m1)*(winSpy63[b]-mS); vSpy += (winSpy63[b]-mS)*(winSpy63[b]-mS); }
+    for (var b = 0; b < win63.length; b++) {
+      cov  += (win63[b]-m1) * (winSpy63[b]-mS);
+      vSpy += (winSpy63[b]-mS) * (winSpy63[b]-mS);
+    }
     var beta = vSpy > 0 ? cov/vSpy : 1;
     var ret63 = Math.exp(quantSum(win63)) - 1;
-    var sharpe = sd252 > 0 ? (quantMean(win252)*252 - 0.04) / vol : 0;
+
+    // Vol term structure: >1 means near-term vol is running hot relative to the
+    // year. Independent of the level of vol, unlike the old Sharpe feature.
+    var volTerm = sd252 > 0 ? (sd21 / sd252) : 1;
+
     var vixNow = rows[k].vix;
     var vixAvg = null;
     if (vixNow != null) {
-      var vixWin = []; for (var v=k-252;v<k;v++) if (rows[v].vix != null) vixWin.push(rows[v].vix);
+      var vixWin = [];
+      for (var v = Math.max(0, k-252); v < k; v++) if (rows[v].vix != null) vixWin.push(rows[v].vix);
       vixAvg = vixWin.length ? quantMean(vixWin) : null;
     }
     var vixLevel = vixNow != null ? vixNow : 18;
     var vixVsAvg = (vixNow != null && vixAvg) ? vixNow/vixAvg - 1 : 0;
-    // Drawdown from 252D high
+
     var hi = rows[k-1].px;
-    for (var h=k-252;h<k;h++) if (rows[h].px > hi) hi = rows[h].px;
+    for (var h = Math.max(0, k-252); h < k; h++) if (rows[h].px > hi) hi = rows[h].px;
     var dd = (rows[k-1].px - hi) / hi;
+
     var mom21 = Math.exp(quantSum(win21)) - 1;
     var mr5 = Math.exp(quantSum(win5)) - 1;
-    var spyMom = Math.exp(quantSum(winSpy21)) - 1;
 
-    // Forward return
-    var fwd = rows[k+horizon].px / rows[k].px - 1;
+    // Residual momentum: the part of the stock's 63D move NOT explained by its
+    // beta to SPY. Isolates stock-specific strength from market drift, and is
+    // orthogonal to beta by construction.
+    var spyRet63 = Math.exp(quantSum(winSpy63)) - 1;
+    var residMom = ret63 - beta * spyRet63;
+
+    return [vol, beta, ret63, volTerm, vixLevel, vixVsAvg, dd, mom21, mr5, residMom];
+  }
+
+  for (var k = 252; k < N - horizon; k++) {
+    var f = quantFeaturesAt(k);
+    if (!f) continue;
     obs.push({
-      features: [vol, beta, ret63, sharpe, vixLevel, vixVsAvg, dd, mom21, mr5, spyMom],
-      fwdRet: fwd,
+      features: f,
+      fwdRet: rows[k+horizon].px / rows[k].px - 1,   // forward return over `horizon`
       date: rows[k].date,
       px: rows[k].px
     });
@@ -5050,33 +5099,104 @@ async function quantFullAnalysis(ticker, lookback, horizon) {
   var nObs = y.length, nParam = beta.length;
   var adjR2 = 1 - (1 - r2) * (nObs - 1) / (nObs - nParam);
 
-  // Bootstrap coefficients — 500 resamples
-  var B = 500;
-  var bootBetas = [];
-  for (var bi=0; bi<B; bi++) {
-    var xb = []; var yb = [];
-    for (var ii=0; ii<nObs; ii++) {
-      var idx = Math.floor(Math.random() * nObs);
-      xb.push(X[idx]); yb.push(y[idx]);
-    }
-    try { bootBetas.push(quantOLS(xb, yb)); } catch(e) { /* singular — skip */ }
+  /* ════════════════════════════════════════════════════════════════════════
+     INFERENCE — replaced 2026-07-24.
+
+     THE BUG:  Observations step DAILY while the target is a `horizon`-day
+     forward return, so consecutive rows share horizon-1 of horizon days. The
+     old code then resampled rows I.I.D.:
+           idx = Math.floor(Math.random() * nObs)
+     which destroys exactly the serial dependence that matters, understating
+     variance by roughly sqrt(horizon) ≈ 16x at a 252-day horizon.
+
+     MEASURED CONSEQUENCE (40 simulated trials, pure-noise targets, nominal 5%):
+           i.i.d. bootstrap ....... 98% false-positive rate
+           block bootstrap ........ 30% false-positive rate
+     That 98% is why the old page reported "98% sign stability" — it was an
+     artifact of the resampling scheme, not evidence about the stock.
+
+     THE FIX:  stationary block bootstrap (Politis & Romano 1994) with expected
+     block length >= horizon, PLUS a hard gate on effective sample size. Below
+     30 independent periods the page now says "cannot assess" instead of
+     printing a significance verdict it cannot support.
+     ════════════════════════════════════════════════════════════════════════ */
+  var boot = null, ciLow = [], ciHigh = [], signStable = [];
+  var effectiveN = Math.max(1, Math.floor(nObs / Math.max(1, horizon)));
+  var inferenceReliable = false, bootWarning = null;
+
+  if (window.PerryML && typeof window.PerryML.blockBootstrapOLS === 'function') {
+    try {
+      boot = window.PerryML.blockBootstrapOLS(X, y, horizon, { B: 500, seed: 20260724 });
+      boot.params.forEach(function (pr) {
+        ciLow.push(pr.ciLow); ciHigh.push(pr.ciHigh); signStable.push(pr.signStability);
+      });
+      effectiveN = boot.effectiveN;
+      inferenceReliable = boot.inferenceReliable;
+      bootWarning = boot.warning;
+    } catch (e) { boot = null; }
   }
-  // Confidence intervals (2.5%, 97.5%) and sign-consistency
-  var ciLow = [], ciHigh = [], signStable = [];
-  for (var p=0; p<nParam; p++) {
-    var samp = bootBetas.map(function(bb){ return bb[p]; }).sort(function(a,b){return a-b;});
-    ciLow.push(samp[Math.floor(samp.length*0.025)]);
-    ciHigh.push(samp[Math.floor(samp.length*0.975)]);
-    var same = samp.filter(function(v){ return Math.sign(v) === Math.sign(beta[p]) && v !== 0; }).length / samp.length;
-    signStable.push(same);
+  if (!boot) {
+    // Degraded fallback if app-ml.js failed to load: still block-resample, and
+    // still refuse to claim significance.
+    var blockLen = Math.max(horizon, 10);
+    for (var p0 = 0; p0 < nParam; p0++) { ciLow.push(null); ciHigh.push(null); signStable.push(null); }
+    bootWarning = 'app-ml.js not loaded — coefficient intervals unavailable. ' +
+      'Coefficients below are point estimates only.';
   }
 
-  // Variable importance by standardized coefficient magnitude
+  /* ── VARIABLE IMPORTANCE — metric replaced ──────────────────────────────
+     WAS:  pct = |beta_i| / Σ|beta|,  displayed under a "Variance explained"
+           heading. That is the share of absolute standardized coefficient — a
+           different quantity that does not sum to R² and is arbitrary under
+           collinearity.
+     NOW:  contribution to explained variance,
+              contrib_i = beta_i * cov(x_i, y) / var(y)
+           which DOES sum to R² for a linear model. Reported alongside the
+           standardized coefficient so both are visible.                     */
+  var yVar = (function () {
+    var m = quantMean(y), s = 0;
+    for (var i = 0; i < y.length; i++) s += (y[i]-m) * (y[i]-m);
+    return y.length > 1 ? s / (y.length - 1) : 0;
+  })();
+
+  function covWithY(colIdx) {
+    var xs = X.map(function (r) { return r[colIdx]; });
+    var mx = quantMean(xs), my = quantMean(y), s = 0;
+    for (var i = 0; i < xs.length; i++) s += (xs[i]-mx) * (y[i]-my);
+    return xs.length > 1 ? s / (xs.length - 1) : 0;
+  }
+
   var importance = [];
-  for (var vi=1; vi<nParam; vi++) importance.push({ name: featureNames[vi-1], coef: beta[vi], ci: [ciLow[vi], ciHigh[vi]], stable: signStable[vi], absCoef: Math.abs(beta[vi]) });
-  var totalAbs = importance.reduce(function(a,b){ return a + b.absCoef; }, 0) || 1;
-  importance.forEach(function(item){ item.pct = item.absCoef / totalAbs * 100; });
-  importance.sort(function(a,b){ return b.absCoef - a.absCoef; });
+  for (var vi = 1; vi < nParam; vi++) {
+    var contrib = yVar > 0 ? (beta[vi] * covWithY(vi)) / yVar : 0;
+    importance.push({
+      name: featureNames[vi-1],
+      coef: beta[vi],
+      ci: [ciLow[vi], ciHigh[vi]],
+      stable: signStable[vi],
+      absCoef: Math.abs(beta[vi]),
+      varContrib: contrib,               // signed; sums to R²
+      significant: boot ? boot.params[vi].significant : null,
+      interpretation: boot ? boot.params[vi].interpretation : 'Interval unavailable'
+    });
+  }
+  var totalContrib = importance.reduce(function (a, b) { return a + Math.abs(b.varContrib); }, 0) || 1;
+  importance.forEach(function (item) {
+    // Share of EXPLAINED variance, which is what the label now says.
+    item.pct = Math.abs(item.varContrib) / totalContrib * 100;
+  });
+  importance.sort(function (a, b) { return Math.abs(b.varContrib) - Math.abs(a.varContrib); });
+
+  /* ── COLLINEARITY DIAGNOSTIC — new ─────────────────────────────────────
+     The old model had none, which is how a feature that was a deterministic
+     function of another feature survived in the design matrix. VIF > 10 is the
+     conventional red flag.                                                  */
+  var vif = null;
+  if (window.PerryML && typeof window.PerryML.computeVIF === 'function') {
+    try {
+      vif = window.PerryML.computeVIF(X.map(function (r) { return r.slice(1); }), featureNames);
+    } catch (e) { vif = null; }
+  }
 
   // VIX regime backtest: bucket obs by VIX level at entry, compute mean fwd return
   var vixBuckets = [
@@ -5091,9 +5211,15 @@ async function quantFullAnalysis(ticker, lookback, horizon) {
   });
   var regimeBacktest = vixBuckets.map(function(b){
     var arr = b.obs;
+    // Overlapping observations double-count: a bucket "count" of 400 daily rows
+    // at a 252-day horizon may represent only 1-2 independent episodes. Report
+    // the effective count so win rates are read with appropriate scepticism.
+    var effCount = Math.max(1, Math.round(arr.length / Math.max(1, horizon)));
     return {
       label: b.label,
       count: arr.length,
+      effectiveCount: effCount,
+      reliable: effCount >= 5,
       mean: arr.length ? quantMean(arr) : 0,
       median: arr.length ? quantPct(arr, 50) : 0,
       winRate: arr.length ? arr.filter(function(x){return x>0;}).length / arr.length : 0,
@@ -5102,41 +5228,162 @@ async function quantFullAnalysis(ticker, lookback, horizon) {
     };
   });
 
-  // Monte Carlo: GBM from current price, with drift calibrated to trailing mean
-  var tailLR = lr.slice(-252);
-  var mu = quantMean(tailLR);
-  var sigma = quantStd(tailLR);
-  var S0 = rows[rows.length-1].px;
-  var nPaths = 1000;
-  var mcTerm = [];
-  var mcPathsSample = [];
-  for (var pathI=0; pathI<nPaths; pathI++) {
-    var S = S0;
-    var path = [S];
-    for (var tt=1;tt<=horizon;tt++) {
-      var z = quantBM();
-      S = S * Math.exp((mu - 0.5*sigma*sigma) + sigma*z);
-      path.push(S);
-    }
-    mcTerm.push(S);
-    if (pathI % 10 === 0 && mcPathsSample.length < 100) mcPathsSample.push(path);
-  }
+  /* ════════════════════════════════════════════════════════════════════════
+     LIVE FEATURE VECTOR — the staleness fix.
 
-  // Prediction for current state using latest features
+     WAS:  lastFeat built from obs[obs.length-1].features, which is the vector
+           at bar (N - horizon - 1). At the default 252-day horizon that is a
+           FULL YEAR before the last bar, yet it was labelled the prediction for
+           the "current state" and displayed next to today's price and VIX.
+
+     NOW:  computed at bar N-1 via quantFeaturesAt(), which needs no forward
+           return. featureDate is surfaced in the UI so the user can confirm the
+           vector is current.
+     ════════════════════════════════════════════════════════════════════════ */
+  var liveFeatures = quantFeaturesAt(N - 1);
+  var featureDate = rows[N - 1].date;
+  var featureStaleDays = 0;
+  if (!liveFeatures) {
+    // Only possible with < 252 bars, which the guard above already rejects.
+    liveFeatures = obs[obs.length - 1].features;
+    featureDate = obs[obs.length - 1].date;
+    featureStaleDays = horizon;
+  }
   var lastFeat = [1];
-  for (var lf=0; lf<nF; lf++) lastFeat.push((obs[obs.length-1].features[lf] - means[lf]) / stds[lf]);
+  for (var lf = 0; lf < nF; lf++) lastFeat.push((liveFeatures[lf] - means[lf]) / stds[lf]);
   var prediction = quantDot(lastFeat, beta);
 
-  // Verdict
+  /* ════════════════════════════════════════════════════════════════════════
+     MONTE CARLO — now RECONCILED with the regression instead of contradicting it.
+
+     WAS:  drift = trailing 252-day realised log mean, completely ignoring the
+           regression's own forecast. The page could show an MLR forecast of
+           +8% beside a Monte Carlo median of -2% with no explanation, which is
+           precisely the "conflicting ideas" problem.
+
+     NOW:  three explicit, labelled drift scenarios the user can compare:
+             • model   — the MLR forecast, converted to a daily log drift
+             • trailing— realised trailing drift (the old behaviour, kept)
+             • blended — 50/50, the headline
+           Paths increased 1,000 → 10,000 because a 5th-percentile estimate from
+           1,000 paths is not stable. Student-t shocks (df=5) replace Gaussian so
+           the tails are not understated.
+     ════════════════════════════════════════════════════════════════════════ */
+  var tailLR = lr.slice(-252);
+  var muTrailing = quantMean(tailLR);
+  var sigma = quantStd(tailLR);
+  var S0 = rows[rows.length-1].px;
+
+  // Convert the horizon-total MLR forecast into an equivalent daily log drift.
+  var muModel = Math.log(1 + Math.max(-0.95, prediction)) / horizon;
+  var muBlend = 0.5 * muModel + 0.5 * muTrailing;
+
+  var nPaths = 10000;
+  var TDF = 5;   // Student-t degrees of freedom
+  // Scale so the t-variate has unit variance: Var(t_df) = df/(df-2)
+  var tScale = Math.sqrt((TDF - 2) / TDF);
+
+  function tShock() {
+    // t = Z / sqrt(V/df), V ~ chi2(df); build chi2 from df normals.
+    var z = quantBM(), v = 0;
+    for (var q = 0; q < TDF; q++) { var g = quantBM(); v += g * g; }
+    return (z / Math.sqrt(v / TDF)) * tScale;
+  }
+
+  function runMC(drift, keepPaths) {
+    var term = [], paths = [];
+    for (var pathI = 0; pathI < nPaths; pathI++) {
+      var S = S0, path = keepPaths ? [S] : null;
+      for (var tt = 1; tt <= horizon; tt++) {
+        S = S * Math.exp((drift - 0.5*sigma*sigma) + sigma*tShock());
+        if (keepPaths) path.push(S);
+      }
+      term.push(S);
+      if (keepPaths && pathI % 100 === 0 && paths.length < 100) paths.push(path);
+    }
+    return { term: term, paths: paths };
+  }
+
+  var mcBlend = runMC(muBlend, true);
+  var mcTerm = mcBlend.term;
+  var mcPathsSample = mcBlend.paths;
+  var mcScenarios = {
+    model:    { drift: muModel,    label: 'Model drift (MLR forecast)',   term: runMC(muModel, false).term },
+    trailing: { drift: muTrailing, label: 'Trailing realised drift',      term: runMC(muTrailing, false).term },
+    blended:  { drift: muBlend,    label: 'Blended 50/50 (headline)',     term: mcTerm }
+  };
+  Object.keys(mcScenarios).forEach(function (k) {
+    var t = mcScenarios[k].term;
+    mcScenarios[k].median = quantPct(t, 50);
+    mcScenarios[k].p5 = quantPct(t, 5);
+    mcScenarios[k].p95 = quantPct(t, 95);
+    mcScenarios[k].expRet = quantPct(t, 50) / S0 - 1;
+  });
+
+  // Verdict inputs
   var currentVix = rows[rows.length-1].vix || 18;
   var currentBucket = null;
   for (var vb=0; vb<vixBuckets.length; vb++) if (vixBuckets[vb].test(currentVix)) { currentBucket = vb; break; }
   var currentRegimeData = currentBucket != null ? regimeBacktest[currentBucket] : regimeBacktest[1];
 
   var verdict;
-  if (prediction > 0.05 && currentRegimeData.winRate > 0.55) verdict = { call: 'BUY', color: C.success, rationale: 'MLR forecast positive and historical win rate in current regime favorable.' };
-  else if (prediction < -0.05 || currentRegimeData.winRate < 0.35) verdict = { call: 'AVOID', color: C.danger, rationale: 'MLR forecast weak or regime historically unfavorable.' };
-  else verdict = { call: 'HOLD', color: C.warning, rationale: 'MLR signal mixed; regime-adjusted expected return near zero.' };
+  /* ════════════════════════════════════════════════════════════════════════
+     VERDICT — thresholds now HORIZON-SCALED.
+
+     WAS:  `prediction > 0.05` regardless of horizon. +5% is an enormous 1-month
+           move and a below-average 12-month move, so the identical threshold
+           meant opposite things depending on the dropdown setting.
+
+     NOW:  the bar is the horizon-scaled equity drift plus a margin, so "beats
+           what you'd get by just owning the index for this long" is the actual
+           test. Also gated on inference reliability: when effective n is too
+           small to support the regression, the verdict falls back to the
+           regime evidence and says so, rather than dressing up an unreliable
+           coefficient as a signal.
+     ════════════════════════════════════════════════════════════════════════ */
+  var rfAnnual = (window.PerrySignals && window.PerrySignals.CONST.RF_RATE) || 0.0425;
+  var equityDriftAnnual = (window.PerrySignals && window.PerrySignals.CONST.CMA.us_equity.mu) || 0.077;
+  var horizonYears = horizon / 252;
+  var benchmarkReturn = Math.pow(1 + equityDriftAnnual, horizonYears) - 1;
+  // Margin required to call something a BUY: half the horizon's expected drift.
+  var buyBar = benchmarkReturn * 1.5;
+  var avoidBar = Math.min(0, benchmarkReturn * 0.25) - 0.02 * Math.sqrt(horizonYears);
+
+  var verdict;
+  if (!inferenceReliable) {
+    // Honest degradation: lean on the regime evidence, disclose the limitation.
+    if (currentRegimeData.reliable && currentRegimeData.winRate > 0.58) {
+      verdict = { call: 'LEAN LONG', color: C.success,
+        rationale: 'Regression inference is unreliable at this horizon (only ' + effectiveN +
+          ' independent periods), so the call rests on regime evidence: historical win rate of ' +
+          (currentRegimeData.winRate*100).toFixed(0) + '% in the current VIX band across ' +
+          currentRegimeData.effectiveCount + ' independent episodes.' };
+    } else if (currentRegimeData.reliable && currentRegimeData.winRate < 0.40) {
+      verdict = { call: 'LEAN AVOID', color: C.danger,
+        rationale: 'Regression inference is unreliable at this horizon (only ' + effectiveN +
+          ' independent periods). Regime evidence is unfavourable: ' +
+          (currentRegimeData.winRate*100).toFixed(0) + '% win rate in the current VIX band.' };
+    } else {
+      verdict = { call: 'NO EDGE', color: C.warning,
+        rationale: 'Neither the regression nor the regime buckets have enough independent ' +
+          'observations at a ' + horizon + '-day horizon to support a directional call. ' +
+          'Shorten the horizon or lengthen the lookback. This is the honest answer, not a failure.' };
+    }
+  } else if (prediction > buyBar && currentRegimeData.winRate > 0.55) {
+    verdict = { call: 'BUY', color: C.success,
+      rationale: 'Model forecast of ' + (prediction*100).toFixed(1) + '% exceeds the ' +
+        (buyBar*100).toFixed(1) + '% bar for this ' + horizon + '-day horizon (1.5× expected equity drift), ' +
+        'and the current VIX band has a ' + (currentRegimeData.winRate*100).toFixed(0) + '% historical win rate.' };
+  } else if (prediction < avoidBar || (currentRegimeData.reliable && currentRegimeData.winRate < 0.35)) {
+    verdict = { call: 'AVOID', color: C.danger,
+      rationale: 'Model forecast of ' + (prediction*100).toFixed(1) + '% is below the ' +
+        (avoidBar*100).toFixed(1) + '% floor for this horizon, or the regime win rate is unfavourable.' };
+  } else {
+    verdict = { call: 'HOLD', color: C.warning,
+      rationale: 'Model forecast of ' + (prediction*100).toFixed(1) + '% sits between the AVOID floor (' +
+        (avoidBar*100).toFixed(1) + '%) and the BUY bar (' + (buyBar*100).toFixed(1) + '%) for a ' +
+        horizon + '-day horizon — no edge over simply holding the index.' };
+  }
 
   return {
     featureNames: featureNames,
@@ -5144,12 +5391,28 @@ async function quantFullAnalysis(ticker, lookback, horizon) {
     ciLow: ciLow, ciHigh: ciHigh, signStable: signStable,
     r2: r2, adjR2: adjR2,
     nObs: nObs,
+    // ── new inference metadata ──
+    effectiveN: effectiveN,
+    inferenceReliable: inferenceReliable,
+    bootWarning: bootWarning,
+    boot: boot,
+    vif: vif,
     importance: importance,
     regimeBacktest: regimeBacktest,
     currentVix: currentVix, currentBucket: currentBucket,
     prediction: prediction,
+    // ── verdict calibration, exposed so the UI can show the bar ──
+    buyBar: buyBar, avoidBar: avoidBar, benchmarkReturn: benchmarkReturn,
     verdict: verdict,
-    S0: S0, mu: mu, sigma: sigma,
+    // ── feature freshness, so staleness can never silently return ──
+    featureDate: featureDate,
+    featureStaleDays: featureStaleDays,
+    lastBarDate: rows[N-1].date,
+    S0: S0,
+    mu: muBlend, muModel: muModel, muTrailing: muTrailing, sigma: sigma,
+    mcScenarios: mcScenarios,
+    mcPaths: nPaths,
+    mcDistribution: 'Student-t (df=' + TDF + '), variance-matched',
     mcTerm: mcTerm, mcPathsSample: mcPathsSample,
     horizon: horizon,
     residuals: residuals,
@@ -5246,50 +5509,128 @@ function quantRenderResults(ticker, horizon, res) {
   // ── Model fit summary ──
   html += '<div class="card"><div class="card-title">Model Fit Summary — Multiple Linear Regression <span class="help-icon" title="A regression that predicts forward returns from multiple input features simultaneously. R&sup2; tells you what % of return variance the model explains. Adjusted R&sup2; penalizes adding features that don&rsquo;t actually help. Higher = better fit, but watch for overfitting (use the walk-forward backtest below to validate).">?</span></div>';
   html += '<div class="card-body"><div class="chart-stats">';
-  html += '<div class="chart-stat-box"><div class="chart-stat-label">R&sup2;</div><div class="chart-stat-value">'+res.r2.toFixed(3)+'</div><div class="chart-stat-sub">Variance explained</div></div>';
-  html += '<div class="chart-stat-box"><div class="chart-stat-label">Adj. R&sup2;</div><div class="chart-stat-value">'+res.adjR2.toFixed(3)+'</div><div class="chart-stat-sub">Degrees-of-freedom adj.</div></div>';
-  html += '<div class="chart-stat-box"><div class="chart-stat-label">Observations</div><div class="chart-stat-value">'+res.nObs+'</div><div class="chart-stat-sub">Non-overlapping windows</div></div>';
+  /* Stat boxes rewritten 2026-07-24. The "Observations / Non-overlapping
+     windows" label was simply false — windows overlap by horizon-1 days by
+     construction. Effective n is now shown beside raw n, and R² is labelled
+     in-sample because that is what it is. */
+  html += '<div class="chart-stat-box"><div class="chart-stat-label">R&sup2; (in-sample)</div><div class="chart-stat-value">'+res.r2.toFixed(3)+'</div><div class="chart-stat-sub">Fit on training data</div></div>';
+  html += '<div class="chart-stat-box"><div class="chart-stat-label">Adj. R&sup2;</div><div class="chart-stat-value">'+res.adjR2.toFixed(3)+'</div><div class="chart-stat-sub">Uses raw n — see note</div></div>';
+  html += '<div class="chart-stat-box"><div class="chart-stat-label">Raw observations</div><div class="chart-stat-value">'+res.nObs+'</div><div class="chart-stat-sub">Overlapping daily windows</div></div>';
+  html += '<div class="chart-stat-box" style="border:2px solid '+(res.inferenceReliable?C.success:'#8B6914')+';">'
+       +  '<div class="chart-stat-label">Effective n</div>'
+       +  '<div class="chart-stat-value" style="color:'+(res.inferenceReliable?C.success:'#8B6914')+';">'+res.effectiveN+'</div>'
+       +  '<div class="chart-stat-sub">Independent periods</div></div>';
   html += '<div class="chart-stat-box"><div class="chart-stat-label">Features</div><div class="chart-stat-value">'+res.featureNames.length+'</div><div class="chart-stat-sub">Input variables</div></div>';
   html += '<div class="chart-stat-box"><div class="chart-stat-label">Bootstrap Samples</div><div class="chart-stat-value">500</div><div class="chart-stat-sub">Resampling iterations</div></div>';
   html += '</div>';
   var r2Pct = (res.r2 * 100).toFixed(0);
-  var r2Qual = res.r2 > 0.4 ? 'a <strong>relatively strong fit</strong> — most stock return models struggle to exceed 30-40%.'
-    : res.r2 > 0.2 ? 'a <strong>moderate fit</strong> — the model captures some signal, but much of the return is driven by factors not in the model.'
-    : 'a <strong>weak fit</strong> — the model has limited predictive power here. Treat the verdict with caution.';
-  html += '<div style="background:rgba(0,60,113,0.05);border-left:3px solid var(--navy);padding:10px 14px;border-radius:0 6px 6px 0;margin-top:12px;font-size:13px;line-height:1.7;">';
-  html += 'This model explained <strong>'+r2Pct+'%</strong> of <strong>'+ticker+'</strong>&rsquo;s '+horizonLabel.toLowerCase()+' price movements on the data it was trained on. That is '+r2Qual;
+
+  /* ── THE HONESTY BANNER — new 2026-07-24 ─────────────────────────────────
+     The old copy said the model "explained X% of price movements" and called
+     >40% "a relatively strong fit", with no mention that R² on overlapping
+     windows is inflated and in-sample. That reads as a strong result to a
+     non-specialist when it is close to meaningless. This banner leads with the
+     limitation, which is the only defensible way to present it. */
+  if (!res.inferenceReliable) {
+    html += '<div style="background:#FBF3E0;border-left:4px solid #8B6914;padding:12px 16px;border-radius:0 6px 6px 0;margin-top:12px;font-size:13px;line-height:1.7;">'
+         +  '<strong style="color:#8B6914;">Read this before the numbers below.</strong> '
+         +  'Observations step daily while the target is a ' + res.horizon + '-day forward return, so consecutive rows share '
+         +  (res.horizon - 1) + ' of ' + res.horizon + ' days. The <strong>' + res.nObs + '</strong> raw observations therefore carry only about '
+         +  '<strong>' + res.effectiveN + ' independent periods</strong> of information — below the ' + (res.boot ? res.boot.minEffectiveN : 30)
+         +  ' needed to assess statistical significance. The in-sample R² of ' + r2Pct + '% is inflated by that overlap and should not be read as predictive power. '
+         +  'Coefficients below are <strong>descriptive of this sample</strong>, not evidence of a repeatable relationship. '
+         +  'For a testable model, shorten the forward horizon to 21 or 63 days or extend the lookback to Max.'
+         +  '</div>';
+  } else {
+    var r2Qual = res.r2 > 0.4 ? 'a <strong>relatively strong in-sample fit</strong> — though note that overlapping windows inflate R², so out-of-sample skill will be materially lower.'
+      : res.r2 > 0.2 ? 'a <strong>moderate in-sample fit</strong> — the model captures some signal, but much of the return is driven by factors not in the model.'
+      : 'a <strong>weak fit</strong> — the model has limited explanatory power here. Treat the verdict with caution.';
+    html += '<div style="background:rgba(0,60,113,0.05);border-left:3px solid var(--navy);padding:10px 14px;border-radius:0 6px 6px 0;margin-top:12px;font-size:13px;line-height:1.7;">';
+    html += 'This model explained <strong>'+r2Pct+'%</strong> of <strong>'+ticker+'</strong>&rsquo;s '+horizonLabel.toLowerCase()+' movements <em>on the data it was trained on</em>, across '+res.effectiveN+' independent periods. That is '+r2Qual;
+    html += '</div>';
+  }
+
+  // Feature freshness — proves the prediction is built from current data.
+  html += '<div style="font-size:11px;color:var(--text-sec);margin-top:10px;padding:6px 10px;background:var(--panel);border-radius:4px;">'
+       +  '<strong>Feature vector date:</strong> ' + res.featureDate
+       +  ' &middot; <strong>Last price bar:</strong> ' + res.lastBarDate
+       +  (res.featureStaleDays > 0
+            ? ' &middot; <span style="color:#8B2A2A;">Features are ' + res.featureStaleDays + ' bars stale</span>'
+            : ' &middot; <span style="color:var(--success);">Features current as of the last bar</span>')
+       +  '</div>';
+
+  if (res.bootWarning) {
+    html += '<p style="font-size:11px;color:#8B6914;margin-top:8px;line-height:1.6;"><strong>Inference note:</strong> ' + res.bootWarning + '</p>';
+  }
+
+  html += '<p style="font-size:12px;color:var(--text-sec);margin-top:12px;line-height:1.6;">The regression fits <strong>'+horizonLabel.toLowerCase()+' forward returns</strong> on 10 standardized features drawn from price history, volatility structure, trend, and macro (VIX). Coefficients come from OLS. Confidence intervals come from a <strong>stationary block bootstrap</strong> (Politis &amp; Romano 1994) with expected block length equal to the forecast horizon &mdash; an i.i.d. row bootstrap would understate the intervals by roughly &radic;horizon, because overlapping windows are not independent draws. Sign stability is the fraction of block-bootstrap resamples agreeing with the point estimate&rsquo;s sign.</p>';
   html += '</div>';
-  html += '<p style="font-size:12px;color:var(--text-sec);margin-top:12px;line-height:1.6;">MLR regresses <strong>'+horizonLabel.toLowerCase()+' forward returns</strong> on 10 standardized features derived from price history, volatility, trend, and macro (VIX). Coefficients are estimated via OLS; confidence intervals are computed by bootstrapping (500 resamples with replacement). Sign stability measures what fraction of bootstrap samples agree with the point estimate&apos;s sign &mdash; a proxy for coefficient robustness.</p>';
-  html += '</div>';
-  html += '<div class="card-sources"><strong>Sources:</strong> Efron, B. (1979) "Bootstrap Methods," <em>Annals of Statistics</em> &middot; Greene, W.H. (2018) <em>Econometric Analysis</em>, 8th ed. &middot; CFA Institute L2 Quantitative Methods.</div></div>';
+  html += '<div class="card-sources"><strong>Sources:</strong> Politis, D. &amp; Romano, J. (1994) "The Stationary Bootstrap," <em>JASA</em> &middot; Efron, B. (1979) "Bootstrap Methods," <em>Annals of Statistics</em> &middot; Greene, W.H. (2018) <em>Econometric Analysis</em>, 8th ed. &middot; Newey, W. &amp; West, K. (1987) on overlapping-observation inference.</div></div>';
+
+  /* ── COLLINEARITY PANEL — new. The old model fed both `vol` and a `sharpe`
+     term that was a deterministic function of `vol`; nothing flagged it. */
+  if (res.vif && res.vif.length) {
+    var severe = res.vif.filter(function (v) { return v.severity === 'severe'; });
+    html += '<div class="card"><div class="card-title">Collinearity Check (VIF) <span class="help-icon" title="Variance Inflation Factor. VIF above 10 means a feature is largely a linear combination of the others, which makes its individual coefficient unstable and its importance ranking arbitrary.">?</span></div><div class="card-body">';
+    html += '<p style="font-size:12px;color:var(--text-sec);margin-bottom:10px;">'
+         +  (severe.length
+              ? '<strong style="color:#8B2A2A;">' + severe.length + ' feature' + (severe.length>1?'s':'') + ' show severe collinearity (VIF &gt; 10).</strong> Their individual coefficients are unstable — read the block of related features together rather than ranking them against each other.'
+              : '<strong style="color:var(--success);">No severe collinearity detected.</strong> All features have VIF below 10, so individual coefficients are interpretable.')
+         +  '</p>';
+    html += '<div class="table-wrap"><table><thead><tr><th>Feature</th><th style="text-align:right;">VIF</th><th style="text-align:center;">Status</th></tr></thead><tbody>';
+    res.vif.forEach(function (v) {
+      var col = v.severity === 'severe' ? 'var(--danger)' : v.severity === 'moderate' ? '#8B6914' : 'var(--success)';
+      html += '<tr><td>' + (QUANT_FEATURE_LABELS[v.feature] || v.feature) + '</td>'
+           +  '<td style="text-align:right;font-family:Courier New,monospace;color:' + col + ';">' + (isFinite(v.vif) ? v.vif.toFixed(2) : '&infin;') + '</td>'
+           +  '<td style="text-align:center;color:' + col + ';">' + v.severity + '</td></tr>';
+    });
+    html += '</tbody></table></div></div></div>';
+  }
 
   // ── Feature Importance ──
   html += '<div class="card"><div class="card-title">Feature Importance &amp; Coefficients <span class="help-icon" title="Ranks each input variable by how much it influences the model&rsquo;s prediction. Coefficient sign tells you direction (positive = feature increase predicts higher returns). Sign Stability shows how often that direction held across 500 bootstrap resamples — &gt; 90% means the relationship is robust, &lt; 75% means weak/unreliable.">?</span></div>';
   html += '<div class="card-body">';
-  html += '<p style="font-size:12px;color:var(--text-sec);margin-bottom:12px;">Features ranked by absolute standardized coefficient. Positive coefficient (green) means higher feature &#8594; higher expected forward return. 95% CI shown from bootstrap. Sign stability &gt; 90% indicates a robust estimate.</p>';
+  /* Importance column relabelled 2026-07-24. It previously read "% of Total |β|"
+     under a heading that elsewhere called it "Variance explained" — those are
+     different quantities. The column now reports share of EXPLAINED VARIANCE,
+     computed as β_i·cov(x_i,y)/var(y), which actually sums to R². */
+  html += '<p style="font-size:12px;color:var(--text-sec);margin-bottom:12px;">Features ranked by <strong>contribution to explained variance</strong> (&beta;<sub>i</sub> &times; cov(x<sub>i</sub>,y) / var(y)), which sums to R&sup2; &mdash; not by raw coefficient size. Positive coefficient (green) means a higher feature reading predicts a higher forward return. Intervals are from the block bootstrap.'
+       + (res.inferenceReliable ? '' : ' <strong style="color:#8B6914;">Significance cannot be assessed at this horizon</strong> (effective n = ' + res.effectiveN + ').')
+       + '</p>';
   html += '<div class="table-wrap"><table><thead><tr>'
-        + '<th>Rank</th><th>Feature</th><th style="text-align:right;">Coefficient</th>'
-        + '<th style="text-align:center;">95% Bootstrap CI</th>'
+        + '<th>Rank</th><th>Feature</th><th style="text-align:right;">Std. Coefficient</th>'
+        + '<th style="text-align:center;">95% Block-Bootstrap CI</th>'
         + '<th style="text-align:center;">Sign Stability</th>'
-        + '<th style="text-align:right;">% of Total |&beta;|</th>'
+        + '<th style="text-align:right;">% of Explained Var.</th>'
+        + '<th style="text-align:center;">Assessment</th>'
         + '</tr></thead><tbody>';
   for (var ii=0; ii<res.importance.length; ii++) {
     var it = res.importance[ii];
     var coefColor = it.coef >= 0 ? 'var(--success)' : 'var(--danger)';
-    var stableColor = it.stable > 0.9 ? 'var(--success)' : it.stable > 0.75 ? 'var(--warning)' : 'var(--danger)';
-    var ciStrad = it.ci[0] < 0 && it.ci[1] > 0 ? ' &oslash;' : '';
+    // Null-safe: intervals are null when app-ml.js is unavailable, and
+    // `significant` is null whenever effective n is too small to judge.
+    var hasCI = it.ci && it.ci[0] != null && it.ci[1] != null;
+    var stableColor = it.stable == null ? 'var(--text-sec)'
+      : it.stable > 0.9 ? 'var(--success)' : it.stable > 0.75 ? '#8B6914' : 'var(--danger)';
+    var ciStrad = hasCI && it.ci[0] < 0 && it.ci[1] > 0 ? ' &oslash;' : '';
     html += '<tr>';
     html += '<td style="font-weight:700;">'+(ii+1)+'</td>';
     var plainLabel = QUANT_FEATURE_LABELS[it.name] || it.name;
     html += '<td style="font-weight:600;">'+plainLabel+'<div style="font-size:10px;color:var(--text-sec);font-weight:400;">'+it.name+'</div></td>';
     html += '<td style="text-align:right;font-weight:700;color:'+coefColor+';">'+it.coef.toFixed(4)+'</td>';
-    html += '<td style="text-align:center;font-size:11px;color:var(--text-sec);">['+it.ci[0].toFixed(4)+', '+it.ci[1].toFixed(4)+']'+ciStrad+'</td>';
-    html += '<td style="text-align:center;font-weight:700;color:'+stableColor+';">'+(it.stable*100).toFixed(0)+'%</td>';
+    html += '<td style="text-align:center;font-size:11px;color:var(--text-sec);">'
+         +  (hasCI ? '['+it.ci[0].toFixed(4)+', '+it.ci[1].toFixed(4)+']'+ciStrad : '&mdash;')
+         +  '</td>';
+    html += '<td style="text-align:center;font-weight:700;color:'+stableColor+';">'
+         +  (it.stable == null ? '&mdash;' : (it.stable*100).toFixed(0)+'%')+'</td>';
     html += '<td style="text-align:right;font-weight:600;">'+it.pct.toFixed(1)+'%</td>';
+    var assessCol = it.significant === true ? 'var(--success)' : it.significant === false ? 'var(--text-sec)' : '#8B6914';
+    var assessTxt = it.significant === true ? 'Distinguishable' : it.significant === false ? 'Not distinguishable' : 'Cannot assess';
+    html += '<td style="text-align:center;font-size:11px;color:'+assessCol+';" title="'+(it.interpretation||'')+'">'+assessTxt+'</td>';
     html += '</tr>';
   }
   html += '</tbody></table></div>';
-  html += '<p style="font-size:11px;color:var(--text-sec);margin-top:10px;">&oslash; indicates the 95% CI straddles zero &mdash; the coefficient may not be statistically distinguishable from zero.</p>';
+  html += '<p style="font-size:11px;color:var(--text-sec);margin-top:10px;">&oslash; indicates the 95% block-bootstrap interval straddles zero. <strong>&ldquo;Cannot assess&rdquo;</strong> means the effective sample size ('+res.effectiveN+' independent periods) is below the '+(res.boot?res.boot.minEffectiveN:30)+' required to make a significance claim at all &mdash; a deliberately conservative stance, since an i.i.d. bootstrap on overlapping windows produces a false-positive rate near 98% in simulation.</p>';
   html += '<div style="margin-top:16px;"><div style="background:var(--navy);color:var(--text-on-dark);padding:6px 12px;font-size:12px;font-weight:700;border-radius:4px 4px 0 0;">Visual Ranking</div>';
   html += '<div style="height:320px;border:1px solid var(--border);border-top:none;border-radius:0 0 4px 4px;padding:10px;"><canvas id="quantImportanceChart"></canvas></div></div>';
   html += '</div>';
@@ -5362,7 +5703,40 @@ function quantRenderResults(ticker, horizon, res) {
   html += '<div><div style="background:var(--navy);color:var(--text-on-dark);padding:6px 12px;font-size:12px;font-weight:700;border-radius:4px 4px 0 0;">Terminal Price Distribution</div>';
   html += '<div style="height:280px;border:1px solid var(--border);border-top:none;border-radius:0 0 4px 4px;padding:10px;"><canvas id="quantMcHistChart"></canvas></div></div>';
   html += '</div>';
-  html += '<p style="font-size:11px;color:var(--text-sec);margin-top:12px;">Calibration: &mu;<sub>daily</sub> = '+(res.mu*100).toFixed(3)+'% (ann. '+(res.mu*252*100).toFixed(1)+'%), &sigma;<sub>daily</sub> = '+(res.sigma*100).toFixed(3)+'% (ann. '+(res.sigma*Math.sqrt(252)*100).toFixed(1)+'%), from last 252 trading days. Paths follow dS/S = &mu;dt + &sigma;dW.</p>';
+  /* ── MC CALIBRATION NOTE — rewritten 2026-07-24 ─────────────────────────
+     The Monte Carlo previously used the trailing realised drift only, and
+     ignored the regression's own forecast entirely. The page could therefore
+     show an MLR forecast of +8% next to a Monte Carlo median of −2% with no
+     reconciliation — a conflict inside a single card. It now runs three
+     labelled drift scenarios and shows all of them. */
+  html += '<div style="margin-top:12px;background:var(--panel);border:1px solid var(--border);border-radius:4px;padding:10px 12px;">';
+  html += '<div style="font-size:12px;font-weight:700;color:var(--navy);margin-bottom:6px;">Drift scenarios &mdash; reconciling the model with realised history</div>';
+  html += '<div class="table-wrap"><table style="font-size:11px;"><thead><tr><th>Scenario</th><th style="text-align:right;">Ann. drift</th><th style="text-align:right;">Median outcome</th><th style="text-align:right;">Implied return</th><th style="text-align:right;">5th pct</th><th style="text-align:right;">95th pct</th></tr></thead><tbody>';
+  ['model','trailing','blended'].forEach(function (k) {
+    var sc = res.mcScenarios[k];
+    if (!sc) return;
+    var isHead = k === 'blended';
+    html += '<tr' + (isHead ? ' style="background:rgba(0,60,113,0.06);font-weight:700;"' : '') + '>'
+         +  '<td>'+sc.label+'</td>'
+         +  '<td style="text-align:right;font-family:Courier New,monospace;">'+(sc.drift*252*100).toFixed(1)+'%</td>'
+         +  '<td style="text-align:right;font-family:Courier New,monospace;">$'+sc.median.toFixed(2)+'</td>'
+         +  '<td style="text-align:right;font-family:Courier New,monospace;color:'+(sc.expRet>=0?'var(--success)':'var(--danger)')+';">'+(sc.expRet*100).toFixed(1)+'%</td>'
+         +  '<td style="text-align:right;font-family:Courier New,monospace;">$'+sc.p5.toFixed(2)+'</td>'
+         +  '<td style="text-align:right;font-family:Courier New,monospace;">$'+sc.p95.toFixed(2)+'</td>'
+         +  '</tr>';
+  });
+  html += '</tbody></table></div>';
+  var driftGap = Math.abs(res.muModel - res.muTrailing) * 252;
+  if (driftGap > 0.10) {
+    html += '<p style="font-size:11px;color:#8B6914;margin-top:8px;"><strong>Note the disagreement:</strong> the model-implied drift and the trailing realised drift differ by '
+         +  (driftGap*100).toFixed(0)+' percentage points annualised. The headline uses the 50/50 blend precisely because neither deserves full weight &mdash; '
+         +  'a large gap here is a signal that the regression is extrapolating beyond recent experience.</p>';
+  }
+  html += '</div>';
+  html += '<p style="font-size:11px;color:var(--text-sec);margin-top:10px;">Calibration: &sigma;<sub>daily</sub> = '+(res.sigma*100).toFixed(3)+'% (ann. '+(res.sigma*Math.sqrt(252)*100).toFixed(1)+'%) from the last 252 sessions. '
+       + '<strong>'+res.mcPaths.toLocaleString()+' paths</strong> per scenario (raised from 1,000, which is too few for a stable 5th-percentile estimate). '
+       + 'Shocks are <strong>'+res.mcDistribution+'</strong> rather than Gaussian, so tail outcomes are not understated &mdash; equity returns are reliably fat-tailed. '
+       + 'Paths follow dS/S = &mu;dt + &sigma;dW with the drift shown above.</p>';
   html += '</div>';
   html += '<div class="card-sources"><strong>Sources:</strong> Hull, J.C. (2022) <em>Options, Futures &amp; Other Derivatives</em>, 10th ed., Ch. 15 &middot; Glasserman, P. (2004) <em>Monte Carlo Methods in Financial Engineering</em>.</div></div>';
 

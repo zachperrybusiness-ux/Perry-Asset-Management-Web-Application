@@ -126,9 +126,28 @@
       <p>Perry Asset Management delivers macro-driven portfolio analytics, quantitative modeling, and real-time regime analysis to support disciplined, data-grounded investment decisions.</p>
     </div>
 
+    <!-- ═══════════════════════════════════════════════════════════════════
+         UNIFIED VIEW — added 2026-07-24.
+
+         This is the site's new spine. Previously the home page described the
+         product; a visitor had to click into five different pages to assemble a
+         view, and those pages could contradict each other. This block states
+         ONE posture, shows the evidence behind it, and — critically — shows
+         where the signals disagree instead of hiding it.
+         ═══════════════════════════════════════════════════════════════════ -->
+    <div id="unifiedView" style="margin-bottom:18px;">
+      <div style="padding:18px;text-align:center;color:var(--text-sec);font-size:13px;border:1px solid var(--border);border-radius:6px;">
+        <span class="spinner"></span> Resolving macro regime, market phase, and trend signals&hellip;
+      </div>
+    </div>
+
+    <!-- Market phase: topping composite + bottoming trigger -->
+    <div id="phasePanel" style="margin-bottom:18px;"></div>
+
     <!-- ── MORNING BRIEFING ── -->
-    <div style="margin-bottom:8px;font-size:12px;font-weight:600;color:var(--text-sec);text-transform:uppercase;letter-spacing:.5px;">
-      Morning Briefing &mdash; <span id="briefingDate" style="font-weight:400;"></span>
+    <div style="margin-bottom:8px;font-size:12px;font-weight:600;color:var(--text-sec);text-transform:uppercase;letter-spacing:.5px;display:flex;justify-content:space-between;align-items:center;">
+      <span>Morning Briefing &mdash; <span id="briefingDate" style="font-weight:400;"></span></span>
+      <span id="warehouseFreshness"></span>
     </div>
 
     <!-- Regime Banner -->
@@ -184,7 +203,12 @@
     </div>
     <div class="about-section">
       <h3>Our Approach</h3>
-      <p>Perry Asset Management combines top-down macro regime analysis with bottom-up fundamental and quantitative research. Our investment process begins with a proprietary six-pillar macro framework covering Real Economic Activity, Labor Markets, Inflation, Monetary Policy, Fiscal Policy, and International Dynamics.</p>
+      <!-- Pillar names corrected 2026-07-24 to match what the data layer
+           actually implements (worker.js). The page previously said "Real
+           Economic Activity" and "International Dynamics"; the scorecard's
+           pillars are "Growth Analysis" and "Global Liquidity". -->
+      <p>Perry Asset Management combines top-down macro regime analysis with bottom-up fundamental and quantitative research. Our process begins with a six-pillar macro scorecard built on 24 FRED series covering <strong>Growth, Labor Market, Inflation, Monetary Policy, Fiscal Policy, and Global Liquidity</strong>. Each indicator carries an explicit threshold, a published release lag, and a dated observation, so nothing is presented as more current than it is.</p>
+      <p>Those pillars feed a single unified signal engine that resolves four distinct read-outs — macro regime, market phase, price trend, and your own risk mandate — into one stated portfolio posture. Where signals disagree, the site shows the conflict and the horizon each operates on rather than silently picking a winner.</p>
     </div>
     <div class="about-section">
       <h3>Products &amp; Services</h3>
@@ -203,7 +227,14 @@
         </div>
         <div class="product-item">
           <h4>Quantitative Research</h4>
-          <p>ML models including regression, random forest, gradient boosting, and time-series forecasting for alpha generation.</p>
+          <!-- Rewritten 2026-07-24. This previously claimed "random forest,
+               gradient boosting, and time-series forecasting" when a full-text
+               search of the codebase found zero implementations of any of them —
+               the only model was OLS. Both ensembles now genuinely exist in
+               app-ml.js (CART trees, bagged forest with out-of-bag scoring, and
+               stagewise gradient boosting with early stopping), so the claim is
+               accurate. Every capability listed below is implemented. -->
+          <p>Cross-sectional factor ranking driven by a random-forest and gradient-boosting ensemble, multiple regression with block-bootstrapped intervals, regime-conditioned backtesting, and Monte Carlo simulation. Model skill is reported out-of-sample; when a model has no measurable edge, the site says so and weights it at zero.</p>
         </div>
         <div class="product-item">
           <h4>Thematic Research</h4>
@@ -1115,6 +1146,14 @@
 
       <!-- ═══ TAB 2: Analysis ═══ -->
       <div class="pf-tab-content" id="htab-analysis">
+        <!-- ═══ HOLDING QUALITY RANKER — added 2026-07-24 ═══
+             Answers "is this the best stock to be holding?" by scoring every
+             position against its INDUSTRY PEERS across fundamentals, technicals,
+             sector and regime fit, then proposing swaps for the weak ones.
+             This is the feature the warehouse and ML engine exist to serve, and
+             it leads the Analysis tab because it is the actionable output. -->
+        <div id="holdingRanker" style="margin-bottom:16px;"></div>
+
         <!-- Account-by-Account Comparison (added 2026-07) -->
         <div class="card" style="margin-bottom:16px;">
           <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
@@ -3392,7 +3431,14 @@
               <div style="grid-column:1/-1;text-align:center;padding:20px;color:var(--text-sec);"><span class="spinner"></span> Loading…</div>
             </div>
           </div>
-          <div class="card-sources"><strong>Source:</strong> Fidelity AART, Bridgewater regime research, CFA business-cycle curriculum. Asset class performance data 1972–2023. Past performance does not guarantee future results.</div>
+          <!-- Citation corrected 2026-07-24. This previously read "Asset class
+               performance data 1972–2023", implying the percentages shown were
+               measured over that period. They were hardcoded literals that
+               nothing in the codebase ever computed, and they contradicted the
+               sector table on the Macro page. The tilts are now presented as
+               what they actually are: directional priors informed by published
+               research. Anything measured is labelled with its sample size. -->
+          <div class="card-sources"><strong>Basis:</strong> Directional priors informed by published business-cycle research (Fidelity AART framework, Bridgewater regime studies, CFA Institute business-cycle curriculum). <strong>These are analyst judgments, not measured hit rates</strong> — no multi-cycle performance statistics have been computed on this dataset, so none are shown. Where a figure is measured live from the warehouse it is labelled with its sample size. Past performance does not guarantee future results.</div>
         </div>
       </div>
 
@@ -3703,6 +3749,9 @@
       renderHoldingsKPIs(h);
       _hldTabInit.analysis = false;
       if (typeof renderPortfolioOverview === 'function') renderPortfolioOverview();
+      /* Added 2026-07-24: tell the views layer holdings are available so the
+         quality ranker can render. Event-driven rather than another setTimeout. */
+      document.dispatchEvent(new CustomEvent('perry:holdings', { detail: h }));
       document.getElementById('holdingsCount').textContent =
         h.length ? '(' + h.length + ' positions)' : '';
       var inlineEl = document.getElementById('holdingsCountInline');
@@ -4182,9 +4231,60 @@
 <!-- App logic split into two parts (GitHub 1MB web-editor limit); load order matters -->
 <!-- ?v=N query strings force browsers + the GitHub Pages CDN to fetch fresh
      copies after every deploy. Bump the number when you update these files. -->
-<script src="app.js?v=11"></script>
-<script src="app2.js?v=11"></script>
-<script src="app3.js?v=11"></script>
-<script src="app-advisor.js?v=11"></script>
+<!-- ═══════════ APP LOGIC — load order matters ═══════════
+     Added 2026-07-24: app-warehouse.js, app-signals.js, app-ml.js.
+
+     Dependency chain (each depends only on those above it):
+       app.js           core UI, charts, fetch helpers
+       app2.js          portfolio/research/playbook views
+       app3.js          late-bound card switchers
+       app-warehouse.js cross-sectional market panel  (needs WORKER_URL)
+       app-signals.js   unified signal engine         (needs warehouse)
+       app-ml.js        ML ensemble + holding ranker   (needs warehouse + signals)
+       app-advisor.js   planning suite                 (reads shared CMA from signals)
+
+     Version bumped to 12 to bust the GitHub Pages CDN cache. -->
+<script src="app.js?v=12"></script>
+<script src="app2.js?v=12"></script>
+<script src="app3.js?v=12"></script>
+<script src="app-warehouse.js?v=12"></script>
+<script src="app-signals.js?v=12"></script>
+<script src="app-ml.js?v=12"></script>
+<script src="app-advisor.js?v=12"></script>
+<script src="app-views.js?v=12"></script>
+<script>
+/* ═══════════ UNIFIED SIGNAL BOOTSTRAP — added 2026-07-24 ═══════════
+   One place where the warehouse loads and the signal engine resolves. Every
+   page then reads window._perrySignals instead of computing its own regime,
+   which is what stops the five taxonomies from drifting apart again.
+
+   Deliberately promise-driven rather than the setTimeout(...,800) pattern used
+   elsewhere in this file — timing-based init silently fails on slow links. */
+(function bootSignals() {
+  function paintFreshness() {
+    var el = document.getElementById('warehouseFreshness');
+    if (el && window.PerryWarehouse) el.innerHTML = window.PerryWarehouse.freshnessChip();
+  }
+  function run() {
+    if (!window.PerryWarehouse || !window.PerrySignals) return;
+    window.PerryWarehouse.load()
+      .then(paintFreshness)
+      .then(function () { return window.PerrySignals.state(); })
+      .then(function (s) {
+        window._perrySignals = s;
+        // Keep the legacy global in sync so older code paths agree with the engine.
+        var legacy = window.PerrySignals.legacyStateName(s);
+        if (legacy) window._briefingState = legacy;
+        document.dispatchEvent(new CustomEvent('perry:signals', { detail: s }));
+        if (typeof populateHitRateTable === 'function') {
+          try { populateHitRateTable(s.regime ? s.regime.label : null); } catch (e) {}
+        }
+      })
+      .catch(function (e) { console.warn('[signals] boot failed:', e && e.message); });
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', run);
+  else run();
+})();
+</script>
 </body>
 </html>

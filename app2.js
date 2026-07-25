@@ -335,24 +335,59 @@ async function pfrRun() {
         fundConf = 'Low';
       }
 
-      // Method B: Regime-conditioned drift over 1, 3, 5 years
-      // Use beta proxy from sector (high-beta sectors = 1.2, low-beta = 0.8, default = 1.0)
-      var betaProxy = 1.0;
-      if (sector === 'Technology' || sector === 'Information Technology' || sector === 'Communication Services') betaProxy = 1.2;
-      else if (sector === 'Consumer Staples' || sector === 'Utilities' || sector === 'Health Care' || sector === 'Healthcare') betaProxy = 0.8;
-      else if (sector === 'Energy' || sector === 'Materials' || sector === 'Basic Materials') betaProxy = 1.1;
-      else if (sector === 'Financials' || sector === 'Financial Services') betaProxy = 1.1;
-      // Use leveraged ETFs as 3x
-      if (info.assetClass === 'Leveraged ETF' || /^(TQQQ|SOXL|SPXL|UPRO|FNGU|TECL|LABU|UDOW)$/.test(t)) betaProxy = 3.0;
+      /* ── Method B: Regime-conditioned drift ─────────────────────────────
+         REWRITTEN 2026-07-24 to use MEASURED risk instead of sector guesses.
 
-      // Apply beta scaling to regime drift
+         WAS: betaProxy hardcoded by sector name — every Technology holding got
+         beta 1.2, every Utility 0.8, regardless of the actual stock. NVDA and
+         a mature software name were treated identically. Volatility was a flat
+         18% for everything, scaled by that same guessed beta.
+
+         NOW: the warehouse stores a real regression beta vs SPY and a real
+         annualised volatility per ticker. Those are used when available, with
+         the old sector proxy retained purely as a fallback for names the
+         warehouse has not yet ingested — and the source of each number is
+         reported in the output so the user can see which is which. */
+      var whRow = (window.PerryWarehouse && window.PerryWarehouse.ready())
+        ? window.PerryWarehouse.get(t) : null;
+
+      var betaProxy, betaSource, sigma1y, sigmaSource;
+
+      if (whRow && whRow.beta_spy != null && isFinite(whRow.beta_spy)) {
+        // Shrink toward 1.0 (Blume adjustment) — raw 2-year betas are noisy and
+        // regress toward the market over time.
+        betaProxy = 0.67 * whRow.beta_spy + 0.33 * 1.0;
+        betaSource = 'measured (2y regression vs SPY, Blume-adjusted)';
+      } else {
+        betaProxy = 1.0;
+        if (sector === 'Technology' || sector === 'Information Technology' || sector === 'Communication Services') betaProxy = 1.2;
+        else if (sector === 'Consumer Staples' || sector === 'Utilities' || sector === 'Health Care' || sector === 'Healthcare') betaProxy = 0.8;
+        else if (sector === 'Energy' || sector === 'Materials' || sector === 'Basic Materials') betaProxy = 1.1;
+        else if (sector === 'Financials' || sector === 'Financial Services') betaProxy = 1.1;
+        betaSource = 'sector proxy (warehouse coverage pending)';
+      }
+
+      // Leveraged ETFs genuinely are multiples and are not in the equity universe.
+      if (info.assetClass === 'Leveraged ETF' || /^(TQQQ|SOXL|SPXL|UPRO|FNGU|TECL|LABU|UDOW)$/.test(t)) {
+        betaProxy = 3.0; betaSource = 'leveraged ETF (3x stated exposure)';
+      }
+
+      if (whRow && whRow.vol_ann != null && isFinite(whRow.vol_ann) && whRow.vol_ann > 0) {
+        sigma1y = whRow.vol_ann;
+        sigmaSource = 'measured (252-day realised, annualised)';
+      } else {
+        sigma1y = 0.18 * betaProxy;
+        sigmaSource = 'estimated (18% base × beta)';
+      }
+
+      // Apply beta scaling to regime drift, then cap.
       var tickerAnnualDrift = regimeAnnualDrift * betaProxy;
-      // Cap to sensible range
       tickerAnnualDrift = Math.max(-0.40, Math.min(0.50, tickerAnnualDrift));
 
-      // Compute 1Y / 3Y / 5Y projections
-      // Bull/Bear bands: ±1σ where σ scales with horizon
-      var sigma1y = 0.18 * betaProxy; // baseline 18% annual volatility scaled by beta
+      info._betaUsed = betaProxy;
+      info._betaSource = betaSource;
+      info._sigmaUsed = sigma1y;
+      info._sigmaSource = sigmaSource;
       var p1y_base = px * (1 + tickerAnnualDrift);
       var p1y_bull = px * (1 + tickerAnnualDrift + sigma1y);
       var p1y_bear = px * (1 + tickerAnnualDrift - sigma1y);
@@ -1228,12 +1263,69 @@ async function rcrLoad(ticker) {
 // ══════  PORTFOLIO-STATE MONTE CARLO  ══════════════════════════════
 // ═══════════════════════════════════════════════════════════════════
 // State-conditioned parameters (annualized drift, vol) derived from SPY history
-var SMC_PARAMS = {
-  leveraged:  { driftAnn: 0.28, volAnn: 0.35, label: 'Leveraged',           color: '#2E7D52' },
-  growth:     { driftAnn: 0.14, volAnn: 0.18, label: 'Non-Levered Growth',  color: '#003C71' },
-  neutral:    { driftAnn: 0.04, volAnn: 0.14, label: 'Neutral',             color: '#8B6914' },
-  drawdown:   { driftAnn:-0.12, volAnn: 0.28, label: 'Positioned Drawdown', color: '#8B2A2A' }
+/* ════════════════════════════════════════════════════════════════════════════
+   STATE-CONDITIONED MONTE CARLO PARAMETERS — rebuilt 2026-07-24.
+
+   WHAT WAS HERE:
+     leveraged: driftAnn +0.28  volAnn 0.35
+     growth:    driftAnn +0.14  volAnn 0.18
+     neutral:   driftAnn +0.04  volAnn 0.14
+     drawdown:  driftAnn -0.12  volAnn 0.28
+   commented "derived from SPY history".
+
+   WHY IT WAS WRONG:
+   Those are REALISED, STATE-CONDITIONAL averages being used as FORWARD drifts.
+   The "leveraged" state is defined by SPY already being down 15-20%, so its
+   +28% figure is the average rebound that historically followed — conditioning
+   on the outcome. A user whose portfolio was flagged "leveraged" saw a forecast
+   compounding at 28%/yr, while the Advisor page told the same user 8.5%. Same
+   portfolio, same site, a 20-point disagreement.
+
+   WHAT IT IS NOW:
+   The shared capital-market assumption (PerrySignals.CONST.CMA.us_equity) plus a
+   bounded regime tilt (±3pp, enforced by REGIME_TILT_CAP). Volatility IS
+   genuinely state-dependent — realised vol really does run ~2x higher in stress
+   than in calm — so the vol multipliers are retained, and now documented as
+   multipliers on the base rather than as absolute levels.
+   ════════════════════════════════════════════════════════════════════════════ */
+function _smcBase() {
+  var S = window.PerrySignals;
+  return S ? { mu: S.CONST.CMA.us_equity.mu, sig: S.CONST.CMA.us_equity.sig }
+           : { mu: 0.077, sig: 0.160 };
+}
+
+/* Drift tilt in pp, and vol as a MULTIPLE of the base. State keys keep their
+   legacy names for back-compat; the unified labels come from
+   PerrySignals.TREND_STATES so the naming is consistent site-wide. */
+var SMC_STATE_ADJ = {
+  leveraged: { driftTilt: +0.03, volMult: 1.9, label: 'Accumulate (post-decline)', color: '#2E7D52',
+               note: 'Volatility runs high after a large decline; the drift tilt is capped at +3pp rather than extrapolating the historical rebound.' },
+  growth:    { driftTilt: +0.02, volMult: 1.1, label: 'Risk-On',    color: '#003C71',
+               note: 'Constructive trend, contained volatility.' },
+  neutral:   { driftTilt:  0.00, volMult: 1.0, label: 'Neutral',    color: '#8B6914',
+               note: 'Base-case assumption with no tilt applied.' },
+  drawdown:  { driftTilt: -0.02, volMult: 1.6, label: 'De-Risk',    color: '#8B2A2A',
+               note: 'Extended market with elevated realised volatility; modest negative drift tilt.' }
 };
+
+/** Built as a getter so it always reflects the current shared CMA. */
+function smcParams() {
+  var base = _smcBase();
+  var out = {};
+  Object.keys(SMC_STATE_ADJ).forEach(function (k) {
+    var a = SMC_STATE_ADJ[k];
+    out[k] = {
+      driftAnn: base.mu + a.driftTilt,
+      volAnn: base.sig * a.volMult,
+      label: a.label, color: a.color, note: a.note,
+      baseMu: base.mu, tilt: a.driftTilt, volMult: a.volMult
+    };
+  });
+  return out;
+}
+
+/* Kept as a live object for the existing consumers that index it directly. */
+var SMC_PARAMS = smcParams();
 
 async function smcRun() {
   var tabsEl=document.getElementById('smcTabs');
@@ -1784,13 +1876,29 @@ async function ivvLoad(ticker, secData){
     var convictionColor = dispersion < 0.15 ? C.success : dispersion < 0.30 ? C.warning : C.danger;
 
     // Macro context flag — current regime affects discount rate validity
-    var stateNames = {leveraged: 'Leveraged', growth: 'Non-Levered Growth', neutral: 'Neutral', drawdown: 'Positioned for Drawdown'};
-    var curState = window._briefingState || 'growth';
+    /* ── SILENT REGIME DEFAULT REMOVED — 2026-07-24 ────────────────────────
+       This previously read `window._briefingState || 'growth'`. Landing directly
+       on Research → Valuation before the briefing had loaded therefore asserted
+       "In Growth regime, valuations typically converge toward the MID estimate"
+       regardless of the actual regime — and the Macro page could be showing
+       Stagflation at the same moment. A fabricated regime is worse than no
+       regime, so the state is now read from the unified engine and left NULL
+       when unknown, with the UI saying so. */
+    var stateNames = { leveraged: 'Accumulate', growth: 'Risk-On', neutral: 'Neutral', drawdown: 'De-Risk' };
+    var sigNow = window._perrySignals || null;
+    var curState = (sigNow && window.PerrySignals && window.PerrySignals.legacyStateName(sigNow))
+                || window._briefingState
+                || null;
     var regimeFlag = '';
-    if (curState === 'drawdown') regimeFlag = 'In Drawdown regime, discount rates typically need to be higher than the base 10Y+5% used here. Treat the LOW band as more realistic.';
-    else if (curState === 'leveraged') regimeFlag = 'In Leveraged regime (post-bottom), valuations typically expand. The HIGH band has historically been the better guide.';
-    else if (curState === 'neutral') regimeFlag = 'In Neutral regime, valuations are typically range-bound — the MID band tends to track reality.';
-    else regimeFlag = 'In Growth regime, valuations typically converge toward the MID estimate over 12–18 months.';
+    if (!curState) {
+      regimeFlag = '<em>Market state not yet loaded.</em> Open the Macro page (or wait for the signal engine to finish) '
+        + 'and this note will state how the current regime should shift your read of the bands below. '
+        + 'No regime assumption is being applied to these numbers.';
+    }
+    else if (curState === 'drawdown') regimeFlag = 'In a <strong>De-Risk</strong> state the discount rate deserves to be higher than the ' + (window.PerrySignals ? 'CAPM-based rate' : 'base rate') + ' used here, so treat the LOW band as the more realistic anchor.';
+    else if (curState === 'leveraged') regimeFlag = 'In an <strong>Accumulate</strong> state (post-decline), valuations have historically expanded off the bottom, and the HIGH band has been the better guide.';
+    else if (curState === 'neutral') regimeFlag = 'In a <strong>Neutral</strong> state valuations tend to be range-bound, and the MID band tracks reality most closely.';
+    else regimeFlag = 'In a <strong>Risk-On</strong> state valuations tend to converge toward the MID estimate over 12–18 months.';
 
     var html = '<div style="text-align:left;padding:0 4px;">'
       + '<div style="background:var(--panel);border:1px solid var(--border);border-radius:4px;padding:10px 14px;margin-bottom:14px;font-size:13px;">'
@@ -10469,20 +10577,186 @@ var PLAYBOOK_DATA = {
   }
 };
 
-// Hit rate data by cycle phase (Fidelity AART framework)
-var HIT_RATE_DATA = [
-  { sector: 'Technology',           early: 68, mid: 74, late: 45, recession: 28 },
-  { sector: 'Consumer Discret.',    early: 72, mid: 68, late: 42, recession: 25 },
-  { sector: 'Financials',           early: 70, mid: 63, late: 38, recession: 35 },
-  { sector: 'Industrials',          early: 65, mid: 61, late: 48, recession: 32 },
-  { sector: 'Communication Svc.',   early: 60, mid: 59, late: 44, recession: 30 },
-  { sector: 'Healthcare',           early: 48, mid: 50, late: 65, recession: 70 },
-  { sector: 'Consumer Staples',     early: 38, mid: 47, late: 68, recession: 67 },
-  { sector: 'Energy',               early: 42, mid: 58, late: 76, recession: 40 },
-  { sector: 'Materials',            early: 55, mid: 70, late: 62, recession: 30 },
-  { sector: 'Utilities',            early: 32, mid: 30, late: 60, recession: 72 },
-  { sector: 'Real Estate',          early: 58, mid: 45, late: 38, recession: 58 }
-];
+/* ════════════════════════════════════════════════════════════════════════════
+   SECTOR PRIORS BY REGIME — replaced 2026-07-24.
+
+   WHAT WAS HERE: a HIT_RATE_DATA table of precise-looking percentages
+   (Technology early 68%, mid 74%, late 45%, recession 28%, and so on) footnoted
+   "Fidelity AART framework" and, on the Playbook page, "Asset class performance
+   data 1972–2023".
+
+   TWO PROBLEMS, BOTH SERIOUS:
+
+   1. THE NUMBERS WERE INVENTED. Nothing in the codebase ever computed them.
+      Presenting fabricated figures under the names of real institutions is
+      worse than presenting no citation at all.
+
+   2. THEY CONTRADICTED THE OTHER TABLE. populateHitRateTable() mapped Quads to
+      cycle phases {Goldilocks→early, Overheat→mid, Stagflation→late,
+      Deflation→recession} and rendered THIS table, while the Playbook rendered
+      PLAYBOOK_DATA. A cell-by-cell comparison found 26 of 44 sector-regime
+      cells disagreeing, with gaps up to 38 points:
+
+        Overheat / Technology .......... Playbook 36% (UW)  vs  table 74%
+        Goldilocks / Real Estate ....... Playbook 30% (UW)  vs  table 58%
+        Overheat / Consumer Disc. ...... Playbook 43%       vs  table 68%
+        Deflation / Technology ......... Playbook 50%       vs  table 28%
+
+      Technology in Overheat was simultaneously marked underweight on one page
+      and highlighted at 74% on another — opposite conclusions, two clicks apart.
+
+   3. THE MAPPING ITSELF WAS A CATEGORY ERROR. Quads (growth × inflation
+      DIRECTION) and cycle phases (early/mid/late/recession) are different
+      taxonomies. Overheat is characteristically LATE cycle, not mid.
+
+   THE FIX: one table, keyed directly on the Quad (no phase mapping), carrying
+   ORDINAL tilts and a stated rationale instead of fake precision. Where a real
+   measured hit rate is available from the warehouse it is shown alongside, with
+   its sample size — see renderSectorPriors(). PLAYBOOK_DATA now derives its
+   tilts from this same object, so the two pages cannot diverge again.
+   ════════════════════════════════════════════════════════════════════════════ */
+
+var SECTOR_PRIORS = {
+  // tilt: +2 strong OW, +1 OW, 0 neutral, -1 UW, -2 strong UW
+  Goldilocks: {
+    rationale: 'Accelerating growth with cooling inflation. Falling discount rates and rising earnings both help long-duration growth and cyclicals; defensives lag because there is no reason to pay for safety.',
+    tilts: { 'Information Technology': 2, 'Consumer Discretionary': 2, 'Industrials': 1, 'Financials': 1,
+             'Communication Services': 1, 'Materials': 0, 'Health Care': 0, 'Energy': -1,
+             'Consumer Staples': -1, 'Real Estate': -1, 'Utilities': -2 }
+  },
+  Overheat: {
+    rationale: 'Growth and inflation both rising. Pricing power and real assets win; long-duration multiples compress as rates climb. This is characteristically a LATE-cycle condition, not a mid-cycle one.',
+    tilts: { 'Energy': 2, 'Materials': 2, 'Financials': 1, 'Industrials': 1,
+             'Health Care': 0, 'Consumer Staples': 0, 'Consumer Discretionary': -1,
+             'Real Estate': -1, 'Information Technology': -1, 'Communication Services': -1, 'Utilities': -2 }
+  },
+  Stagflation: {
+    rationale: 'Weak growth with sticky inflation — the hardest regime for equities generally. Inelastic demand and hard assets hold up; anything cyclical or discretionary sees earnings compress while costs stay high.',
+    tilts: { 'Energy': 2, 'Consumer Staples': 2, 'Health Care': 1, 'Utilities': 1,
+             'Materials': 0, 'Financials': -1, 'Real Estate': -1, 'Industrials': -1,
+             'Communication Services': -1, 'Information Technology': -2, 'Consumer Discretionary': -2 }
+  },
+  Deflation: {
+    rationale: 'Growth and inflation both falling. Duration and defensive cash flows win; commodity-sensitive and credit-sensitive sectors suffer most. Quality of balance sheet matters more than quality of growth.',
+    tilts: { 'Consumer Staples': 2, 'Health Care': 2, 'Utilities': 1, 'Real Estate': 0,
+             'Information Technology': 0, 'Communication Services': 0, 'Industrials': -1,
+             'Consumer Discretionary': -1, 'Financials': -1, 'Materials': -2, 'Energy': -2 }
+  }
+};
+
+var TILT_LABELS = {
+  '2':  { label: 'Strong OW', color: '#1E5E3A' },
+  '1':  { label: 'Overweight', color: '#2E7D52' },
+  '0':  { label: 'Neutral',    color: '#5A6A7A' },
+  '-1': { label: 'Underweight',color: '#8B6914' },
+  '-2': { label: 'Strong UW',  color: '#8B2A2A' }
+};
+
+/**
+ * Measured hit rate from the warehouse, when coverage allows. Returns null when
+ * it cannot be computed — the UI then shows the ordinal prior alone rather than
+ * inventing a number. This is the mechanism by which the priors get progressively
+ * replaced by evidence as the warehouse accumulates history.
+ */
+function measuredSectorHitRate(sector) {
+  var WH = window.PerryWarehouse;
+  if (!WH || !WH.ready()) return null;
+  var rows = WH.all().filter(function (r) {
+    return r.sector === sector && r.ret_3m != null;
+  });
+  if (rows.length < 8) return null;
+  var spy = WH.get('SPY');
+  var bench = spy && spy.ret_3m != null ? spy.ret_3m : null;
+  if (bench == null) {
+    var all = WH.all().filter(function (r) { return r.ret_3m != null; });
+    if (all.length < 30) return null;
+    bench = WH.util.median(all.map(function (r) { return r.ret_3m; }));
+  }
+  var beat = rows.filter(function (r) { return r.ret_3m > bench; }).length;
+  return {
+    pct: beat / rows.length * 100,
+    n: rows.length,
+    // Honest label: this is CURRENT cross-sectional breadth vs the benchmark
+    // over one trailing window — not a multi-cycle historical hit rate.
+    basis: 'share of ' + rows.length + ' names in this sector beating the benchmark over the trailing 3 months'
+  };
+}
+
+/* Back-compat: legacy callers still reference HIT_RATE_DATA. It is now DERIVED
+   from SECTOR_PRIORS so the two can never diverge, and the phase columns are
+   generated from the Quad that actually corresponds to each phase rather than
+   from an arbitrary mapping. Values are ordinal tilts, not percentages. */
+var HIT_RATE_DATA = (function () {
+  var phaseToQuad = { early: 'Goldilocks', mid: 'Goldilocks', late: 'Overheat', recession: 'Deflation' };
+  var sectors = Object.keys(SECTOR_PRIORS.Goldilocks.tilts);
+  return sectors.map(function (s) {
+    var row = { sector: s };
+    Object.keys(phaseToQuad).forEach(function (ph) {
+      row[ph] = SECTOR_PRIORS[phaseToQuad[ph]].tilts[s];
+    });
+    return row;
+  });
+})();
+
+/* ════════════════════════════════════════════════════════════════════════════
+   RECONCILE PLAYBOOK_DATA WITH SECTOR_PRIORS — added 2026-07-24.
+
+   PLAYBOOK_DATA was authored independently of the hit-rate table, which is how
+   the two drifted into disagreeing on 26 of 44 sector-regime cells. Rather than
+   hand-editing two lists and hoping they stay in sync, the Playbook's sector
+   recommendations are now OVERWRITTEN from SECTOR_PRIORS at load time.
+
+   The ETF suggestions and narrative text in PLAYBOOK_DATA are genuine editorial
+   content and are preserved. Only `rec` and `hit` — the two fields that
+   conflicted — are replaced. `hit` becomes null, and the renderer shows the
+   ordinal tilt instead of a fabricated percentage.
+   ════════════════════════════════════════════════════════════════════════════ */
+(function reconcilePlaybookWithPriors() {
+  if (typeof PLAYBOOK_DATA === 'undefined') return;
+
+  // PLAYBOOK_DATA uses 'Technology' / 'Healthcare'; GICS (and the warehouse)
+  // use 'Information Technology' / 'Health Care'. Bridge the two.
+  var alias = {
+    'Technology': 'Information Technology',
+    'Healthcare': 'Health Care',
+    'Health Care': 'Health Care',
+    'Information Technology': 'Information Technology'
+  };
+  var recFromTilt = function (t) { return t > 0 ? 'OW' : t < 0 ? 'UW' : 'NEUT'; };
+
+  Object.keys(SECTOR_PRIORS).forEach(function (quad) {
+    var pd = PLAYBOOK_DATA[quad];
+    if (!pd || !pd.sectors) return;
+    var tilts = SECTOR_PRIORS[quad].tilts;
+
+    pd.sectors.forEach(function (s) {
+      var canonical = alias[s.name] || s.name;
+      var tilt = tilts[canonical];
+      if (tilt == null) return;
+      s.rec = recFromTilt(tilt);
+      s.tilt = tilt;
+      s.tiltLabel = (TILT_LABELS[String(tilt)] || TILT_LABELS['0']).label;
+      s.hit = null;                       // no more invented percentages
+      s.canonicalSector = canonical;
+    });
+
+    // Order the grid by conviction so the strongest calls read first.
+    pd.sectors.sort(function (a, b) { return (b.tilt || 0) - (a.tilt || 0); });
+    pd.priorRationale = SECTOR_PRIORS[quad].rationale;
+  });
+
+  // Asset-class hit rates were invented too. Convert to ordinal tilts derived
+  // from the existing rec, and drop the numbers.
+  Object.keys(PLAYBOOK_DATA).forEach(function (quad) {
+    var pd = PLAYBOOK_DATA[quad];
+    if (!pd || !pd.assets) return;
+    pd.assets.forEach(function (a) {
+      a.tilt = a.rec === 'OW' ? 1 : a.rec === 'UW' ? -1 : 0;
+      a.tiltLabel = (TILT_LABELS[String(a.tilt)] || TILT_LABELS['0']).label;
+      a.hit = null;
+    });
+  });
+})();
 
 // Compute current Quad from macro pillar data
 function computeCurrentQuad(macroData) {
@@ -10737,8 +11011,17 @@ function renderPlaybook(quadLabel) {
       var recColor = s.rec === 'OW' ? '#2E7D52' : s.rec === 'UW' ? '#8B2A2A' : '#8B6914';
       h += '<div class="playbook-tile ' + recClass + '">' +
            '<div class="playbook-tile-name">' + s.name + '</div>' +
-           '<div class="playbook-tile-rec" style="background:' + recColor + ';color:#fff;display:inline-block;padding:2px 10px;border-radius:10px;font-size:11px;font-weight:700;">' + s.rec + '</div>' +
-           '<div class="playbook-tile-hit" style="font-size:12px;margin-top:4px;">Hit rate: <strong>' + s.hit + '%</strong></div>' +
+           '<div class="playbook-tile-rec" style="background:' + recColor + ';color:#fff;display:inline-block;padding:2px 10px;border-radius:10px;font-size:11px;font-weight:700;">' + (s.tiltLabel || s.rec) + '</div>' +
+           /* "Hit rate: X%" removed 2026-07-24 — those percentages were invented
+              and contradicted the sector table. Replaced with the measured
+              breadth figure where the warehouse can supply one, or nothing. */
+           (function () {
+             var m = typeof measuredSectorHitRate === 'function'
+               ? measuredSectorHitRate(s.canonicalSector || s.name) : null;
+             return m
+               ? '<div class="playbook-tile-hit" style="font-size:11px;margin-top:4px;" title="' + m.basis + '">Beating benchmark: <strong>' + m.pct.toFixed(0) + '%</strong> <span style="font-size:9px;color:var(--text-sec);">(n=' + m.n + ')</span></div>'
+               : '<div class="playbook-tile-hit" style="font-size:10px;margin-top:4px;color:var(--text-sec);">Directional prior</div>';
+           })() +
            '<div class="playbook-tile-etfs" style="font-size:10px;color:var(--text-sec);margin-top:4px;">' + s.etfs + '</div>' +
            '</div>';
     });
@@ -10755,7 +11038,9 @@ function renderPlaybook(quadLabel) {
       ah += '<div class="playbook-tile ' + recClass + '">' +
             '<div class="playbook-tile-name">' + a.name + '</div>' +
             '<div class="playbook-tile-rec" style="background:' + recColor + ';color:#fff;display:inline-block;padding:2px 10px;border-radius:10px;font-size:11px;font-weight:700;">' + a.rec + '</div>' +
-            '<div class="playbook-tile-hit" style="font-size:12px;margin-top:4px;">Hit rate: <strong>' + a.hit + '%</strong></div>' +
+            /* Invented asset-class hit rates removed 2026-07-24 (they carried a
+               "1972–2023 data" citation for numbers nothing ever computed). */
+            '<div class="playbook-tile-hit" style="font-size:10px;margin-top:4px;color:var(--text-sec);">' + (a.tiltLabel || 'Directional prior') + '</div>' +
             '<div class="playbook-tile-etfs" style="font-size:11px;color:var(--text-sec);margin-top:4px;">' + a.note + '</div>' +
             '</div>';
     });
@@ -10763,24 +11048,70 @@ function renderPlaybook(quadLabel) {
   }
 }
 
+/* ════════════════════════════════════════════════════════════════════════════
+   SECTOR TILT TABLE — rewritten 2026-07-24.
+
+   Now renders across the four QUADS directly (the taxonomy the rest of the site
+   uses) rather than mapping Quads onto cycle phases, which was a category error
+   and the source of the 26-of-44 disagreement with the Playbook page. Shows
+   ordinal tilts plus the measured breadth figure when the warehouse can supply
+   one, and never a fabricated percentage.
+   ════════════════════════════════════════════════════════════════════════════ */
 function populateHitRateTable(activeQuadLabel) {
   var body = document.getElementById('hitRateBody');
   if (!body) return;
-  var qd = activeQuadLabel || (window._lastMacroData ? (computeCurrentQuad(window._lastMacroData) || {}).quadLabel : null);
-  var phaseMap = { 'Goldilocks': 'early', 'Deflation': 'recession', 'Overheat': 'mid', 'Stagflation': 'late' };
-  var activePhase = phaseMap[qd] || 'early';
+
+  var sig = window._perrySignals;
+  var qd = activeQuadLabel
+        || (sig && sig.regime && sig.regime.label)
+        || (window._lastMacroData ? (computeCurrentQuad(window._lastMacroData) || {}).quadLabel : null);
+
+  var quads = ['Goldilocks', 'Overheat', 'Stagflation', 'Deflation'];
+  var sectors = Object.keys(SECTOR_PRIORS.Goldilocks.tilts);
+
   var h = '';
-  HIT_RATE_DATA.forEach(function(row) {
-    var highlightCol = function(phase, val) {
-      var isActive = phase === activePhase;
-      var color = val >= 65 ? '#2E7D52' : val >= 50 ? '#8B6914' : '#8B2A2A';
-      return '<td style="text-align:center;font-weight:' + (isActive ? '800' : '400') + ';color:' + (isActive ? color : '#5A6A7A') + ';background:' + (isActive ? 'rgba(91,155,213,0.10)' : '') + ';">' + val + '%</td>';
-    };
-    h += '<tr><td style="font-weight:600;padding:7px 12px;">' + row.sector + '</td>' +
-         highlightCol('early', row.early) + highlightCol('mid', row.mid) +
-         highlightCol('late', row.late) + highlightCol('recession', row.recession) + '</tr>';
+  sectors.forEach(function (sector) {
+    var measured = measuredSectorHitRate(sector);
+    h += '<tr><td style="font-weight:600;padding:7px 12px;">' + sector + '</td>';
+    quads.forEach(function (q) {
+      var tilt = SECTOR_PRIORS[q].tilts[sector];
+      var meta = TILT_LABELS[String(tilt)] || TILT_LABELS['0'];
+      var isActive = q === qd;
+      h += '<td style="text-align:center;font-weight:' + (isActive ? '800' : '500') + ';'
+        +  'color:' + (isActive ? meta.color : '#8A97A3') + ';'
+        +  'background:' + (isActive ? 'rgba(91,155,213,0.12)' : 'transparent') + ';'
+        +  '" title="' + SECTOR_PRIORS[q].rationale.replace(/"/g, '&quot;') + '">'
+        +  meta.label + '</td>';
+    });
+    h += '<td style="text-align:center;font-size:11px;color:var(--text-sec);">'
+      +  (measured
+            ? '<strong>' + measured.pct.toFixed(0) + '%</strong><span style="font-size:9px;"> (n=' + measured.n + ')</span>'
+            : '&mdash;')
+      +  '</td>';
+    h += '</tr>';
   });
   body.innerHTML = h;
+
+  // Rewrite the header to match the new columns, if the table shell allows it.
+  var head = document.getElementById('hitRateHead');
+  if (head) {
+    head.innerHTML = '<tr><th style="text-align:left;padding:7px 12px;">Sector</th>'
+      + quads.map(function (q) {
+          return '<th style="text-align:center;' + (q === qd ? 'background:rgba(91,155,213,0.18);' : '') + '">' + q + '</th>';
+        }).join('')
+      + '<th style="text-align:center;" title="Share of names in this sector currently beating the benchmark over the trailing 3 months. This is measured live from the warehouse — it is current breadth, not a multi-cycle historical hit rate.">Measured breadth</th></tr>';
+  }
+
+  var note = document.getElementById('hitRateNote');
+  if (note) {
+    note.innerHTML = '<strong>How to read this:</strong> the four Quad columns are <em>directional priors</em> '
+      + 'drawn from published cycle research — deliberately ordinal (Strong OW through Strong UW) rather than '
+      + 'false-precision percentages, because no multi-cycle hit rate has been measured on this dataset. '
+      + 'The final column <em>is</em> measured: it is the share of names in each sector currently beating the '
+      + 'benchmark over the trailing three months, with its sample size. As the warehouse accumulates history, '
+      + 'measured figures will progressively replace the priors.'
+      + (qd ? ' The highlighted column is the current regime (<strong>' + qd + '</strong>).' : '');
+  }
 }
 
 // ════════════════════════════════════════════════════════════════════
