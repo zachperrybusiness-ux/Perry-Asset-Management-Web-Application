@@ -39,7 +39,8 @@
       </div>
       <div class="nav-dropdown">
         <div class="nav-child" data-page="holdings" onclick="navigateTo('holdings')">Manage Holdings</div>
-        <div class="nav-child" data-page="sector-macro-alignment" onclick="navigateTo('sector-macro-alignment')">Sector &amp; Macro Alignment</div>
+        <!-- Routes to the Manage Holdings > Sector &amp; Macro Alignment tab (moved 2026-07-25). -->
+        <div class="nav-child" data-page="holdings" onclick="navigateTo('holdings');setTimeout(function(){holdingsShowTab('alignment');},60);">Sector &amp; Macro Alignment</div>
         <div class="nav-child" data-page="themes" onclick="navigateTo('themes')">Portfolio Themes</div>
       </div>
     </div>
@@ -94,7 +95,8 @@
     <div class="mob-nav-label">Portfolio</div>
     <button class="mob-nav-item" data-mobpage="portfolio" onclick="mobileNav('portfolio')" style="font-weight:700;border-left:3px solid rgba(91,155,213,0.6);">📈 Portfolio Overview</button>
     <button class="mob-nav-item" data-mobpage="holdings" onclick="mobileNav('holdings')">💼 Manage Holdings</button>
-    <button class="mob-nav-item" data-mobpage="sector-macro-alignment" onclick="mobileNav('sector-macro-alignment')">🎯 Sector &amp; Macro Alignment</button>
+    <!-- Routes to the Manage Holdings > Sector &amp; Macro Alignment tab (moved 2026-07-25). -->
+    <button class="mob-nav-item" data-mobpage="holdings" onclick="mobileNav('holdings');setTimeout(function(){holdingsShowTab('alignment');},80);">Sector &amp; Macro Alignment</button>
     <button class="mob-nav-item" data-mobpage="themes"   onclick="mobileNav('themes')">🎨 Portfolio Themes</button>
   </div>
   <div class="mob-nav-section">
@@ -127,41 +129,68 @@
     </div>
 
     <!-- ═══════════════════════════════════════════════════════════════════
-         UNIFIED VIEW — added 2026-07-24.
+         THREE-BOX HEADER — restructured 2026-07-25 at user request.
 
-         This is the site's new spine. Previously the home page described the
-         product; a visitor had to click into five different pages to assemble a
-         view, and those pages could contradict each other. This block states
-         ONE posture, shows the evidence behind it, and — critically — shows
-         where the signals disagree instead of hiding it.
+         The home page previously stacked the full Unified View, the full Market
+         Phase panel and the Regime banner vertically, which meant scrolling a
+         long way before reaching the Market Pulse. This now mirrors the Macro
+         Regime page's side-by-side layout: three compressed boxes of equal
+         height, each holding a consolidated table where every row carries its
+         own hover tooltip instead of a separate paragraph of prose.
+
+         Nothing was removed — the detail moved into `title` tooltips and the
+         ⓘ / ? markers, the same pattern the macro scorecard already uses.
          ═══════════════════════════════════════════════════════════════════ -->
-    <div id="unifiedView" style="margin-bottom:18px;">
-      <div style="padding:18px;text-align:center;color:var(--text-sec);font-size:13px;border:1px solid var(--border);border-radius:6px;">
-        <span class="spinner"></span> Resolving macro regime, market phase, and trend signals&hellip;
-      </div>
-    </div>
-
-    <!-- Market phase: topping composite + bottoming trigger -->
-    <div id="phasePanel" style="margin-bottom:18px;"></div>
-
-    <!-- ── MORNING BRIEFING ── -->
     <div style="margin-bottom:8px;font-size:12px;font-weight:600;color:var(--text-sec);text-transform:uppercase;letter-spacing:.5px;display:flex;justify-content:space-between;align-items:center;">
-      <span>Morning Briefing &mdash; <span id="briefingDate" style="font-weight:400;"></span></span>
+      <span>Today&rsquo;s View &mdash; <span id="briefingDate" style="font-weight:400;"></span></span>
       <span id="warehouseFreshness"></span>
     </div>
 
-    <!-- Regime Banner -->
-    <div class="card" style="margin-bottom:14px;">
-      <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;">
-        <span>Current Portfolio State &amp; Market Regime</span>
-        <button class="btn-sm" style="background:rgba(255,255,255,0.2);color:#fff;border:1px solid rgba(255,255,255,0.35);padding:3px 9px;border-radius:3px;font-size:11px;cursor:pointer;" onclick="briefingLoad(true)">&#8635; Refresh</button>
-      </div>
-      <div class="card-body" style="padding:0;">
-        <div id="briefingRegime" style="padding:18px;text-align:center;color:var(--text-sec);font-size:13px;">
-          <span class="spinner"></span> Fetching live market data...
+    <div class="grid-3 home-triptych" style="margin-bottom:16px;align-items:stretch;">
+      <!-- BOX 1 — Unified View + signal reconciliation, consolidated -->
+      <div class="card" style="margin-bottom:0;display:flex;flex-direction:column;">
+        <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;gap:6px;">
+          <span>Unified View
+            <span class="help-icon" title="One portfolio posture resolved from four signals by a stated hierarchy: the macro regime sets the sector tilt, market phase sets gross exposure, the price trend sets entry timing, and your risk mandate caps everything. Where signals disagree the conflict is shown rather than averaged away — hover any row below for its horizon and basis." data-heading="Unified View">ⓘ</span>
+          </span>
+          <a href="javascript:navigateTo('holdings');setTimeout(function(){holdingsShowTab('alignment');},60);" style="font-size:10px;font-weight:400;color:rgba(255,255,255,0.85);text-decoration:underline;" title="Open the full Sector &amp; Macro Alignment view">detail &rsaquo;</a>
+        </div>
+        <div class="card-body" id="unifiedView" style="flex:1;padding:12px 14px;">
+          <div style="padding:16px;text-align:center;color:var(--text-sec);font-size:12px;">
+            <span class="spinner"></span> Resolving signals&hellip;
+          </div>
         </div>
       </div>
-      <div class="card-sources"><strong>Sources:</strong> SPY &amp; QQQ via Cloudflare Worker / Yahoo Finance &bull; VIX via CBOE &bull; Perry 4-state regime classifier</div>
+
+      <!-- BOX 2 — Market Phase: topping composite + bottoming trigger -->
+      <div class="card" style="margin-bottom:0;display:flex;flex-direction:column;">
+        <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;gap:6px;">
+          <span>Market Phase
+            <span class="help-icon" title="Two independent reads on where we sit in the market cycle. BOTTOMING is a state machine on the VIX: it arms when VIX closes above 30 and triggers when it crosses back below — the round trip is the signal, not the spike. TOPPING is a nine-component composite covering concentration, breadth, valuation, margin debt, the 30-year yield, sentiment, savings rate and IPO supply. Each row below has its own tooltip explaining what it measures and why it matters." data-heading="Market Phase">ⓘ</span>
+          </span>
+          <span id="phaseCoverage" style="font-size:10px;font-weight:400;opacity:.85;"></span>
+        </div>
+        <div class="card-body" id="phasePanel" style="flex:1;padding:12px 14px;">
+          <div style="padding:16px;text-align:center;color:var(--text-sec);font-size:12px;">
+            <span class="spinner"></span> Loading phase signals&hellip;
+          </div>
+        </div>
+      </div>
+
+      <!-- BOX 3 — Portfolio State & Market Regime, compressed -->
+      <div class="card" style="margin-bottom:0;display:flex;flex-direction:column;">
+        <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;gap:6px;">
+          <span>Portfolio State
+            <span class="help-icon" title="The tactical market-state read from price action: SPY trend, drawdown from the 12-month high, advance off the 12-month low, VIX level and breadth. Operates on a days-to-weeks horizon and is intentionally mean-reverting at extremes — strength after a large advance reduces exposure. Sources: SPY and QQQ via Yahoo, VIX via CBOE." data-heading="Portfolio State">ⓘ</span>
+          </span>
+          <button class="btn-sm" style="background:rgba(255,255,255,0.2);color:#fff;border:1px solid rgba(255,255,255,0.35);padding:2px 7px;border-radius:3px;font-size:10px;cursor:pointer;" onclick="briefingLoad(true)" title="Refetch live market data">&#8635;</button>
+        </div>
+        <div class="card-body" style="flex:1;padding:12px 14px;">
+          <div id="briefingRegime" style="text-align:center;color:var(--text-sec);font-size:12px;padding:16px;">
+            <span class="spinner"></span> Fetching market data&hellip;
+          </div>
+        </div>
+      </div>
     </div>
 
     <!-- Market Pulse Row -->
@@ -1116,7 +1145,8 @@
       <div class="pf-tabs">
         <button class="pf-tab active" data-htab="holdings" onclick="holdingsShowTab('holdings')">Holdings</button>
         <button class="pf-tab" data-htab="analysis" onclick="holdingsShowTab('analysis')">Analysis</button>
-        <button class="pf-tab" data-htab="advisor" onclick="holdingsShowTab('advisor');if(typeof advisorOnShow==='function')advisorOnShow();">💼 Advisor</button>
+        <button class="pf-tab" data-htab="alignment" onclick="holdingsShowTab('alignment')">Sector &amp; Macro Alignment</button>
+        <button class="pf-tab" data-htab="advisor" onclick="holdingsShowTab('advisor');if(typeof advisorOnShow==='function')advisorOnShow();">Advisor</button>
         <button class="pf-tab" data-htab="rebalance" onclick="holdingsShowTab('rebalance')">Rebalance</button>
         <button class="pf-tab" data-htab="import" onclick="holdingsShowTab('import')">Import &amp; Add</button>
       </div>
@@ -1146,14 +1176,6 @@
 
       <!-- ═══ TAB 2: Analysis ═══ -->
       <div class="pf-tab-content" id="htab-analysis">
-        <!-- ═══ HOLDING QUALITY RANKER — added 2026-07-24 ═══
-             Answers "is this the best stock to be holding?" by scoring every
-             position against its INDUSTRY PEERS across fundamentals, technicals,
-             sector and regime fit, then proposing swaps for the weak ones.
-             This is the feature the warehouse and ML engine exist to serve, and
-             it leads the Analysis tab because it is the actionable output. -->
-        <div id="holdingRanker" style="margin-bottom:16px;"></div>
-
         <!-- Account-by-Account Comparison (added 2026-07) -->
         <div class="card" style="margin-bottom:16px;">
           <div class="card-title" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;">
@@ -1167,6 +1189,30 @@
           </div>
           <div class="card-sources"><strong>Method:</strong> Value & unrealized G/L from cost basis vs. live price. Sector mix value-weighted per account. Overlap = shared tickers between account pairs. Underperformer flag: unrealized loss worse than −5% AND below the portfolio's median position return.</div>
         </div>
+
+        <!-- ═══ HOLDING QUALITY RANKER ═══
+             Moved below Account-by-Account Comparison and made collapsible
+             on 2026-07-25 at user request. Collapsed by default so the Analysis
+             tab opens to a shorter page; state persists in localStorage. -->
+        <div class="card" style="margin-bottom:16px;">
+          <div class="card-title" id="rankerToggle"
+               style="display:flex;justify-content:space-between;align-items:center;cursor:pointer;user-select:none;"
+               onclick="toggleHoldingRanker()" role="button" tabindex="0"
+               onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();toggleHoldingRanker();}"
+               aria-expanded="false" aria-controls="holdingRankerWrap">
+            <span>Holding Quality Ranker
+              <span class="help-icon" title="Scores every position against its INDUSTRY peers across five factor blocks — value, quality, momentum, growth and low-volatility — using cohort-relative z-scores rather than raw ratios, because a 32x P/E means something different in software than in utilities. Factor weights shift with the macro regime. A random-forest and gradient-boosting ensemble contributes only when it demonstrates out-of-sample skill; otherwise its weight is zero and the ranking runs on the transparent factor model alone." data-heading="Holding Quality Ranker">ⓘ</span>
+            </span>
+            <span style="display:flex;align-items:center;gap:10px;">
+              <span id="rankerSummary" style="font-size:11px;font-weight:400;opacity:.9;"></span>
+              <span id="rankerCaret" style="font-size:13px;">&#9656;</span>
+            </span>
+          </div>
+          <div id="holdingRankerWrap" style="display:none;">
+            <div id="holdingRanker"></div>
+          </div>
+        </div>
+
         <!-- Story Cards -->
         <div class="hld-story-strip" id="hldStoryStrip">
           <div class="hld-story-card info">
@@ -1215,6 +1261,229 @@
         </div>
       </div>
 
+      <!-- ═══ TAB: Sector & Macro Alignment ═══
+           Moved here from its own top-level page on 2026-07-25 at user request.
+           It only ever operated on the user's holdings plus the macro regime, so it
+           belongs beside Analysis rather than as a separate nav destination. The
+           page hero was dropped (the tab label carries the title) and the auth gate
+           is redundant here because the whole Holdings page is already gated. -->
+      <div class="pf-tab-content" id="htab-alignment">
+
+      <!-- (Story breadcrumb strip removed 2026-07: it duplicated main-nav destinations.
+           All cross-page navigation now goes through the top navigation bar only.) -->
+
+      <div id="sectorMacroAuthGate" class="auth-gate" style="display:none;">
+        <div style="text-align:center;padding:40px;"><span style="font-size:36px;">🎯</span><br><br>
+          <strong>Sign in to view Sector &amp; Macro Alignment</strong><br>
+          <p style="color:var(--text-sec);font-size:13px;">This page requires your holdings data and FRED macro analysis.</p>
+        </div>
+      </div>
+      <div id="sectorMacroPanel" style="display:none;">
+        <!-- ══════════════════════════════════════════════════════════════════ -->
+        <!-- SECTION 1: PORTFOLIO GAP ANALYSIS -->
+        <!-- ══════════════════════════════════════════════════════════════════ -->
+
+        <h2 style="margin-bottom:12px;">Portfolio Gap Analysis</h2>
+
+        <!-- KPI Band -->
+        <div class="gap-kpi-band" id="gapKpiBand" style="margin-bottom:16px;">
+          <div class="metric-card" id="gapDriftCard">
+            <div class="metric-label">Portfolio Drift</div>
+            <div class="metric-value" id="gapDriftVal">—</div>
+            <div class="metric-sub" id="gapDriftSub">vs. playbook</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-label">Regime</div>
+            <div class="metric-value" id="gapRegimeVal" style="font-size:13px;">—</div>
+            <div class="metric-sub" id="gapRegimeSub">current macro phase</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-label">Largest Gap</div>
+            <div class="metric-value" id="gapLargestVal" style="font-size:13px;">—</div>
+            <div class="metric-sub" id="gapLargestSub">sector mismatch</div>
+          </div>
+          <div class="metric-card">
+            <div class="metric-label">Holdings</div>
+            <div class="metric-value" id="gapPositionsVal">—</div>
+            <div class="metric-sub" id="gapPositionsSub">positions</div>
+          </div>
+        </div>
+
+        <div id="gapDriftBanner" style="margin-bottom:16px;"></div>
+
+        <div class="card">
+          <div class="card-title">Gap Analysis Chart</div>
+          <div class="card-body" style="padding:0;height:380px;">
+            <canvas id="gapBarChart"></canvas>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-title">Sector-by-Sector Breakdown</div>
+          <div class="card-body">
+            <div style="overflow-x:auto;">
+              <table class="data-table">
+                <thead>
+                  <tr>
+                    <th>Sector</th>
+                    <th style="min-width:140px;">Current vs Target</th>
+                    <th style="text-align:right;">Current %</th>
+                    <th style="text-align:right;">Target %</th>
+                    <th style="text-align:right;">Gap %</th>
+                    <th style="text-align:right;">Gap $</th>
+                    <th style="text-align:center;">Action</th>
+                  </tr>
+                </thead>
+                <tbody id="gapDetailBody">
+                  <tr><td colspan="5" style="text-align:center;padding:20px;color:var(--text-sec);">
+                    <span class="spinner"></span> Computing gap analysis…
+                  </td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-title">Rebalancing Actions</div>
+          <div class="card-body" id="gapRebalanceSuggestions" style="font-size:13px;">
+            <div style="text-align:center;color:var(--text-sec);padding:10px;"><span class="spinner"></span> Loading…</div>
+          </div>
+          <div class="card-footer" style="display:flex;gap:10px;padding:10px 14px;">
+            <button class="btn" onclick="navigateTo('holdings');holdingsShowTab('rebalance')">Go to Rebalancer &#8594;</button>
+            <button class="btn btn-outline" id="gapExportBtn" onclick="gapExportCSV()">Export Gap CSV</button>
+          </div>
+        </div>
+
+        <!-- ══════════════════════════════════════════════════════════════════ -->
+        <!-- SECTION 2: ASSET PLAYBOOK (Regime-aware recommendations) -->
+        <!-- ══════════════════════════════════════════════════════════════════ -->
+
+        <h2 style="margin-bottom:12px;margin-top:32px;">Asset Playbook</h2>
+
+        <!-- Regime Banner -->
+        <div id="playbookRegimeBanner" class="card" style="margin-bottom:16px;">
+          <div class="card-body" id="playbookRegimeBody">
+            <div style="text-align:center;padding:20px;color:var(--text-sec);"><span class="spinner"></span> Loading regime…</div>
+          </div>
+        </div>
+
+        <!-- Asset Playbook Tabs -->
+        <div class="pf-tabs">
+          <button class="pf-tab active" data-pbtab="sectors" onclick="playbookShowTab('sectors')">Sector Playbook</button>
+          <button class="pf-tab" data-pbtab="assets" onclick="playbookShowTab('assets')">Asset Classes</button>
+          <button class="pf-tab" data-pbtab="rrg" onclick="playbookShowTab('rrg')">Sector Rotation (RRG)</button>
+          <button class="pf-tab" data-pbtab="hitrateS" onclick="playbookShowTab('hitrateS')">Historical Hit Rates</button>
+        </div>
+
+        <!-- TAB: Sector Playbook -->
+        <div class="pf-tab-content active" id="pbtab-sectors">
+          <div class="card">
+            <div class="card-title">GICS Sector Playbook — <span id="pbSectorQuadLabel">Current Regime</span>
+              <span class="help-icon" title="Color-coded by the Fidelity AART business-cycle playbook. Green = Overweight, Yellow = Neutral, Red = Underweight. Hit rate = % of historical periods this sector outperformed in this cycle phase.">?</span>
+            </div>
+            <div class="card-body">
+              <div class="playbook-section-title">Equity Sectors (GICS)</div>
+              <div class="playbook-grid" id="pbSectorGrid">
+                <div style="grid-column:1/-1;text-align:center;padding:20px;color:var(--text-sec);"><span class="spinner"></span> Loading…</div>
+              </div>
+            </div>
+            <div class="card-sources"><strong>Source:</strong> Fidelity Asset Allocation Research Team (AART) business-cycle sector study (1962–2020). Hit rates represent historical frequency of outperformance vs. S&amp;P 500 during the indicated cycle phase. Not investment advice.</div>
+          </div>
+          <div class="card" style="margin-top:16px;">
+            <div class="card-title">Playbook Positioning vs. My Holdings</div>
+            <div class="card-body" id="pbVsHoldings">
+              <div style="text-align:center;padding:20px;color:var(--text-sec);font-size:13px;">
+                Load your holdings in <button class="btn btn-sm" onclick="navigateTo('holdings')">Manage Holdings</button> to see how your portfolio aligns to the playbook.
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- TAB: Asset Classes -->
+        <div class="pf-tab-content" id="pbtab-assets">
+          <div class="card">
+            <div class="card-title">Asset Class Playbook — <span id="pbAssetQuadLabel">Current Regime</span></div>
+            <div class="card-body">
+              <div class="playbook-grid" id="pbAssetGrid">
+                <div style="grid-column:1/-1;text-align:center;padding:20px;color:var(--text-sec);"><span class="spinner"></span> Loading…</div>
+              </div>
+            </div>
+            <!-- Citation corrected 2026-07-24. This previously read "Asset class
+                 performance data 1972–2023", implying the percentages shown were
+                 measured over that period. They were hardcoded literals that
+                 nothing in the codebase ever computed, and they contradicted the
+                 sector table on the Macro page. The tilts are now presented as
+                 what they actually are: directional priors informed by published
+                 research. Anything measured is labelled with its sample size. -->
+            <div class="card-sources"><strong>Basis:</strong> Directional priors informed by published business-cycle research (Fidelity AART framework, Bridgewater regime studies, CFA Institute business-cycle curriculum). <strong>These are analyst judgments, not measured hit rates</strong> — no multi-cycle performance statistics have been computed on this dataset, so none are shown. Where a figure is measured live from the warehouse it is labelled with its sample size. Past performance does not guarantee future results.</div>
+          </div>
+        </div>
+
+        <!-- TAB: RRG Sector Rotation -->
+        <div class="pf-tab-content" id="pbtab-rrg">
+          <div class="card">
+            <div class="card-title">Relative Rotation Graph (RRG) — Sector Momentum
+              <span class="help-icon" title="The RRG shows sector ETFs plotted by relative strength (X) vs. momentum of relative strength (Y). Leading = strong and accelerating. Weakening = strong but decelerating. Lagging = weak and decelerating. Improving = weak but accelerating.">?</span>
+              <button class="btn btn-sm" onclick="loadRRG(true)" style="float:right;">Refresh Data</button>
+            </div>
+            <div class="card-body">
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;font-size:11px;">
+                <div style="padding:6px 10px;background:rgba(46,125,82,.1);border-radius:4px;border-left:3px solid var(--success);"><strong style="color:var(--success);">Leading</strong> — Strong RS, Positive Momentum</div>
+                <div style="padding:6px 10px;background:rgba(139,105,20,.1);border-radius:4px;border-left:3px solid #8B6914;"><strong style="color:#8B6914;">Weakening</strong> — Strong RS, Negative Momentum</div>
+                <div style="padding:6px 10px;background:rgba(139,42,42,.1);border-radius:4px;border-left:3px solid var(--danger);"><strong style="color:var(--danger);">Lagging</strong> — Weak RS, Negative Momentum</div>
+                <div style="padding:6px 10px;background:rgba(0,120,215,.1);border-radius:4px;border-left:3px solid var(--blue);"><strong style="color:var(--blue);">Improving</strong> — Weak RS, Positive Momentum</div>
+              </div>
+              <div id="rrgStatus" style="font-size:12px;color:var(--text-sec);margin-bottom:8px;"></div>
+              <div style="position:relative;height:420px;"><canvas id="rrgChart"></canvas></div>
+              <div id="rrgSectorList" style="margin-top:14px;font-size:12px;display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:6px;"></div>
+            </div>
+            <div class="card-sources"><strong>Calculation (corrected 2026-07):</strong> RS-Ratio = 100 × (sector÷SPY price ratio today) ÷ 63-day average of that ratio — so 100 means the sector is tracking its own recent relative trend, above 100 means it's gaining on SPY. RS-Momentum = 15-day % change of the RS-Ratio. Quadrants per Julius de Kempenaer's RRG method. It is <em>normal</em> for the four quadrants to be populated unevenly — in strong risk-on tapes most sectors cluster in Leading/Weakening; in narrow markets one or two sectors lead while the rest lag. Data: 1 year of daily closes, date-aligned, Yahoo Finance via Cloudflare proxy.</div>
+          </div>
+        </div>
+
+        <!-- TAB: Historical Hit Rates -->
+        <div class="pf-tab-content" id="pbtab-hitrateS">
+          <div class="card">
+            <div class="card-title">Historical Hit Rates by Business Cycle Phase
+              <span class="help-icon" title="Hit rate = % of historical cycle-phase periods where each sector generated positive excess return vs. SPX. Source: Fidelity AART business-cycle sector study 1962–2020. For educational reference only.">?</span>
+            </div>
+            <div class="card-body">
+              <div style="overflow-x:auto;">
+                <!-- Header is now REWRITTEN AT RUNTIME by populateHitRateTable()
+                     (see the #hitRateHead id below). Changed 2026-07-25: the body
+                     used to render four business-cycle phase columns derived from an
+                     arbitrary Quad-to-phase mapping, which was a category error and
+                     disagreed with the Playbook card on 26 of 44 cells. The table now
+                     renders the four Quads directly plus a live measured-breadth
+                     column, and the header is generated to match so the two can never
+                     drift apart again. The markup below is the pre-JS fallback. -->
+                <table class="data-table" id="hitRateTable">
+                  <thead id="hitRateHead">
+                    <tr>
+                      <th style="text-align:left;">Sector</th>
+                      <th style="background:rgba(46,125,82,.15);color:#1A5C38;border-bottom:2px solid var(--success);">Goldilocks</th>
+                      <th style="background:rgba(139,105,20,.15);color:#5C4500;border-bottom:2px solid #8B6914;">Overheat</th>
+                      <th style="background:rgba(139,42,42,.15);color:#5C0000;border-bottom:2px solid var(--danger);">Stagflation</th>
+                      <th style="background:rgba(91,155,213,.15);color:#003C71;border-bottom:2px solid var(--blue);">Deflation</th>
+                      <th>Measured breadth</th>
+                    </tr>
+                  </thead>
+                  <tbody id="hitRateBody"></tbody>
+                </table>
+                <div id="hitRateNote" style="font-size:11px;color:var(--text-sec);line-height:1.65;margin-top:8px;"></div>
+              </div>
+            </div>
+            <!-- Citation corrected 2026-07-25. This claimed hit rates "calculated from NBER
+                 business cycle dates 1962-2020" for figures that were hardcoded literals
+                 nothing ever computed — the same false-attribution issue fixed on the
+                 Playbook card. The table now shows ordinal tilts plus a live measured
+                 breadth column. -->
+            <div class="card-sources"><strong>Basis:</strong> Directional priors informed by published business-cycle research (Fidelity AART framework, CFA Institute curriculum). <strong>These are analyst judgments, not measured hit rates</strong> — no multi-cycle performance statistics have been computed on this dataset. The "Measured breadth" column IS computed live from the warehouse and carries its sample size. Past performance is not indicative of future results.</div>
+          </div>
+        </div>
+      </div>
+      </div>
       <!-- ═══ TAB: Advisor (advisor-grade planning suite, added 2026-07) ═══ -->
       <div class="pf-tab-content" id="htab-advisor">
         <div id="advisorRoot">
@@ -1995,7 +2264,7 @@
               Loading…
             </div>
             <div class="card-footer" style="padding:10px 14px;">
-              <button class="btn" onclick="navigateTo('sector-macro-alignment')">Full Playbook &#8594;</button>
+              <button class="btn" onclick="navigateTo('holdings');setTimeout(function(){holdingsShowTab('alignment');},60);">Full Playbook &#8594;</button>
             </div>
           </div>
         </div>
@@ -3285,216 +3554,6 @@
 
 
 <!-- ═══════════ SECTOR & MACRO ALIGNMENT PAGE (merged playbook + gap analysis) ═══════════ -->
-<div class="page" id="page-sector-macro-alignment">
-  <div class="content-wrap">
-    <div class="hero" style="padding:32px 40px;">
-      <h1>🎯 Sector &amp; Macro Alignment</h1>
-      <p>Compare your portfolio against the regime playbook and identify sector gaps. Combines portfolio drift analysis with regime-aware asset allocation recommendations.</p>
-    </div>
-    <!-- (Story breadcrumb strip removed 2026-07: it duplicated main-nav destinations.
-         All cross-page navigation now goes through the top navigation bar only.) -->
-
-    <div id="sectorMacroAuthGate" class="auth-gate" style="display:none;">
-      <div style="text-align:center;padding:40px;"><span style="font-size:36px;">🎯</span><br><br>
-        <strong>Sign in to view Sector &amp; Macro Alignment</strong><br>
-        <p style="color:var(--text-sec);font-size:13px;">This page requires your holdings data and FRED macro analysis.</p>
-      </div>
-    </div>
-    <div id="sectorMacroPanel" style="display:none;">
-      <!-- ══════════════════════════════════════════════════════════════════ -->
-      <!-- SECTION 1: PORTFOLIO GAP ANALYSIS -->
-      <!-- ══════════════════════════════════════════════════════════════════ -->
-
-      <h2 style="margin-bottom:12px;">Portfolio Gap Analysis</h2>
-
-      <!-- KPI Band -->
-      <div class="gap-kpi-band" id="gapKpiBand" style="margin-bottom:16px;">
-        <div class="metric-card" id="gapDriftCard">
-          <div class="metric-label">Portfolio Drift</div>
-          <div class="metric-value" id="gapDriftVal">—</div>
-          <div class="metric-sub" id="gapDriftSub">vs. playbook</div>
-        </div>
-        <div class="metric-card">
-          <div class="metric-label">Regime</div>
-          <div class="metric-value" id="gapRegimeVal" style="font-size:13px;">—</div>
-          <div class="metric-sub" id="gapRegimeSub">current macro phase</div>
-        </div>
-        <div class="metric-card">
-          <div class="metric-label">Largest Gap</div>
-          <div class="metric-value" id="gapLargestVal" style="font-size:13px;">—</div>
-          <div class="metric-sub" id="gapLargestSub">sector mismatch</div>
-        </div>
-        <div class="metric-card">
-          <div class="metric-label">Holdings</div>
-          <div class="metric-value" id="gapPositionsVal">—</div>
-          <div class="metric-sub" id="gapPositionsSub">positions</div>
-        </div>
-      </div>
-
-      <div id="gapDriftBanner" style="margin-bottom:16px;"></div>
-
-      <div class="card">
-        <div class="card-title">Gap Analysis Chart</div>
-        <div class="card-body" style="padding:0;height:380px;">
-          <canvas id="gapBarChart"></canvas>
-        </div>
-      </div>
-
-      <div class="card">
-        <div class="card-title">Sector-by-Sector Breakdown</div>
-        <div class="card-body">
-          <div style="overflow-x:auto;">
-            <table class="data-table">
-              <thead>
-                <tr>
-                  <th>Sector</th>
-                  <th style="min-width:140px;">Current vs Target</th>
-                  <th style="text-align:right;">Current %</th>
-                  <th style="text-align:right;">Target %</th>
-                  <th style="text-align:right;">Gap %</th>
-                  <th style="text-align:right;">Gap $</th>
-                  <th style="text-align:center;">Action</th>
-                </tr>
-              </thead>
-              <tbody id="gapDetailBody">
-                <tr><td colspan="5" style="text-align:center;padding:20px;color:var(--text-sec);">
-                  <span class="spinner"></span> Computing gap analysis…
-                </td></tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
-      </div>
-
-      <div class="card">
-        <div class="card-title">Rebalancing Actions</div>
-        <div class="card-body" id="gapRebalanceSuggestions" style="font-size:13px;">
-          <div style="text-align:center;color:var(--text-sec);padding:10px;"><span class="spinner"></span> Loading…</div>
-        </div>
-        <div class="card-footer" style="display:flex;gap:10px;padding:10px 14px;">
-          <button class="btn" onclick="navigateTo('holdings');holdingsShowTab('rebalance')">Go to Rebalancer &#8594;</button>
-          <button class="btn btn-outline" id="gapExportBtn" onclick="gapExportCSV()">Export Gap CSV</button>
-        </div>
-      </div>
-
-      <!-- ══════════════════════════════════════════════════════════════════ -->
-      <!-- SECTION 2: ASSET PLAYBOOK (Regime-aware recommendations) -->
-      <!-- ══════════════════════════════════════════════════════════════════ -->
-
-      <h2 style="margin-bottom:12px;margin-top:32px;">Asset Playbook</h2>
-
-      <!-- Regime Banner -->
-      <div id="playbookRegimeBanner" class="card" style="margin-bottom:16px;">
-        <div class="card-body" id="playbookRegimeBody">
-          <div style="text-align:center;padding:20px;color:var(--text-sec);"><span class="spinner"></span> Loading regime…</div>
-        </div>
-      </div>
-
-      <!-- Asset Playbook Tabs -->
-      <div class="pf-tabs">
-        <button class="pf-tab active" data-pbtab="sectors" onclick="playbookShowTab('sectors')">Sector Playbook</button>
-        <button class="pf-tab" data-pbtab="assets" onclick="playbookShowTab('assets')">Asset Classes</button>
-        <button class="pf-tab" data-pbtab="rrg" onclick="playbookShowTab('rrg')">Sector Rotation (RRG)</button>
-        <button class="pf-tab" data-pbtab="hitrateS" onclick="playbookShowTab('hitrateS')">Historical Hit Rates</button>
-      </div>
-
-      <!-- TAB: Sector Playbook -->
-      <div class="pf-tab-content active" id="pbtab-sectors">
-        <div class="card">
-          <div class="card-title">GICS Sector Playbook — <span id="pbSectorQuadLabel">Current Regime</span>
-            <span class="help-icon" title="Color-coded by the Fidelity AART business-cycle playbook. Green = Overweight, Yellow = Neutral, Red = Underweight. Hit rate = % of historical periods this sector outperformed in this cycle phase.">?</span>
-          </div>
-          <div class="card-body">
-            <div class="playbook-section-title">Equity Sectors (GICS)</div>
-            <div class="playbook-grid" id="pbSectorGrid">
-              <div style="grid-column:1/-1;text-align:center;padding:20px;color:var(--text-sec);"><span class="spinner"></span> Loading…</div>
-            </div>
-          </div>
-          <div class="card-sources"><strong>Source:</strong> Fidelity Asset Allocation Research Team (AART) business-cycle sector study (1962–2020). Hit rates represent historical frequency of outperformance vs. S&amp;P 500 during the indicated cycle phase. Not investment advice.</div>
-        </div>
-        <div class="card" style="margin-top:16px;">
-          <div class="card-title">Playbook Positioning vs. My Holdings</div>
-          <div class="card-body" id="pbVsHoldings">
-            <div style="text-align:center;padding:20px;color:var(--text-sec);font-size:13px;">
-              Load your holdings in <button class="btn btn-sm" onclick="navigateTo('holdings')">Manage Holdings</button> to see how your portfolio aligns to the playbook.
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- TAB: Asset Classes -->
-      <div class="pf-tab-content" id="pbtab-assets">
-        <div class="card">
-          <div class="card-title">Asset Class Playbook — <span id="pbAssetQuadLabel">Current Regime</span></div>
-          <div class="card-body">
-            <div class="playbook-grid" id="pbAssetGrid">
-              <div style="grid-column:1/-1;text-align:center;padding:20px;color:var(--text-sec);"><span class="spinner"></span> Loading…</div>
-            </div>
-          </div>
-          <!-- Citation corrected 2026-07-24. This previously read "Asset class
-               performance data 1972–2023", implying the percentages shown were
-               measured over that period. They were hardcoded literals that
-               nothing in the codebase ever computed, and they contradicted the
-               sector table on the Macro page. The tilts are now presented as
-               what they actually are: directional priors informed by published
-               research. Anything measured is labelled with its sample size. -->
-          <div class="card-sources"><strong>Basis:</strong> Directional priors informed by published business-cycle research (Fidelity AART framework, Bridgewater regime studies, CFA Institute business-cycle curriculum). <strong>These are analyst judgments, not measured hit rates</strong> — no multi-cycle performance statistics have been computed on this dataset, so none are shown. Where a figure is measured live from the warehouse it is labelled with its sample size. Past performance does not guarantee future results.</div>
-        </div>
-      </div>
-
-      <!-- TAB: RRG Sector Rotation -->
-      <div class="pf-tab-content" id="pbtab-rrg">
-        <div class="card">
-          <div class="card-title">Relative Rotation Graph (RRG) — Sector Momentum
-            <span class="help-icon" title="The RRG shows sector ETFs plotted by relative strength (X) vs. momentum of relative strength (Y). Leading = strong and accelerating. Weakening = strong but decelerating. Lagging = weak and decelerating. Improving = weak but accelerating.">?</span>
-            <button class="btn btn-sm" onclick="loadRRG(true)" style="float:right;">Refresh Data</button>
-          </div>
-          <div class="card-body">
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;font-size:11px;">
-              <div style="padding:6px 10px;background:rgba(46,125,82,.1);border-radius:4px;border-left:3px solid var(--success);"><strong style="color:var(--success);">Leading</strong> — Strong RS, Positive Momentum</div>
-              <div style="padding:6px 10px;background:rgba(139,105,20,.1);border-radius:4px;border-left:3px solid #8B6914;"><strong style="color:#8B6914;">Weakening</strong> — Strong RS, Negative Momentum</div>
-              <div style="padding:6px 10px;background:rgba(139,42,42,.1);border-radius:4px;border-left:3px solid var(--danger);"><strong style="color:var(--danger);">Lagging</strong> — Weak RS, Negative Momentum</div>
-              <div style="padding:6px 10px;background:rgba(0,120,215,.1);border-radius:4px;border-left:3px solid var(--blue);"><strong style="color:var(--blue);">Improving</strong> — Weak RS, Positive Momentum</div>
-            </div>
-            <div id="rrgStatus" style="font-size:12px;color:var(--text-sec);margin-bottom:8px;"></div>
-            <div style="position:relative;height:420px;"><canvas id="rrgChart"></canvas></div>
-            <div id="rrgSectorList" style="margin-top:14px;font-size:12px;display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:6px;"></div>
-          </div>
-          <div class="card-sources"><strong>Calculation (corrected 2026-07):</strong> RS-Ratio = 100 × (sector÷SPY price ratio today) ÷ 63-day average of that ratio — so 100 means the sector is tracking its own recent relative trend, above 100 means it's gaining on SPY. RS-Momentum = 15-day % change of the RS-Ratio. Quadrants per Julius de Kempenaer's RRG method. It is <em>normal</em> for the four quadrants to be populated unevenly — in strong risk-on tapes most sectors cluster in Leading/Weakening; in narrow markets one or two sectors lead while the rest lag. Data: 1 year of daily closes, date-aligned, Yahoo Finance via Cloudflare proxy.</div>
-        </div>
-      </div>
-
-      <!-- TAB: Historical Hit Rates -->
-      <div class="pf-tab-content" id="pbtab-hitrateS">
-        <div class="card">
-          <div class="card-title">Historical Hit Rates by Business Cycle Phase
-            <span class="help-icon" title="Hit rate = % of historical cycle-phase periods where each sector generated positive excess return vs. SPX. Source: Fidelity AART business-cycle sector study 1962–2020. For educational reference only.">?</span>
-          </div>
-          <div class="card-body">
-            <div style="overflow-x:auto;">
-              <table class="data-table" id="hitRateTable">
-                <thead>
-                  <tr>
-                    <th>Sector</th>
-                    <!-- Light tinted headers need DARK text — the global th rule
-                         is white-on-navy, which was invisible on these tints -->
-                    <th style="background:rgba(46,125,82,.15);color:#1A5C38;border-bottom:2px solid var(--success);">Early Expansion</th>
-                    <th style="background:rgba(91,155,213,.15);color:#003C71;border-bottom:2px solid var(--blue);">Mid Expansion</th>
-                    <th style="background:rgba(139,105,20,.15);color:#5C4500;border-bottom:2px solid #8B6914;">Late / Peak</th>
-                    <th style="background:rgba(139,42,42,.15);color:#5C0000;border-bottom:2px solid var(--danger);">Contraction</th>
-                    <th>Top ETF</th>
-                  </tr>
-                </thead>
-                <tbody id="hitRateBody"></tbody>
-              </table>
-            </div>
-          </div>
-          <div class="card-sources"><strong>Source:</strong> Fidelity Asset Allocation Research Team (AART), "Business Cycle and Sector Performance," 2022. Hit rates calculated from NBER business cycle dates 1962–2020. Gross total returns. Past performance is not indicative of future results.</div>
-        </div>
-      </div>
-    </div>
-  </div>
-</div>
 
 <!-- ═══════════ COMMAND PALETTE ═══════════ -->
 <div class="cmdk-overlay" id="cmdkOverlay" onclick="if(event.target===this)closeCmdK()">
@@ -4243,15 +4302,15 @@
        app-ml.js        ML ensemble + holding ranker   (needs warehouse + signals)
        app-advisor.js   planning suite                 (reads shared CMA from signals)
 
-     Version bumped to 12 to bust the GitHub Pages CDN cache. -->
-<script src="app.js?v=12"></script>
-<script src="app2.js?v=12"></script>
-<script src="app3.js?v=12"></script>
-<script src="app-warehouse.js?v=12"></script>
-<script src="app-signals.js?v=12"></script>
-<script src="app-ml.js?v=12"></script>
-<script src="app-advisor.js?v=12"></script>
-<script src="app-views.js?v=12"></script>
+     Version bumped to 13 (2026-07-25 layout + fixes) to bust the GitHub Pages CDN cache. -->
+<script src="app.js?v=13"></script>
+<script src="app2.js?v=13"></script>
+<script src="app3.js?v=13"></script>
+<script src="app-warehouse.js?v=13"></script>
+<script src="app-signals.js?v=13"></script>
+<script src="app-ml.js?v=13"></script>
+<script src="app-advisor.js?v=13"></script>
+<script src="app-views.js?v=13"></script>
 <script>
 /* ═══════════ UNIFIED SIGNAL BOOTSTRAP — added 2026-07-24 ═══════════
    One place where the warehouse loads and the signal engine resolves. Every

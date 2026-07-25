@@ -48,8 +48,99 @@
      1. UNIFIED VIEW
      ══════════════════════════════════════════════════════════════════════════ */
 
-  V.renderUnifiedView = function (sig) {
+  /* ══════════════════════════════════════════════════════════════════════════
+     COMPACT UNIFIED VIEW — added 2026-07-25
+
+     The home page now uses a three-box triptych, so this renders a condensed
+     version: posture, thesis, and the signal reconciliation collapsed into a
+     tight table where every row's horizon/basis/resolution lives in a `title`
+     tooltip. Conflict COUNT is shown as a badge rather than expanded prose —
+     the full expansion lives on the Sector & Macro Alignment page.
+
+     The full-width version is still available via renderUnifiedViewFull().
+     ══════════════════════════════════════════════════════════════════════════ */
+
+  V.renderUnifiedViewCompact = function (sig) {
     var host = el('unifiedView');
+    if (!host) return;
+    if (!sig || !sig.view) {
+      host.innerHTML = '<div style="padding:14px;font-size:12px;color:var(--text-sec);text-align:center;">'
+        + 'Macro data unavailable &mdash; open the <a href="javascript:navigateTo(\'macro\')">Macro page</a> to load the FRED scorecard.</div>';
+      return;
+    }
+    var v = sig.view, h = '';
+
+    /* Posture strip */
+    h += '<div style="display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:6px;'
+      +  'background:' + v.postureColor + '12;border:1px solid ' + v.postureColor + '55;margin-bottom:10px;">'
+      +  '<div style="flex:1;">'
+      +    '<div style="font-size:10px;text-transform:uppercase;letter-spacing:.5px;color:var(--text-sec);">Posture</div>'
+      +    '<div style="font-size:16px;font-weight:800;color:' + v.postureColor + ';line-height:1.2;">' + esc(v.posture) + '</div>'
+      +  '</div>'
+      +  '<div style="text-align:right;" title="Gross exposure target. ' + esc((v.grossReasoning || []).join(' · ')) + '">'
+      +    '<div style="font-size:22px;font-weight:800;color:' + v.postureColor + ';line-height:1;">' + pct(v.grossTarget, 0) + '</div>'
+      +    '<div style="font-size:9px;color:var(--text-sec);">gross target</div>'
+      +  '</div>'
+      +  '</div>';
+
+    /* Thesis — clamped to keep box heights even, full text on hover */
+    h += '<div style="font-size:11.5px;line-height:1.6;color:var(--text-pri);margin-bottom:10px;'
+      +  'display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden;" '
+      +  'title="' + esc(v.thesis) + '">' + esc(v.thesis) + '</div>';
+
+    /* Signal reconciliation — one row per signal, everything else on hover */
+    h += '<table style="width:100%;font-size:11px;border-collapse:collapse;">';
+    (sig.signals || []).forEach(function (s) {
+      var ds = DIR_STYLE[s.direction] || DIR_STYLE.neutral;
+      var tip = s.name + ' — ' + s.value
+        + '\nHorizon: ' + s.horizon
+        + '\nConfidence: ' + (s.confidence == null ? 'n/a' : Math.round(s.confidence * 100) + '%')
+        + '\nBasis: ' + s.basis;
+      h += '<tr style="border-bottom:1px solid var(--border);" title="' + esc(tip) + '">'
+        +  '<td style="padding:4px 2px;color:var(--text-sec);white-space:nowrap;">' + esc(s.name)
+        +    ' <span class="help-icon" style="font-size:9px;" title="' + esc(tip) + '">?</span></td>'
+        +  '<td style="padding:4px 2px;text-align:right;font-weight:600;">' + esc(s.value) + '</td>'
+        +  '<td style="padding:4px 2px;text-align:right;width:1%;">'
+        +    '<span style="background:' + ds.bg + ';color:' + ds.fg + ';padding:1px 5px;border-radius:8px;font-size:9px;font-weight:600;white-space:nowrap;">' + ds.label + '</span></td>'
+        +  '</tr>';
+    });
+    h += '</table>';
+
+    /* Sector tilt — compressed to two lines */
+    if (v.tiltOW && v.tiltOW.length) {
+      h += '<div style="margin-top:9px;font-size:10.5px;line-height:1.55;" title="' + esc(v.tiltRationale || '') + '">'
+        +  '<span style="color:#2E7D52;font-weight:700;">OW:</span> ' + esc(v.tiltOW.join(', ')) + '<br>'
+        +  '<span style="color:#8B2A2A;font-weight:700;">UW:</span> ' + esc(v.tiltUW.join(', '))
+        +  '</div>';
+    }
+
+    /* Conflicts and agreements as badges — full text in the tooltip */
+    if ((v.conflicts && v.conflicts.length) || (v.agreements && v.agreements.length)) {
+      h += '<div style="margin-top:9px;display:flex;gap:6px;flex-wrap:wrap;">';
+      if (v.conflicts && v.conflicts.length) {
+        var ctip = v.conflicts.map(function (c) {
+          return '• ' + c.between.join(' vs ') + ' (' + c.severity + ')\n  ' + c.text + '\n  → ' + c.resolution;
+        }).join('\n\n');
+        h += '<span style="background:#F7E9E6;color:#8B2A2A;padding:2px 7px;border-radius:9px;font-size:10px;font-weight:600;cursor:help;" '
+          +  'title="' + esc(ctip) + '">' + v.conflicts.length + ' conflict' + (v.conflicts.length > 1 ? 's' : '') + ' &#9432;</span>';
+      }
+      if (v.agreements && v.agreements.length) {
+        h += '<span style="background:#E8F3EC;color:#2E7D52;padding:2px 7px;border-radius:9px;font-size:10px;font-weight:600;cursor:help;" '
+          +  'title="' + esc(v.agreements.join('\n\n')) + '">' + v.agreements.length + ' agreement &#9432;</span>';
+      }
+      h += '</div>';
+    }
+
+    if (v.notes && v.notes.length) {
+      h += '<div style="margin-top:7px;font-size:10px;color:var(--text-sec);cursor:help;" title="' + esc(v.notes.join('\n\n')) + '">'
+        +  '&#9432; ' + v.notes.length + ' note' + (v.notes.length > 1 ? 's' : '') + ' on this reading</div>';
+    }
+
+    host.innerHTML = h;
+  };
+
+  V.renderUnifiedViewFull = function (sig) {
+    var host = el('unifiedViewFull');
     if (!host) return;
     if (!sig || !sig.view) {
       host.innerHTML = '<div style="padding:16px;border:1px solid var(--border);border-radius:6px;font-size:13px;color:var(--text-sec);">'
@@ -175,12 +266,115 @@
     host.innerHTML = h;
   };
 
+  /* Dispatcher: renders whichever container the current page provides. */
+  V.renderUnifiedView = function (sig) {
+    if (el('unifiedView'))     V.renderUnifiedViewCompact(sig);
+    if (el('unifiedViewFull')) V.renderUnifiedViewFull(sig);
+  };
+
   /* ══════════════════════════════════════════════════════════════════════════
      2. PHASE PANEL — topping composite + bottoming trigger
      ══════════════════════════════════════════════════════════════════════════ */
 
-  V.renderPhasePanel = function (sig) {
+  /* ══════════════════════════════════════════════════════════════════════════
+     COMPACT MARKET PHASE — added 2026-07-25
+
+     Consolidated to a line-per-component table in the style of the macro
+     scorecard: each row shows the component, its current reading, and a signal
+     bar, with the full "why this matters" explanation and provenance in a
+     per-row tooltip on the ? marker. Nothing was dropped — all nine components
+     plus the bottoming state machine are still present.
+     ══════════════════════════════════════════════════════════════════════════ */
+
+  V.renderPhasePanelCompact = function (sig) {
     var host = el('phasePanel');
+    if (!host || !sig || !sig.phase) return;
+    var top = sig.phase.top, bot = sig.phase.bottom, h = '';
+
+    var cov = el('phaseCoverage');
+    if (cov) cov.textContent = top.available + '/' + top.total + ' inputs';
+
+    /* --- Bottoming: one compact strip --- */
+    var botColor = bot.triggered ? '#2E7D52' : bot.armed ? '#8B6914' : '#5A6A7A';
+    var botTip = bot.label
+      + '\n\nRule: VIX closes above ' + bot.threshold + ', then crosses back below it. '
+      + 'The round trip is the signal — a spike alone only says stress is present, not that it is resolving.'
+      + (bot.priceConfirmed != null ? '\n\nPrice confirmation: SPY is ' + (bot.priceConfirmed ? 'ABOVE' : 'BELOW') + ' its level at the trigger.' : '')
+      + (bot.triggerCount ? '\n\n' + bot.triggerCount + ' completed round-trips found in the available history.' : '');
+    h += '<div style="display:flex;align-items:center;gap:8px;padding:6px 9px;border-radius:5px;'
+      +  'background:' + botColor + '10;border:1px solid ' + botColor + '50;margin-bottom:9px;" title="' + esc(botTip) + '">'
+      +  '<div style="flex:1;">'
+      +    '<div style="font-size:9.5px;text-transform:uppercase;letter-spacing:.5px;color:var(--text-sec);">Bottoming'
+      +      ' <span class="help-icon" style="font-size:9px;" title="' + esc(botTip) + '">?</span></div>'
+      +    '<div style="font-size:13px;font-weight:800;color:' + botColor + ';text-transform:capitalize;line-height:1.2;">' + esc(bot.state) + '</div>'
+      +  '</div>'
+      +  '<div style="text-align:right;font-size:10px;color:var(--text-sec);">VIX<br><strong style="font-size:13px;color:' + botColor + ';">'
+      +    (bot.currentVix == null ? '—' : bot.currentVix.toFixed(1)) + '</strong></div>'
+      +  '</div>';
+
+    /* --- Topping: score header --- */
+    var tc = top.score == null ? '#5A6A7A'
+      : top.score >= 0.70 ? '#8B2A2A' : top.score >= 0.50 ? '#8B6914' : '#2E7D52';
+    var topTip = 'Nine-component topping composite. Each input is normalised 0-100 against explicit anchors, then weighted. '
+      + 'Components with no data are EXCLUDED and the weights renormalised, so missing data is never scored as benign. '
+      + 'A high score is not a sell signal — tops are processes that can run for months. It is a reason to reduce gross '
+      + 'exposure and upgrade quality, which is what the Unified View does with it.'
+      + (top.note ? '\n\n' + top.note : '');
+    h += '<div style="display:flex;align-items:center;gap:9px;margin-bottom:7px;" title="' + esc(topTip) + '">'
+      +  '<div><div style="font-size:9.5px;text-transform:uppercase;letter-spacing:.5px;color:var(--text-sec);">Topping'
+      +    ' <span class="help-icon" style="font-size:9px;" title="' + esc(topTip) + '">?</span></div>'
+      +    '<div style="font-size:22px;font-weight:800;color:' + tc + ';line-height:1;">'
+      +      (top.score == null ? '—' : (top.score * 100).toFixed(0)) + '<span style="font-size:10px;font-weight:400;color:var(--text-sec);">/100</span></div></div>'
+      +  '<div style="flex:1;font-size:11px;font-weight:700;color:' + tc + ';">' + esc(top.label) + '</div>'
+      +  '</div>';
+
+    /* --- Component table, one line each --- */
+    h += '<table style="width:100%;font-size:10.5px;border-collapse:collapse;">';
+    top.components.forEach(function (c) {
+      var rc = !c.available ? '#8A97A3'
+        : c.norm >= 0.75 ? '#8B2A2A' : c.norm >= 0.5 ? '#8B6914' : '#2E7D52';
+      var tip = c.label + '\n\n' + c.why
+        + '\n\nWeight in composite: ' + (c.weight * 100).toFixed(0) + '%'
+        + '\nCurrent reading: ' + c.display
+        + (c.available ? '\nNormalised: ' + (c.norm * 100).toFixed(0) + '/100 (' + c.reading + ')' : '')
+        + (c.asOf ? '\nAs of: ' + c.asOf + (c.daysOld != null ? ' (' + c.daysOld + ' days old)' : '') : '')
+        + (c.stale ? '\n⚠ This series publishes with a lag — read it as context, not a live signal.' : '');
+      // Shorten labels so every row fits one line in a third-width box.
+      var shortLabel = c.label
+        .replace('Top-10 Growth Contribution', 'Top-10 Growth Contrib.')
+        .replace('Consumer Savings Rate', 'Savings Rate')
+        .replace('30Y Treasury Yield', '30Y Yield')
+        .replace('Sentiment Euphoria', 'Sentiment')
+        .replace('Index Concentration', 'Concentration')
+        .replace('Valuation Stretch', 'Valuation');
+      h += '<tr style="border-bottom:1px solid var(--border);' + (c.available ? '' : 'opacity:.5;') + '" title="' + esc(tip) + '">'
+        +  '<td style="padding:3px 2px;color:var(--text-sec);white-space:nowrap;">' + esc(shortLabel)
+        +    ' <span class="help-icon" style="font-size:9px;" title="' + esc(tip) + '">?</span>'
+        +    (c.stale ? '<span style="color:#8B6914;" title="Published with a lag">&#9788;</span>' : '')
+        +  '</td>'
+        +  '<td style="padding:3px 2px;text-align:right;white-space:nowrap;font-size:10px;">'
+        +    (c.available ? esc(String(c.display).split(' — ')[0].slice(0, 22)) : '<em>no data</em>') + '</td>'
+        +  '<td style="padding:3px 0 3px 4px;width:44px;">'
+        +    (c.available
+              ? '<div style="background:#E6E9ED;border-radius:5px;height:6px;overflow:hidden;"><div style="width:'
+                + Math.round(c.norm * 100) + '%;height:100%;background:' + rc + ';"></div></div>'
+              : '')
+        +  '</td>'
+        +  '</tr>';
+    });
+    h += '</table>';
+
+    if (top.elevated && top.elevated.length) {
+      h += '<div style="margin-top:7px;font-size:10px;color:#8B2A2A;line-height:1.5;" '
+        +  'title="These components are reading at or above the 75th percentile of their anchor range.">'
+        +  '<strong>Elevated:</strong> ' + esc(top.elevated.join(', ')) + '</div>';
+    }
+
+    host.innerHTML = h;
+  };
+
+  V.renderPhasePanelFull = function (sig) {
+    var host = el('phasePanelFull');
     if (!host || !sig || !sig.phase) return;
 
     var top = sig.phase.top, bot = sig.phase.bottom;
@@ -269,6 +463,12 @@
     host.innerHTML = h;
   };
 
+  /* Dispatcher — renders whichever container the current page provides. */
+  V.renderPhasePanel = function (sig) {
+    if (el('phasePanel'))     V.renderPhasePanelCompact(sig);
+    if (el('phasePanelFull')) V.renderPhasePanelFull(sig);
+  };
+
   /* ══════════════════════════════════════════════════════════════════════════
      3. HOLDING RANKER — "is this the best stock to be holding?"
      ══════════════════════════════════════════════════════════════════════════ */
@@ -281,11 +481,11 @@
     if (!WH || !ML) { host.innerHTML = ''; return; }
 
     if (!WH.ready()) {
-      host.innerHTML = '<div class="card"><div class="card-title">Holding Quality Ranker</div><div class="card-body">'
+      host.innerHTML = '<div class="card-body">'
         + '<p style="font-size:13px;color:var(--text-sec);">The market warehouse has not been populated yet. '
         + 'The nightly ingestion job builds it — on the FMP free tier the universe fills over roughly two weeks, '
-        + 'with your own holdings ingested first. Until then this panel stays hidden rather than showing a partial ranking.</p>'
-        + '</div></div>';
+        + 'with your own holdings ingested first. Until then this panel stays quiet rather than showing a partial ranking.</p>'
+        + '</div>';
       return;
     }
 
@@ -293,27 +493,29 @@
       return h.ticker && !['Cash', 'Money Market', 'CD'].includes(h.assetClass);
     });
     if (!holdings.length) {
-      host.innerHTML = '<div class="card"><div class="card-title">Holding Quality Ranker</div><div class="card-body">'
+      host.innerHTML = '<div class="card-body">'
         + '<p style="font-size:13px;color:var(--text-sec);">Add holdings to see them ranked against their industry peers.</p>'
-        + '</div></div>';
+        + '</div>';
       return;
     }
 
     var opt;
     try { opt = ML.optimizePortfolio(holdings, {}); }
     catch (e) {
-      host.innerHTML = '<div class="card"><div class="card-body"><p style="color:#8B2A2A;font-size:12px;">Ranker error: ' + esc(e.message) + '</p></div></div>';
+      host.innerHTML = '<div class="card-body"><p style="color:#8B2A2A;font-size:12px;">Ranker error: ' + esc(e.message) + '</p></div>';
       return;
     }
     if (opt.error) {
-      host.innerHTML = '<div class="card"><div class="card-body"><p style="font-size:12px;color:var(--text-sec);">' + esc(opt.error) + '</p></div></div>';
+      host.innerHTML = '<div class="card-body"><p style="font-size:12px;color:var(--text-sec);">' + esc(opt.error) + '</p></div>';
       return;
     }
 
     var model = opt.model;
     var h = '';
 
-    h += '<div class="card"><div class="card-title">Holding Quality Ranker &mdash; Factor + ML Ensemble</div><div class="card-body">';
+    /* No outer .card here: index.html supplies the collapsible card shell.
+       Rendering one would nest cards and double the padding/borders. */
+    h += '<div class="card-body">';
 
     /* ---- Model skill disclosure FIRST. If the model has no edge, say so before
            showing anything it produced. ---- */
@@ -496,10 +698,72 @@
     }
 
     h += '</div>';
-    h += '<div class="card-sources"><strong>Method:</strong> Cohort-relative robust z-scores (median/MAD, winsorised at the 2nd/98th percentile) across value, quality, momentum, growth and low-volatility blocks, weighted by macro regime. Random forest (bagged CART, out-of-bag scored) and gradient boosting (stagewise, early-stopped on a held-out split) trained in-browser on the warehouse panel. ML weight is a function of measured out-of-sample rank correlation and is zero when no skill is detected. Fundamentals via FMP, prices via Yahoo, both stored in Firestore.</div>';
-    h += '</div>';
+    h += '<div class="card-sources"><strong>Method:</strong> Cohort-relative robust z-scores (median/MAD, winsorised at the 2nd/98th percentile) across value, quality, momentum, growth and low-volatility blocks, weighted by macro regime. Random forest (bagged CART, out-of-bag scored) and gradient boosting (stagewise, early-stopped on a held-out test split) trained in-browser on the warehouse panel. ML weight is a function of measured out-of-sample rank correlation and is zero when no skill is detected. Positions with price history but no fundamentals — ETFs and funds — are scored on their technical blocks and labelled accordingly rather than excluded. Fundamentals via FMP, prices via Yahoo, both stored in Firestore.</div>';
 
     host.innerHTML = h;
+  };
+
+  /* ══════════════════════════════════════════════════════════════════════════
+     COLLAPSIBLE RANKER — added 2026-07-25
+
+     Two reasons this is lazy rather than always-rendered: the ensemble trains on
+     the full warehouse panel (a few hundred milliseconds), and the Analysis tab
+     was long enough already. Collapsed by default, state remembered.
+     ══════════════════════════════════════════════════════════════════════════ */
+
+  var LS_RANKER_OPEN = 'perry_ranker_open';
+
+  V.rankerSummaryText = function () {
+    var WH = window.PerryWarehouse;
+    if (!WH || !WH.ready()) return 'warehouse still filling';
+    var holdings = (window._holdings || []).filter(function (h) {
+      return h.ticker && !['Cash', 'Money Market', 'CD'].includes(h.assetClass);
+    });
+    if (!holdings.length) return '';
+    var e = WH.enrichHoldings(holdings);
+    var n = holdings.length, cov = e.covered.length;
+    return cov + ' of ' + n + ' position' + (n === 1 ? '' : 's') + ' scored'
+      + (cov < n ? ' · ' + (n - cov) + ' awaiting data' : '');
+  };
+
+  V.setRankerOpen = function (open, opts) {
+    opts = opts || {};
+    var wrap = el('holdingRankerWrap');
+    var caret = el('rankerCaret');
+    var toggle = el('rankerToggle');
+    var summary = el('rankerSummary');
+    if (!wrap) return;
+
+    wrap.style.display = open ? '' : 'none';
+    if (caret) caret.innerHTML = open ? '&#9662;' : '&#9656;';
+    if (toggle) toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+    if (summary) summary.textContent = open ? '' : V.rankerSummaryText();
+
+    try { localStorage.setItem(LS_RANKER_OPEN, open ? '1' : '0'); } catch (e) {}
+
+    // Render only on first expand, or when explicitly asked to refresh.
+    if (open && (!V._rankerRendered || opts.force)) {
+      V.renderHoldingRanker();
+      V._rankerRendered = true;
+    }
+  };
+
+  window.toggleHoldingRanker = function () {
+    var wrap = el('holdingRankerWrap');
+    if (!wrap) return;
+    V.setRankerOpen(wrap.style.display === 'none');
+  };
+
+  /* Keeps the collapsed summary line current as holdings/warehouse arrive. */
+  V.refreshRankerChrome = function () {
+    var wrap = el('holdingRankerWrap');
+    if (!wrap) return;
+    var isOpen = wrap.style.display !== 'none';
+    if (isOpen) { V.renderHoldingRanker(); V._rankerRendered = true; }
+    else {
+      var summary = el('rankerSummary');
+      if (summary) summary.textContent = V.rankerSummaryText();
+    }
   };
 
   /* ══════════════════════════════════════════════════════════════════════════
@@ -510,13 +774,23 @@
     var sig = e.detail;
     try { V.renderUnifiedView(sig); } catch (err) { console.warn('[views] unified:', err); }
     try { V.renderPhasePanel(sig); } catch (err) { console.warn('[views] phase:', err); }
-    try { V.renderHoldingRanker(); } catch (err) { console.warn('[views] ranker:', err); }
+    try { V.refreshRankerChrome(); } catch (err) { console.warn('[views] ranker:', err); }
   });
 
-  // Holdings can load after signals resolve; re-render the ranker when they do.
+  // Holdings can load after signals resolve; refresh the ranker when they do.
   document.addEventListener('perry:holdings', function () {
-    try { V.renderHoldingRanker(); } catch (err) { console.warn('[views] ranker:', err); }
+    try { V.refreshRankerChrome(); } catch (err) { console.warn('[views] ranker:', err); }
   });
+
+  // Restore the saved collapse state once the DOM is ready.
+  function initRankerState() {
+    if (!el('holdingRankerWrap')) return;
+    var saved = null;
+    try { saved = localStorage.getItem(LS_RANKER_OPEN); } catch (e) {}
+    V.setRankerOpen(saved === '1');       // collapsed unless previously opened
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', initRankerState);
+  else initRankerState();
 
   window.PerryViews = V;
 })();

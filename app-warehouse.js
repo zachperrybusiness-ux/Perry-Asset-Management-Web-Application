@@ -161,6 +161,26 @@
     catch (e) { /* panel can exceed quota on small budgets — non-fatal */ }
   }
 
+  /* ── COVERAGE TIERS, computed client-side — added 2026-07-25 ──────────────
+     The worker now writes has_technicals / has_fundamentals / coverage_tier,
+     but rows ingested before that change carry the old brittle `data_complete`
+     flag, which excluded every ETF (FMP returns no P/E or P/S for a fund).
+     Recomputing here means the fix takes effect immediately instead of waiting
+     for the whole universe to be re-ingested over the following nights. */
+  function applyTiers(rows) {
+    rows.forEach(function (r) {
+      if (!r) return;
+      r.has_technicals = (r.px_last != null && r.ret_3m != null);
+      r.has_fundamentals = (r.pe != null || r.ps != null || r.pb != null ||
+                            r.roe != null || r.fcf_yield != null);
+      r.coverage_tier = !r.has_technicals ? 'none'
+                      : r.has_fundamentals ? 'full' : 'technical';
+      // Overwrite the stored flag so every downstream consumer agrees.
+      r.data_complete = r.has_technicals;
+    });
+    return rows;
+  }
+
   function index(rows) {
     var m = {};
     rows.forEach(function (r) { if (r && r.ticker) m[r.ticker] = r; });
@@ -179,7 +199,7 @@
     if (!opts.force) {
       var cached = readLS();
       if (cached) {
-        W._rows = cached.rows;
+        W._rows = applyTiers(cached.rows);
         W._byTicker = index(cached.rows);
         W._asOf = cached.asOf;
         return Promise.resolve(W.snapshot());
@@ -192,7 +212,7 @@
         return r.json();
       })
       .then(function (j) {
-        var rows = (j.rows || []).filter(function (r) { return r && r.ticker; });
+        var rows = applyTiers((j.rows || []).filter(function (r) { return r && r.ticker; }));
         W._rows = rows;
         W._byTicker = index(rows);
         W._asOf = j.asOf || new Date().toISOString();

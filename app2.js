@@ -5993,6 +5993,32 @@ const BALANCED_WEIGHTS = {
   'Consumer Discretionary':9.0,'Consumer Staples':8.0,'Communication Services':8.0,
   'Energy':6.0,'Utilities':5.0,'Real Estate':5.0,'Materials':3.0
 };
+
+/* ── EXPORTED TO window — added 2026-07-25 ────────────────────────────────────
+   The five objects above are declared with `const`. A top-level `const` in a
+   classic script creates a binding in the global LEXICAL scope but, unlike
+   `var`, does NOT create a property on `window`. app.js read them as
+   `window.SPY_SECTOR_WEIGHTS`, got undefined, fell through to `|| {}` and drew
+   the "Current vs. Target Allocation" chart with an empty target set — an axis
+   with no bars, and no error in the console to explain it.
+
+   Exporting them explicitly fixes that chart and any future consumer that
+   reasonably expects these to be reachable from `window`. TARGET_MODELS is the
+   preferred handle going forward; the individual aliases are kept for the
+   existing call sites. */
+window.SPY_SECTOR_WEIGHTS        = SPY_SECTOR_WEIGHTS;
+window.QQQ_SECTOR_WEIGHTS        = QQQ_SECTOR_WEIGHTS;
+window.AGGRESSIVE_GROWTH_WEIGHTS = AGGRESSIVE_GROWTH_WEIGHTS;
+window.CONSERVATIVE_WEIGHTS      = CONSERVATIVE_WEIGHTS;
+window.BALANCED_WEIGHTS          = BALANCED_WEIGHTS;
+window.TARGET_MODELS = {
+  spy: SPY_SECTOR_WEIGHTS,
+  qqq: QQQ_SECTOR_WEIGHTS,
+  aggressive_growth: AGGRESSIVE_GROWTH_WEIGHTS,
+  conservative: CONSERVATIVE_WEIGHTS,
+  balanced: BALANCED_WEIGHTS
+};
+
 function driftRender() {
   const el = document.getElementById('driftPanel');
   if (!el) return;
@@ -10992,7 +11018,9 @@ function loadPlaybook() {
 }
 
 function playbookShowTab(name) {
-  _toggleTabs('#page-sector-macro-alignment', 'data-pbtab', name, 'pbtab-');
+  // Scope updated 2026-07-25: the alignment content moved from its own page
+  // into the Manage Holdings tab strip, so the sub-tabs now live under #htab-alignment.
+  _toggleTabs('#htab-alignment', 'data-pbtab', name, 'pbtab-');
   // Lazy-load RRG only when its tab is opened
   if (name === 'rrg' && !window._rrgLoaded) {
     loadRRG();

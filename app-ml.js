@@ -830,8 +830,13 @@
       .concat(CLEAN_FIELDS.map(function (f) { return f + '_z'; }))
       .concat(['log_cap']);
 
+    /* TRAINING requires fundamentals specifically — every feature in
+       CLEAN_FIELDS is a fundamental, so a technical-only row (an ETF) would
+       enter the design matrix as an all-null vector and only add noise.
+       Note this is a stricter filter than the RANKER uses: the ranker scores
+       ETFs on their technical blocks, it just cannot train on them. */
     var rows = WH.all().filter(function (r) {
-      return r.data_complete && r.ret_3m != null && r.market_cap > 0;
+      return r.has_fundamentals && r.has_technicals && r.ret_3m != null && r.market_cap > 0 && !r.is_etf;
     });
     if (rows.length < 60) return null;
 
@@ -966,8 +971,18 @@
     var scored = list.map(function (t) {
       var row = WH.get(t);
       if (!row) {
-        return { ticker: t, covered: false,
-                 note: 'Not yet in the warehouse — the universe fills over several nights on the FMP free tier.' };
+        return { ticker: t, covered: false, tier: 'none',
+                 note: 'Not yet in the warehouse — held tickers ingest first each night, so this should appear after the next run.' };
+      }
+      /* Tiered coverage — reworked 2026-07-25. Previously any row failing the
+         old `data_complete` test was dropped entirely, which silently excluded
+         every ETF (no P/E or P/S exists for a fund). A row with price history
+         can still be scored on momentum, volatility, beta and trend; only the
+         value and quality blocks are unavailable. Scoring what we have and
+         SAYING which blocks are missing is far more useful than an empty row. */
+      if (!row.has_technicals) {
+        return { ticker: t, covered: false, tier: 'none', name: row.name, sector: row.sector,
+                 note: 'Price history not yet ingested — no scoreable data.' };
       }
 
       var cohort = WH.cohort(t, opts.scope);
@@ -1002,6 +1017,11 @@
 
       return {
         ticker: t, covered: true,
+        tier: row.coverage_tier || (row.has_fundamentals ? 'full' : 'technical'),
+        isEtf: !!row.is_etf,
+        blocksScored: Object.keys(blocks).filter(function (b) { return blocks[b].z != null; }),
+        blocksMissing: Object.keys(blocks).filter(function (b) { return blocks[b].z == null; }),
+        weightCovered: wUsed,
         name: row.name, sector: row.sector, industry: row.industry,
         cohort: cohort.scope, cohortLabel: cohort.label || 'Market', cohortN: cohort.rows.length,
         blocks: blocks,
@@ -1049,6 +1069,22 @@
   function verdictFor(s) {
     var z = s.composite;
     var fit = s.regimeFit.fit;
+
+    /* Partial-coverage guard, added 2026-07-25. An ETF scored on 2 of 5 factor
+       blocks is on the same z-scale as a stock scored on all 5 (factorZ is
+       renormalised by the weight actually used), but it rests on fewer inputs
+       and is correspondingly noisier. Soften the call rather than pretending to
+       the same confidence — and never issue a Replace on thin evidence. */
+    if (s.tier === 'technical' || (s.weightCovered != null && s.weightCovered < 0.55)) {
+      var lbl = s.isEtf ? 'fund' : 'partial data';
+      if (z >= 0.5) return { call: 'Hold (technical read)', color: '#2E7D52',
+        action: 'Strong on trend and volatility. Scored on technicals only — ' + lbl + ', so no valuation or quality input.' };
+      if (z >= -0.5) return { call: 'Hold (technical read)', color: '#003C71',
+        action: 'Middling on trend and volatility. Scored on technicals only — ' + lbl + '.' };
+      return { call: 'Review (technical read)', color: '#8B6914',
+        action: 'Weak on trend and volatility. Scored on technicals only — ' + lbl + ' — so this is a weaker signal than a full-coverage score. Confirm before acting.' };
+    }
+
     if (z >= 0.75 && fit !== 'unfavoured') return { call: 'Core Hold', color: '#2E7D52', action: 'Top-quartile on the factors that matter in this regime. Hold or add on weakness.' };
     if (z >= 0.75) return { call: 'Hold, Watch Sector', color: '#003C71', action: 'Strong company-level score, but the sector is out of favour in this regime. Keep, do not add.' };
     if (z >= 0.25) return { call: 'Hold', color: '#003C71', action: 'Above-median standing within its cohort. No action indicated.' };

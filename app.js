@@ -660,7 +660,7 @@ Chart.register(priceBubblePlugin);
 let donutCharts = {};
 
 // ═══ NAVIGATION ═══
-const parentMap = { home: 'home', about: 'home', resources: 'home', portfolio: 'portfolio', holdings: 'portfolio', 'sector-macro-alignment': 'portfolio', themes: 'portfolio', macro: 'analysis', markets: 'analysis', research: 'analysis' };
+const parentMap = { home: 'home', about: 'home', resources: 'home', portfolio: 'portfolio', holdings: 'portfolio', themes: 'portfolio', macro: 'analysis', markets: 'analysis', research: 'analysis' };
 function navigateTo(p) {
   document.activeElement.blur();
   document.querySelectorAll('.page').forEach(x => x.classList.remove('active'));
@@ -695,11 +695,13 @@ function navigateTo(p) {
     if (typeof macroShowTab === 'function') macroShowTab('dashboard');
     else loadMacroLiveTable();
   }
+  /* Legacy destination. The Sector & Macro Alignment content moved into the
+     Manage Holdings tab strip on 2026-07-25, so any surviving link or bookmark
+     is redirected to the new location rather than landing on a missing page. */
   if (p === 'sector-macro-alignment') {
-    setTimeout(function(){
-      if (typeof loadPlaybook === 'function') loadPlaybook();
-      if (typeof loadGapAnalysis === 'function') loadGapAnalysis();
-    }, 100);
+    navigateTo('holdings');
+    setTimeout(function(){ if (typeof holdingsShowTab === 'function') holdingsShowTab('alignment'); }, 60);
+    return;
   }
   if (p === 'home') {
     // Re-run briefing every time home is visited
@@ -1328,6 +1330,21 @@ function holdingsShowTab(name) {
     }, 250);
   }
   if (name === 'analysis' && typeof renderAccountComparison === 'function') setTimeout(function(){ renderAccountComparison(false); }, 100);
+  /* Alignment tab — added 2026-07-25 when this content moved in from its own
+     page. Lazy-initialised on first open: the playbook and gap analysis both
+     need holdings plus the FRED macro payload, so running them on page load
+     would fire before either is available. */
+  if (name === 'alignment') {
+    if (!_hldTabInit.alignment) {
+      _hldTabInit.alignment = true;
+      if (typeof playbookShowTab === 'function') { try { playbookShowTab('playbook'); } catch(e) {} }
+    }
+    setTimeout(function(){
+      try { if (typeof loadPlaybook === 'function') loadPlaybook(); } catch(e) {}
+      try { if (typeof loadGapAnalysis === 'function') loadGapAnalysis(); } catch(e) {}
+      try { if (typeof populateHitRateTable === 'function') populateHitRateTable(); } catch(e) {}
+    }, 120);
+  }
   var h = window._holdings || [];
   if (name === 'analysis') {
     if (!_hldTabInit.analysis) { _hldTabInit.analysis = true; if (h.length) renderHoldingsAnalysis(h); }
@@ -1608,13 +1625,49 @@ function renderHldRebalanceChart() {
   var tolEl = document.getElementById('driftTol');
   var model = modelEl?modelEl.value:'spy';
   var tol = tolEl?parseFloat(tolEl.value)||3:3;
-  var targets = model==='aggressive_growth'?(window.AGGRESSIVE_GROWTH_WEIGHTS||{})
-    :model==='conservative'?(window.CONSERVATIVE_WEIGHTS||{})
-    :model==='balanced'?(window.BALANCED_WEIGHTS||{})
-    :model==='qqq'?(window.QQQ_SECTOR_WEIGHTS||{})
-    :(window.SPY_SECTOR_WEIGHTS||{});
+
+  /* ── FIXED 2026-07-25: "Current vs. Target Allocation" chart rendered empty ──
+     The five target-weight objects are declared in app2.js as:
+         const SPY_SECTOR_WEIGHTS = {...}
+     A top-level `const` in a classic script creates a binding in the global
+     LEXICAL scope but — unlike `var` — does NOT create a property on `window`.
+     So every `window.SPY_SECTOR_WEIGHTS` lookup here returned undefined, the
+     `|| {}` fallback kicked in, `allSectors` came out empty, and Chart.js drew
+     an axis with no bars. Nothing threw, which is why it looked like a broken
+     chart rather than an error.
+
+     The fix is in app2.js, which now explicitly assigns all five objects onto
+     `window` immediately after declaring them (search for TARGET_MODELS). This
+     function keeps reading from `window`, which now actually works. */
+  var TM = window.TARGET_MODELS || {};
+  var targets = model==='aggressive_growth' ? (TM.aggressive_growth || window.AGGRESSIVE_GROWTH_WEIGHTS)
+    :model==='conservative' ? (TM.conservative || window.CONSERVATIVE_WEIGHTS)
+    :model==='balanced'     ? (TM.balanced     || window.BALANCED_WEIGHTS)
+    :model==='qqq'          ? (TM.qqq          || window.QQQ_SECTOR_WEIGHTS)
+    :                         (TM.spy          || window.SPY_SECTOR_WEIGHTS);
+  targets = targets || {};
+
+  if (!Object.keys(targets).length) {
+    var wrapEmpty = document.getElementById('hldRebalanceBar');
+    if (wrapEmpty && wrapEmpty.parentNode) {
+      wrapEmpty.parentNode.innerHTML = '<div style="text-align:center;padding:30px;color:var(--text-sec);font-size:12px;">'
+        + 'Target model weights unavailable — app2.js may not have finished loading. Reload the page.</div>';
+    }
+    return;
+  }
+  /* ── SECOND BUG IN THIS CHART, fixed 2026-07-25 ─────────────────────────
+     Holdings are classified as "Information Technology" / "Health Care" (GICS
+     naming, set by classifyHolding), but the target-weight models key on
+     "Technology" / "Healthcare". So a tech position accumulated into a bucket
+     with no matching target, while the 'Technology' row showed a 20% target
+     against 0% current. Even with the window fix above, the chart would have
+     been wrong rather than empty.
+
+     normSector() in app2.js already maps between the two taxonomies — it just
+     was not being applied here. */
+  var _ns = (typeof normSector === 'function') ? normSector : function (s) { return s || 'Unknown'; };
   var sectorMV={};
-  equityH.forEach(function(x){ var s=x.sector||'Unknown'; sectorMV[s]=(sectorMV[s]||0)+(x.currentPrice||0)*x.quantity; });
+  equityH.forEach(function(x){ var s=_ns(x.sector)||'Unknown'; sectorMV[s]=(sectorMV[s]||0)+(x.currentPrice||0)*x.quantity; });
   var allSectors = Object.keys(targets).filter(function(s){ return (targets[s]||0)>0||(sectorMV[s]||0)>0; }).sort();
   var curPcts = allSectors.map(function(s){ return equityMV>0?parseFloat(((sectorMV[s]||0)/equityMV*100).toFixed(1)):0; });
   var tgtPcts = allSectors.map(function(s){ return targets[s]||0; });

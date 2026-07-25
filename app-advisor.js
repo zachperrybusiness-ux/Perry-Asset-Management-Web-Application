@@ -547,10 +547,17 @@
     // 3) equity sleeve over/under
     if (driftS < -band) {
       // overweight equities → sell; prefer tax-deferred, then loss lots in taxable, then biggest winners last
+      /* This is a REBALANCE, not a withdrawal: proceeds are reinvested into
+         bonds or cash INSIDE the same account. Trimming equities in a Roth is
+         therefore the ideal place to do it — no taxable event, no penalty,
+         because nothing leaves the account. The rationale now says so
+         explicitly, since the previous wording ("No tax on sale") read as though
+         it were endorsing a Roth withdrawal. */
       var sellAmt = -driftS;
+      var _age = p.age == null ? 99 : p.age;
       var candidates = hs.filter(function (h) { return h.bucket === 'stock'; })
-        .sort(function (a, b) { return sellPriority(a) - sellPriority(b); });
-      allocateTrades(candidates, sellAmt, 'TRIM', 'Equities are ' + pct(cur.s) + ' vs. ' + pct(tgt.s) + ' target (' + LEVEL_META[tgt.level].label + ', regime ' + tgt.regime.label + '). Reduce equity risk.', p, recs, total);
+        .sort(function (a, b) { return sellPriority(a, 'rebalance', _age) - sellPriority(b, 'rebalance', _age); });
+      allocateTrades(candidates, sellAmt, 'TRIM', 'Equities are ' + pct(cur.s) + ' vs. ' + pct(tgt.s) + ' target (' + LEVEL_META[tgt.level].label + ', regime ' + tgt.regime.label + '). Reduce equity risk. <em>Proceeds are reinvested within the same account — this is a reallocation, not a withdrawal.</em>', p, recs, total);
     } else if (driftS > band) {
       recs.push({ action: 'BUY', ticker: 'Equity', name: 'Add to equity sleeve', account: bestBuyAccount('stock', hs), amount: driftS,
         rationale: 'Equities are ' + pct(cur.s) + ' vs. ' + pct(tgt.s) + ' target. Add broad, tax-efficient equity (e.g., VTI/VOO). Regime favors: ' + tgt.regime.note, sev: 2, bucket: 'stock' });
@@ -563,18 +570,125 @@
       recs.push({ action: 'TRIM', ticker: 'Bonds', name: 'Reduce fixed income', account: preferAccount('bond', hs), amount: -driftB,
         rationale: 'Bonds are ' + pct(cur.b) + ' vs. ' + pct(tgt.b) + ' target. Trim in tax-deferred to avoid taxable events.', sev: 1, bucket: 'bond' });
     }
-    // 5) cash buffer
+    /* 5) cash buffer — REWRITTEN 2026-07-25 to respect account accessibility.
+       Cash raised for a spending buffer must come from accounts you can
+       actually draw on without a penalty. Previously this emitted a generic
+       "Taxable / MMF" instruction while the equity-trim logic above happily
+       sourced the sale from a Roth, which would have meant funding near-term
+       spending out of a retirement account. */
     if (driftC > band) {
-      recs.push({ action: 'RAISE CASH', ticker: 'Cash', name: 'Build cash buffer', account: 'Taxable / MMF', amount: driftC,
-        rationale: 'Cash is ' + pct(cur.c) + ' vs. ' + pct(tgt.c) + ' target. Near/in retirement the glide lifts the cash buffer to fund ~1–2 yrs of spending (sequence-of-returns protection).', sev: 2, bucket: 'cash' });
+      var age = p.age == null ? 99 : p.age;
+      var spendableMV = 0, lockedMV = 0, lockedDetail = {};
+      hs.forEach(function (h) {
+        if (h.bucket === 'cash') return;
+        if (isSpendable(h.taxType, age)) spendableMV += h.mv;
+        else {
+          lockedMV += h.mv;
+          var k = (ACCOUNT_ACCESS[h.taxType] || {}).label || h.taxType;
+          lockedDetail[k] = (lockedDetail[k] || 0) + h.mv;
+        }
+      });
+
+      var fundable = Math.min(driftC, spendableMV);
+      var shortfall = driftC - fundable;
+
+      if (fundable > 1) {
+        recs.push({
+          action: 'RAISE CASH', ticker: 'Cash', name: 'Build cash buffer',
+          account: 'Taxable only', amount: fundable,
+          rationale: 'Cash is ' + pct(cur.c) + ' vs. ' + pct(tgt.c) + ' target. '
+            + (age < RETIREMENT_AGE_59_5
+                ? 'Sourced from <strong>taxable accounts only</strong> — you are ' + age + ', so a withdrawal from a Roth, IRA or 401(k) would trigger a 10% early-distribution penalty. Those accounts are excluded from cash-raising by design.'
+                : 'You are past 59½, so retirement accounts are penalty-free, but taxable is still sourced first to preserve tax-sheltered compounding.')
+            + ' Near and in retirement the glide lifts this buffer to roughly 1–2 years of spending as sequence-of-returns protection.',
+          sev: 2, bucket: 'cash'
+        });
+      }
+
+      if (shortfall > 1) {
+        recs.push({
+          action: 'REVIEW', ticker: 'Cash', name: 'Cash target not reachable from accessible accounts',
+          account: '—', amount: shortfall,
+          rationale: 'The cash target needs ' + usd(driftC) + ' but only ' + usd(spendableMV)
+            + ' sits in accounts you can draw on without a penalty. '
+            + usd(lockedMV) + ' is held in '
+            + Object.keys(lockedDetail).map(function (k) { return k + ' (' + usd(lockedDetail[k]) + ')'; }).join(', ')
+            + '. <strong>The recommendation is NOT to withdraw from those.</strong> Better routes: redirect new contributions to taxable, '
+            + 'reduce the cash target, or hold the buffer as short-duration bonds inside the retirement account so it is at least '
+            + 'positioned defensively even though it is not spendable yet.',
+          sev: 3, bucket: 'cash'
+        });
+      }
     }
 
     // sort by severity then $ size
     recs.sort(function (a, b) { return (b.sev - a.sev) || (b.amount - a.amount); });
     return { recs: recs, hs: hs, cur: cur, tgt: tgt, total: total };
   }
-  function sellPriority(h) {
-    // lower = sell first. Prefer tax-deferred/roth (no cap gains), then taxable losses, winners last.
+  /* ══════════════════════════════════════════════════════════════════════════
+     ACCOUNT ACCESSIBILITY — added 2026-07-25
+
+     THE BUG THIS FIXES
+     sellPriority() returned 0 — meaning "sell this FIRST" — for deferred, roth
+     and hsa, on the reasoning that a sale inside those accounts triggers no
+     capital gains. That is true, and for a REBALANCE it is exactly right.
+
+     But the engine used the same ordering when raising cash to SPEND. Those are
+     different operations:
+
+       • Rebalancing INSIDE a Roth (sell stock, buy bonds) — tax-free, and
+         genuinely the best account to do it in.
+       • WITHDRAWING from a Roth or IRA before 59½ — 10% early-distribution
+         penalty, plus ordinary income tax on a traditional account.
+
+     So the tool was recommending you fund near-term spending from a retirement
+     account, which is close to the worst available option. It now distinguishes
+     the two purposes, and refuses to source spending cash from a penalised
+     account unless you are actually eligible.
+     ══════════════════════════════════════════════════════════════════════════ */
+
+  var RETIREMENT_AGE_59_5 = 59.5;
+
+  var ACCOUNT_ACCESS = {
+    taxable:  { label: 'Taxable',        spendable: true,
+                note: 'Accessible any time. Sales realise capital gains or losses.' },
+    roth:     { label: 'Roth',           spendable: false, penaltyPct: 0.10,
+                note: 'Contributions can be withdrawn any time, but EARNINGS are penalised before 59½ (and the 5-year rule applies). Best left to compound tax-free — the most valuable dollar in the portfolio.' },
+    deferred: { label: 'Tax-deferred',   spendable: false, penaltyPct: 0.10, ordinaryIncome: true,
+                note: 'Withdrawals are taxed as ordinary income at any age, plus a 10% penalty before 59½.' },
+    hsa:      { label: 'HSA',            spendable: false, penaltyPct: 0.20,
+                note: 'Tax-free for qualified medical expenses. Non-medical withdrawals before 65 incur income tax plus a 20% penalty — the harshest treatment of any account here.' },
+    college:  { label: '529 / College',  spendable: false, penaltyPct: 0.10,
+                note: 'Earnings are penalised unless used for qualified education expenses. Not a general-purpose reserve.' }
+  };
+
+  function isSpendable(taxType, age) {
+    var meta = ACCOUNT_ACCESS[taxType] || ACCOUNT_ACCESS.taxable;
+    if (meta.spendable) return true;
+    if (taxType === 'hsa') return age >= 65;
+    if (taxType === 'college') return false;
+    return age >= RETIREMENT_AGE_59_5;
+  }
+
+  /**
+   * Sell ordering.
+   * @param purpose 'rebalance' — proceeds stay inside the same account, so tax
+   *                              treatment of the sale is all that matters.
+   *                'raise_cash' — proceeds LEAVE the account and are spent, so
+   *                              accessibility and penalties dominate.
+   */
+  function sellPriority(h, purpose, age) {
+    age = age == null ? 99 : age;
+
+    if (purpose === 'raise_cash') {
+      // Penalised accounts go last, and are excluded upstream unless eligible.
+      if (!isSpendable(h.taxType, age)) return 100 + (ACCOUNT_ACCESS[h.taxType] || {}).penaltyPct * 100;
+      if (h.taxType === 'taxable' && h.gain < 0) return 0;      // harvest a loss and raise cash at once
+      if (h.taxType === 'taxable') return 1 + h.gainPct / 1000; // smallest gains first
+      return 10 + h.gainPct / 1000;                             // eligible retirement accounts, still last
+    }
+
+    // Default: rebalancing. Sheltered accounts first — no taxable event.
     if (h.taxType === 'deferred' || h.taxType === 'roth' || h.taxType === 'hsa') return 0;
     if (h.gain < 0) return 1;                 // harvest losses
     return 2 + h.gainPct / 1000;              // winners last, biggest gains latest
@@ -582,10 +696,16 @@
   function makeRec(action, h, amt, rationale, p, sev) {
     return { action: action, ticker: h.ticker, name: h.name, account: h.account, amount: amt, rationale: taxTag(h) + rationale, sev: sev || 2, bucket: h.bucket, gain: h.gain };
   }
+  /* Reworded 2026-07-25. "No tax on sale" was accurate but dangerously
+     incomplete — it invited reading a Roth trim as a free source of spending
+     money. The tag now names the account and states that the shelter applies to
+     a REALLOCATION, with the withdrawal caveat attached. */
   function taxTag(h) {
-    if (h.taxType === 'taxable' && h.gain < 0) return '📉 Harvest loss (' + usd(h.gain) + '). ';
-    if (h.taxType === 'taxable' && h.gain > 0) return '⚠️ Taxable gain (' + usd(h.gain) + ') if sold. ';
-    if (h.taxType === 'deferred' || h.taxType === 'roth') return '✅ No tax on sale (' + TAX_LABEL[h.taxType] + '). ';
+    if (h.taxType === 'taxable' && h.gain < 0) return 'Harvest loss (' + usd(h.gain) + '). ';
+    if (h.taxType === 'taxable' && h.gain > 0) return 'Taxable gain (' + usd(h.gain) + ') if sold. ';
+    if (h.taxType === 'roth')     return 'In Roth &mdash; reallocating inside the account is tax-free; <em>withdrawing</em> is a different decision. ';
+    if (h.taxType === 'deferred') return 'In tax-deferred &mdash; reallocating inside the account is tax-free; a <em>withdrawal</em> is taxed as ordinary income. ';
+    if (h.taxType === 'hsa')      return 'In HSA &mdash; reallocate freely; withdrawals are for qualified medical expenses. ';
     return '';
   }
   function allocateTrades(cands, amount, action, baseRationale, p, recs, total) {
@@ -709,13 +829,57 @@
 
     var statusBox;
     if (shortfall > 0) {
-      // propose raising cash: taxable loss lots first, then overweight winners in tax-advantaged
-      var raise = hs.filter(function (h) { return h.bucket === 'stock'; }).sort(function (a, b) { return sellPriority(a) - sellPriority(b); });
+      /* ── REWRITTEN 2026-07-25 ────────────────────────────────────────────
+         This is a genuine cash-to-SPEND situation, and the old comment said it
+         out loud: "taxable loss lots first, then overweight winners in
+         tax-advantaged". Because sellPriority() ranked sheltered accounts at 0,
+         the plan would frequently lead with selling Roth or IRA assets to cover
+         a near-term liquidity need — a 10% early-distribution penalty (plus
+         ordinary income tax on a traditional account) to fund a kitchen remodel.
+
+         Penalised accounts are now excluded outright below 59½, and the table
+         reports the eligible pool so a shortfall is visible rather than silently
+         filled from the worst possible source. */
+      var pAge = ADV.profile && ADV.profile.age != null ? ADV.profile.age : 99;
+      var eligible = hs.filter(function (h) { return h.bucket === 'stock' && isSpendable(h.taxType, pAge); })
+        .sort(function (a, b) { return sellPriority(a, 'raise_cash', pAge) - sellPriority(b, 'raise_cash', pAge); });
+      var excluded = hs.filter(function (h) { return h.bucket === 'stock' && !isSpendable(h.taxType, pAge); });
+      var excludedMV = excluded.reduce(function (s, h) { return s + h.mv; }, 0);
+
       var plan = [], rem = shortfall;
-      for (var i = 0; i < raise.length && rem > 1; i++) { var h = raise[i]; var take = Math.min(rem, h.mv); if (take < 200) continue; plan.push({ h: h, take: take }); rem -= take; }
+      for (var i = 0; i < eligible.length && rem > 1; i++) {
+        var h = eligible[i]; var take = Math.min(rem, h.mv);
+        if (take < 200) continue;
+        plan.push({ h: h, take: take }); rem -= take;
+      }
       var planRows = plan.map(function (x) { return '<tr><td><strong>' + esc(x.h.ticker) + '</strong></td><td>' + usd(x.take) + '</td><td>' + esc(x.h.account) + '</td><td class="adv-note">' + taxTag(x.h) + '</td></tr>'; }).join('');
-      statusBox = '<div class="adv-disc" style="background:#FDEDEC;border-color:#E6A9A0;color:#922B21;"><strong>Liquidity shortfall of ' + usd(shortfall) + '.</strong> Your cash (' + usd(cashNow) + ') is below the recommended reserve (' + usd(reserveTarget) + '). Suggested tax-efficient raise (loss lots & tax-advantaged first):</div>' +
-        '<table class="adv-tbl"><thead><tr><th>Sell</th><th>Amount</th><th>Account</th><th>Tax</th></tr></thead><tbody>' + planRows + '</tbody></table>';
+
+      statusBox = '<div class="adv-disc" style="background:#FDEDEC;border-color:#E6A9A0;color:#922B21;"><strong>Liquidity shortfall of ' + usd(shortfall) + '.</strong> '
+        + 'Your cash (' + usd(cashNow) + ') is below the recommended reserve (' + usd(reserveTarget) + '). '
+        + 'Plan below draws <strong>only from accounts you can access without a penalty</strong>, smallest taxable gains first, harvesting losses where available.</div>';
+
+      if (planRows) {
+        statusBox += '<table class="adv-tbl"><thead><tr><th>Sell</th><th>Amount</th><th>Account</th><th>Tax treatment</th></tr></thead><tbody>' + planRows + '</tbody></table>';
+      }
+
+      if (rem > 1) {
+        statusBox += '<div class="adv-disc" style="background:#FBF3E0;border-color:#E0C878;color:#8B6914;margin-top:8px;">'
+          + '<strong>' + usd(rem) + ' of the shortfall cannot be funded from accessible accounts.</strong> '
+          + 'Do <em>not</em> plug the gap from retirement accounts — consider extending the timeline for the goal, '
+          + 'redirecting new savings to taxable, or financing the expense instead. Paying a 10% penalty plus income '
+          + 'tax to accelerate a discretionary purchase is almost never the right trade.</div>';
+      }
+
+      if (excludedMV > 0) {
+        statusBox += '<div class="adv-note" style="margin-top:8px;"><strong>Deliberately excluded:</strong> '
+          + usd(excludedMV) + ' across '
+          + Object.keys(excluded.reduce(function (m, h) { m[(ACCOUNT_ACCESS[h.taxType] || {}).label || h.taxType] = 1; return m; }, {})).join(', ')
+          + (pAge < RETIREMENT_AGE_59_5
+              ? '. You are ' + pAge + ', so withdrawals from these would incur a 10% early-distribution penalty '
+                + '(20% for an HSA used non-medically), on top of any income tax. These accounts are for retirement, not liquidity.'
+              : '. You are past 59½ so these are penalty-free, but taxable assets are drawn first to preserve tax-sheltered compounding.')
+          + '</div>';
+      }
     } else {
       statusBox = '<div class="adv-disc" style="background:#EAF7EE;border-color:#A6D9B8;color:#1E7A43;"><strong>Fully funded.</strong> Cash (' + usd(cashNow) + ') covers your reserve target (' + usd(reserveTarget) + ') with ' + usd(-shortfall) + ' to spare. This buffer is carved out of the risk sleeve so market drops don’t force a bad-timing sale.</div>';
     }
