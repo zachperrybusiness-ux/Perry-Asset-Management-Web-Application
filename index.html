@@ -3615,6 +3615,55 @@
     }
   });
 
+  /* ══════════════════════════════════════════════════════════════════════
+     FIRESTORE BRIDGE — added 2026-07-25 for app-history.js
+
+     The Firestore SDK is imported into this module's scope, so nothing in the
+     classic (non-module) app-*.js files can reach it. Rather than duplicate
+     the SDK import — which would create a second app instance and a second
+     auth session — three narrow functions are exported.
+
+     Deliberately narrow: read-one-collection, write-one-doc, merge-one-doc.
+     No generic query surface, so a bug in a UI file cannot issue an arbitrary
+     write. Every path is forced under users/{uid}/ regardless of what the
+     caller passes, which means a caller cannot reach another user's data or
+     the shared warehouse collections even by accident.
+     ══════════════════════════════════════════════════════════════════════ */
+  function userScoped(sub) {
+    const user = window._currentUser;
+    if (!user) throw new Error('not signed in');
+    // Strip anything that could climb out of the user's subtree.
+    const clean = String(sub).replace(/[^a-zA-Z0-9_-]/g, '');
+    if (!clean) throw new Error('bad collection');
+    return { uid: user.uid, path: `users/${user.uid}/${clean}` };
+  }
+
+  window.PerryDb = {
+    /** Write (or overwrite) one document by id. */
+    async setDoc(sub, id, data) {
+      const s = userScoped(sub);
+      const docId = String(id).replace(/[^a-zA-Z0-9_.:-]/g, '');
+      await setDoc(doc(db, s.path, docId), { ...data, uid: s.uid, savedAt: serverTimestamp() });
+      return docId;
+    },
+    /** Merge fields into an existing document without replacing it. */
+    async mergeDoc(sub, id, data) {
+      const s = userScoped(sub);
+      const docId = String(id).replace(/[^a-zA-Z0-9_.:-]/g, '');
+      await setDoc(doc(db, s.path, docId), { ...data, uid: s.uid }, { merge: true });
+      return docId;
+    },
+    /** Read a whole user-scoped subcollection, newest last. */
+    async listDocs(sub, orderField) {
+      const s = userScoped(sub);
+      const snap = orderField
+        ? await getDocs(query(collection(db, s.path), orderBy(orderField)))
+        : await getDocs(collection(db, s.path));
+      return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    },
+    get ready() { return !!window._currentUser; }
+  };
+
   // ── Add Holding (with duplicate detection) ──
   window.addHolding = async function() {
     const user = window._currentUser;
@@ -4271,6 +4320,7 @@
 <script src="app-corr.js?v=13"></script>
 <script src="app-views.js?v=13"></script>
 <script src="app-portfolio-analysis.js?v=13"></script>
+<script src="app-history.js?v=14"></script>
 <script src="app-consolidate.js?v=13"></script>
 <script>
 /* ═══════════ UNIFIED SIGNAL BOOTSTRAP — added 2026-07-24 ═══════════
