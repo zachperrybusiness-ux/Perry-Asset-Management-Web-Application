@@ -2083,6 +2083,104 @@ function ycRender() {
       }
     });
   }
+
+  // Feed the Curve Dynamics view (added 2026-07-26) whenever fresh FRED
+  // curve data lands. Self-guards on the presence of its host element.
+  try { if (typeof ycRenderDynamics === 'function') ycRenderDynamics(); } catch(e) {}
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   CURVE DYNAMICS — added 2026-07-26.
+   A genuinely different angle from the snapshot chart: not WHERE the curve
+   is, but HOW IT MOVED. Computes the yield change at every maturity over
+   1M / 3M / 6M / 1Y from the same /yieldcurve FRED payload (no extra
+   requests), classifies the 3-month move as a bull/bear steepener/flattener
+   from the sign of Δ2Y vs Δ10Y, and shows the 2s5s10s butterfly.
+   ═══════════════════════════════════════════════════════════════════ */
+var _ycDynChart = null;
+function ycRenderDynamics() {
+  var host = document.getElementById('ycDynamicsBody');
+  if (!host || !_ycData || !_ycData.snapshots) return;
+  var snaps = _ycData.snapshots;
+  function rateOf(snap, mat) {
+    var p = (snap || []).find(function(x){ return x.maturity === mat; });
+    return p ? p.rate : null;
+  }
+  var mats = (snaps.current || []).map(function(p){ return p.maturity; });
+  if (!mats.length) return;
+
+  function deltas(past) {
+    return mats.map(function(mm) {
+      var c = rateOf(snaps.current, mm), p = rateOf(past, mm);
+      return (c != null && p != null) ? +(c - p).toFixed(3) : null;
+    });
+  }
+  var d1m = deltas(snaps.oneMonthAgo), d3m = deltas(snaps.threeMonthsAgo),
+      d6m = deltas(snaps.sixMonthsAgo), d1y = deltas(snaps.oneYearAgo);
+
+  // ── Regime classification from the 3M move in 2Y and 10Y ──
+  var c2 = rateOf(snaps.current,'2Y'), p2 = rateOf(snaps.threeMonthsAgo,'2Y');
+  var c10 = rateOf(snaps.current,'10Y'), p10 = rateOf(snaps.threeMonthsAgo,'10Y');
+  var verdict = null;
+  if (c2 != null && p2 != null && c10 != null && p10 != null) {
+    var dS = c2 - p2, dL = c10 - p10, dSlope = dL - dS;
+    var steep = dSlope > 0.05, flat = dSlope < -0.05;
+    var name, meaning, col;
+    if (steep && dS <= 0)      { name = 'Bull Steepener';  col = '#2E7D52'; meaning = 'Short rates falling faster than long — the market pricing Fed easing. Historically the curve\'s recession-confirmation move when it follows an inversion, but supportive for banks and early-cycle assets once growth stabilizes.'; }
+    else if (steep)            { name = 'Bear Steepener';  col = '#8B6914'; meaning = 'Long rates rising faster than short — term premium / supply / inflation-expectation driven. Pressures long duration and growth multiples; favors banks, value, real assets.'; }
+    else if (flat && dS >= 0)  { name = 'Bear Flattener';  col = '#8B2A2A'; meaning = 'Short rates rising faster than long — the market pricing Fed tightening. The classic late-cycle squeeze: pressures small caps, leveraged balance sheets and housing first.'; }
+    else if (flat)             { name = 'Bull Flattener';  col = '#003C71'; meaning = 'Long rates falling faster than short — growth-scare / flight-to-duration move. Favors long Treasuries, quality and defensives over cyclicals.'; }
+    else                       { name = 'Parallel Shift';  col = '#5A6A7A'; meaning = 'Short and long rates moving together — no meaningful slope change over the last 3 months. The level move, not the shape, is the story.'; }
+    verdict = { name: name, col: col, meaning: meaning, dS: dS, dL: dL, dSlope: dSlope };
+  }
+
+  // ── 2s5s10s butterfly: 2×5Y − 2Y − 10Y (belly rich/cheap) ──
+  var c5 = rateOf(snaps.current,'5Y');
+  var fly = (c2 != null && c5 != null && c10 != null) ? (2*c5 - c2 - c10) : null;
+
+  var h = '';
+  if (verdict) {
+    h += '<div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap;background:var(--panel);border:1px solid var(--border);border-left:4px solid ' + verdict.col + ';border-radius:4px;padding:12px 16px;margin-bottom:12px;">'
+      + '<div><div style="font-size:10px;text-transform:uppercase;letter-spacing:.6px;color:var(--text-sec);">3-Month Curve Regime</div>'
+      + '<div style="font-size:22px;font-weight:800;color:' + verdict.col + ';">' + verdict.name + '</div></div>'
+      + '<div style="font-size:11.5px;color:var(--text-sec);flex:1;min-width:240px;line-height:1.55;">' + verdict.meaning + '</div>'
+      + '<div style="font-size:11px;font-family:\'Courier New\',monospace;color:var(--text-sec);white-space:nowrap;">'
+      + 'Δ2Y ' + (verdict.dS>=0?'+':'') + verdict.dS.toFixed(2) + '%<br>Δ10Y ' + (verdict.dL>=0?'+':'') + verdict.dL.toFixed(2) + '%<br>Δslope ' + (verdict.dSlope>=0?'+':'') + verdict.dSlope.toFixed(2) + '%</div>'
+      + '</div>';
+  }
+  if (fly != null) {
+    h += '<div style="font-size:11px;color:var(--text-sec);margin-bottom:10px;">2s5s10s butterfly (2×5Y − 2Y − 10Y): '
+      + '<strong style="color:' + (fly >= 0 ? '#8B6914' : '#003C71') + ';">' + (fly>=0?'+':'') + fly.toFixed(2) + '%</strong> — '
+      + (fly >= 0 ? 'belly trading cheap vs the wings (humped curve pressure)' : 'belly trading rich vs the wings — typical when the market concentrates rate-cut pricing in the 3–7Y sector')
+      + '</div>';
+  }
+  h += '<div class="chart-wrap" style="height:280px;"><canvas id="ycDynChart"></canvas></div>';
+  host.innerHTML = h;
+
+  var canvas = document.getElementById('ycDynChart');
+  if (canvas && typeof Chart !== 'undefined') {
+    if (_ycDynChart) { try { _ycDynChart.destroy(); } catch(e){} }
+    _ycDynChart = new Chart(canvas.getContext('2d'), {
+      type: 'bar',
+      data: { labels: mats, datasets: [
+        { label: 'Δ vs 1M ago', data: d1m, backgroundColor: 'rgba(168,200,232,0.9)' },
+        { label: 'Δ vs 3M ago', data: d3m, backgroundColor: 'rgba(91,155,213,0.9)' },
+        { label: 'Δ vs 6M ago', data: d6m, backgroundColor: 'rgba(0,60,113,0.75)' },
+        { label: 'Δ vs 1Y ago', data: d1y, backgroundColor: 'rgba(139,42,42,0.65)' }
+      ]},
+      options: { responsive: true, maintainAspectRatio: false,
+        plugins: {
+          legend: { position: 'bottom', labels: { font: { size: 11 }, color: C.textSec, boxWidth: 10 } },
+          tooltip: Object.assign({}, chartTooltip, { callbacks: { label: function(ctx){ return ctx.dataset.label + ': ' + (ctx.parsed.y>=0?'+':'') + ctx.parsed.y.toFixed(2) + '%'; } } }),
+          title: { display: true, text: 'Yield Change by Maturity — who moved, and when', color: C.navy, font: { size: 13, weight: '700' } }
+        },
+        scales: {
+          x: { grid: chartGrid, ticks: chartTicks, title: { display: true, text: 'Maturity', color: C.textSec, font: { size: 11 } } },
+          y: { grid: chartGrid, ticks: Object.assign({}, chartTicks, { callback: function(v){ return (v>=0?'+':'') + v.toFixed(1) + '%'; } }), title: { display: true, text: 'Yield change (pp)', color: C.textSec, font: { size: 11 } } }
+        }
+      }
+    });
+  }
 }
 
 // ═══════════════════════════════════════════════════════════════════
@@ -7306,6 +7404,18 @@ window.mktLoadFearGreed = async function() {
       { name: 'Risk Appetite (QQQ vs SPY)', score: riskAppSig, desc: 'QQQ/SPY 20D rel: ' + (riskAppetite*100).toFixed(1) + '%', icon: '🚀' }
     ];
     var composite = signals.reduce(function(s, sg) { return s + sg.score; }, 0) / signals.length;
+
+    /* ── Breadth tab composite banner (added 2026-07-26) ───────────────────
+       The Breadth sub-tab was the only pillar tab without a score banner.
+       Uses the same renderPillarHeader as Business Cycle / Credit / Yield
+       Curve / Momentum / Sector Rotation so all sub-tabs open identically. */
+    try {
+      if (typeof renderPillarHeader === 'function' && document.getElementById('breadthPillarHeader')) {
+        var bLbl = composite >= 75 ? 'Extreme Greed' : composite >= 60 ? 'Greed' : composite >= 45 ? 'Neutral' : composite >= 25 ? 'Fear' : 'Extreme Fear';
+        renderPillarHeader('breadthPillarHeader', 'Breadth / Fear–Greed (7-signal composite)', composite, bLbl + ' · VIX ' + vixCur.toFixed(1));
+      }
+    } catch(e) { console.warn('breadth banner:', e); }
+
     var compLabel, compColor;
     // Brand palette: navy=extreme fear, blue=fear, warning=neutral, danger shades=greed
     if (composite >= 75) { compLabel = 'Extreme Greed'; compColor = '#8B2A2A'; }
@@ -11480,11 +11590,19 @@ function loadGapAnalysis(force) {
   var pd = quadLabel ? PLAYBOOK_DATA[quadLabel] : null;
   var targetSectors = {};
   if (pd) {
+    /* ── FIXED 2026-07-26 ────────────────────────────────────────────────
+       The old target gave every sector an EQUAL base weight (1/11 ≈ 9.1%)
+       before the OW/UW multiplier — implying Utilities should be sized like
+       Technology. That is not how any benchmark-aware playbook works, and it
+       manufactured huge phantom "drift" for any realistically cap-weighted
+       portfolio (Tech alone showed ~17pp of drift on day one). Targets now
+       TILT THE SPY SECTOR WEIGHTS by the playbook multiplier and re-normalize:
+       target_k = SPY_w_k × (OW 1.3 / NEUT 1.0 / UW 0.5), Σ = 100%. */
     pd.sectors.forEach(function(s) {
-      var w = s.rec === 'OW' ? 1.3 : s.rec === 'UW' ? 0.5 : 1.0;
-      targetSectors[s.name] = w;
+      var mult = s.rec === 'OW' ? 1.3 : s.rec === 'UW' ? 0.5 : 1.0;
+      var base = SPY_SECTOR_WEIGHTS[s.name] != null ? SPY_SECTOR_WEIGHTS[s.name] : 2.0;
+      targetSectors[s.name] = base * mult;
     });
-    // Normalize targets to sum to 100%
     var totalW = Object.keys(targetSectors).reduce(function(s, k) { return s + targetSectors[k]; }, 0);
     Object.keys(targetSectors).forEach(function(k) { targetSectors[k] = targetSectors[k] / totalW * 100; });
   } else {
@@ -11499,7 +11617,12 @@ function loadGapAnalysis(force) {
 
   var currentSectors = {};
   equityHoldings.forEach(function(h) {
-    var sec = h.sector || 'Other';
+    /* FIXED 2026-07-26: sector names now normalized ("Information
+       Technology" → "Technology", "Consumer Defensive" → "Consumer Staples"
+       etc.) before comparison. Without this, a holding tagged with a data
+       vendor's sector alias landed in a phantom row that matched no target,
+       double-counting the gap on both sides and inflating total drift. */
+    var sec = (typeof normSector === 'function') ? normSector(h.sector || 'Other') : (h.sector || 'Other');
     var mv = h.currentPrice * h.quantity;
     currentSectors[sec] = (currentSectors[sec] || 0) + mv;
   });
@@ -11632,7 +11755,11 @@ function renderGapChart(rows) {
   var top12 = rows.slice(0, 12);
   var labels = top12.map(function(r) { return r.sector.length > 16 ? r.sector.substring(0, 14) + '…' : r.sector; });
   var data = top12.map(function(r) { return +r.gap.toFixed(2); });
-  var colors = data.map(function(v) { return v >= 0 ? 'rgba(46,125,82,0.75)' : 'rgba(139,42,42,0.75)'; });
+  /* FIXED 2026-07-26: colors were inverted vs. the detail table below —
+     the table paints overweight (gap>0 → "Trim") RED and underweight
+     ("Add") GREEN, while this chart painted overweight green. Now aligned:
+     overweight = danger red, underweight = success green. */
+  var colors = data.map(function(v) { return v >= 0 ? 'rgba(139,42,42,0.75)' : 'rgba(46,125,82,0.75)'; });
 
   _gapBarChart = new Chart(canvasEl, {
     type: 'bar',

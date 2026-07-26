@@ -1013,6 +1013,14 @@
           // nominal while `sp` grew with inflation, so contributions silently
           // eroded in real terms and understated success.
           contrib *= (1 + INFLATION);
+          /* FIXED 2026-07-26: spending must ALSO inflate during the
+             accumulation years. `sp` previously stayed at today's dollars
+             until retirement began, so someone 20 years from retirement was
+             projected to spend today's nominal amount in year 21 — against
+             NOMINAL return assumptions. That overstated success rates most
+             for the youngest users. Spending now compounds with inflation
+             from year 1, matching the nominal CMA return basis. */
+          sp *= (1 + INFLATION);
         } else {
           v -= sp;
           sp *= (1 + INFLATION);
@@ -1112,7 +1120,7 @@
       '<h4 style="margin:16px 0 6px;color:var(--navy);font-size:13px;">What moves the needle</h4>' +
       '<div class="adv-grid">' + lever('Save +$10k/yr', save5) + lever('Retire 3 yrs later', late2) + lever('Spend 10% less', spendLess) + '</div>' +
       '<p class="adv-note" style="margin-top:8px;">Every scenario above is run on the <strong>same set of simulated market paths</strong> (common random numbers), so a difference reflects the change you made and not the luck of the draw. Deltas smaller than the simulation noise band are marked.</p>',
-      'Monte Carlo with normally-distributed annual returns from the shared capital-market assumptions in PerrySignals.CONST.CMA — stocks μ' + pct(CMA.stock.mu * 100) + '/σ' + pct(CMA.stock.sig * 100) + ', bonds μ' + pct(CMA.bond.mu * 100) + '/σ' + pct(CMA.bond.sig * 100) + ', cash μ' + pct(CMA.cash.mu * 100) + '. ' + CMA.cmaSource + ' Inflation ' + pct(INFLATION * 100) + ' applied to both spending and contributions. ' +
+      'Monte Carlo with normally-distributed annual returns from the shared capital-market assumptions in PerrySignals.CONST.CMA — stocks μ' + pct(CMA.stock.mu * 100) + '/σ' + pct(CMA.stock.sig * 100) + ', bonds μ' + pct(CMA.bond.mu * 100) + '/σ' + pct(CMA.bond.sig * 100) + ', cash μ' + pct(CMA.cash.mu * 100) + '. ' + (CMA.source || '') + ' Inflation ' + pct(INFLATION * 100) + ' applied to both spending and contributions. ' +
       'Withdrawals are grossed up for tax on the tax-deferred share. Remaining simplifications, stated plainly: constant allocation with no glide inside the simulation, normally-distributed (not fat-tailed) annual returns, no inflation volatility, and no correlation between inflation and returns — which means this projection cannot fully express a stagflation scenario. Treat it as a planning range, not a forecast.');
   }
 

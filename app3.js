@@ -266,8 +266,13 @@ function makeCardSwitcher(cardEls, title, anchorEl) {
     body.appendChild(pane); pane.appendChild(el);
     el.style.marginBottom = '0';
     panes.push(pane);
+    /* Label override (added 2026-07-26): a card can carry an explicit
+       data-switch-label attribute. Without it, buttons were auto-truncated
+       card titles — which is how the Yield Curve tab ended up with two
+       buttons both reading "Full Treasury Yield Curve - …". */
+    var explicit = el.getAttribute && el.getAttribute('data-switch-label');
     var t = el.querySelector('.card-title');
-    var label = (t ? t.textContent : 'View ' + (i+1)).replace(/[ⓘ?·]/g, '').replace(/\d+\s/, '').replace(/\s+/g, ' ').trim().slice(0, 30);
+    var label = explicit || (t ? t.textContent : 'View ' + (i+1)).replace(/[ⓘ?·]/g, '').replace(/\d+\s/, '').replace(/\s+/g, ' ').trim().slice(0, 30);
     var b = document.createElement('button');
     b.className = 'tabview-btn' + (i === 0 ? ' active' : '');
     b.textContent = label;
@@ -464,7 +469,13 @@ function _movQuadStatic(q) {
         ycTab.querySelectorAll('div').forEach(function(d){ if (!ycHdr && /Yield Curve — Cross-Asset View/.test(d.textContent) && d.childElementCount === 0) ycHdr = d; });
         ycTab.insertBefore(caYc, ycTab.firstChild);
         if (ycHdr) ycTab.insertBefore(ycHdr, caYc);
-        findCardsByTitle(caYc, [/Full Treasury Yield Curve/i]).forEach(function(c){ if (c) c.style.display = 'none'; });
+        /* CHANGED 2026-07-26: the Cross-Asset duplicate of the full-curve
+           chart is now REMOVED, not display:none'd. Hidden cards were still
+           being collected by the Yield Curve switcher in app-consolidate.js,
+           producing a button ("Full Treasury Yield Curve - Cu…") that opened
+           an empty pane. ycTabLoad null-guards every element it renders into,
+           so removal is safe. */
+        findCardsByTitle(caYc, [/Full Treasury Yield Curve.*Current/i]).forEach(function(c){ if (c) c.remove(); });
       }
 
       // 5e) BREADTH: rally card pinned; grouped switcher windows

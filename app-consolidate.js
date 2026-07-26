@@ -191,7 +191,7 @@
 
     if (typeof makeCardSwitcher === 'function' && risk.length >= 2) {
       var a1 = document.createElement('div'); wrap.appendChild(a1);
-      makeCardSwitcher(risk, 'Risk &amp; Tails <span class="help-icon" title="How bad can it get? Value at Risk across three estimation methods, rolling risk metrics, and the implied-volatility surface — three lenses on the same question." data-heading="Risk and Tails">&#9432;</span>', a1);
+      makeCardSwitcher(risk, 'Risk &amp; Tails <span class="help-icon" title="How bad can it get? Value at Risk and Expected Shortfall across estimation methods, rolling Sharpe/Sortino/beta/drawdown, and the realized-volatility term structure (10D–252D windows) — three lenses on the same question." data-heading="Risk and Tails">&#9432;</span>', a1);
       if (a1.parentNode) a1.remove();
     } else risk.forEach(function (c) { wrap.appendChild(c); });
 
@@ -313,17 +313,68 @@
      7. YIELD CURVE — the one grouping worth keeping
      ══════════════════════════════════════════════════════════════════════════ */
 
+  /* REBUILT 2026-07-26. The old grouping collected every card whose title
+     matched "Full Treasury Yield Curve" — which caught BOTH independently-
+     built copies of the same chart (one of them hidden), so two of the three
+     switcher buttons showed the identical curve and the third pane was empty.
+     The tab now presents four genuinely different angles:
+       1. Curve Snapshot   — where the curve IS (FRED live + historical overlays)
+       2. Curve Dynamics   — how it MOVED (Δ by maturity, steepener/flattener
+                             classification, 2s5s10s butterfly) [new]
+       3. Spreads & Inversion — 2s10s and 3m10y history, the recession clocks
+       4. Pillar Scorecard — how the curve scores inside the macro composite */
   function groupYieldCurve() {
     if (typeof makeCardSwitcher !== 'function') return 0;
     var panel = el('macrotab-yieldcurve');
     if (!panel || panel.getAttribute('data-grouped') === '1') return 0;
-    var els = allByTitles(panel, ['Full Treasury Yield Curve', 'Yield Curve Pillar']);
-    if (els.length < 2) return 0;
+
+    // Kill any surviving duplicate of the CA full-curve chart outright.
+    matchesByTitle(panel, 'Full Treasury Yield Curve — Current').forEach(function (c) { c.remove(); });
+
+    var snapshot = byTitle(panel, 'Full Treasury Yield Curve');
+    var pillar = byTitle(panel, 'Yield Curve Pillar');
+    if (!snapshot || !pillar) return 0;
+
+    // Wrap the 2s10s + 3m10y grid into one "Spreads & Inversion" pane.
+    var spreadsPane = null;
+    var s2card = byTitle(panel, '2s10s Spread History');
+    if (s2card && s2card.parentNode && s2card.parentNode !== panel) {
+      var grid = s2card.parentNode;                 // the 2-column grid div
+      spreadsPane = document.createElement('div');
+      spreadsPane.className = 'card';
+      spreadsPane.innerHTML = '<div class="card-title">Spreads &amp; Inversion History &mdash; the Recession Clocks'
+        + ' <span class="help-icon" title="2s10s (10Y − 2Y) and 3m10y (10Y − 3M) through time. Inversion (below zero) has preceded every US recession in the modern era; the 3m10y version is the NY Fed’s preferred specification. The dangerous moment is historically the RE-steepening out of inversion, not the inversion itself.">?</span></div>';
+      var body = document.createElement('div');
+      body.className = 'card-body';
+      grid.parentNode.insertBefore(spreadsPane, grid);
+      body.appendChild(grid);
+      spreadsPane.appendChild(body);
+      grid.style.marginBottom = '0';
+    }
+
+    // New Curve Dynamics card — rendered by ycRenderDynamics() (app2.js)
+    // from the same FRED payload the snapshot chart already fetched.
+    var dyn = document.createElement('div');
+    dyn.className = 'card';
+    dyn.innerHTML = '<div class="card-title">Curve Dynamics &mdash; Steepener / Flattener Decomposition'
+      + ' <span class="help-icon" title="Not where the curve is — how it moved. Bars show the yield change at each maturity over 1M/3M/6M/1Y; the banner classifies the 3-month move as a bull/bear steepener/flattener from the sign of Δ2Y vs Δ10Y. Each of the four regimes has a distinct historical playbook.">?</span></div>'
+      + '<div class="card-body"><div id="ycDynamicsBody"><div style="text-align:center;padding:24px;color:var(--text-sec);"><span class="spinner"></span> Waiting for FRED curve data…</div></div></div>'
+      + '<div class="card-sources"><strong>Sources:</strong><br>&#8226; FRED&reg; — Treasury constant-maturity series (DGS1MO&hellip;DGS30), snapshots today vs 1M/3M/6M/1Y ago. Same payload as the Curve Snapshot; no extra requests.</div>';
+
+    var els = [snapshot, dyn, spreadsPane, pillar].filter(Boolean);
+    snapshot.setAttribute('data-switch-label', 'Curve Snapshot');
+    dyn.setAttribute('data-switch-label', 'Curve Dynamics');
+    if (spreadsPane) spreadsPane.setAttribute('data-switch-label', 'Spreads & Inversion');
+    pillar.setAttribute('data-switch-label', 'Pillar Scorecard');
+
     var anchor = document.createElement('div');
     els[0].parentNode.insertBefore(anchor, els[0]);
-    makeCardSwitcher(els, 'Yield Curve <span class="help-icon" title="Two Treasury curve views were built independently and the Cross-Asset merge stacks both into this tab. The FRED view carries overlay comparison and the spread chart; the Cross-Asset view carries the pillar scorecard plus 2s10s and 3m10y history. Only the curve shape is duplicated." data-heading="Yield Curve">&#9432;</span>', anchor);
+    makeCardSwitcher(els, 'Yield Curve <span class="help-icon" title="Four angles on the Treasury curve: today’s shape vs history (Snapshot), how it moved and which steepener/flattener regime that is (Dynamics), the 2s10s / 3m10y recession clocks (Spreads), and how it scores in the macro composite (Pillar)." data-heading="Yield Curve">&#9432;</span>', anchor);
     if (anchor.parentNode) anchor.remove();
     panel.setAttribute('data-grouped', '1');
+
+    // Populate dynamics if the FRED payload is already in memory.
+    try { if (typeof ycRenderDynamics === 'function') ycRenderDynamics(); } catch (e) {}
     return 1;
   }
 

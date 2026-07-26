@@ -4904,6 +4904,17 @@ function loadMacroLiveTable(force) {
     if (typeof renderBusinessCycleChart === 'function') renderBusinessCycleChart(d.phase, d.totalScore, d.maxScore);
     // Cache for briefing page and LIC
     window._lastMacroData = d;
+
+    /* ── Macro Regime tab composite banner (added 2026-07-26) ──────────────
+       Same 0–100 mapping the Business Cycle tab uses, so the two tabs can
+       never disagree about the number. */
+    try {
+      if (typeof renderPillarHeader === 'function' && document.getElementById('dashPillarHeader')) {
+        var dashScore = Math.max(0, Math.min(100, ((d.totalScore + d.maxScore) / (2 * d.maxScore)) * 100));
+        renderPillarHeader('dashPillarHeader', 'Macro Regime (FRED Scorecard Composite)', dashScore,
+          (d.phase || '—') + (d._phasePending ? ' · watching: ' + d._phasePending : '') + ' · ' + d.totalScore + ' / ' + d.maxScore + ' raw');
+      }
+    } catch(e) { console.warn('dash banner:', e); }
     // Render Quad Map if quadmap tab is active (or was first-visited)
     var quadTab = document.getElementById('macrotab-quadmap');
     if (quadTab && quadTab.classList.contains('active')) {
@@ -7594,6 +7605,14 @@ function mktAlignData(startDate, endDate) {
 
 // ═══ STATISTICAL HELPERS ═══
 function mktMean(a){ var s=0; for (var i=0;i<a.length;i++) s+=a[i]; return a.length ? s/a.length : 0; }
+/* Live risk-free rate (annualized, decimal). Reads the 3M T-bill that
+   app-signals.js pulls from FRED (DGS3MO); falls back to 4% if the signals
+   module has not loaded. Added 2026-07-26 — replaces the stale hardcoded
+   5.3% used by the frontier, rolling-risk and VaR modules. */
+function perryRf(){
+  try { if (window.PerrySignals && PerrySignals.CONST && PerrySignals.CONST.RF_RATE != null) return PerrySignals.CONST.RF_RATE; } catch(e) {}
+  return 0.04;
+}
 function mktStd(a){ var m=mktMean(a); var s=0; for (var i=0;i<a.length;i++) s+=(a[i]-m)*(a[i]-m); return a.length>1 ? Math.sqrt(s/(a.length-1)) : 0; }
 function mktPearson(x,y) {
   var n = Math.min(x.length,y.length); if (n<2) return 0;
@@ -8384,7 +8403,7 @@ function mktRenderFrontier() {
   }
   // Monte Carlo
   var nSim = 5000;
-  var rf = 0.053;
+  var rf = perryRf();   // live 3M T-bill via PerrySignals (was hardcoded 5.3%)
   var pts = [];
   var bestSR = -Infinity, bestSRW = null, bestSRRet = 0, bestSRVol = 0;
   var bestOmega = -Infinity, bestOmegaW = null, bestOmegaRet = 0, bestOmegaVol = 0;
@@ -8538,7 +8557,7 @@ function mktRenderRolling() {
   var rp = [], rspy = [];
   for (var r=0;r<T;r++) { rp.push(matrix.returns[r][tickIdx[primary]]); rspy.push(matrix.returns[r][tickIdx[spy]]); }
   var WIN = 63;
-  var rfDaily = 0.053 / 252;
+  var rfDaily = perryRf() / 252;   // live 3M T-bill (was hardcoded 5.3%)
   var labels = MKT_STATE.alignedDates.slice(1); // returns are T-1 long vs dates T long, so align from 1
 
   var sharpe = [], sortino = [], beta = [];
@@ -8547,9 +8566,15 @@ function mktRenderRolling() {
     var slSpy = rspy.slice(t-WIN+1, t+1);
     var mu = mktMean(slice);
     var std = mktStd(slice);
-    var neg = slice.filter(function(v){ return v < 0; });
+    /* Downside deviation — FIXED 2026-07-26. Previously divided the sum of
+       squared negative returns by the COUNT OF NEGATIVE DAYS, which is not the
+       Sortino denominator. The standard definition (Sortino & Price 1994)
+       divides by the FULL number of observations: sqrt( (1/N) Σ min(r−τ,0)² ).
+       Dividing by only the loss days systematically overstated downside risk
+       and understated the Sortino ratio for every asset. Target τ = 0. */
     var negVar = 0;
-    if (neg.length) { for (var nv=0;nv<neg.length;nv++) negVar += neg[nv]*neg[nv]; negVar = negVar/neg.length; }
+    for (var nv=0;nv<slice.length;nv++) { if (slice[nv] < 0) negVar += slice[nv]*slice[nv]; }
+    negVar = negVar / slice.length;
     var downside = Math.sqrt(negVar);
     sharpe.push(std > 0 ? (mu - rfDaily)/std * Math.sqrt(252) : 0);
     sortino.push(downside > 0 ? (mu - rfDaily)/downside * Math.sqrt(252) : 0);
@@ -8661,43 +8686,67 @@ function mktRenderVaR() {
   var skew = mktSkew(rets), ekurt = mktKurt(rets);
 
   var z95 = 1.645, z99 = 2.326;
+  /* ── 10-DAY SCALING — FIXED 2026-07-26 ─────────────────────────────────
+     The old code multiplied the WHOLE 1-day VaR (which contains the −μ drift
+     term) by √10. Variance scales with time (σ·√10) but the mean scales
+     LINEARLY (μ·10) — so the drift was being scaled by √10 instead of 10,
+     overstating multi-day VaR for assets with positive drift. Correct form:
+       VaR_10 = −(10μ − z·σ·√10)
+     For the quantile-based methods the same mean adjustment applies:
+       VaR_10 ≈ −10μ + √10·(VaR_1 + μ)                                   */
+  function scale10(var1) { return Math.sqrt(10) * (var1 + mu) - 10 * mu; }
   // Parametric
   var parVaR1_95 = -(mu - z95*sigma);
   var parVaR1_99 = -(mu - z99*sigma);
-  var parVaR10_95 = parVaR1_95 * Math.sqrt(10);
-  var parVaR10_99 = parVaR1_99 * Math.sqrt(10);
+  var parVaR10_95 = -(10*mu - z95*sigma*Math.sqrt(10));
+  var parVaR10_99 = -(10*mu - z99*sigma*Math.sqrt(10));
   // Historical
   var sorted = rets.slice().sort(function(a,b){return a-b;});
-  var histVaR1_95 = -sorted[Math.floor(sorted.length*0.05)];
-  var histVaR1_99 = -sorted[Math.floor(sorted.length*0.01)];
-  var histVaR10_95 = histVaR1_95 * Math.sqrt(10);
-  var histVaR10_99 = histVaR1_99 * Math.sqrt(10);
+  var i95 = Math.floor(sorted.length*0.05), i99 = Math.floor(sorted.length*0.01);
+  var histVaR1_95 = -sorted[i95];
+  var histVaR1_99 = -sorted[i99];
+  var histVaR10_95 = scale10(histVaR1_95);
+  var histVaR10_99 = scale10(histVaR1_99);
+  // Expected Shortfall (CVaR) — mean loss GIVEN the VaR threshold is breached.
+  // Added 2026-07-26: VaR says how bad the 5th-percentile day is; ES says how
+  // bad the average day beyond it is. Basel III replaced VaR with ES for a reason.
+  function tailMean(k) {
+    if (k < 1) k = 1;
+    var s = 0; for (var ti=0;ti<k;ti++) s += sorted[ti];
+    return -(s/k);
+  }
+  var es1_95 = tailMean(i95), es1_99 = tailMean(i99);
+  var es10_95 = scale10(es1_95), es10_99 = scale10(es1_99);
   // Cornish-Fisher
   function zCF(z, s, k) { return z + ((z*z-1)/6)*s + ((z*z*z-3*z)/24)*k - ((2*z*z*z-5*z)/36)*s*s; }
   var zcf95 = zCF(z95, skew, ekurt);
   var zcf99 = zCF(z99, skew, ekurt);
   var cfVaR1_95 = -(mu - zcf95*sigma);
   var cfVaR1_99 = -(mu - zcf99*sigma);
-  var cfVaR10_95 = cfVaR1_95 * Math.sqrt(10);
-  var cfVaR10_99 = cfVaR1_99 * Math.sqrt(10);
+  var cfVaR10_95 = -(10*mu - zcf95*sigma*Math.sqrt(10));
+  var cfVaR10_99 = -(10*mu - zcf99*sigma*Math.sqrt(10));
 
   function fmt(v) { return (v*100).toFixed(2)+'%'; }
 
-  var cols = [[parVaR1_95,parVaR1_99,parVaR10_95,parVaR10_99],[histVaR1_95,histVaR1_99,histVaR10_95,histVaR10_99],[cfVaR1_95,cfVaR1_99,cfVaR10_95,cfVaR10_99]];
-  // Find max (most conservative) per column
+  var cols = [[parVaR1_95,parVaR1_99,parVaR10_95,parVaR10_99],[histVaR1_95,histVaR1_99,histVaR10_95,histVaR10_99],[cfVaR1_95,cfVaR1_99,cfVaR10_95,cfVaR10_99],[es1_95,es1_99,es10_95,es10_99]];
+  // Find max (most conservative) per column — among the three VaR methods only
+  // (ES is a different measure and is always ≥ historical VaR by construction).
   var maxCol = [0,0,0,0];
   for (var cc=0;cc<4;cc++) {
     var mv = -Infinity, mrow = 0;
     for (var rr=0;rr<3;rr++) if (cols[rr][cc] > mv) { mv = cols[rr][cc]; mrow = rr; }
     maxCol[cc] = mrow;
   }
-  var methods = ['Parametric (Gaussian)', 'Historical Simulation', 'Cornish-Fisher (fat-tail)'];
+  var methods = ['Parametric (Gaussian)', 'Historical Simulation', 'Cornish-Fisher (fat-tail)', 'Expected Shortfall (hist. CVaR)'];
   var html = '<thead><tr><th>Method</th><th style="text-align:right;">1D 95%</th><th style="text-align:right;">1D 99%</th><th style="text-align:right;">10D 95%</th><th style="text-align:right;">10D 99%</th></tr></thead><tbody>';
-  for (var m=0;m<3;m++) {
-    html += '<tr><td style="font-weight:600;">'+methods[m]+'</td>';
+  for (var m=0;m<4;m++) {
+    var isES = m === 3;
+    html += '<tr'+(isES ? ' style="border-top:2px solid var(--border);"' : '')+'><td style="font-weight:600;">'+methods[m]
+      + (isES ? ' <span class="help-icon" title="Average loss on the days the 95%/99% threshold is exceeded — the depth of the tail, not just its edge. Always larger than historical VaR at the same confidence.">?</span>' : '')
+      + '</td>';
     for (var cc2=0;cc2<4;cc2++) {
-      var isMax = maxCol[cc2] === m;
-      var style = isMax ? 'background:rgba(139,105,20,0.18);font-weight:700;' : '';
+      var isMax = !isES && maxCol[cc2] === m;
+      var style = isMax ? 'background:rgba(139,105,20,0.18);font-weight:700;' : (isES ? 'color:var(--danger);font-weight:700;' : '');
       html += '<td style="text-align:right;'+style+'">'+fmt(cols[m][cc2])+'</td>';
     }
     html += '</tr>';
@@ -10218,6 +10267,27 @@ async function regimeLoadBreakdown(force) {
 function renderCycleBreakdown(data) {
   var el = document.getElementById('cycleBreakdownResult');
   if (!el) return;
+
+  /* ── Composite score banner (added 2026-07-26) ─────────────────────────
+     Every Macro Regime Analysis sub-tab opens with its composite. The
+     Economic composite maps each indicator's cycle phase to a score
+     (Expansion +1, Recovery +0.5, Neutral 0, Slowdown −0.5, Contraction −1),
+     averages across all ~22 indicators, and rescales [−1,+1] → [0,100]. */
+  try {
+    var PHASE_SCORE = { 'Expansion': 1, 'Recovery': 0.5, 'Neutral': 0, 'Slowdown': -0.5, 'Contraction': -1 };
+    var eSum = 0, eN = 0, phaseCounts = {};
+    (data.categories || []).forEach(function(cat) {
+      (cat.indicators || []).forEach(function(ind) {
+        if (ind.phase in PHASE_SCORE) { eSum += PHASE_SCORE[ind.phase]; eN++; phaseCounts[ind.phase] = (phaseCounts[ind.phase]||0)+1; }
+      });
+    });
+    if (eN > 0 && typeof renderPillarHeader === 'function') {
+      var econScore = ((eSum / eN) + 1) / 2 * 100;
+      var domPhase = Object.keys(phaseCounts).sort(function(a,b){ return phaseCounts[b]-phaseCounts[a]; })[0] || '—';
+      renderPillarHeader('econPillarHeader', 'Economic (Cycle Breakdown, ' + eN + ' FRED indicators)',
+        econScore, 'Dominant phase: ' + domPhase + ' · ' + (data.categories || []).map(function(c){ return c.name.split(' ')[0] + ' ' + (c.summary && c.summary.dominant || '—'); }).join(' · '));
+    }
+  } catch(e) { console.warn('econ banner:', e); }
 
   var PHASE_CONFIG = {
     'Expansion':   { bg: 'rgba(46,125,82,0.12)',  border: '#2E7D52', text: '#1A5C38',  badge: '#2E7D52',  label: 'Expansion'   },

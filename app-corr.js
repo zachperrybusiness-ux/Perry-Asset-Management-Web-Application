@@ -353,17 +353,78 @@
       return { ticker: tk, name: (valid[i].name || tk), avg: c ? s / c : 0, mv: valid[i].mv, accounts: valid[i].accounts };
     });
 
-    // Portfolio-level mean pair correlation.
+    // Portfolio-level mean pair correlation — equal-weighted AND value-weighted.
+    // The MV-weighted version (added 2026-07-26) is what the portfolio actually
+    // experiences: a 0.95 correlation between two 1% positions matters far less
+    // than 0.95 between two 20% positions. weight_ij = w_i · w_j.
     var tot = 0, cnt = 0;
     for (var p1 = 0; p1 < tickers.length; p1++) for (var p2 = p1 + 1; p2 < tickers.length; p2++) { tot += M[p1][p2]; cnt++; }
+    var meanPairW = null;
+    var mvTot = valid.reduce(function (s, u) { return s + (u.mv || 0); }, 0);
+    if (mvTot > 0) {
+      var wTot = 0, wSum = 0;
+      for (var q1 = 0; q1 < tickers.length; q1++) for (var q2 = q1 + 1; q2 < tickers.length; q2++) {
+        var w12 = ((valid[q1].mv || 0) / mvTot) * ((valid[q2].mv || 0) / mvTot);
+        wSum += M[q1][q2] * w12; wTot += w12;
+      }
+      meanPairW = wTot > 0 ? wSum / wTot : null;
+    }
+
+    /* Statistical significance floor (added 2026-07-26): with n observations,
+       a sample correlation is indistinguishable from zero below roughly
+       1.96/√(n−3) (Fisher z, 95% two-sided). Cells under this are rendered
+       muted so noise doesn't read as signal — especially important for the
+       small-sample stress regimes. */
+    var rCrit = idx.length > 4 ? 1.96 / Math.sqrt(idx.length - 3) : 1;
 
     return {
       tickers: tickers, names: valid.map(function (u) { return u.name || u.ticker; }),
-      matrix: M, avg: avg, meanPair: cnt ? tot / cnt : 0,
+      matrix: M, avg: avg, meanPair: cnt ? tot / cnt : 0, meanPairW: meanPairW, rCrit: rCrit,
       nObs: idx.length, nTotal: retDates.length,
       dateFrom: retDates[idx[0]], dateTo: retDates[idx[idx.length - 1]],
       universe: valid, missing: universe.filter(function (u) { return !CW._px[u.ticker]; }).map(function (u) { return u.ticker; })
     };
+  }
+
+  /* Seriation (added 2026-07-26): order assets so correlated blocks sit next
+     to each other. Greedy clusters (threshold 0.65) come first, ordered by
+     cluster size, members ordered by average within-cluster correlation;
+     unclustered names follow, ordered by average correlation. A matrix in
+     this order shows structure as visible blocks instead of scattered cells. */
+  function clusterOrder(m, thr) {
+    thr = thr || 0.65;
+    var n = m.tickers.length, assigned = {}, clusters = [];
+    for (var pass = 0; pass < n; pass++) {
+      var best = null;
+      for (var i = 0; i < n; i++) {
+        if (assigned[i]) continue;
+        for (var j = i + 1; j < n; j++) {
+          if (assigned[j]) continue;
+          if (m.matrix[i][j] >= thr && (!best || m.matrix[i][j] > best.v)) best = { i: i, j: j, v: m.matrix[i][j] };
+        }
+      }
+      if (!best) break;
+      var members = [best.i, best.j];
+      assigned[best.i] = assigned[best.j] = 1;
+      for (var k = 0; k < n; k++) {
+        if (assigned[k]) continue;
+        var meanTo = members.reduce(function (s, mm) { return s + m.matrix[k][mm]; }, 0) / members.length;
+        if (meanTo >= thr) { members.push(k); assigned[k] = 1; }
+      }
+      clusters.push(members);
+    }
+    clusters.sort(function (a, b) { return b.length - a.length; });
+    var order = [], bounds = [];
+    clusters.forEach(function (c) {
+      c.sort(function (a, b) { return m.avg[b].avg - m.avg[a].avg; });
+      order = order.concat(c);
+      bounds.push(order.length);   // index AFTER each cluster block
+    });
+    var singles = [];
+    for (var q = 0; q < n; q++) if (!assigned[q]) singles.push(q);
+    singles.sort(function (a, b) { return m.avg[b].avg - m.avg[a].avg; });
+    order = order.concat(singles);
+    return { order: order, bounds: bounds, nClusters: clusters.length };
   }
 
   /* ══════════════════════════════════════════════════════════════════════════
@@ -378,57 +439,99 @@
   function el(id) { return document.getElementById(id); }
 
   function corrColor(v) {
-    // Diverging scale: red = moves together (bad for diversification), blue = hedge.
-    if (v == null) return '#EEE';
+    /* Diverging scale on white, matte per the brand system:
+       positive = muted danger red (moves together — diversification risk),
+       negative = brand blues (hedge). White at zero. */
+    if (v == null) return '#EEEEEE';
     if (v >= 0) {
       var t = Math.min(1, v);
-      return 'rgba(139,42,42,' + (0.08 + t * 0.80).toFixed(3) + ')';
+      return 'rgba(139,42,42,' + (0.05 + t * 0.85).toFixed(3) + ')';
     }
     var u = Math.min(1, -v);
-    return 'rgba(46,90,140,' + (0.08 + u * 0.80).toFixed(3) + ')';
+    return 'rgba(0,60,113,' + (0.05 + u * 0.85).toFixed(3) + ')';
   }
 
   function shortTicker(t) { return t.replace('-USD', ''); }
 
+  /* One-time CSS for the heatmap: row/column crosshair on hover, cluster
+     separators, smooth cells. Injected once. (Rebuilt 2026-07-26.) */
+  function injectHeatmapCSS() {
+    if (document.getElementById('corrHeatCSS')) return;
+    var st = document.createElement('style');
+    st.id = 'corrHeatCSS';
+    st.textContent =
+      '#corrViewport table.corr-hm { border-collapse:separate; border-spacing:1px; table-layout:fixed; margin:0 auto; font-family:Arial,Helvetica,sans-serif; }' +
+      '#corrViewport table.corr-hm td { transition: box-shadow .06s ease; cursor:default; border-radius:2px; }' +
+      '#corrViewport table.corr-hm td.hm-cell:hover { box-shadow: inset 0 0 0 2px #003C71; }' +
+      '#corrViewport table.corr-hm tr:hover th.hm-rowlab { background:#003C71 !important; color:#fff !important; }' +
+      '#corrViewport table.corr-hm td.hm-clusterR { border-right:2px solid #003C71; }' +
+      '#corrViewport table.corr-hm tr.hm-clusterB > * { border-bottom:2px solid #003C71; }';
+    document.head.appendChild(st);
+  }
+
   function viewHeatmap(m) {
-    /* NO INTERNAL SCROLLING — reworked 2026-07-25.
-       Cell size and font are derived from the asset count so the whole matrix
-       always fits the card width. A 17-asset matrix renders at 22px cells with
-       7px labels, which is still readable, and every cell carries its exact
-       value in a hover tooltip. Scrolling inside a panel to see the rest of a
-       correlation matrix defeats the purpose of a matrix. */
-    var n = m.tickers.length;
-    var cell = n > 16 ? 21 : n > 13 ? 25 : n > 10 ? 30 : n > 7 ? 36 : 42;
-    var fs   = n > 16 ? 7  : n > 13 ? 8  : n > 10 ? 8.5 : 9.5;
-    var h = '<div style="width:100%;">';
-    h += '<table style="border-collapse:collapse;font-size:' + fs + 'px;">';
-    h += '<tr><th style="position:sticky;left:0;background:var(--panel);z-index:2;"></th>';
-    m.tickers.forEach(function (t) {
-      h += '<th style="padding:2px;font-size:' + fs + 'px;writing-mode:vertical-rl;transform:rotate(180deg);height:52px;font-weight:600;">' + esc(shortTicker(t)) + '</th>';
+    /* REBUILT 2026-07-26. Three upgrades over the old table:
+       1. SERIATION — assets are cluster-ordered so correlated blocks are
+          visibly contiguous (navy separators mark cluster boundaries).
+       2. SIGNIFICANCE — cells with |r| below the 95% significance floor for
+          this sample size render hollow (white with a gray value): with few
+          sessions those numbers are statistically indistinguishable from 0.
+       3. LEGIBILITY — horizontal column labels up to 10 assets, a continuous
+          legend gradient, hover crosshair, and no internal scrolling. */
+    injectHeatmapCSS();
+    var co = clusterOrder(m);
+    var ord = co.order;
+    var n = ord.length;
+    var cell = n > 16 ? 24 : n > 13 ? 28 : n > 10 ? 33 : n > 7 ? 40 : 48;
+    var fs   = n > 16 ? 8  : n > 13 ? 8.5 : n > 10 ? 9 : 10.5;
+    var labFs = n > 16 ? 8.5 : n > 13 ? 9 : 10;
+    var horizLabels = n <= 10;
+    var boundSet = {};
+    co.bounds.forEach(function (b) { if (b < n) boundSet[b - 1] = 1; });   // draw after these row/col positions
+
+    var h = '<div style="width:100%;overflow-x:auto;">';
+    h += '<table class="corr-hm" style="font-size:' + fs + 'px;">';
+    h += '<tr><th style="width:60px;"></th>';
+    ord.forEach(function (oi, jj) {
+      var lbl = esc(shortTicker(m.tickers[oi]));
+      h += '<th class="' + (boundSet[jj] ? 'hm-clusterR' : '') + '" style="width:' + cell + 'px;padding:2px 0;font-size:' + labFs + 'px;font-weight:600;color:#5A6A7A;'
+        + (horizLabels ? '' : 'writing-mode:vertical-rl;transform:rotate(180deg);height:56px;vertical-align:bottom;')
+        + '" title="' + esc(m.names[oi]) + '">' + lbl + '</th>';
     });
     h += '</tr>';
-    for (var i = 0; i < n; i++) {
-      h += '<tr><th style="position:sticky;left:0;background:var(--panel);z-index:1;text-align:right;padding:2px 6px;font-size:' + fs + 'px;font-weight:600;white-space:nowrap;" title="' + esc(m.names[i]) + '">' + esc(shortTicker(m.tickers[i])) + '</th>';
-      for (var j = 0; j < n; j++) {
+    for (var ii = 0; ii < n; ii++) {
+      var i = ord[ii];
+      h += '<tr class="' + (boundSet[ii] ? 'hm-clusterB' : '') + '">'
+        + '<th class="hm-rowlab" style="background:#F4F6F9;text-align:right;padding:2px 7px;font-size:' + labFs + 'px;font-weight:600;color:#5A6A7A;white-space:nowrap;border-radius:2px;" title="' + esc(m.names[i]) + '">' + esc(shortTicker(m.tickers[i])) + '</th>';
+      for (var jj2 = 0; jj2 < n; jj2++) {
+        var j = ord[jj2];
         var v = m.matrix[i][j];
         var isDiag = i === j;
-        h += '<td title="' + esc(shortTicker(m.tickers[i]) + ' vs ' + shortTicker(m.tickers[j]) + ': ' + v.toFixed(3) + '  (' + m.nObs + ' sessions)') + '" '
-          +  'style="width:' + cell + 'px;height:' + cell + 'px;text-align:center;'
-          +  'background:' + (isDiag ? 'var(--navy)' : corrColor(v)) + ';'
-          +  'color:' + (isDiag ? '#fff' : (Math.abs(v) > 0.55 ? '#fff' : 'var(--text-pri)')) + ';'
-          +  'border:1px solid rgba(255,255,255,.5);font-variant-numeric:tabular-nums;">'
-          +  (isDiag ? '—' : (v > 0 ? '' : '−') + Math.abs(v).toFixed(2).slice(1))
-          +  '</td>';
+        var insig = !isDiag && Math.abs(v) < (m.rCrit || 0);
+        var bg = isDiag ? '#003C71' : (insig ? '#FFFFFF' : corrColor(v));
+        var col = isDiag ? '#FFFFFF' : (insig ? '#A8B4C0' : (Math.abs(v) > 0.55 ? '#FFFFFF' : '#000000'));
+        var tip = shortTicker(m.tickers[i]) + ' vs ' + shortTicker(m.tickers[j]) + ': ' + v.toFixed(3) + ' (' + m.nObs + ' sessions)'
+          + (insig ? ' — below the ±' + (m.rCrit || 0).toFixed(2) + ' significance floor for this sample; statistically indistinguishable from zero' : '');
+        h += '<td class="hm-cell ' + (boundSet[jj2] ? 'hm-clusterR' : '') + '" title="' + esc(tip) + '" '
+          + 'style="width:' + cell + 'px;height:' + cell + 'px;text-align:center;background:' + bg + ';color:' + col + ';'
+          + (insig ? 'border:1px dashed #D0D7E0;' : '')
+          + 'font-variant-numeric:tabular-nums;font-weight:' + (Math.abs(v) >= 0.8 && !isDiag ? '700' : '400') + ';">'
+          + (isDiag ? '' : (n > 14 && Math.abs(v) < 0.4 && !insig ? '' : (v < 0 ? '−' : '') + Math.abs(v).toFixed(2).replace(/^0/, '')))
+          + '</td>';
       }
       h += '</tr>';
     }
     h += '</table></div>';
-    h += '<div style="margin-top:8px;display:flex;align-items:center;gap:10px;font-size:10px;color:var(--text-sec);flex-wrap:wrap;">'
-      +  '<span style="display:inline-flex;align-items:center;gap:4px;"><span style="width:14px;height:10px;background:' + corrColor(-0.8) + ';display:inline-block;"></span>−0.8 hedge</span>'
-      +  '<span style="display:inline-flex;align-items:center;gap:4px;"><span style="width:14px;height:10px;background:' + corrColor(0) + ';display:inline-block;border:1px solid #ccc;"></span>0.0 unrelated</span>'
-      +  '<span style="display:inline-flex;align-items:center;gap:4px;"><span style="width:14px;height:10px;background:' + corrColor(0.8) + ';display:inline-block;"></span>+0.8 moves together</span>'
-      +  '<span>· values shown without leading zero (.72 = 0.72)</span>'
-      +  '</div>';
+
+    // Continuous legend gradient + reading notes.
+    h += '<div style="margin-top:10px;display:flex;align-items:center;gap:12px;font-size:10px;color:#5A6A7A;flex-wrap:wrap;">'
+      + '<span style="display:inline-flex;align-items:center;gap:6px;">−1.0'
+      + '<span style="width:130px;height:12px;border:1px solid #D0D7E0;border-radius:2px;display:inline-block;background:linear-gradient(to right, rgba(0,60,113,0.9), rgba(0,60,113,0.15), #FFFFFF, rgba(139,42,42,0.15), rgba(139,42,42,0.9));"></span>'
+      + '+1.0</span>'
+      + '<span><span style="color:#003C71;font-weight:700;">blue</span> = hedge · <span style="color:#8B2A2A;font-weight:700;">red</span> = moves together</span>'
+      + '<span style="display:inline-flex;align-items:center;gap:4px;"><span style="width:13px;height:11px;border:1px dashed #D0D7E0;display:inline-block;background:#fff;"></span>below significance floor (±' + (m.rCrit || 0).toFixed(2) + ' at n=' + m.nObs + ')</span>'
+      + (co.nClusters ? '<span>· navy lines separate the ' + co.nClusters + ' correlation cluster' + (co.nClusters > 1 ? 's' : '') + ' (see Clusters view)</span>' : '')
+      + '</div>';
     return h;
   }
 
@@ -756,9 +859,16 @@
             +    ' · ' + m2.nObs + ' of ' + m2.nTotal + ' sessions'
             +    (m2.dateFrom ? ' (' + m2.dateFrom + ' → ' + m2.dateTo + ')' : '')
             +  '</span>'
+            +  '<span style="display:inline-flex;gap:10px;align-items:center;">'
             +  '<span style="font-weight:700;color:' + (m2.meanPair > 0.6 ? '#8B2A2A' : m2.meanPair > 0.4 ? '#8B6914' : '#2E7D52') + ';" '
-            +    'title="Mean of every unique pair correlation. Above 0.6 the portfolio is effectively one bet.">'
+            +    'title="Equal-weighted mean of every unique pair correlation. Above 0.6 the portfolio is effectively one bet.">'
             +    'mean pair corr ' + m2.meanPair.toFixed(2) + '</span>'
+            +  (m2.meanPairW != null
+                 ? '<span style="font-weight:700;color:' + (m2.meanPairW > 0.6 ? '#8B2A2A' : m2.meanPairW > 0.4 ? '#8B6914' : '#2E7D52') + ';" '
+                   + 'title="Position-size-weighted mean pair correlation (w_i × w_j weights) — what the portfolio actually experiences. A high value here with a low equal-weight value means your BIG positions are the correlated ones.">'
+                   + '$-weighted ' + m2.meanPairW.toFixed(2) + '</span>'
+                 : '')
+            +  '</span>'
             +  '</div>';
           if (m2.missing && m2.missing.length) {
             hdr += '<div style="font-size:10px;color:#8B6914;margin-bottom:8px;">'
