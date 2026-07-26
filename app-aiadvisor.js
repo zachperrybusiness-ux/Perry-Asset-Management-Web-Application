@@ -88,6 +88,7 @@
       + '<div style="font-size:11px;opacity:.75;">Generated ' + fmtWhen(data.generated_at)
       + (cs.total_value ? ' · portfolio $' + Number(cs.total_value).toLocaleString() : '')
       + (cs.n_positions ? ' · ' + cs.n_positions + ' positions' : '')
+      + (cs.holdings_rows_used ? ' · ' + cs.holdings_rows_used + ' holdings rows read' : '')
       + (cs.cash_pct != null ? ' · ' + cs.cash_pct + '% cash' : '') + '</div>'
       + '</div>'
       + '<div style="text-align:center;min-width:130px;">'
@@ -205,7 +206,14 @@
   window.aiBriefGenerate = function (force) {
     var st = el('aiBriefGenStatus');
     if (st) st.innerHTML = '<span class="spinner"></span> Generating — PAM-1 is scoring the book against today\'s data…';
-    fetch(WORKER + '/advisor-report/generate' + (force ? '?force=1' : ''), { method: 'POST' })
+    // Pass the signed-in uid so the report covers ONLY this account's
+    // holdings (fixed 2026-07-26: without it the worker summed every row in
+    // the shared holdings collection, including stale/test data).
+    var uid = (window._currentUser && window._currentUser.uid) ? window._currentUser.uid : '';
+    var qs = [];
+    if (force) qs.push('force=1');
+    if (uid) qs.push('uid=' + encodeURIComponent(uid));
+    fetch(WORKER + '/advisor-report/generate' + (qs.length ? '?' + qs.join('&') : ''), { method: 'POST' })
       .then(function (r) { return r.json(); })
       .then(function (d) {
         if (d.error) { if (st) st.textContent = 'Failed: ' + d.error; return; }
