@@ -1006,7 +1006,7 @@ async function ffRunAnalysis() {
       if(!isCash&&h.ticker&&!seen[h.ticker]){seen[h.ticker]=1;eqTickers.push(h.ticker);}
     });
     // Factor proxies
-    var factorTickers=['SPY','IWM','VTV','VUG','MTUM','IJJ','QUAL'];
+    var factorTickers=['SPY','IWM','VTV','VUG','MTUM','IJJ','QUAL','USMV'];
     var allTickers=eqTickers.concat(factorTickers);
     // Fetch all in parallel
     var results={};
@@ -1038,13 +1038,45 @@ async function ffRunAnalysis() {
       var b=alignReturns(results[tickerB].returns,n);
       return a.map(function(v,i){return v-b[i];});
     }
-    var RF_DAILY=0.0525/252; // risk-free ~5.25% annual
+    /* ══════════════════════════════════════════════════════════════════════
+       FACTOR MODEL — corrected 2026-07-25 (portfolio-manager audit).
+
+       THREE DEFECTS FIXED:
+
+       1. MOMENTUM WAS NOT A FACTOR. It used RAW MTUM returns, not the
+          MTUM-minus-market spread. A factor must be long-short; raw MTUM is
+          roughly 95% market exposure, so it collided with Mkt-RF, produced a
+          meaningless momentum beta, and inflated the market factor's standard
+          error. Now MTUM - SPY, matching how SMB and HML are already built.
+
+          This matters most for THIS portfolio: leveraged momentum names
+          (TQQQ, FNGU) load heavily on momentum, and a model that cannot see
+          momentum attributes those returns to ALPHA — overstating skill.
+
+       2. QUALITY AND LOW-VOL WERE MISSING. QUAL was already being fetched and
+          then never used. The standard set is Market / Size / Value / Momentum
+          / Quality / Low-vol; the model had three of six.
+
+       3. HARDCODED RISK-FREE of 5.25% — a fifth different value on a site that
+          now has one shared constant. Reads PerrySignals.CONST.RF_RATE.
+       ══════════════════════════════════════════════════════════════════════ */
+    var RF_ANNUAL = (window.PerrySignals && window.PerrySignals.CONST && window.PerrySignals.CONST.RF_RATE) || 0.0425;
+    var RF_DAILY = RF_ANNUAL/252;
     var factors={
       'Market (Mkt-RF)': mktRets.map(function(v){return v-RF_DAILY;}),
       'Size (SMB)': compFactorRet('IWM','SPY'),
       'Value (HML)': compFactorRet('VTV','VUG'),
-      'Momentum (MOM)': (results['MTUM']?alignReturns(results['MTUM'].returns,n):new Array(n).fill(0)),
+      'Momentum (MOM)': (results['MTUM'] ? compFactorRet('MTUM','SPY') : new Array(n).fill(0)),
+      'Quality (QMJ)': (results['QUAL'] ? compFactorRet('QUAL','SPY') : new Array(n).fill(0)),
+      'Low Vol (BAB)': (results['USMV'] ? compFactorRet('USMV','SPY') : new Array(n).fill(0))
     };
+    // Drop any factor whose proxy ETF failed to load — an all-zero column makes
+    // X'X singular and silently corrupts every other beta in the regression.
+    Object.keys(factors).forEach(function(fk){
+      var col=factors[fk];
+      var nz=col.filter(function(v){return v!==0;}).length;
+      if(nz < Math.max(20, col.length*0.5)) { delete factors[fk]; }
+    });
     // Build portfolio daily return series (market-value weighted)
     var totalMV=0;
     var weights={};
@@ -1099,6 +1131,9 @@ async function ffRunAnalysis() {
       'Market (Mkt-RF)':'Excess market sensitivity. >1 = more volatile than SPY.',
       'Size (SMB)':'Small-cap tilt. >0 = small-cap exposure, <0 = large-cap.',
       'Value (HML)':'Value tilt. >0 = value stocks, <0 = growth stocks.',
+      'Momentum (MOM)':'Momentum tilt, measured as MTUM minus the market. >0 means the portfolio rides recent winners and will suffer in a sharp reversal or rotation. Leveraged index ETFs load heavily here.',
+      'Quality (QMJ)':'Quality tilt (profitability, stable earnings), measured as QUAL minus the market. >0 tends to cushion drawdowns.',
+      'Low Vol (BAB)':'Low-volatility tilt, measured as USMV minus the market. >0 means defensively positioned; <0 means the portfolio is higher-beta than the index.',
       'Momentum (MOM)':'Momentum exposure. >0 = riding winners, <0 = contrarian.'
     };
     var cardHtml='';
@@ -5380,6 +5415,7 @@ async function brinsonRun() {
       '<div style="font-family:Courier New,monospace;text-align:right;">'+(totalActive>=0?'+':'')+totalActive.toFixed(2)+'%</div>'+
       '</div>';
     html += '<p style="font-size:11px;color:var(--text-sec);margin-top:10px;line-height:1.5;"><strong>Reading the table.</strong> <strong>Allocation</strong> measures whether your sector tilt vs. '+benchSym+' added value (overweight a strong sector, underweight a weak one). <strong>Selection</strong> measures whether your picks within each sector beat the sector benchmark (XLK for Tech, XLE for Energy, etc.). <strong>Interaction</strong> is a cross-effect — being overweight in a sector where your picks also outperformed.</p>';
+    html += '<p style="font-size:10.5px;color:var(--text-sec);margin-top:6px;line-height:1.5;"><strong>Method note.</strong> The allocation term uses the Brinson-<em>Fachler</em> form &mdash; (w<sub>P</sub>&minus;w<sub>B</sub>) &times; (r<sub>B,i</sub> &minus; r<sub>B,total</sub>) &mdash; which measures the tilt against the benchmark&rsquo;s <em>own</em> total return, so overweighting a sector that merely rose with the market is not credited as skill. Interaction is shown as its own column rather than folded into selection; textbook Brinson-Fachler folds it in, but separating it makes it visible when a large active return is really the product of two decisions compounding rather than one good call.</p>';
     el.innerHTML = html;
 
     // ── Grouped bar chart: Allocation / Selection / Interaction per sector ──

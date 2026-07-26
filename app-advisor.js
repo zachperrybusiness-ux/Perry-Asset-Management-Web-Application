@@ -744,7 +744,10 @@
         '<td>' + esc(r.account) + '</td>' +
         '<td class="adv-note">' + r.rationale + '</td></tr>';
     }).join('');
-    var tbl = '<div class="table-wrap" style="max-height:520px;overflow:auto;"><table class="adv-tbl"><thead><tr><th>Action</th><th>Position</th><th>Amount</th><th>Account (asset location)</th><th>Why</th></tr></thead><tbody>' + rows + '</tbody></table></div>';
+    /* QA 2026-07-25: internal scroll removed from this data table. The two modal
+       dialogs in this file KEEP their max-height:88vh + overflow:auto, which is
+       correct behaviour for a modal. */
+    var tbl = '<div class="table-wrap"><table class="adv-tbl"><thead><tr><th>Action</th><th>Position</th><th>Amount</th><th>Account (asset location)</th><th>Why</th></tr></thead><tbody>' + rows + '</tbody></table></div>';
     var totBuy = out.recs.filter(function(r){return r.action==='BUY';}).reduce(function(s,r){return s+r.amount;},0);
     var totSell = out.recs.filter(function(r){return r.action==='TRIM'||r.action==='SELL';}).reduce(function(s,r){return s+r.amount;},0);
     var summary = '<div class="adv-grid" style="margin-top:12px;">' + metric('Sell / Trim', usd(totSell), '') + metric('Buy / Add', usd(totBuy), '') + metric('Net', usd(totBuy - totSell), 'Positive = deploy cash') + '</div>';

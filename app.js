@@ -89,6 +89,46 @@ async function fetchQuote(t) {
   if (d.error) throw new Error(d.error);
   return d;
 }
+/* ══════════════════════════════════════════════════════════════════════════
+   BAR-FREQUENCY DETECTION — added 2026-07-25 (QA pass).
+
+   WHY THIS EXISTS: Yahoo silently downgrades interval=1d to weekly/monthly bars
+   for long ranges (range=max returns MONTHLY). Any code that then annualises with
+   a hardcoded sqrt(252), or divides bar count by 252 to get years, is wrong by a
+   large factor and gives no indication of it.
+
+   Measured impact before this fix:
+     • Portfolio Risk    SPY vol 68% vs true ~15%   (monthly sigma x sqrt(252))
+     • Backtester        "years" = bars/252, so 25 years of monthly bars (300)
+                         was treated as 1.19 years -> CAGR wildly overstated,
+                         Sharpe ~4.6x too high, drawdown far too shallow
+                         (month-close bars miss every intra-month trough)
+
+   Every annualisation should now derive its periods-per-year from the ACTUAL
+   dates via perryPeriodsPerYear(), not from an assumption about the request.
+   ══════════════════════════════════════════════════════════════════════════ */
+function perryBarFrequency(dates) {
+  if (!dates || dates.length < 6) return { periodsPerYear: 252, label: 'daily', medianGapDays: 1, assumed: true };
+  var gaps = [];
+  var n = Math.min(dates.length, 60);
+  for (var i = dates.length - n + 1; i < dates.length; i++) {
+    var a = new Date(dates[i - 1]), b = new Date(dates[i]);
+    var g = (b - a) / 86400000;
+    if (g > 0 && g < 400) gaps.push(g);
+  }
+  if (!gaps.length) return { periodsPerYear: 252, label: 'daily', medianGapDays: 1, assumed: true };
+  gaps.sort(function (x, y) { return x - y; });
+  var med = gaps[Math.floor(gaps.length / 2)];
+  if (med <= 4)   return { periodsPerYear: 252, label: 'daily',   medianGapDays: med, assumed: false };
+  if (med <= 10)  return { periodsPerYear: 52,  label: 'weekly',  medianGapDays: med, assumed: false };
+  if (med <= 45)  return { periodsPerYear: 12,  label: 'monthly', medianGapDays: med, assumed: false };
+  if (med <= 120) return { periodsPerYear: 4,   label: 'quarterly', medianGapDays: med, assumed: false };
+  return { periodsPerYear: 1, label: 'annual', medianGapDays: med, assumed: false };
+}
+function perryPeriodsPerYear(dates) { return perryBarFrequency(dates).periodsPerYear; }
+window.perryBarFrequency = perryBarFrequency;
+window.perryPeriodsPerYear = perryPeriodsPerYear;
+
 async function fetchChart(t, range, interval) {
   // Yahoo Finance accepts: 1d, 5d, 1mo, 3mo, 6mo, ytd, 1y, 2y, 5y, 10y, max
   // Normalize unsupported ranges (e.g. 15y, 20y) to max
@@ -3192,7 +3232,8 @@ function renderDonut(id, title, data) {
     '<div style="font-size:18px;font-weight:800;color:var(--navy);">' + deduped.length + '</div>' +
     '<div style="font-size:10px;color:var(--text-sec);white-space:nowrap;">' + (deduped.length === 1 ? 'category' : 'categories') + '</div>' +
     '</div></div>' +
-    '<div style="flex:1;min-width:0;max-height:170px;overflow-y:auto;">' +
+    /* QA 2026-07-25: internal 170px scroll removed — panel sizes to content. */
+    '<div style="flex:1;min-width:0;">' +
     deduped.map((d, i) =>
       '<div style="display:flex;align-items:center;gap:6px;padding:3px 0;border-bottom:1px solid rgba(0,0,0,0.04);">' +
       '<span style="width:10px;height:10px;border-radius:2px;flex-shrink:0;background:' + PALETTE[i % PALETTE.length] + ';"></span>' +
@@ -12160,11 +12201,35 @@ function btRenderTradeLog(trades) {
 }
 
 // ── Shared: compute statistics ─────────────────────────────────────────────
-function btStats(equity, benchEquity, capital) {
+/* `dates` param added 2026-07-25 (QA pass). Optional and backward-compatible:
+   when supplied, the true bar frequency and elapsed calendar time are derived
+   from the dates instead of assuming 252 daily bars per year. */
+function btStats(equity, benchEquity, capital, dates) {
   if (!equity.length) return {};
   var finalVal = equity[equity.length-1];
   var totalReturn = (finalVal - capital) / capital * 100;
-  var years = equity.length / 252;
+
+  /* ── ANNUALISATION — FIXED 2026-07-25 ───────────────────────────────────
+     WAS: years = equity.length / 252, and every ratio scaled by sqrt(252).
+     Both assumed daily bars. The strategy fetch used range='max', which
+     returns MONTHLY bars, so 25 years of history (about 300 bars) was treated
+     as 1.19 years. CAGR was computed over the wrong horizon and every
+     risk-adjusted ratio was overstated by roughly sqrt(21) = 4.6x.
+
+     Now: periods-per-year comes from the actual dates, and elapsed years come
+     from the real calendar span when dates are available. */
+  var freq = (typeof perryBarFrequency === 'function' && dates && dates.length > 5)
+    ? perryBarFrequency(dates)
+    : { periodsPerYear: 252, label: 'daily', assumed: true };
+  var ppy = freq.periodsPerYear;
+
+  var years;
+  if (dates && dates.length > 1) {
+    years = (new Date(dates[dates.length-1]) - new Date(dates[0])) / (365.25 * 86400000);
+  } else {
+    years = equity.length / ppy;
+  }
+  if (!(years > 0)) years = equity.length / ppy;
 
   // CAGR
   var cagr = years > 0 ? (Math.pow(finalVal / capital, 1 / years) - 1) * 100 : 0;
@@ -12178,19 +12243,22 @@ function btStats(equity, benchEquity, capital) {
   });
 
   // Daily returns → Sharpe (annualized, rf=4%)
-  var rf_daily = 0.04 / 252;
+  /* Risk-free per PERIOD, not per day — matches the detected bar frequency.
+     Also reads the single shared constant rather than a 0.04 literal. */
+  var rfAnnual = (window.PerrySignals && window.PerrySignals.CONST.RF_RATE) || 0.0425;
+  var rf_daily = rfAnnual / ppy;
   var dailyRets = [];
   for (var i = 1; i < equity.length; i++) {
     if (equity[i-1] > 0) dailyRets.push(equity[i] / equity[i-1] - 1);
   }
   var meanRet = dailyRets.reduce(function(s,v){return s+v;},0) / Math.max(1,dailyRets.length);
   var variance = dailyRets.reduce(function(s,v){return s+(v-meanRet)*(v-meanRet);},0) / Math.max(1,dailyRets.length-1);
-  var sharpe = variance > 0 ? (meanRet - rf_daily) / Math.sqrt(variance) * Math.sqrt(252) : 0;
+  var sharpe = variance > 0 ? (meanRet - rf_daily) / Math.sqrt(variance) * Math.sqrt(ppy) : 0;
 
   // Sortino (downside std only)
   var downRets = dailyRets.filter(function(r){return r < rf_daily;});
   var downVar = downRets.reduce(function(s,v){return s+(v-rf_daily)*(v-rf_daily);},0) / Math.max(1,downRets.length-1);
-  var sortino = downVar > 0 ? (meanRet - rf_daily) / Math.sqrt(downVar) * Math.sqrt(252) : 0;
+  var sortino = downVar > 0 ? (meanRet - rf_daily) / Math.sqrt(downVar) * Math.sqrt(ppy) : 0;
 
   // Calmar
   var calmar = maxDD !== 0 ? cagr / Math.abs(maxDD) : 0;
@@ -12296,8 +12364,11 @@ async function btRunLVM() {
     for(var fi=0;fi<fetchList.length;fi++){
       var ft=fetchList[fi];
       status.textContent='Fetching '+ft+' ('+(fi+1)+'/'+fetchList.length+')…';
-      try{raw[ft]=await btFetchPrices(ft,'max');}
-      catch(e){try{raw[ft]=await btFetchPrices(ft,'15y');}catch(e2){raw[ft]=[];}}
+      /* FIXED 2026-07-25 (QA pass): requested 'max', which returns MONTHLY bars
+         while btStats() annualises as if they were daily. Now requests '10y'
+         (verified to return true daily bars) and falls back to 5y. */
+      try{raw[ft]=await btFetchPrices(ft,'10y');}
+      catch(e){try{raw[ft]=await btFetchPrices(ft,'5y');}catch(e2){raw[ft]=[];}}
     }
     var px={};
     fetchList.forEach(function(t){
@@ -12537,7 +12608,7 @@ async function btRunLVM() {
       expUnlev.push(parseFloat(((sharesQQQ*qqqC+sharesSPY*spyC)/pvS*100).toFixed(1)));
     }
 
-    var stats=btStats(equityCurve,benchCurve,capital);
+    var stats=btStats(equityCurve,benchCurve,capital,(typeof dates!=='undefined'?dates:null));
 
     btRenderKPI([
       {label:'Total Return',  value:stats.totalReturn+'%', color:parseFloat(stats.totalReturn)>=0?C.success:C.danger},
@@ -12624,7 +12695,7 @@ async function btRunDCA() {
       benchCurve.push((benchShares||0) * (benchMap[d]?.close||px));
     });
 
-    var stats = btStats(equityCurve, benchCurve, totalInvested);
+    var stats = btStats(equityCurve, benchCurve, totalInvested,(typeof dates!=='undefined'?dates:null));
     var finalVal = equityCurve[equityCurve.length-1]||0;
     var gain = finalVal - totalInvested;
     btRenderKPI([
@@ -12708,7 +12779,7 @@ async function btRunMomentum() {
       benchCurve.push(benchShares2 * (pm[benchT][d]?.close||spyPx));
     });
 
-    var stats = btStats(equityCurve, benchCurve, capital);
+    var stats = btStats(equityCurve, benchCurve, capital,(typeof dates!=='undefined'?dates:null));
     btRenderKPI([
       { label:'Total Return',  value:stats.totalReturn+'%', color:parseFloat(stats.totalReturn)>=0?C.success:C.danger },
       { label:'CAGR',          value:stats.cagr+'%', color:parseFloat(stats.cagr)>=0?C.success:C.danger },
@@ -12793,7 +12864,7 @@ async function btRunCustom() {
       benchCurve.push(benchShares3*(bm[d]||px));
     }
 
-    var stats = btStats(equityCurve, benchCurve, capital);
+    var stats = btStats(equityCurve, benchCurve, capital,(typeof dates!=='undefined'?dates:null));
     btRenderKPI([
       { label:'Total Return', value:stats.totalReturn+'%', color:parseFloat(stats.totalReturn)>=0?C.success:C.danger },
       { label:'CAGR',         value:stats.cagr+'%', color:parseFloat(stats.cagr)>=0?C.success:C.danger },

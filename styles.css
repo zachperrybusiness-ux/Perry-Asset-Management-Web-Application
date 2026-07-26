@@ -657,8 +657,10 @@ tr:hover td { background: #EAF1F9; }
   font-size: 12px;
   color: var(--text);
   white-space: pre-wrap;
-  overflow-y: auto;
-  max-height: 500px;
+  /* QA 2026-07-25: was overflow-y:auto + max-height:500px. This is a CONTENT
+     panel — capping it created a scrollbar inside a card, which is the pattern
+     the user specifically objected to. Content now grows to fit; the page
+     scrolls, not the panel. */
   line-height: 1.6;
 }
 .chart-wrap {
@@ -2625,7 +2627,11 @@ select option { color: #1A2733 !important; background: #ffffff !important; }
   margin: 0 16px 14px;
 }
 #macroOverviewGrid .macro-ovr-col { margin: 0; display: flex; flex-direction: column; }
-#macroOverviewGrid .macro-ovr-col .card-body { flex: 1; overflow-y: auto; max-height: 560px; padding: 10px 12px; }
+/* QA 2026-07-25: removed overflow-y:auto + max-height:560px. These are the
+   three side-by-side macro columns; an internal scrollbar in each defeated the
+   point of a compact overview. They now size to content. If a column grows too
+   tall, the fix is to move detail into hover tooltips, not to add a scrollbar. */
+#macroOverviewGrid .macro-ovr-col .card-body { flex: 1; padding: 10px 12px; }
 #macroOverviewGrid table { margin-left: auto; margin-right: auto; }
 /* Quad map compressed for the middle column: stack panels, shrink canvas */
 #movCol2Body .quad-map-wrap { display: grid !important; grid-template-columns: 1fr !important; gap: 10px !important; }
@@ -2718,7 +2724,8 @@ body.view-mobile #themesGlanceStrip .card-body > div { min-width: 100% !importan
 .explorer-summary-band table { font-size: 11px !important; }
 .explorer-summary-band td, .explorer-summary-band th { padding: 4px 7px !important; }
 /* Mobile: band scrolls internally rather than pushing panes off-screen */
-body.view-mobile .explorer-summary-band { max-height: 46vh; overflow-y: auto; }
+body.view-mobile /* QA 2026-07-25: internal scroll removed — content panel, not a modal. */
+.explorer-summary-band { }
 
 /* ═══ ROUND 10 — verdict banner retired (replaced by the pillar Overview).
    !important beats the data loader's inline display:block re-show. ═══ */

@@ -1344,7 +1344,11 @@
                 <div style="grid-column:1/-1;text-align:center;padding:20px;color:var(--text-sec);"><span class="spinner"></span> Loading…</div>
               </div>
             </div>
-            <div class="card-sources"><strong>Source:</strong> Fidelity Asset Allocation Research Team (AART) business-cycle sector study (1962–2020). Hit rates represent historical frequency of outperformance vs. S&amp;P 500 during the indicated cycle phase. Not investment advice.</div>
+            <!-- Citation corrected 2026-07-25 (QA pass). This attributed measured 1962-2020
+               outperformance frequencies to Fidelity AART for numbers that were hardcoded
+               literals nothing in this codebase ever computed. Third instance of the same
+               defect; the first two were corrected earlier the same day. -->
+            <div class="card-sources"><strong>Basis:</strong> Directional priors informed by published business-cycle research (Fidelity AART framework, CFA Institute curriculum). <strong>These are analyst judgments, not measured outperformance frequencies</strong> &mdash; no multi-cycle statistics have been computed on this dataset. Any figure labelled &ldquo;measured&rdquo; is computed live from the warehouse and carries its sample size. Not investment advice.</div>
           </div>
           <div class="card" style="margin-top:16px;">
             <div class="card-title">Playbook Positioning vs. My Holdings</div>
@@ -1402,7 +1406,7 @@
         <div class="pf-tab-content" id="pbtab-hitrateS">
           <div class="card">
             <div class="card-title">Historical Hit Rates by Business Cycle Phase
-              <span class="help-icon" title="Hit rate = % of historical cycle-phase periods where each sector generated positive excess return vs. SPX. Source: Fidelity AART business-cycle sector study 1962–2020. For educational reference only.">?</span>
+              <span class="help-icon" title="Directional prior, not a measured hit rate. Indicates whether published business-cycle research generally favours this sector in this regime. NO multi-cycle outperformance frequency has been computed on this dataset, so no percentage is shown. Where a measured figure appears elsewhere on this page it is computed live from the warehouse and labelled with its sample size.">?</span>
             </div>
             <div class="card-body">
               <div style="overflow-x:auto;">
@@ -3488,7 +3492,12 @@
       <div class="card">
         <div class="card-title">Trade Log</div>
         <div class="card-body" style="padding:0;">
-          <div id="btTradeLog" style="overflow-x:auto;max-height:400px;overflow-y:auto;"></div>
+          <!-- QA 2026-07-25: kept scrollable. A backtest trade log can legitimately run to
+             hundreds of rows, and an unbounded list would push every result card off
+             screen. Raised 400px -> 520px and made the horizontal scroll explicit. This
+             is one of four intentional scroll containers on the site (the others being
+             the mobile nav drawer, the command palette, and modal dialogs). -->
+        <div id="btTradeLog" style="overflow-x:auto;max-height:520px;overflow-y:auto;"></div>
         </div>
         <div class="card-sources">
           <strong>Data:</strong> Daily OHLCV from Yahoo Finance via Cloudflare Worker.
