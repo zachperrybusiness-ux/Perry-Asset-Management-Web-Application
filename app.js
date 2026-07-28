@@ -2697,6 +2697,41 @@ window.renderPortfolioChart = async function() {
   }
 
   const twrModeOn = !!window._twrModeOnly;
+
+  /* ═══ CHART-04 FIX (2026-07-27) — TWR mode is now a true common-base view ══
+
+     WHAT WAS WRONG. In TWR mode the portfolio was drawn on the left axis in
+     DOLLARS while SPY and QQQ were drawn on the right axis at their RAW SHARE
+     PRICES. Two different axes, two different units, two different start dates
+     — the benchmark lines began at the far left of the window while the
+     portfolio began whenever it was funded. Nothing about that comparison is
+     valid, and "who returned more" was impossible to read off the chart.
+
+     The previous fix only anchored the optional dashed "(rebased)" lines, which
+     default to off. So in the normal view nothing had actually changed.
+
+     WHAT IT DOES NOW. In TWR mode every series is indexed to 100 at ONE shared
+     anchor — the first date the portfolio has a value. Benchmarks are null
+     before it, so every line literally starts on the same dot. The y-axis then
+     reads directly as cumulative return: 130 means +30%, and the highest line
+     is the best performer. That is the whole question this chart exists to
+     answer.
+
+     The raw-price benchmark series and the right-hand axis are suppressed in
+     this mode — they are what made the comparison unreadable. Dollar view is
+     unchanged.
+     ═════════════════════════════════════════════════════════════════════════ */
+  const TWR_BASE = 100;
+  const alignIdx = pfFirstNonNullIdx;                     // the shared anchor
+  const twrAnchorVal = twrSeries[alignIdx];
+  window._twrAlignIdx = alignIdx;
+  window._twrAnchorDate = cd[alignIdx];
+
+  // Portfolio, indexed to 100 at the anchor.
+  const twrIndexed = (twrModeOn && twrAnchorVal > 0)
+    ? twrSeries.map(function(v){ return v == null ? null : v / twrAnchorVal * TWR_BASE; })
+    : twrSeries;
+
   const ds = [{
     label: 'Portfolio (Total Value, with deposits)',
     data: cv, borderColor: C.navy, backgroundColor: 'rgba(0,60,113,.06)',
@@ -2705,12 +2740,12 @@ window.renderPortfolioChart = async function() {
     fill: !twrModeOn, tension: .3, yAxisID: 'y', spanGaps: false,
     hidden: twrModeOn
   }, {
-    label: twrModeOn ? 'Portfolio (Time-Weighted Return)' : 'Portfolio (TWR, deposits stripped)',
-    data: twrSeries,
+    label: twrModeOn ? 'Portfolio (TWR, indexed to 100)' : 'Portfolio (TWR, deposits stripped)',
+    data: twrIndexed,
     borderColor: twrModeOn ? C.navy : '#2E7D52',
     backgroundColor: twrModeOn ? 'rgba(0,60,113,.06)' : 'transparent',
     borderWidth: twrModeOn ? 2.5 : 2, borderDash: twrModeOn ? [] : [4, 3],
-    pointRadius: twrModeOn ? 1 : 0, pointHoverRadius: 5,
+    pointRadius: 0, pointHoverRadius: 5,
     pointBackgroundColor: twrModeOn ? C.navy : '#2E7D52',
     fill: twrModeOn, tension: .3, yAxisID: 'y', spanGaps: false,
     hidden: !twrModeOn
@@ -2737,14 +2772,41 @@ window.renderPortfolioChart = async function() {
         const pm = {};
         pts.forEach(p => { pm[p.date.slice(0, 10)] = p.close; if (i === 0 && p.volume) _pfVolume[p.date.slice(0,10)] = p.volume; });
         _chartBenchmarkSeries[sym] = pm;
-        // Add benchmark on right axis (raw price) AND rebased on left axis
-        ds.push({
-          label: sym, data: cd.map(d => pm[d] != null ? pm[d] : null),
-          borderColor: cc2[i], borderWidth: 2, pointRadius: 1, pointHoverRadius: 5,
-          pointBackgroundColor: cc2[i], pointHoverBackgroundColor: cc2[i],
-          fill: false, tension: .3, spanGaps: true, yAxisID: 'y1',
-          hidden: !!window._benchmarksHidden
-        });
+
+        /* CHART-04: in TWR mode the benchmark is indexed to 100 at the SAME
+           anchor as the portfolio and drawn on the SAME axis, so both lines
+           start on one dot and the gap between them is the excess return.
+           Everything before the anchor is null — there is nothing to compare
+           against until the portfolio exists. */
+        if (twrModeOn) {
+          // Nearest available benchmark price at or after the anchor date.
+          var bmBase = null;
+          for (var _b = alignIdx; _b < cd.length; _b++) {
+            if (pm[cd[_b]] != null) { bmBase = pm[cd[_b]]; break; }
+          }
+          if (bmBase > 0) {
+            ds.push({
+              label: sym + ' (indexed to 100)',
+              data: cd.map(function(d, idx){
+                if (idx < alignIdx) return null;
+                return pm[d] != null ? pm[d] / bmBase * TWR_BASE : null;
+              }),
+              borderColor: cc2[i], borderWidth: 2, pointRadius: 0, pointHoverRadius: 5,
+              pointBackgroundColor: cc2[i], pointHoverBackgroundColor: cc2[i],
+              fill: false, tension: .3, spanGaps: true, yAxisID: 'y',
+              hidden: !!window._benchmarksHidden
+            });
+          }
+        } else {
+          // Dollar view — unchanged: benchmark at its actual price, right axis.
+          ds.push({
+            label: sym, data: cd.map(d => pm[d] != null ? pm[d] : null),
+            borderColor: cc2[i], borderWidth: 2, pointRadius: 1, pointHoverRadius: 5,
+            pointBackgroundColor: cc2[i], pointHoverBackgroundColor: cc2[i],
+            fill: false, tension: .3, spanGaps: true, yAxisID: 'y1',
+            hidden: !!window._benchmarksHidden
+          });
+        }
         // Rebased benchmark for direct visual comparison on left axis.
         // 2026-07: only rendered in TWR mode (or % axis mode, which is the
         // same normalized concept). In plain dollar view the chart now shows
@@ -2768,7 +2830,10 @@ window.renderPortfolioChart = async function() {
         // ─────────────────────────────────────────────────────────────────────
         const bmValidIdx = cd.findIndex(d => pm[d] != null);
         const showRebased = (window._showRebased === true);
-        if (bmValidIdx >= 0 && showRebased && (window._twrModeOnly || window._pctAxisMode)) {
+        /* CHART-04: in TWR mode the benchmark is ALREADY indexed to the shared
+           anchor above, so this optional dashed layer would draw a duplicate
+           line on top of it. Restricted to % Change Axis mode only. */
+        if (bmValidIdx >= 0 && showRebased && window._pctAxisMode && !twrModeOn) {
           const anchorIdx = Math.max(bmValidIdx, pfFirstNonNullIdx);
           const bmStartPrice = pm[cd[anchorIdx]] != null ? pm[cd[anchorIdx]] : pm[cd[bmValidIdx]];
           // Anchor to whatever the PORTFOLIO line is showing at that same index,
@@ -3227,8 +3292,12 @@ window.renderPortfolioChart = async function() {
           ticks: {
             ...chartTicks,
             callback: function(v) {
+              // CHART-04: everything is indexed to 100 at the shared anchor, so
+              // the axis can read directly as cumulative return. 130 = +30%.
               if (window._twrModeOnly) {
-                return (v != null ? v.toFixed(1) : '0');
+                if (v == null) return '';
+                var pct = v - 100;
+                return (pct >= 0 ? '+' : '') + pct.toFixed(0) + '%';
               }
               // Dollar mode
               return '$' + (v >= 1e6 ? (v/1e6).toFixed(1)+'M' : v >= 1e3 ? (v/1e3).toFixed(0)+'K' : (v||0).toFixed(0));
@@ -3237,7 +3306,16 @@ window.renderPortfolioChart = async function() {
           border: { display: false },
           title: {
             display: !window._pctAxisMode,
-            text: window._twrModeOnly ? 'Time-Weighted Return (indexed to 100)' : 'Portfolio Value ($)',
+            text: window._twrModeOnly
+              ? (function(){
+                  var sd = cd[pfFirstNonNullIdx];
+                  var lbl = 'Cumulative Return — all lines start at 0%';
+                  if (sd) { try { lbl = 'Cumulative Return since '
+                    + new Date(sd + 'T00:00:00Z').toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric',timeZone:'UTC'})
+                    + ' — all lines start at 0%'; } catch(e) {} }
+                  return lbl;
+                })()
+              : 'Portfolio Value ($)',
             font: { family: 'Arial', size: 12, weight: '600' },
             color: C.textSec
           }
@@ -3270,12 +3348,17 @@ window.renderPortfolioChart = async function() {
         },
         y1: {
           type: 'linear', position: 'right',
-          // In pct mode, hide y1 since benchmark is also rebased to right axis
-          display: window._pctAxisMode ? false : hb,
+          /* CHART-04: hidden in TWR mode too. The raw-price right axis is what
+             made the comparison unreadable — benchmarks sat on a different
+             scale, in different units, starting on a different date. In TWR
+             mode every series lives on 'y', indexed to a common base. */
+          display: (window._pctAxisMode || window._twrModeOnly) ? false : hb,
           grid: { drawOnChartArea: false },
           ticks: { ...chartTicks, callback: function(v) { return '$' + (v||0).toFixed(2); } },
           border: { display: false },
-          title: { display: window._pctAxisMode ? false : hb, text: 'Benchmark Price ($)', font: { family: 'Arial', size: 12, weight: '600' }, color: C.textSec }
+          title: {
+            display: (window._pctAxisMode || window._twrModeOnly) ? false : hb,
+            text: 'Benchmark Price ($)', font: { family: 'Arial', size: 12, weight: '600' }, color: C.textSec }
         },
         yVol: {
           position: 'right', display: false,
