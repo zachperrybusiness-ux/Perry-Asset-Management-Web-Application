@@ -2605,12 +2605,15 @@ window.renderPortfolioChart = async function() {
   // user can see real performance vs benchmarks without confounded "alpha"
   // from money being added. This is the GIPS / industry-standard method.
   //
-  // Detection of cash flows (deposits/withdrawals) — uses BOTH:
-  //   1. Holding purchase dates: when a new holding first becomes valued, that's
-  //      treated as a deposit equal to its first-day market value.
-  //   2. Auto-detect: any single-day jump > 5% of prior value AND > $1,000 is
-  //      flagged as a likely deposit (catches manual cash moves, dividends
-  //      reinvested, etc.). Tunable via _twrJumpThreshold.
+  // Detection of cash flows — ONE source, as of the 2026-07-27 CHART-06 fix:
+  //   Holding purchase dates, corroborated against an actual rise in portfolio
+  //   value (see BUG-SELL-02 below).
+  //
+  // The former second source — "any single-day jump > 5% and > $1,000 is a
+  // likely deposit" — was REMOVED. Quantities in this reconstruction are frozen
+  // at today's values, so a day-over-day change can only come from prices or
+  // from a holding's start gate. A real deposit cannot appear here at all, which
+  // meant that test could only ever delete genuine market moves. See CHART-06.
   // ─────────────────────────────────────────────────────────────────────
   // ─── BUG-SELL-02 FIX (2026-07-27) ────────────────────────────────────────
   // A deposit is EXTERNAL CAPITAL ARRIVING. It is not "a holding appeared".
@@ -2669,9 +2672,52 @@ window.renderPortfolioChart = async function() {
   twrSeries[pfFirstNonNullIdx] = rebaseStart;
   // In pct mode, rebaseStart is already 100 (we keep it)
   var compoundFactor = 1.0;
-  var _twrJumpThreshold = 0.05;  // 5% single-day move
-  var _twrDollarThreshold = 1000; // $1K minimum to flag
   var detectedDeposits = []; // for tooltip
+
+  /* ═══ CHART-06 FIX (2026-07-27) — the jump detector was deleting real gains ══
+
+     THE OLD RULE, removed:
+
+         isDeposit = depositDates.has(cd[i]) ||
+           (Math.abs(rawReturn) > 0.05 && Math.abs(dollarChange) > 1000);
+
+     Any single-day move over 5% and $1,000 was declared an external cash flow
+     and DROPPED from the compounding.
+
+     WHY IT CANNOT BE RIGHT. Look at what portfolioValueAt() actually varies:
+
+         Object.values(hs).forEach(function(s){
+           if (s.datePurchased && d < s.datePurchased) return;   // (a) start gate
+           t += s._forwardFilled[d] * s.quantity;                // (b) PRICE only
+         });
+
+     `s.quantity` is the quantity you hold TODAY, applied unchanged at every
+     historical date. Quantities never vary across the series. So a day-over-day
+     change in portfolio value can come from exactly two things:
+
+        (a) a holding crossing its datePurchased — already captured by
+            depositDates, with the corroboration guard added earlier; or
+        (b) prices moving.
+
+     There is no third source. A genuine deposit cannot appear in this series,
+     because adding money would change a quantity, and quantities are frozen.
+
+     THEREFORE THE JUMP DETECTOR COULD ONLY EVER FIRE ON REAL MARKET MOVES.
+     Every "deposit" it found was a rally or a selloff being deleted from your
+     performance record.
+
+     The $1,000 floor made it worse: at this portfolio's size any >5% day clears
+     $1,000 by four orders of magnitude, so the dollar test never filtered
+     anything. And because it tested Math.abs(), it removed crashes as readily as
+     rallies — depressing TWR in a rising market and flattering it in a falling
+     one.
+
+     This is why the chart said +17.46% while you knew you had done better.
+
+     Cash flows now come only from depositDates. When a real transaction log is
+     wired in, THAT becomes the source — inferring flows from value jumps is
+     unsound here by construction, not merely badly tuned. */
+
   for (var i = pfFirstNonNullIdx + 1; i <= pfLastNonNullIdx; i++) {
     var prev = cv[i - 1];
     var curr = cv[i];
@@ -2682,12 +2728,8 @@ window.renderPortfolioChart = async function() {
     }
     var rawReturn = (curr - prev) / prev;
     var dollarChange = curr - prev;
-    // Detect: known purchase date, OR auto-detected jump
-    var isDeposit = depositDates.has(cd[i]) ||
-      (Math.abs(rawReturn) > _twrJumpThreshold && Math.abs(dollarChange) > _twrDollarThreshold);
-    if (isDeposit) {
-      // Skip this period — assume the change is entirely from external cash flow,
-      // not market performance. TWR carries forward unchanged.
+    // Only a corroborated holding-start date counts as an external flow.
+    if (depositDates.has(cd[i])) {
       twrSeries[i] = twrSeries[i - 1];
       detectedDeposits.push({ date: cd[i], dollarChange: dollarChange, rawReturn: rawReturn });
     } else {
@@ -3258,11 +3300,41 @@ window.renderPortfolioChart = async function() {
                   lines.push('');
                 }
               }
-              // Point-in-time return
+              /* ═══ CHART-05 FIX (2026-07-27) — the tooltip contradicted the chart ══
+
+                 WHAT WAS WRONG. "Return to Date: Portfolio" was computed from
+                 cv[] — TOTAL DOLLAR value, which INCLUDES deposits — while the
+                 benchmarks beside it were price returns, and the plotted
+                 portfolio line was TWR. Three different measures, stacked in one
+                 list, presented as a like-for-like comparison.
+
+                 Observed 2026-07-23: the tooltip read Portfolio +29.93% against
+                 SPY +15.89% — "nearly doubled the index" — while the line it was
+                 attached to showed 117.27 vs 115.89, barely ahead. Both numbers
+                 were real; they were answering different questions. The +29.93%
+                 included a deposit, and money you add is not performance.
+
+                 THE LINE WAS RIGHT. The tooltip was wrong.
+
+                 Now both are shown, labelled, with the comparable one first and
+                 the deposit gap called out — so the difference is explained
+                 rather than hidden behind whichever number happens to flatter. */
               const pfAt = cv[idx];
-              const pfPtR = pfS > 0 ? ((pfAt - pfS) / pfS * 100) : 0;
+              const pfDollarR = pfS > 0 ? ((pfAt - pfS) / pfS * 100) : 0;
+              const pfTwrR = (twrIndexed && twrIndexed[idx] != null && twrAnchorVal > 0)
+                ? (twrModeOn ? (twrIndexed[idx] - 100)
+                             : ((twrIndexed[idx] - twrAnchorVal) / twrAnchorVal * 100))
+                : null;
+              const nDep = window._twrDeposits ? window._twrDeposits.length : 0;
+
               lines.push('Return to Date:');
-              lines.push('  Portfolio: ' + fmtPct(pfPtR));
+              if (pfTwrR != null) {
+                lines.push('  Portfolio (TWR):   ' + fmtPct(pfTwrR) + '   ← comparable');
+                lines.push('  Portfolio (total): ' + fmtPct(pfDollarR)
+                  + (nDep > 0 ? '   incl. ' + nDep + ' cash flow' + (nDep > 1 ? 's' : '') : ''));
+              } else {
+                lines.push('  Portfolio: ' + fmtPct(pfDollarR));
+              }
               ci.forEach(sym => {
                 const pm = _chartBenchmarkSeries[sym];
                 if (!pm) return;
@@ -3270,8 +3342,14 @@ window.renderPortfolioChart = async function() {
                 let bf = null;
                 for (var bdi = pfFirstNonNullIdx; bdi < cd.length; bdi++) { if (pm[cd[bdi]] != null) { bf = pm[cd[bdi]]; break; } }
                 var ba = pm[cd[idx]];
-                if (bf != null && bf > 0 && ba != null) lines.push('  ' + sym + ': ' + fmtPct(((ba - bf) / bf) * 100));
+                if (bf != null && bf > 0 && ba != null) lines.push('  ' + sym + ':' + (pfTwrR != null ? '             ' : ' ') + fmtPct(((ba - bf) / bf) * 100));
               });
+              if (pfTwrR != null && nDep > 0) {
+                lines.push('');
+                lines.push('TWR strips cash flows so the comparison');
+                lines.push('is like-for-like. The gap between the two');
+                lines.push('portfolio figures is money added, not gain.');
+              }
               return lines;
             }
           }
