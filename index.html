@@ -17,11 +17,11 @@
 <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2.0.1/dist/chartjs-plugin-zoom.min.js"></script>
 <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-<link rel="stylesheet" href="styles.css?v=15">
+<link rel="stylesheet" href="styles.css?v=16">
 
 <!-- UX-01 (2026-07-27): PerryStatus must be defined before any module that
      loads data, so it is the first local script rather than the last. -->
-<script src="app-status.js?v=16"></script>
+<script src="app-status.js?v=17"></script>
 </head>
 <body>
 <!-- VIS-08: first tab stop, lets keyboard users bypass the nav. -->
@@ -521,6 +521,9 @@
               <button class="btn-outline btn-sm js-bench-toggle" id="btnHideBenchmarks" onclick="toggleBenchmarkVisibility()" title="Show/hide SPY, QQQ and other benchmark lines">Benchmarks</button>
               <button class="btn-outline btn-sm" id="btnTWR" onclick="toggleTWRMode()" title="Toggle Time-Weighted Return vs. Portfolio Dollar Value">TWR Mode</button>
               <button class="btn-outline btn-sm" id="btnPctAxis" onclick="togglePctAxis()" title="Toggle Y-axis between dollar value and % change from start">% Change Axis</button>
+              <!-- Added 2026-07-27 — CHART-01 / CHART-03. Both default OFF. -->
+              <button class="btn-outline btn-sm" id="btnRebased" onclick="toggleRebasedLines()" title="Dashed rebased benchmark lines are OFF — click to show apples-to-apples comparison lines">Rebased Lines</button>
+              <button class="btn-outline btn-sm" id="btnPreInception" onclick="togglePreInception()" title="Show the raw reconstructed history before your portfolio was fully funded. Off by default because the pre-funding stub is an artifact of pricing today's holdings backwards, not real performance.">Full History</button>
               <button class="btn-outline btn-sm" id="btnRegimeOverlay" onclick="toggleRegimeOverlay()" title="Show Perry 4-state market regime as colored background bands">Perry Regime</button>
               <button class="btn-outline btn-sm" id="btnVixRegime" onclick="toggleVixRegime()" title="Show VIX-based volatility regime as background bands (Low / Medium / High / Extreme vol)">VIX Regime</button>
               <button class="btn-outline btn-sm" id="btnRecState" onclick="toggleRecState()" title="Overlay the historically recommended portfolio state returns">Rec. State</button>
@@ -4383,19 +4386,19 @@
        app-advisor.js   planning suite                 (reads shared CMA from signals)
 
      Version bumped to 13 (2026-07-25 layout + fixes) to bust the GitHub Pages CDN cache. -->
-<script src="app.js?v=16"></script>
-<script src="app2.js?v=16"></script>
-<script src="app3.js?v=16"></script>
-<script src="app-warehouse.js?v=16"></script>
-<script src="app-signals.js?v=16"></script>
-<script src="app-ml.js?v=16"></script>
-<script src="app-advisor.js?v=16"></script>
-<script src="app-corr.js?v=16"></script>
-<script src="app-views.js?v=16"></script>
-<script src="app-portfolio-analysis.js?v=16"></script>
-<script src="app-history.js?v=16"></script>
-<script src="app-consolidate.js?v=16"></script>
-<script src="app-aiadvisor.js?v=16"></script>
+<script src="app.js?v=17"></script>
+<script src="app2.js?v=17"></script>
+<script src="app3.js?v=17"></script>
+<script src="app-warehouse.js?v=17"></script>
+<script src="app-signals.js?v=17"></script>
+<script src="app-ml.js?v=17"></script>
+<script src="app-advisor.js?v=17"></script>
+<script src="app-corr.js?v=17"></script>
+<script src="app-views.js?v=17"></script>
+<script src="app-portfolio-analysis.js?v=17"></script>
+<script src="app-history.js?v=17"></script>
+<script src="app-consolidate.js?v=17"></script>
+<script src="app-aiadvisor.js?v=17"></script>
 <script>
 /* ═══════════ UNIFIED SIGNAL BOOTSTRAP — added 2026-07-24 ═══════════
    One place where the warehouse loads and the signal engine resolves. Every

@@ -2530,6 +2530,61 @@ window.renderPortfolioChart = async function() {
   _chartDatesGlobal = cd;
   _chartPortfolioSeries = reducedPV; // always keep dollar values
 
+  // ═══ FIX 2026-07-27 (CHART-03) — reconstruction cliff ════════════════════
+  //
+  // THE PROBLEM. portfolioValueAt() reconstructs history by taking the
+  // quantities you hold TODAY and pricing them backwards, skipping each
+  // holding before its datePurchased. There is no transaction history, so if
+  // one old position has an early datePurchased and the rest were bought in
+  // April 2024, the series reads as a tiny portfolio for a year and then jumps
+  // vertically the day the other positions switch on.
+  //
+  // That is not a return. It is the reconstruction turning on.
+  //
+  // WHY IT MATTERS BEYOND THE UGLY LINE. Every headline stat divides by
+  // cv[pfFirstNonNullIdx]. With a near-zero denominator the 20Y view reported
+  // Total Return +2,564.76%, Alpha vs SPY +2,503.01% and Growth of $10,000 =
+  // $266,476. Those numbers were pure artifact, and they were the most
+  // prominent figures on the page.
+  //
+  // THE RULE. A single-step gain of more than 3x is not a market move — no
+  // index does +200% in one trading day. It can only be the reconstruction
+  // switching on. Everything at or before that step is discarded and the
+  // series starts at the first honest date.
+  //
+  // Deliberately conservative: it only fires on ratios no real market produces,
+  // so ordinary contributions and dollar-cost averaging are untouched. Set
+  // window._showPreInception = true to see the raw reconstruction anyway.
+  // ═════════════════════════════════════════════════════════════════════════
+  window._pfInception = null;
+  if (window._showPreInception !== true) {
+    var _stepJumpRatio = 3.0;     // 3x in one step = artifact, not a market move
+    var _incIdx = -1, _incRatio = 0;
+    for (var _j = 1; _j < cv.length; _j++) {
+      var _p = cv[_j - 1], _c = cv[_j];
+      if (_p == null || _c == null || _p <= 0) continue;
+      var _r = _c / _p;
+      if (_r > _stepJumpRatio && _r > _incRatio) { _incRatio = _r; _incIdx = _j; }
+    }
+    if (_incIdx > 0) {
+      // Record what was suppressed so the UI can say so rather than silently
+      // shortening the user's history.
+      var _priorFirst = cv.findIndex(function(v){ return v != null; });
+      window._pfInception = {
+        date: cd[_incIdx],
+        ratio: _incRatio,
+        priorStartDate: _priorFirst >= 0 ? cd[_priorFirst] : null,
+        priorStartValue: _priorFirst >= 0 ? cv[_priorFirst] : null,
+        newStartValue: cv[_incIdx],
+        suppressedPoints: _incIdx
+      };
+      for (var _k = 0; _k < _incIdx; _k++) {
+        cv[_k] = null;
+        _chartPortfolioSeries[_k] = null;   // keep downstream consumers consistent
+      }
+    }
+  }
+
   // ── % Change Axis Mode: rebase to 100 at first non-null value ──
   if (window._pctAxisMode) {
     const pfBase = cv.find(v => v != null && v > 0) || 1;
@@ -2694,21 +2749,44 @@ window.renderPortfolioChart = async function() {
         // 2026-07: only rendered in TWR mode (or % axis mode, which is the
         // same normalized concept). In plain dollar view the chart now shows
         // ONLY the benchmark's actual historical price on the right axis.
+        // ── FIX 2026-07-27 (CHART-01 + CHART-02) ────────────────────────────
+        //
+        // CHART-01 — the dashed rebased lines are now OPT-IN (window._showRebased,
+        // default false). They were always drawn in TWR / % modes, which put four
+        // or more lines on the chart and made it unreadable. Toggle: "Rebased Lines".
+        //
+        // CHART-02 — lines did not start together. The benchmark rebased at its OWN
+        // first valid date (bmValidIdx, usually index 0 since SPY covers the whole
+        // window) while the portfolio TWR starts at pfFirstNonNullIdx — often a year
+        // later. So the benchmark was already well up the y-axis before the portfolio
+        // line began, and "TWR" did not compare like with like.
+        //
+        // Both series now rebase at a COMMON ANCHOR — the first index where the
+        // portfolio and the benchmark both have data — and the benchmark is nulled
+        // before it. Every line therefore starts at the same x and the same y, which
+        // is the entire point of a time-weighted comparison.
+        // ─────────────────────────────────────────────────────────────────────
         const bmValidIdx = cd.findIndex(d => pm[d] != null);
-        if (bmValidIdx >= 0 && (window._twrModeOnly || window._pctAxisMode)) {
-          const bmStartPrice = pm[cd[bmValidIdx]];
-          // In pct mode: rebase benchmark to 100 so it shares the same Y axis as portfolio
-          // In dollar mode: scale to match portfolio starting value
-          const bmStartPortVal = cv[bmValidIdx] || cv[pfFirstNonNullIdx];
-          const bmScaleBase = window._pctAxisMode ? 100 : bmStartPortVal;
+        const showRebased = (window._showRebased === true);
+        if (bmValidIdx >= 0 && showRebased && (window._twrModeOnly || window._pctAxisMode)) {
+          const anchorIdx = Math.max(bmValidIdx, pfFirstNonNullIdx);
+          const bmStartPrice = pm[cd[anchorIdx]] != null ? pm[cd[anchorIdx]] : pm[cd[bmValidIdx]];
+          // Anchor to whatever the PORTFOLIO line is showing at that same index,
+          // so the two lines are coincident at the start by construction.
+          const bmStartPortVal = window._pctAxisMode
+            ? 100
+            : ((window._twrModeOnly ? twrSeries[anchorIdx] : cv[anchorIdx]) || cv[pfFirstNonNullIdx]);
+          const bmScaleBase = bmStartPortVal;
           if (bmStartPrice && bmStartPortVal) {
-            const rebasedBM = cd.map(d => pm[d] != null ? pm[d] / bmStartPrice * bmScaleBase : null);
+            const rebasedBM = cd.map(function(d, idx) {
+              if (idx < anchorIdx) return null;          // no benchmark before the shared start
+              return pm[d] != null ? pm[d] / bmStartPrice * bmScaleBase : null;
+            });
             ds.push({
               label: sym + ' (rebased)', data: rebasedBM,
               borderColor: cc2[i], borderWidth: 1.5, borderDash: [5,3],
               pointRadius: 0, fill: false, tension: .3, spanGaps: true,
-              // In pct mode, benchmarks rebased to 100 — use same y axis as portfolio
-              yAxisID: window._pctAxisMode ? 'y' : 'y',
+              yAxisID: 'y',
               pointHoverRadius: 4, backgroundColor: 'transparent',
               hidden: !!window._benchmarksHidden
             });
@@ -2990,6 +3068,24 @@ window.renderPortfolioChart = async function() {
       '<div class="chart-stat-value" style="color:' + (medRet >= 0 ? C.success : C.danger) + ';">' + (medRet >= 0 ? '+' : '') + medRet.toFixed(1) + '%</div>' +
       '<div class="chart-stat-sub">P10: ' + (p10Ret >= 0 ? '+' : '') + p10Ret.toFixed(1) + '% / P90: ' + (p90Ret >= 0 ? '+' : '') + p90Ret.toFixed(1) + '%</div></div>';
   }
+  /* CHART-03 (2026-07-27) — never suppress data silently. If the pre-funding
+     reconstruction stub was trimmed, say so, say how much, and offer the way
+     back. DEC-01 in the UI audit: a number without provenance is not evidence,
+     and neither is a chart with an unexplained start date. */
+  if (window._pfInception) {
+    var _inc = window._pfInception;
+    sh += '<div class="chart-stat-box" style="border-left:3px solid var(--warning);flex:1 1 100%;min-width:0;">' +
+      '<div class="chart-stat-label" style="color:var(--warning);">Chart starts ' + _inc.date +
+      ' <span class="help-icon" title="Your holdings are priced backwards from the quantities you hold today, so any date before the portfolio was funded shows only the positions that happen to carry an early purchase date. That produced a ' +
+      (_inc.ratio >= 100 ? Math.round(_inc.ratio) : _inc.ratio.toFixed(1)) +
+      'x single-day step — which no market produces — and it was inflating every return figure above. Click Full History to see the raw reconstruction.">?</span></div>' +
+      '<div class="chart-stat-sub" style="line-height:1.5;">Trimmed ' + _inc.suppressedPoints +
+      ' pre-funding point(s) back to ' + (_inc.priorStartDate || 'window start') +
+      '. A ' + (_inc.ratio >= 100 ? Math.round(_inc.ratio) : _inc.ratio.toFixed(1)) +
+      '&times; one-day step is a reconstruction artifact, not performance &mdash; returns are measured from ' +
+      _inc.date + '. Use <strong>Full History</strong> to show it anyway.</div></div>';
+  }
+
   document.getElementById('chartStats').innerHTML = sh;
 
   // ── B2-A: In pct mode, reassign all 'y' datasets to 'yRight' ──

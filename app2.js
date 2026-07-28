@@ -3222,6 +3222,46 @@ window.togglePctAxis = function() {
   if (typeof renderPortfolioChart === 'function') renderPortfolioChart();
 };
 
+/* ═══ Added 2026-07-27 — portfolio chart toggles ═══════════════════════════
+
+   CHART-01 — Rebased benchmark lines.
+   The dashed "(rebased)" lines used to appear automatically whenever TWR or
+   % Change Axis was on. With two benchmarks that is four extra lines, and the
+   chart became unreadable. They are now opt-in and DEFAULT OFF.
+
+   CHART-03 — Pre-inception reconstruction.
+   Off by default, i.e. the artificial pre-funding stub is hidden. Turning this
+   on restores the raw reconstruction, cliff and all, for anyone who wants to
+   see what the underlying data actually contains.
+   ═════════════════════════════════════════════════════════════════════════ */
+
+window._showRebased = false;          // CHART-01 — default OFF, by request
+window.toggleRebasedLines = function() {
+  window._showRebased = !window._showRebased;
+  var btn = document.getElementById('btnRebased');
+  if (btn) {
+    btn.classList.toggle('active', window._showRebased);
+    btn.title = window._showRebased
+      ? 'Dashed rebased benchmark lines are ON — click to hide'
+      : 'Dashed rebased benchmark lines are OFF — click to show apples-to-apples comparison lines';
+  }
+  if (!window._showRebased && window.PerryStatus) {
+    /* no-op: keeps the dependency explicit without forcing a toast */
+  }
+  if (typeof renderPortfolioChart === 'function') renderPortfolioChart();
+};
+
+window._showPreInception = false;     // CHART-03 — default OFF (cliff hidden)
+window.togglePreInception = function() {
+  window._showPreInception = !window._showPreInception;
+  var btn = document.getElementById('btnPreInception');
+  if (btn) {
+    btn.classList.toggle('active', window._showPreInception);
+    btn.textContent = window._showPreInception ? 'Hide Pre-Funding' : 'Full History';
+  }
+  if (typeof renderPortfolioChart === 'function') renderPortfolioChart();
+};
+
 // B1-B: tap-to-reveal tooltips on metric-cards inside #pftab-risk (event delegation)
 document.addEventListener('click', function(e) {
   var card = e.target.closest('#pftab-risk .metric-card');
