@@ -2374,6 +2374,10 @@ window.renderPortfolioChart = async function() {
         cashValue: (h.costBasis || 0) * h.quantity,
         quantity: h.quantity,
         datePurchased: h.datePurchased || null,
+        // BUG-SELL-02 fix: carried through so the TWR cash-flow detector can
+        // tell an internal reallocation (sale proceeds moving into cash) from
+        // genuine outside money arriving.
+        internalTransfer: !!h.internalTransfer,
         ticker: h.ticker,
         map: {}
       };
@@ -2388,6 +2392,7 @@ window.renderPortfolioChart = async function() {
         map: m,
         quantity: h.quantity,
         datePurchased: h.datePurchased || null,
+        internalTransfer: !!h.internalTransfer,   // see BUG-SELL-02
         ticker: h.ticker,
         isCash: false
       };
@@ -2552,15 +2557,52 @@ window.renderPortfolioChart = async function() {
   //      flagged as a likely deposit (catches manual cash moves, dividends
   //      reinvested, etc.). Tunable via _twrJumpThreshold.
   // ─────────────────────────────────────────────────────────────────────
-  // Build a per-date set of "expected deposit dates" from holding purchase dates
-  var depositDates = new Set();
+  // ─── BUG-SELL-02 FIX (2026-07-27) ────────────────────────────────────────
+  // A deposit is EXTERNAL CAPITAL ARRIVING. It is not "a holding appeared".
+  //
+  // The old logic conflated the two: it flagged a deposit on the first chart
+  // date of any holding's datePurchased, full stop. So selling a position —
+  // which creates a Cash row dated today — made the chart announce
+  // "Deposit Detected" and break the TWR line, even though no money entered
+  // the portfolio. Selling AAPL and holding the proceeds is a change of
+  // composition, not of capital.
+  //
+  // Two guards now:
+  //
+  //   1. EXPLICIT — holdings tagged internalTransfer (sale proceeds, written
+  //      by confirmSell in index.html) are never deposit candidates.
+  //
+  //   2. CORROBORATION — a purchase date is only treated as a deposit if the
+  //      portfolio total actually ROSE materially on that date. New outside
+  //      money raises the total; reallocating money already inside does not.
+  //      This also repairs rows created BEFORE the flag existed, which matters
+  //      because those already sit in the user's data.
+  //
+  // Withdrawals are handled symmetrically: a material DROP on a date where a
+  // position disappeared is an outflow, and must also be stripped from TWR.
+  // ─────────────────────────────────────────────────────────────────────────
+  var _cashFlowCandidates = new Set();
   Object.values(hs).forEach(function(s){
     if (!s.datePurchased) return;
-    // Find the first chart date >= datePurchased
+    if (s.internalTransfer) return;            // guard 1 — sale proceeds
     var firstIdx = cd.findIndex(function(d){ return d >= s.datePurchased; });
-    if (firstIdx >= 0) depositDates.add(cd[firstIdx]);
+    if (firstIdx >= 0) _cashFlowCandidates.add(cd[firstIdx]);
   });
-  // Also flag the very first non-null point as a "deposit" (initial funding)
+
+  // Guard 2 — require the portfolio total to have actually moved on that date.
+  // Thresholds match the auto-detector below so the two agree.
+  var depositDates = new Set();
+  _cashFlowCandidates.forEach(function(dateKey){
+    var i = cd.indexOf(dateKey);
+    if (i <= 0) return;
+    var prev = cv[i - 1], curr = cv[i];
+    if (prev == null || curr == null || prev <= 0) { depositDates.add(dateKey); return; }
+    var chg = curr - prev;
+    // Only a genuine inflow — a rise that is both material in % and in dollars.
+    if (chg > 0 && (chg / prev) > 0.05 && chg > 1000) depositDates.add(dateKey);
+  });
+
+  // The very first non-null point is always initial funding.
   depositDates.add(cd[pfFirstNonNullIdx]);
 
   // Build TWR series — rebased so it starts at the same dollar value as the
@@ -3011,8 +3053,13 @@ window.renderPortfolioChart = async function() {
               if (window._twrDeposits) {
                 var dep = window._twrDeposits.find(function(x){ return x.date === d; });
                 if (dep) {
-                  lines.push('💵 Deposit detected: ' + (dep.dollarChange >= 0 ? '+' : '') + '$' + Math.round(dep.dollarChange).toLocaleString());
-                  lines.push('  (excluded from TWR)');
+                  // BUG-SELL-02: the label said "Deposit detected" for outflows
+                  // too, because detection is on |change|. Name what actually
+                  // happened rather than assuming money came in.
+                  var _isIn = dep.dollarChange >= 0;
+                  lines.push((_isIn ? '💵 Cash inflow detected: +$' : '💸 Cash outflow detected: -$')
+                    + Math.round(Math.abs(dep.dollarChange)).toLocaleString());
+                  lines.push('  (external flow — excluded from TWR)');
                   lines.push('');
                 }
               }

@@ -17,11 +17,11 @@
 <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2.0.1/dist/chartjs-plugin-zoom.min.js"></script>
 <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-<link rel="stylesheet" href="styles.css?v=14">
+<link rel="stylesheet" href="styles.css?v=15">
 
 <!-- UX-01 (2026-07-27): PerryStatus must be defined before any module that
      loads data, so it is the first local script rather than the last. -->
-<script src="app-status.js?v=1"></script>
+<script src="app-status.js?v=16"></script>
 </head>
 <body>
 <!-- VIS-08: first tab stop, lets keyboard users bypass the nav. -->
@@ -4037,18 +4037,54 @@
         await updateHoldingDoc(docId, { quantity: Math.round((curQty - sq) * 10000) / 10000, lastUpdated: new Date().toISOString() });
       }
       // 2) Credit proceeds to Cash in the same account (merge if cash row exists)
-      const cashRow = (window._holdings || []).find(x =>
-        x.id !== docId && x.assetClass === 'Cash' && (x.accountType || 'Individual') === acct);
+      //
+      // FIX 2026-07-27 (BUG-SELL-01) — the cash-row lookup tested only
+      //   x.assetClass === 'Cash'
+      // while every other cash test in the codebase (app.js isCashH, and ~12
+      // inline copies) treats Cash, Money Market, CD and Bond Position as cash.
+      //
+      // Consequence: if your cash was held as a money market fund (SPAXX, FDRXX,
+      // a CD, etc.) — which is the normal case — the lookup found nothing, so a
+      // SECOND row literally named 'CASH' was created beside it instead of the
+      // proceeds being added to the cash you already had. Your actual cash
+      // position never moved, which is exactly the reported symptom.
+      //
+      // Now uses the same four-class test as the rest of the app, and prefers
+      // the largest existing cash row when an account holds more than one.
+      const isCashCls = function(c) {
+        return c === 'Cash' || c === 'Money Market' || c === 'CD' || c === 'Bond Position';
+      };
+      const cashCandidates = (window._holdings || []).filter(x =>
+        x.id !== docId && isCashCls(x.assetClass) && (x.accountType || 'Individual') === acct);
+      cashCandidates.sort((a, b) =>
+        ((b.costBasis || 0) * (b.quantity || 1)) - ((a.costBasis || 0) * (a.quantity || 1)));
+      const cashRow = cashCandidates[0];
+
       if (cashRow) {
         const curCash = (cashRow.costBasis || 0) * (cashRow.quantity || 1);
-        await updateHoldingDoc(cashRow.id, { costBasis: Math.round((curCash + proceeds) * 100) / 100, quantity: 1, lastUpdated: new Date().toISOString() });
+        await updateHoldingDoc(cashRow.id, {
+          costBasis: Math.round((curCash + proceeds) * 100) / 100,
+          quantity: 1,
+          // BUG-SELL-02: do NOT stamp datePurchased here. Overwriting it would
+          // make the TWR engine read this pre-existing cash position as newly
+          // acquired and flag a deposit. The row keeps its original date.
+          lastSaleCredit: sellDate,
+          lastUpdated: new Date().toISOString()
+        });
       } else {
         await addDoc(collection(db, "holdings"), {
           uid: window._currentUser ? window._currentUser.uid : null,
           ticker: 'CASH', companyName: 'Cash (sale proceeds)',
           quantity: 1, costBasis: proceeds, currentPrice: null,
           yieldPct: null, accountType: acct, sector: 'Cash', industry: 'Cash',
-          assetClass: 'Cash', datePurchased: new Date().toISOString().slice(0,10),
+          assetClass: 'Cash', datePurchased: sellDate,
+          // BUG-SELL-02: this row is an INTERNAL TRANSFER, not new outside money.
+          // The TWR engine treats any holding whose datePurchased falls in the
+          // window as a deposit; without this flag, selling a position made the
+          // portfolio chart announce "Deposit Detected" and break the line.
+          internalTransfer: true,
+          origin: 'sale-proceeds',
+          originTicker: h.ticker,
           createdAt: new Date().toISOString()
         });
       }
@@ -4347,19 +4383,19 @@
        app-advisor.js   planning suite                 (reads shared CMA from signals)
 
      Version bumped to 13 (2026-07-25 layout + fixes) to bust the GitHub Pages CDN cache. -->
-<script src="app.js?v=15"></script>
-<script src="app2.js?v=15"></script>
-<script src="app3.js?v=15"></script>
-<script src="app-warehouse.js?v=13"></script>
-<script src="app-signals.js?v=13"></script>
-<script src="app-ml.js?v=13"></script>
-<script src="app-advisor.js?v=15"></script>
-<script src="app-corr.js?v=15"></script>
-<script src="app-views.js?v=13"></script>
-<script src="app-portfolio-analysis.js?v=13"></script>
-<script src="app-history.js?v=14"></script>
-<script src="app-consolidate.js?v=15"></script>
-<script src="app-aiadvisor.js?v=4"></script>
+<script src="app.js?v=16"></script>
+<script src="app2.js?v=16"></script>
+<script src="app3.js?v=16"></script>
+<script src="app-warehouse.js?v=16"></script>
+<script src="app-signals.js?v=16"></script>
+<script src="app-ml.js?v=16"></script>
+<script src="app-advisor.js?v=16"></script>
+<script src="app-corr.js?v=16"></script>
+<script src="app-views.js?v=16"></script>
+<script src="app-portfolio-analysis.js?v=16"></script>
+<script src="app-history.js?v=16"></script>
+<script src="app-consolidate.js?v=16"></script>
+<script src="app-aiadvisor.js?v=16"></script>
 <script>
 /* ═══════════ UNIFIED SIGNAL BOOTSTRAP — added 2026-07-24 ═══════════
    One place where the warehouse loads and the signal engine resolves. Every
