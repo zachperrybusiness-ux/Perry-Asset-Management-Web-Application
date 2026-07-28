@@ -5780,7 +5780,7 @@ function quantRenderResults(ticker, horizon, res) {
        +  '<strong>Feature vector date:</strong> ' + res.featureDate
        +  ' &middot; <strong>Last price bar:</strong> ' + res.lastBarDate
        +  (res.featureStaleDays > 0
-            ? ' &middot; <span style="color:#8B2A2A;">Features are ' + res.featureStaleDays + ' bars stale</span>'
+            ? ' &middot; <span style="color:var(--danger);">Features are ' + res.featureStaleDays + ' bars stale</span>'
             : ' &middot; <span style="color:var(--success);">Features current as of the last bar</span>')
        +  '</div>';
 
@@ -5799,7 +5799,7 @@ function quantRenderResults(ticker, horizon, res) {
     html += '<div class="card"><div class="card-title">Collinearity Check (VIF) <span class="help-icon" title="Variance Inflation Factor. VIF above 10 means a feature is largely a linear combination of the others, which makes its individual coefficient unstable and its importance ranking arbitrary.">?</span></div><div class="card-body">';
     html += '<p style="font-size:12px;color:var(--text-sec);margin-bottom:10px;">'
          +  (severe.length
-              ? '<strong style="color:#8B2A2A;">' + severe.length + ' feature' + (severe.length>1?'s':'') + ' show severe collinearity (VIF &gt; 10).</strong> Their individual coefficients are unstable — read the block of related features together rather than ranking them against each other.'
+              ? '<strong style="color:var(--danger);">' + severe.length + ' feature' + (severe.length>1?'s':'') + ' show severe collinearity (VIF &gt; 10).</strong> Their individual coefficients are unstable — read the block of related features together rather than ranking them against each other.'
               : '<strong style="color:var(--success);">No severe collinearity detected.</strong> All features have VIF below 10, so individual coefficients are interpretable.')
          +  '</p>';
     html += '<div class="table-wrap"><table><thead><tr><th>Feature</th><th style="text-align:right;">VIF</th><th style="text-align:center;">Status</th></tr></thead><tbody>';
@@ -7611,7 +7611,11 @@ function mktMean(a){ var s=0; for (var i=0;i<a.length;i++) s+=a[i]; return a.len
    5.3% used by the frontier, rolling-risk and VaR modules. */
 function perryRf(){
   try { if (window.PerrySignals && PerrySignals.CONST && PerrySignals.CONST.RF_RATE != null) return PerrySignals.CONST.RF_RATE; } catch(e) {}
-  return 0.04;
+  /* Fallback aligned 2026-07-27 to PerrySignals.CONST.RF_RATE's own default of
+     0.0425. It was 0.04 here, so on any page load where app-signals.js had not
+     yet resolved, the frontier/rolling-risk/VaR modules used a different
+     risk-free rate than every other module's fallback. */
+  return 0.0425;
 }
 function mktStd(a){ var m=mktMean(a); var s=0; for (var i=0;i<a.length;i++) s+=(a[i]-m)*(a[i]-m); return a.length>1 ? Math.sqrt(s/(a.length-1)) : 0; }
 function mktPearson(x,y) {
@@ -10578,7 +10582,7 @@ function resRenderFinancials(ticker, d) {
       // Industry benchmark
       var bv = row.benchVal;
       var btxt = bv!=null?(row.fmt?row.fmt(bv):bv.toFixed(1)):'—';
-      h += '<td style="padding:6px 10px;text-align:right;font-family:monospace;color:#2E7D52;font-weight:600;background:rgba(46,125,82,0.05);">'+btxt+'</td>';
+      h += '<td style="padding:6px 10px;text-align:right;font-family:monospace;color:var(--success);font-weight:600;background:rgba(46,125,82,0.05);">'+btxt+'</td>';
       h += '</tr>';
     });
     h += '</tbody></table></div>';
@@ -11578,7 +11582,7 @@ async function resInsiderLoad(ticker) {
 
     // ── Transaction table ──
     if (!transactions.length) {
-      tableEl.innerHTML = '<p style="padding:16px;color:var(--text-sec);">No parsed transactions found in the last 24 months' + (data.parseErrors ? ' &mdash; <span style="color:#8B2A2A;">' + data.parseErrors + ' of ' + data.parsedAttempted + ' filings failed to parse (SEC rate limit or subrequest cap). Reload in a minute.</span>' : '') + '. <a href="https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK='+data.cik+'&type=4&dateb=&owner=include&count=40" target="_blank" style="color:var(--navy);">View on SEC EDGAR</a>.</p>';
+      tableEl.innerHTML = '<p style="padding:16px;color:var(--text-sec);">No parsed transactions found in the last 24 months' + (data.parseErrors ? ' &mdash; <span style="color:var(--danger);">' + data.parseErrors + ' of ' + data.parsedAttempted + ' filings failed to parse (SEC rate limit or subrequest cap). Reload in a minute.</span>' : '') + '. <a href="https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK='+data.cik+'&type=4&dateb=&owner=include&count=40" target="_blank" style="color:var(--navy);">View on SEC EDGAR</a>.</p>';
       return;
     }
 
@@ -12325,9 +12329,22 @@ function btStats(equity, benchEquity, capital, dates) {
   var variance = dailyRets.reduce(function(s,v){return s+(v-meanRet)*(v-meanRet);},0) / Math.max(1,dailyRets.length-1);
   var sharpe = variance > 0 ? (meanRet - rf_daily) / Math.sqrt(variance) * Math.sqrt(ppy) : 0;
 
-  // Sortino (downside std only)
-  var downRets = dailyRets.filter(function(r){return r < rf_daily;});
-  var downVar = downRets.reduce(function(s,v){return s+(v-rf_daily)*(v-rf_daily);},0) / Math.max(1,downRets.length-1);
+  /* Sortino — FIXED 2026-07-27.
+     The denominator was sum of squared shortfalls / (COUNT OF DOWNSIDE PERIODS
+     − 1). Downside deviation divides by the TOTAL observation count: periods
+     above the target contribute a zero term but stay in the denominator
+     (Sortino & Price 1994). Dividing by only the loss periods inflated the
+     denominator by ~sqrt(N/N_down) and understated every backtest's Sortino by
+     roughly 29% on a typical series.
+
+     Target τ = rf per period, consistent with the Sharpe numerator directly
+     above. Matches app.js:8566, app2.js:4855 and app2.js:5759. */
+  var downSum = 0;
+  for (var dsi = 0; dsi < dailyRets.length; dsi++) {
+    var shortfall = dailyRets[dsi] - rf_daily;
+    if (shortfall < 0) downSum += shortfall * shortfall;
+  }
+  var downVar = dailyRets.length > 0 ? downSum / dailyRets.length : 0;
   var sortino = downVar > 0 ? (meanRet - rf_daily) / Math.sqrt(downVar) * Math.sqrt(ppy) : 0;
 
   // Calmar

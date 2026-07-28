@@ -109,8 +109,8 @@
     /* Sector tilt — compressed to two lines */
     if (v.tiltOW && v.tiltOW.length) {
       h += '<div style="margin-top:9px;font-size:10.5px;line-height:1.55;" title="' + esc(v.tiltRationale || '') + '">'
-        +  '<span style="color:#2E7D52;font-weight:700;">OW:</span> ' + esc(v.tiltOW.join(', ')) + '<br>'
-        +  '<span style="color:#8B2A2A;font-weight:700;">UW:</span> ' + esc(v.tiltUW.join(', '))
+        +  '<span style="color:var(--success);font-weight:700;">OW:</span> ' + esc(v.tiltOW.join(', ')) + '<br>'
+        +  '<span style="color:var(--danger);font-weight:700;">UW:</span> ' + esc(v.tiltUW.join(', '))
         +  '</div>';
     }
 
@@ -121,11 +121,11 @@
         var ctip = v.conflicts.map(function (c) {
           return '• ' + c.between.join(' vs ') + ' (' + c.severity + ')\n  ' + c.text + '\n  → ' + c.resolution;
         }).join('\n\n');
-        h += '<span style="background:#F7E9E6;color:#8B2A2A;padding:2px 7px;border-radius:9px;font-size:10px;font-weight:600;cursor:help;" '
+        h += '<span style="background:#F7E9E6;color:var(--danger);padding:2px 7px;border-radius:9px;font-size:10px;font-weight:600;cursor:help;" '
           +  'title="' + esc(ctip) + '">' + v.conflicts.length + ' conflict' + (v.conflicts.length > 1 ? 's' : '') + ' &#9432;</span>';
       }
       if (v.agreements && v.agreements.length) {
-        h += '<span style="background:#E8F3EC;color:#2E7D52;padding:2px 7px;border-radius:9px;font-size:10px;font-weight:600;cursor:help;" '
+        h += '<span style="background:#E8F3EC;color:var(--success);padding:2px 7px;border-radius:9px;font-size:10px;font-weight:600;cursor:help;" '
           +  'title="' + esc(v.agreements.join('\n\n')) + '">' + v.agreements.length + ' agreement &#9432;</span>';
       }
       h += '</div>';
@@ -172,8 +172,8 @@
     // Sector tilt from the regime
     if (v.tiltOW && v.tiltOW.length) {
       h += '<div style="margin-top:12px;font-size:12px;line-height:1.8;">'
-        +  '<strong style="color:#2E7D52;">Overweight:</strong> ' + v.tiltOW.map(esc).join(', ') + '<br>'
-        +  '<strong style="color:#8B2A2A;">Underweight:</strong> ' + v.tiltUW.map(esc).join(', ')
+        +  '<strong style="color:var(--success);">Overweight:</strong> ' + v.tiltOW.map(esc).join(', ') + '<br>'
+        +  '<strong style="color:var(--danger);">Underweight:</strong> ' + v.tiltUW.map(esc).join(', ')
         +  '</div>';
       if (v.tiltRationale) {
         h += '<div style="margin-top:6px;font-size:11px;color:var(--text-sec);line-height:1.6;font-style:italic;">' + esc(v.tiltRationale) + '</div>';
@@ -222,7 +222,7 @@
     /* ---- CONFLICTS — surfaced, never silently resolved ---- */
     if (v.conflicts && v.conflicts.length) {
       h += '<div style="margin-top:16px;">';
-      h += '<div style="font-size:12px;font-weight:700;color:#8B2A2A;margin-bottom:6px;">Unresolved Conflicts (' + v.conflicts.length + ')</div>';
+      h += '<div style="font-size:12px;font-weight:700;color:var(--danger);margin-bottom:6px;">Unresolved Conflicts (' + v.conflicts.length + ')</div>';
       v.conflicts.forEach(function (c) {
         var sev = c.severity === 'high' ? { bg: '#F7E9E6', bd: '#8B2A2A' } : { bg: '#FBF3E0', bd: '#8B6914' };
         h += '<div style="background:' + sev.bg + ';border-left:4px solid ' + sev.bd + ';padding:10px 14px;border-radius:0 4px 4px 0;margin-bottom:8px;font-size:12px;line-height:1.7;">'
@@ -239,7 +239,7 @@
       h += '<div style="margin-top:10px;">';
       v.agreements.forEach(function (a) {
         h += '<div style="background:#E8F3EC;border-left:4px solid #2E7D52;padding:10px 14px;border-radius:0 4px 4px 0;margin-bottom:8px;font-size:12px;line-height:1.7;">'
-          +  '<strong style="color:#2E7D52;">Signals agree.</strong> ' + esc(a) + '</div>';
+          +  '<strong style="color:var(--success);">Signals agree.</strong> ' + esc(a) + '</div>';
       });
       h += '</div>';
     }
@@ -365,7 +365,7 @@
     h += '</table>';
 
     if (top.elevated && top.elevated.length) {
-      h += '<div style="margin-top:7px;font-size:10px;color:#8B2A2A;line-height:1.5;" '
+      h += '<div style="margin-top:7px;font-size:10px;color:var(--danger);line-height:1.5;" '
         +  'title="These components are reading at or above the 75th percentile of their anchor range.">'
         +  '<strong>Elevated:</strong> ' + esc(top.elevated.join(', ')) + '</div>';
     }
@@ -502,7 +502,7 @@
     var opt;
     try { opt = ML.optimizePortfolio(holdings, {}); }
     catch (e) {
-      host.innerHTML = '<div class="card-body"><p style="color:#8B2A2A;font-size:12px;">Ranker error: ' + esc(e.message) + '</p></div>';
+      host.innerHTML = '<div class="card-body"><p style="color:var(--danger);font-size:12px;">Ranker error: ' + esc(e.message) + '</p></div>';
       return;
     }
     if (opt.error) {

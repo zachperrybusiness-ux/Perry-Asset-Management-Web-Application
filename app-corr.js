@@ -528,7 +528,7 @@
       + '<span style="display:inline-flex;align-items:center;gap:6px;">−1.0'
       + '<span style="width:130px;height:12px;border:1px solid #D0D7E0;border-radius:2px;display:inline-block;background:linear-gradient(to right, rgba(0,60,113,0.9), rgba(0,60,113,0.15), #FFFFFF, rgba(139,42,42,0.15), rgba(139,42,42,0.9));"></span>'
       + '+1.0</span>'
-      + '<span><span style="color:#003C71;font-weight:700;">blue</span> = hedge · <span style="color:#8B2A2A;font-weight:700;">red</span> = moves together</span>'
+      + '<span><span style="color:#003C71;font-weight:700;">blue</span> = hedge · <span style="color:var(--danger);font-weight:700;">red</span> = moves together</span>'
       + '<span style="display:inline-flex;align-items:center;gap:4px;"><span style="width:13px;height:11px;border:1px dashed #D0D7E0;display:inline-block;background:#fff;"></span>below significance floor (±' + (m.rCrit || 0).toFixed(2) + ' at n=' + m.nObs + ')</span>'
       + (co.nClusters ? '<span>· navy lines separate the ' + co.nClusters + ' correlation cluster' + (co.nClusters > 1 ? 's' : '') + ' (see Clusters view)</span>' : '')
       + '</div>';
@@ -586,7 +586,7 @@
     });
 
     var base = results[0].m;
-    if (base.error) return '<p style="color:#8B2A2A;font-size:12px;padding:12px;">' + esc(base.error) + '</p>';
+    if (base.error) return '<p style="color:var(--danger);font-size:12px;padding:12px;">' + esc(base.error) + '</p>';
 
     var h = '<div style="font-size:11px;color:var(--text-sec);margin-bottom:10px;line-height:1.6;">'
       +  'Mean pairwise correlation for the <strong>same universe</strong> under each condition. '
@@ -704,7 +704,7 @@
       var inner = 0, cnt = 0;
       for (var a = 0; a < c.length; a++) for (var b = a + 1; b < c.length; b++) { inner += m.matrix[c[a]][c[b]]; cnt++; }
       h += '<div style="margin-bottom:8px;padding:9px 12px;background:rgba(139,42,42,.06);border-left:4px solid #8B2A2A;border-radius:0 4px 4px 0;">'
-        +  '<div style="font-size:11px;font-weight:700;color:#8B2A2A;">Cluster ' + (ci + 1)
+        +  '<div style="font-size:11px;font-weight:700;color:var(--danger);">Cluster ' + (ci + 1)
         +    ' <span style="font-weight:400;color:var(--text-sec);">— ' + c.length + ' names, internal corr '
         +    (cnt ? (inner / cnt).toFixed(2) : '—')
         +    (totMV > 0 ? ', ' + (mv / totMV * 100).toFixed(1) + '% of portfolio' : '') + '</span></div>'
@@ -713,7 +713,7 @@
     });
     if (singles.length) {
       h += '<div style="margin-top:10px;padding:9px 12px;background:#E8F3EC;border-left:4px solid #2E7D52;border-radius:0 4px 4px 0;">'
-        +  '<div style="font-size:11px;font-weight:700;color:#2E7D52;">Independent <span style="font-weight:400;color:var(--text-sec);">— ' + singles.length + ' names below the clustering threshold</span></div>'
+        +  '<div style="font-size:11px;font-weight:700;color:var(--success);">Independent <span style="font-weight:400;color:var(--text-sec);">— ' + singles.length + ' names below the clustering threshold</span></div>'
         +  '<div style="font-size:12px;margin-top:3px;">' + singles.map(function (i) { return esc(shortTicker(m.tickers[i])); }).join(' · ') + '</div>'
         +  '</div>';
     }
@@ -890,7 +890,7 @@
         view.innerHTML = hdr + body;
       })
       .catch(function (e) {
-        view.innerHTML = '<div style="padding:16px;color:#8B2A2A;font-size:12px;">Correlation workbench error: ' + esc(e.message) + '</div>';
+        view.innerHTML = '<div style="padding:16px;color:var(--danger);font-size:12px;">Correlation workbench error: ' + esc(e.message) + '</div>';
       });
   };
 

@@ -422,7 +422,7 @@
   W.freshnessChip = function () {
     var c = W.coverage();
     if (!c.n) {
-      return '<span style="font-size:11px;padding:2px 8px;border-radius:10px;background:#F5E6E0;color:#8B2A2A;">'
+      return '<span style="font-size:11px;padding:2px 8px;border-radius:10px;background:#F5E6E0;color:var(--danger);">'
         + 'Warehouse empty — nightly ingest has not run</span>';
     }
     var age = c.medianAgeDays == null ? null : Math.round(c.medianAgeDays);

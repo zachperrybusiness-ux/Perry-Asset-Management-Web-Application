@@ -764,18 +764,50 @@ async function poeRun() {
     var validTickers = tickers.filter(function(t){return prices[t];});
     if (validTickers.length < 2) { el.innerHTML = '<div style="color:var(--danger);padding:10px;">Could not load enough price history.</div>'; return; }
 
-    // Align dates
-    var minLen = Math.min.apply(null, validTickers.map(function(t){return prices[t].length;}));
-    validTickers.forEach(function(t){ prices[t] = prices[t].slice(-minLen); });
-    var dates = prices[validTickers[0]].map(function(p){return p.date;});
+    /* ── DATE ALIGNMENT — FIXED 2026-07-27 ────────────────────────────────
+       The comment said "Align dates" but the code only truncated every series
+       to a common LENGTH and then paired them by array index. That is only
+       equivalent to aligning on dates when every ticker has an identical
+       trading calendar. It does not, in practice:
+         • a ticker that listed part-way through the window returns fewer bars,
+           so its day-1 return got paired against another name's day-200;
+         • ADRs / cross-listed names observe different market holidays;
+         • any upstream gap or missing bar shifts one column against the rest.
+       The result was a covariance matrix built from mismatched calendar days —
+       silently wrong correlations feeding a Sharpe-maximising optimizer, which
+       then emits confident weights off a corrupted estimate. Nothing about the
+       output looked broken, which is what made it dangerous.
 
-    // Compute return matrix [days x tickers]
-    var nDays = minLen - 1;
+       Now: intersect the actual date keys, sort chronologically, and build the
+       matrix only from days on which EVERY ticker traded. Same approach already
+       used by app-corr.js buildMatrix(). */
+    var dateMaps = {};
+    validTickers.forEach(function(t){
+      var m = {};
+      prices[t].forEach(function(p){ if (p && p.date != null && p.close != null) m[p.date] = p.close; });
+      dateMaps[t] = m;
+    });
+    var dates = Object.keys(dateMaps[validTickers[0]]).filter(function(d){
+      return validTickers.every(function(t){ return dateMaps[t][d] != null; });
+    }).sort();
+
+    if (dates.length < 30) {
+      el.innerHTML = '<div style="color:var(--danger);padding:10px;">Only ' + dates.length +
+        ' trading days are common to all ' + validTickers.length +
+        ' tickers — too few to estimate a covariance matrix. Remove recently-listed or thinly-traded names and retry.</div>';
+      return;
+    }
+
+    // Compute return matrix [days x tickers] on the common date grid
+    var nDays = dates.length - 1;
     var nT = validTickers.length;
     var R = []; // returns per day per ticker
-    for (var i = 1; i < minLen; i++) {
-      var row = validTickers.map(function(t){ return (prices[t][i].close - prices[t][i-1].close) / prices[t][i-1].close; });
-      R.push(row);
+    for (var i = 1; i < dates.length; i++) {
+      var dPrev = dates[i-1], dCur = dates[i];
+      R.push(validTickers.map(function(t){
+        var p0 = dateMaps[t][dPrev], p1 = dateMaps[t][dCur];
+        return p0 > 0 ? (p1 - p0) / p0 : 0;
+      }));
     }
 
     // Mean and covariance
@@ -800,11 +832,14 @@ async function poeRun() {
 
     // Optimize: maximize Sharpe ratio. Use simple grid + refine via gradient projection.
     // Long-only, sum-to-1 simplex. Since this can be expensive, use Dirichlet sampling + best-pick.
+    // Risk-free — FIXED 2026-07-27, was a hardcoded 4%. Shared live constant, so
+    // the optimizer maximises the SAME Sharpe the rest of the site reports.
+    var RF_OPT = (window.PerrySignals && window.PerrySignals.CONST && window.PerrySignals.CONST.RF_RATE) || 0.0425;
     function portfolioStats(w) {
       var ret = 0; for (var i=0;i<nT;i++) ret += w[i]*muAdjusted[i];
       var vari = 0; for (var i=0;i<nT;i++) for (var j=0;j<nT;j++) vari += w[i]*w[j]*cov[i][j];
       var vol = Math.sqrt(Math.max(0, vari));
-      return { ret: ret*252, vol: vol*Math.sqrt(252), sharpe: vol > 0 ? (ret*252 - 0.04)/(vol*Math.sqrt(252)) : -999 };
+      return { ret: ret*252, vol: vol*Math.sqrt(252), sharpe: vol > 0 ? (ret*252 - RF_OPT)/(vol*Math.sqrt(252)) : -999 };
     }
     function dirichlet(n, alpha) {
       var w = new Array(n);
@@ -2332,13 +2367,23 @@ async function themesLoadDetail(themeKey) {
     mx /= n; my /= n;
     var num = 0, dx = 0, dy = 0;
     for (var i = 0; i < n; i++) { var ax = x[i] - mx, ay = y[i] - my; num += ax*ay; dx += ax*ax; dy += ay*ay; }
-    return num / Math.sqrt(dx * dy);
+    /* Zero-variance guard added 2026-07-27. A flat series (a halted ticker, a
+       cash sleeve, or a single repeated close) gives dx or dy = 0, so this
+       returned 0/0 = NaN. The caller's isNaN() check then silently dropped the
+       pair from the average-correlation denominator, which biased the reported
+       average without any indication that a pair had been excluded. Returning
+       null makes "undefined" explicit; the other three pearson() copies in this
+       codebase already guard this way. */
+    return (dx > 0 && dy > 0) ? num / Math.sqrt(dx * dy) : null;
   }
   var corrSum = 0, corrCount = 0;
   for (var i = 0; i < corrTickers.length; i++) {
     for (var j = i+1; j < corrTickers.length; j++) {
       var r = pearson(dataByTicker[corrTickers[i]].returns, dataByTicker[corrTickers[j]].returns);
-      if (!isNaN(r)) { corrSum += r; corrCount++; }
+      /* Null check added 2026-07-27 alongside pearson()'s zero-variance guard.
+         `isNaN(null)` is FALSE — null coerces to 0 — so a bare isNaN() test
+         would have accepted null and poisoned corrSum. Test finiteness. */
+      if (r != null && isFinite(r)) { corrSum += r; corrCount++; }
     }
   }
   var avgCorr = corrCount > 0 ? corrSum / corrCount : 0;
@@ -3156,10 +3201,13 @@ window.toggleRecState = function() {
 window._benchmarksHidden = false;
 window.toggleBenchmarkVisibility = function() {
   window._benchmarksHidden = !window._benchmarksHidden;
-  var btn = document.getElementById('btnHideBenchmarks');
-  if (btn) {
-    btn.classList.toggle('active', !window._benchmarksHidden);
-    btn.textContent = window._benchmarksHidden ? 'Benchmarks (Hidden)' : 'Benchmarks';
+  /* FIXED 2026-07-27: there are two benchmark-toggle buttons in index.html and
+     they shared one id, so getElementById updated only the first and the other
+     permanently displayed a stale label. Update every toggle. */
+  var btns = document.querySelectorAll('.js-bench-toggle');
+  for (var bi = 0; bi < btns.length; bi++) {
+    btns[bi].classList.toggle('active', !window._benchmarksHidden);
+    btns[bi].textContent = window._benchmarksHidden ? 'Benchmarks (Hidden)' : 'Benchmarks';
   }
   // Re-render chart with the hidden flag — renderPortfolioChart reads this flag
   if (typeof renderPortfolioChart === 'function') renderPortfolioChart();
@@ -3398,7 +3446,8 @@ async function buildRecommendedStateSeries(rangeKey) {
   }
   // Compute daily returns per ticker; CASH = 0% return (or 4.5%/252 short rate)
   function tickerDailyReturn(t, idx, dateArr) {
-    if (t === 'CASH') return 0.045 / 252; // approximate risk-free
+    // FIXED 2026-07-27: hardcoded 4.5% → shared live short rate.
+    if (t === 'CASH') return ((window.PerrySignals && window.PerrySignals.CONST.RF_RATE) || 0.0425) / 252;
     var prev = data[t][dateArr[idx-1]]; var cur = data[t][dateArr[idx]];
     if (prev != null && cur != null && prev > 0) return Math.log(cur/prev);
     return 0;
@@ -3648,7 +3697,9 @@ async function themeCompareRun() {
     var rmean = dailyRets.length ? dailyRets.reduce(function(s,v){return s+v;},0)/dailyRets.length : 0;
     var rvar = dailyRets.length > 1 ? dailyRets.reduce(function(s,x){return s+(x-rmean)*(x-rmean);},0)/(dailyRets.length-1) : 0;
     var volAnn = Math.sqrt(rvar) * Math.sqrt(252) * 100;
-    var sharpe = rvar > 0 ? ((rmean - 0.05/252) / Math.sqrt(rvar)) * Math.sqrt(252) : 0;
+    // Risk-free — FIXED 2026-07-27, was a hardcoded 5%. Shared live constant.
+    var RF_D_THEME = ((window.PerrySignals && window.PerrySignals.CONST && window.PerrySignals.CONST.RF_RATE) || 0.0425) / 252;
+    var sharpe = rvar > 0 ? ((rmean - RF_D_THEME) / Math.sqrt(rvar)) * Math.sqrt(252) : 0;
     var peak = -Infinity, maxDD = 0;
     for (var di = firstIdx; di <= lastIdx; di++) {
       var dv = ds.data[di]; if (dv == null) continue;
@@ -3800,7 +3851,9 @@ async function themeCompareRun() {
   var sharpeEl = document.getElementById('themeRollingSharpeChart');
   if (sharpeEl && seriesStats.length && chartDates.length > 90) {
     var WINDOW = 90;
-    var RF_DAILY = 0.05 / 252; // 5% annual risk-free rate
+    // Risk-free — FIXED 2026-07-27. Was a hardcoded 5%; reads the shared live
+    // 3M T-bill constant so this Sharpe is comparable to every other on the site.
+    var RF_DAILY = ((window.PerrySignals && window.PerrySignals.CONST && window.PerrySignals.CONST.RF_RATE) || 0.0425) / 252;
     function rollingSharpeSeries(data) {
       var out = new Array(data.length).fill(null);
       for (var i = WINDOW; i < data.length; i++) {
@@ -4581,7 +4634,8 @@ async function buildFixedRegimeSeries(regime, rangeKey) {
   for (var i = 1; i < dates.length; i++) {
     var dayRet = 0;
     Object.keys(w).forEach(function(t){
-      if (t === 'CASH') { dayRet += w[t] * (0.045/252); return; }
+      // FIXED 2026-07-27: hardcoded 4.5% → shared live short rate.
+      if (t === 'CASH') { dayRet += w[t] * (((window.PerrySignals && window.PerrySignals.CONST.RF_RATE) || 0.0425)/252); return; }
       var prev = data[t][dates[i-1]], cur = data[t][dates[i]];
       if (prev != null && cur != null && prev > 0) dayRet += w[t] * Math.log(cur/prev);
     });
@@ -4848,12 +4902,33 @@ async function pfRenderPerformance() {
       const pfVar = pfSlice.reduce((s,v)=>s+(v-pfMean)*(v-pfMean),0)/Math.max(pfSlice.length-1,1);
       const pfAnnVol = Math.sqrt(pfVar) * Math.sqrt(252);
       const pfAnnRet = (pfMean + pfVar/2) * 252;
-      const sharpe = pfAnnVol > 0 ? (pfAnnRet - 0.045) / pfAnnVol : 0;
+      /* Risk-free rate — FIXED 2026-07-27. Was a hardcoded 0.045 while the rest
+         of the site reads the live 3M T-bill from PerrySignals.CONST.RF_RATE.
+         Two cards showing "Sharpe" for the SAME portfolio disagreed by roughly
+         (0.045 − RF)/σ because of this literal alone. */
+      const RF_PF = (window.PerrySignals && window.PerrySignals.CONST.RF_RATE) || 0.0425;
+      const sharpe = pfAnnVol > 0 ? (pfAnnRet - RF_PF) / pfAnnVol : 0;
 
-      // Sortino (downside deviation only)
-      const negRets = pfSlice.filter(r => r < 0);
-      const downVar = negRets.length > 1 ? negRets.reduce((s,v)=>s+v*v,0)/negRets.length : pfVar;
-      const sortino = Math.sqrt(downVar)*Math.sqrt(252) > 0 ? (pfAnnRet - 0.045) / (Math.sqrt(downVar)*Math.sqrt(252)) : 0;
+      /* Sortino downside deviation — FIXED 2026-07-27.
+         Was dividing the sum of squared negative returns by negRets.length, i.e.
+         the COUNT OF NEGATIVE RETURNS. The standard definition (Sortino & Price
+         1994) divides by the TOTAL number of observations: periods above the
+         threshold contribute zero to the numerator but are NOT removed from the
+         denominator. The old form inflated the denominator by sqrt(N/N_neg)
+         — about 1.41x for a typical series where ~half the days are down — and
+         so understated Sortino by roughly 29%.
+
+         This is the same defect that was corrected at app.js:8566 (2026-07-26)
+         and app2.js:5759 (2026-07-25); this site and the backtest engine in
+         app.js:12329 were missed by those passes. All four now agree.
+
+         The old `: pfVar` fallback was also wrong — substituting TOTAL variance
+         for downside variance silently turns Sortino into Sharpe. With fewer
+         than two observations the ratio is simply not defined; report 0. */
+      const downVar = pfSlice.length > 1
+        ? pfSlice.reduce((s,v)=>s+(v<0?v*v:0),0)/pfSlice.length : 0;
+      const downSigmaAnn = Math.sqrt(downVar) * Math.sqrt(252);
+      const sortino = downSigmaAnn > 0 ? (pfAnnRet - RF_PF) / downSigmaAnn : 0;
 
       // Max drawdown 1Y
       const nonNull1Y = pfSeries.values.slice(-252).filter(v=>v!=null);
@@ -4983,7 +5058,8 @@ async function renderPerformanceTab() {
     // Annualizing very short windows produces absurd extrapolations
     // (a +4% month becomes "+60% annualized"). Only meaningful ≥ ~6 months.
     var annRetMeaningful = dailyRets.length >= 120;
-    var rf = 0.05/252;
+    // FIXED 2026-07-27: hardcoded 5% → shared live risk-free constant.
+    var rf = ((window.PerrySignals && window.PerrySignals.CONST.RF_RATE) || 0.0425)/252;
     var sharpe = stdDaily > 0 ? (avgDaily - rf) / stdDaily * Math.sqrt(252) : 0;
     var peak = perf[0], maxDD = 0;
     perf.forEach(function(v){ if (v>peak) peak=v; var dd=(peak-v)/peak; if (dd>maxDD) maxDD=dd; });
@@ -5674,7 +5750,10 @@ async function pfRenderRisk() {
         const dailyArithMean = mean + variance / 2;
         const annArithR = dailyArithMean * 252;
         const annVol = sigma * Math.sqrt(252);
-        const rf = 0.045; // 4.5% risk-free
+        // FIXED 2026-07-27: was a hardcoded 4.5%. This feeds the headline
+        // kpiSharpe tile, so the literal made the most visible number on the
+        // page inconsistent with every other Sharpe the site computes.
+        const rf = (window.PerrySignals && window.PerrySignals.CONST.RF_RATE) || 0.0425;
         const sharpe = annVol > 0 ? (annArithR - rf) / annVol : 0;
         document.getElementById('kpiSharpe').textContent = sharpe.toFixed(2);
       }
@@ -5760,7 +5839,9 @@ async function pfRenderRisk() {
         ? rets.reduce(function(s,v){ return s + (v < 0 ? v*v : 0); }, 0) / rets.length : 0;
       var downSigma = Math.sqrt(downVar);
       var annArithMean2 = (mean + variance/2) * 252;
-      sortinoVal = downSigma > 0 ? (annArithMean2 - 0.045) / (downSigma * Math.sqrt(252)) : 0;
+      // FIXED 2026-07-27: hardcoded 0.045 → shared live risk-free constant.
+      var RF_RMD = (window.PerrySignals && window.PerrySignals.CONST.RF_RATE) || 0.0425;
+      sortinoVal = downSigma > 0 ? (annArithMean2 - RF_RMD) / (downSigma * Math.sqrt(252)) : 0;
 
       // Comparative render: same metrics computed for SPY and QQQ over the
       // same 1-year window, side by side — a number means nothing without
@@ -5797,7 +5878,8 @@ async function pfRenderRisk() {
             /* Risk-free rate — was 0.05 here and 0.045 on the portfolio side of
                the same table, which made the benchmark Sharpe artificially low.
                Both now read the single shared constant. */
-            var RF = (window.PerrySignals && window.PerrySignals.CONST.RF_RATE) || 0.045;
+            // Fallback aligned to CONST.RF_RATE's own default (0.0425) 2026-07-27.
+            var RF = (window.PerrySignals && window.PerrySignals.CONST.RF_RATE) || 0.0425;
 
             idxM[sym] = {
               sharpe: sd>0 ? (mn - RF/252)/sd*Math.sqrt(252) : 0,
@@ -7928,7 +8010,7 @@ window.topLineRefreshAll = async function() {
     tlRenderMovingToday();
 
   } catch (e) {
-    if (verd) verd.innerHTML = '<div style="color:#8B2A2A;padding:12px;font-family:Arial,Helvetica,sans-serif;font-size:13px;">Error computing verdict: ' + e.message + '</div>';
+    if (verd) verd.innerHTML = '<div style="color:var(--danger);padding:12px;font-family:Arial,Helvetica,sans-serif;font-size:13px;">Error computing verdict: ' + e.message + '</div>';
     console.error('[topLine]', e);
   }
 };
@@ -8664,7 +8746,7 @@ window.moversRender = async function(tf) {
       if (typeof snapshotLoad === 'function') await snapshotLoad();
     }
     var cells = window._snapshotCells || [];
-    if (!cells.length) { el.innerHTML = '<span style="color:#8B2A2A;">Snapshot data unavailable.</span>'; return; }
+    if (!cells.length) { el.innerHTML = '<span style="color:var(--danger);">Snapshot data unavailable.</span>'; return; }
     var n = tf === '1d' ? 1 : tf === '1w' ? 5 : 21;
     // For 1w / 1m we need to fetch the chart (1d data is already in cells)
     if (tf === '1d') {
@@ -8688,7 +8770,7 @@ window.moversRender = async function(tf) {
       rows2.sort(function(a, b) { return b.ret - a.ret; });
       tlRenderMoversTable(rows2, tf);
     }
-  } catch (e) { el.innerHTML = '<span style="color:#8B2A2A;">' + e.message + '</span>'; }
+  } catch (e) { el.innerHTML = '<span style="color:var(--danger);">' + e.message + '</span>'; }
 };
 
 function tlRenderMoversTable(rows, tf) {
@@ -8706,7 +8788,7 @@ function tlRenderMoversTable(rows, tf) {
     html += '<tr style="background:' + (i % 2 === 0 ? '#FFFFFF' : '#F4F6F9') + ';">';
     html += '<td style="padding:6px 10px;color:#003C71;font-weight:700;border-bottom:1px solid #D0D7E0;">' + r.ticker.replace('^', '') + '</td>';
     html += '<td style="padding:6px 10px;color:#000000;border-bottom:1px solid #D0D7E0;font-size:11px;">' + r.label + '</td>';
-    html += '<td style="padding:6px 10px;text-align:right;color:#2E7D52;font-weight:700;font-family:Courier New,monospace;border-bottom:1px solid #D0D7E0;">+' + r.ret.toFixed(2) + '%</td>';
+    html += '<td style="padding:6px 10px;text-align:right;color:var(--success);font-weight:700;font-family:Courier New,monospace;border-bottom:1px solid #D0D7E0;">+' + r.ret.toFixed(2) + '%</td>';
     html += '</tr>';
   });
   html += '</table></div>';
@@ -8718,7 +8800,7 @@ function tlRenderMoversTable(rows, tf) {
     html += '<tr style="background:' + (i % 2 === 0 ? '#FFFFFF' : '#F4F6F9') + ';">';
     html += '<td style="padding:6px 10px;color:#003C71;font-weight:700;border-bottom:1px solid #D0D7E0;">' + r.ticker.replace('^', '') + '</td>';
     html += '<td style="padding:6px 10px;color:#000000;border-bottom:1px solid #D0D7E0;font-size:11px;">' + r.label + '</td>';
-    html += '<td style="padding:6px 10px;text-align:right;color:#8B2A2A;font-weight:700;font-family:Courier New,monospace;border-bottom:1px solid #D0D7E0;">' + r.ret.toFixed(2) + '%</td>';
+    html += '<td style="padding:6px 10px;text-align:right;color:var(--danger);font-weight:700;font-family:Courier New,monospace;border-bottom:1px solid #D0D7E0;">' + r.ret.toFixed(2) + '%</td>';
     html += '</tr>';
   });
   html += '</table></div>';
@@ -8815,7 +8897,7 @@ window.driverThemeMapRun = async function() {
     });
     html += '</div>';
     el.innerHTML = html;
-  } catch (e) { el.innerHTML = '<span style="color:#8B2A2A;">' + e.message + '</span>'; }
+  } catch (e) { el.innerHTML = '<span style="color:var(--danger);">' + e.message + '</span>'; }
 };
 
 // ═══════════════════════════════════════════════
@@ -8834,7 +8916,7 @@ window.rotationMapRun = async function() {
     await Promise.all(allSec.map(async function(t) {
       data[t] = await tlFetchChart(t, '1y');
     }));
-    if (!data['XLK'].length) { emptyEl.innerHTML = '<span style="color:#8B2A2A;">Sector data unavailable.</span>'; return; }
+    if (!data['XLK'].length) { emptyEl.innerHTML = '<span style="color:var(--danger);">Sector data unavailable.</span>'; return; }
     // Find common dates
     var allDatesSet = new Set();
     cyc.forEach(function(t) { (data[t]||[]).forEach(function(p) { allDatesSet.add(p.date.slice(0,10)); }); });
@@ -8920,7 +9002,7 @@ window.rotationMapRun = async function() {
         }
       }
     });
-  } catch (e) { emptyEl.innerHTML = '<span style="color:#8B2A2A;">' + e.message + '</span>'; }
+  } catch (e) { emptyEl.innerHTML = '<span style="color:var(--danger);">' + e.message + '</span>'; }
 };
 
 // ── Cross-Asset tab auto-load timestamps ──────────────────────────────────

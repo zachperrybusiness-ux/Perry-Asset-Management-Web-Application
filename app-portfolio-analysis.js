@@ -783,7 +783,7 @@
         + '</div>';
     }
 
-    h += '<div style="font-size:11px;font-weight:700;color:#8B2A2A;text-transform:uppercase;letter-spacing:.4px;margin:12px 0 5px;">Biggest detractors</div>';
+    h += '<div style="font-size:11px;font-weight:700;color:var(--danger);text-transform:uppercase;letter-spacing:.4px;margin:12px 0 5px;">Biggest detractors</div>';
     h += '<div style="font-size:11.5px;">'
       + ca.laggards.filter(function (l) { return l.contrib < 0; }).map(function (l) {
           return '<span style="display:inline-block;background:rgba(139,42,42,.07);border:1px solid rgba(139,42,42,.3);border-radius:10px;padding:1px 8px;margin:2px;font-size:11px;" '
@@ -881,7 +881,7 @@
       if (window.PerryViews && window.PerryViews.renderHoldingRanker) {
         try { window.PerryViews.renderHoldingRanker('holdingRanker'); }
         catch (e) { document.getElementById('holdingRanker').innerHTML =
-          '<p style="font-size:12px;color:#8B2A2A;padding:10px;">Ranker error: ' + esc(e.message) + '</p>'; }
+          '<p style="font-size:12px;color:var(--danger);padding:10px;">Ranker error: ' + esc(e.message) + '</p>'; }
       }
       return;
     }

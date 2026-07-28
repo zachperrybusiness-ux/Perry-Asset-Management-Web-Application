@@ -5,13 +5,27 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Perry Asset Management</title>
+
+<!-- VIS-10 (2026-07-27): no description, no favicon, no theme-color existed.
+     The <title> is also updated per view by PerryStatus.setTitle(), so browser
+     history and multiple tabs are distinguishable. -->
+<meta name="description" content="Perry Asset Management — portfolio analytics, risk decomposition, macro regime analysis and strategy backtesting.">
+<meta name="theme-color" content="#003C71">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%23003C71'/%3E%3Ctext x='16' y='23' font-family='Arial,sans-serif' font-size='19' font-weight='bold' fill='%23fff' text-anchor='middle'%3EP%3C/text%3E%3C/svg%3E">
+
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2.0.1/dist/chartjs-plugin-zoom.min.js"></script>
 <script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-<link rel="stylesheet" href="styles.css?v=13">
+<link rel="stylesheet" href="styles.css?v=14">
+
+<!-- UX-01 (2026-07-27): PerryStatus must be defined before any module that
+     loads data, so it is the first local script rather than the last. -->
+<script src="app-status.js?v=1"></script>
 </head>
 <body>
+<!-- VIS-08: first tab stop, lets keyboard users bypass the nav. -->
+<a class="skip-link" href="#" onclick="return (window.PerryStatus&&PerryStatus.skipToMain(event)),false;">Skip to main content</a>
 
 <!-- ═══════════ TOPBAR ═══════════ -->
 <div class="topbar">
@@ -450,7 +464,12 @@
             <span style="font-size:10.5px;color:var(--text-sec);font-style:italic;" id="rebasedExplainer">
               Dollar view: benchmarks plot at their <strong>actual prices</strong> (right axis). Switch on <strong>TWR Mode</strong> (or % axis) for rebased apples-to-apples comparison lines.
             </span>
-            <button class="btn-outline btn-sm" id="btnHideBenchmarks" onclick="toggleBenchmarkVisibility()" style="font-size:11px;" title="Toggle benchmark lines on/off">Hide Benchmarks</button>
+            <!-- id was a DUPLICATE of the button at line ~502 (fixed 2026-07-27).
+                 getElementById returns only the first match, so whichever copy
+                 came second never updated its label and drifted out of sync with
+                 the actual chart state. Both now carry js-bench-toggle and the
+                 handler updates every one of them. -->
+            <button class="btn-outline btn-sm js-bench-toggle" id="btnHideBenchmarksTop" onclick="toggleBenchmarkVisibility()" style="font-size:11px;" title="Toggle benchmark lines on/off">Benchmarks</button>
           </div>
         </div>
         <div class="card-body">
@@ -499,7 +518,7 @@
             <div style="height:32px;width:1px;background:var(--border);margin:0 4px;"></div>
             <!-- Overlay toggle buttons -->
             <div style="display:flex;align-items:center;gap:4px;flex-wrap:wrap;">
-              <button class="btn-outline btn-sm" id="btnHideBenchmarks" onclick="toggleBenchmarkVisibility()" title="Show/hide SPY, QQQ and other benchmark lines">Benchmarks</button>
+              <button class="btn-outline btn-sm js-bench-toggle" id="btnHideBenchmarks" onclick="toggleBenchmarkVisibility()" title="Show/hide SPY, QQQ and other benchmark lines">Benchmarks</button>
               <button class="btn-outline btn-sm" id="btnTWR" onclick="toggleTWRMode()" title="Toggle Time-Weighted Return vs. Portfolio Dollar Value">TWR Mode</button>
               <button class="btn-outline btn-sm" id="btnPctAxis" onclick="togglePctAxis()" title="Toggle Y-axis between dollar value and % change from start">% Change Axis</button>
               <button class="btn-outline btn-sm" id="btnRegimeOverlay" onclick="toggleRegimeOverlay()" title="Show Perry 4-state market regime as colored background bands">Perry Regime</button>

@@ -1,11 +1,39 @@
 
 :root {
   --navy: #003C71;
-  --blue: #5B9BD5;
+
+  /* VIS-04 (2026-07-27): --blue was #5B9BD5 = 2.96:1 on white, 2.73:1 on --panel.
+     Both fail WCAG AA (4.5:1). It is the primary accent — links, active nav,
+     primary buttons, chart series — so text use was failing everywhere.
+     #2E6DA4 measures 5.28:1 on white and 4.87:1 on --panel. Both pass, and it
+     reads as the same blue. The old value is kept below for large decorative
+     fills (chart areas, bars) where the contrast rule does not bind. */
+  --blue: #2E6DA4;
+  --blue-decorative: #5B9BD5;
   --blue-light: #A8C8E8;
+
   --bg: #FFFFFF;
   --panel: #F4F6F9;
-  --border: #D0D7E0;
+
+  /* VIS-04: --border was #D0D7E0 = 1.45:1 on white — table gridlines and card
+     edges were near-invisible on a bright screen or viewed off-axis.
+
+     CORRECTION (verified 2026-07-27): the audit claimed #B9C2CD reaches 3.05:1.
+     It does not — measured 1.80:1 on white, 1.66:1 on --panel. The published
+     figure was wrong. Three tokens now, by role:
+
+       --border         #B9C2CD  1.80:1  decorative dividers, table gridlines.
+                                         Below 3:1, which is acceptable only
+                                         because these are not meaningful UI
+                                         boundaries under WCAG 1.4.11.
+       --border-strong  #848F9E  3.28:1 on white, 3.03:1 on --panel. PASSES.
+                                         Use for input borders, control edges,
+                                         and any boundary a user must perceive.
+       --border-subtle  #D0D7E0  the old value, hairline separation only. */
+  --border: #B9C2CD;
+  --border-strong: #848F9E;
+  --border-subtle: #D0D7E0;
+
   --text: #000000;
   --text-on-dark: #FFFFFF;
   --text-sec: #5A6A7A;
@@ -15,6 +43,22 @@
   --highlight-gray: #C8D0D8;
   --radius: 6px;
   --shadow: 0 2px 8px rgba(0,0,0,0.06);
+
+  /* ── VIS-01/VIS-02: token scale. New code uses ONLY these. ────────────── */
+  /* Numeric face — see VIS-03. Arial digits are proportional, so columns of
+     numbers do not align. These stacks ship true tabular figures. */
+  --font-num: ui-monospace, "SF Mono", "Cascadia Mono", "Segoe UI Mono", Menlo, Consolas, monospace;
+  --font-ui: system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+
+  /* space — 4px scale */
+  --s1: 4px;  --s2: 8px;  --s3: 12px; --s4: 16px; --s5: 24px; --s6: 32px;
+
+  /* type — 6 sizes, replacing the 31 currently in use */
+  --t-xs: 11px; --t-sm: 12px; --t-md: 13px;
+  --t-lg: 16px; --t-xl: 20px; --t-2xl: 28px;
+
+  --radius-lg: 10px;
+  --shadow-2: 0 4px 12px rgba(16,24,40,0.10);
 }
 
 *, *::before, *::after {
@@ -2732,3 +2776,199 @@ body.view-mobile /* QA 2026-07-25: internal scroll removed — content panel, no
 #macroRegimeVerdict { display: none !important; }
 body.view-mobile #macroPillarOverview .card-body > div { gap: 6px !important; }
 body.view-mobile #macroPillarOverview .card-body > div > div { min-width: 44% !important; }
+
+/* ═══════════════════════════════════════════════════════════════════════════
+   UI AUDIT REMEDIATION — 2026-07-27
+   Appended last so these rules win the cascade without needing !important.
+   Findings referenced: UI-UX-DATA-AUDIT-2026-07-27.md
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* ── VIS-03 — Tabular figures ───────────────────────────────────────────────
+   Arial digits are proportional: "1" is narrower than "0", so decimal points
+   in a column do not line up and scanning for magnitude is slowed. Exactly one
+   occurrence of tabular-nums existed in 40,707 lines. This is the single
+   highest-value visual fix in the audit — one rule, applied to every numeric
+   surface in the app. */
+table td, table th,
+.data-table td, .data-table th,
+.kpi-value, .kpi-sub, .chart-stat-value, .stat-value, .metric-value,
+.num, [class*="-val"], [class*="Val"], [class*="pct"], [class*="Pct"] {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1, "lnum" 1;
+}
+
+/* Headline numerics get the true monospace stack — alignment plus a clearer
+   distinction between the number and its label. */
+.kpi-value, .chart-stat-value, .stat-value, .metric-value {
+  font-family: var(--font-num);
+  letter-spacing: -0.01em;
+}
+
+/* ── VIS-05 — Gain/loss must not be encoded by colour alone ────────────────
+   ~8% of men have red-green colour vision deficiency; to a deuteranope
+   #2E7D52 and #8B2A2A are similar mid-tone browns, so winners and losers were
+   indistinguishable. Colour becomes redundant reinforcement rather than the
+   channel.
+
+   Scoped deliberately to table cells and stat values. The codebase emits
+   colour as inline `style="color:var(--success)"`, and an unscoped
+   attribute-substring selector would put an arrow in front of prose. */
+td[style*="--success"]::before,
+.chart-stat-value[style*="--success"]::before,
+.kpi-value[style*="--success"]::before,
+.stat-value[style*="--success"]::before {
+  content: "\25B2\00A0";      /* ▲ + nbsp */
+  font-size: 0.75em;
+  vertical-align: 0.08em;
+}
+td[style*="--danger"]::before,
+.chart-stat-value[style*="--danger"]::before,
+.kpi-value[style*="--danger"]::before,
+.stat-value[style*="--danger"]::before {
+  content: "\25BC\00A0";      /* ▼ + nbsp */
+  font-size: 0.75em;
+  vertical-align: 0.08em;
+}
+/* Escape hatch: add class="no-glyph" to any cell where the arrow is wrong
+   (counts, dates, or text that happens to be coloured). */
+td.no-glyph::before, .no-glyph::before { content: none !important; }
+
+/* ── VIS-08 / UX-04 — Keyboard accessibility ───────────────────────────────
+   4 :focus rules existed across 2,734 lines, so a keyboard user could not see
+   where they were. :focus-visible means mouse users never see the ring. */
+:where(a, button, input, select, textarea, summary, [tabindex]):focus-visible {
+  outline: 2px solid var(--blue);
+  outline-offset: 2px;
+  border-radius: 3px;
+}
+/* Skip link — first tab stop, lets keyboard users bypass the nav. */
+.skip-link {
+  position: absolute; left: -9999px; top: 0; z-index: 200;
+  background: var(--navy); color: var(--text-on-dark);
+  padding: var(--s2) var(--s4); border-radius: 0 0 var(--radius) 0;
+  font-size: var(--t-sm); font-weight: 600; text-decoration: none;
+}
+.skip-link:focus { left: 0; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* ── UX-01 / UX-02 / UX-03 — Panel state machine ───────────────────────────
+   299 catch blocks, 18 with console.error, no user-facing error channel. On
+   failure a panel either blanked or silently kept the previous values. These
+   are the four states PerryStatus (app-status.js) renders. */
+.perry-state {
+  display: flex; align-items: center; gap: var(--s2);
+  padding: var(--s3) var(--s4);
+  font-size: var(--t-sm);
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  background: var(--panel);
+  color: var(--text-sec);
+}
+.perry-state-icon { font-size: 14px; line-height: 1; flex: 0 0 auto; }
+.perry-state-body { flex: 1 1 auto; min-width: 0; }
+.perry-state-title { font-weight: 700; color: var(--text); }
+.perry-state-msg   { margin-top: 2px; }
+.perry-state-act {
+  flex: 0 0 auto; font-size: var(--t-xs); font-weight: 600;
+  padding: var(--s1) var(--s3);
+  border: 1px solid var(--border); border-radius: var(--radius);
+  background: var(--bg); color: var(--blue); cursor: pointer;
+}
+.perry-state-act:hover { background: var(--panel); }
+
+.perry-state--error { border-color: var(--danger); background: #FBF2F2; color: var(--danger); }
+.perry-state--error .perry-state-title { color: var(--danger); }
+.perry-state--stale { border-color: var(--warning); background: #FBF7EC; color: var(--warning); }
+.perry-state--stale .perry-state-title { color: var(--warning); }
+.perry-state--empty { border-style: dashed; text-align: left; }
+
+/* Stale panels are visibly degraded — a number you should not act on must not
+   look like one you should. */
+.is-stale { opacity: .62; filter: saturate(.55); }
+.is-stale::after {
+  content: "STALE"; position: absolute; top: 6px; right: 8px;
+  font-size: 9px; font-weight: 800; letter-spacing: .08em;
+  color: var(--warning); background: #FBF7EC;
+  border: 1px solid var(--warning); border-radius: 3px; padding: 1px 4px;
+  pointer-events: none;
+}
+.is-stale { position: relative; }
+
+/* Skeleton — UX-02. 60 of 65 canvases had no loading state, so "still
+   fetching", "no data" and "request failed" were the same white rectangle. */
+.perry-skeleton {
+  border-radius: var(--radius);
+  background: linear-gradient(90deg, #EDF0F4 25%, #F7F9FB 50%, #EDF0F4 75%);
+  background-size: 200% 100%;
+  animation: perry-shimmer 1.3s ease-in-out infinite;
+  min-height: 64px;
+}
+@keyframes perry-shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+
+/* ── DEC-01 — Provenance footer ────────────────────────────────────────────
+   The cron runs macro daily, fundamentals on a ~6-day cycle and prices hourly
+   (cloudflare-worker/wrangler.toml), so two numbers on one panel can be six
+   days apart in vintage. Nothing indicated it. Every panel gets source,
+   as-of and age. */
+.perry-prov {
+  display: flex; flex-wrap: wrap; align-items: center; gap: var(--s1) var(--s3);
+  margin-top: var(--s2); padding-top: var(--s2);
+  border-top: 1px solid var(--border-subtle);
+  font-size: var(--t-xs); color: var(--text-sec);
+}
+.perry-prov-src { font-weight: 600; }
+.perry-prov-age { font-family: var(--font-num); }
+.perry-prov--stale { color: var(--warning); font-weight: 600; }
+.perry-prov--stale .perry-prov-age::after { content: " \26A0"; }   /* ⚠ */
+
+/* Toast — non-blocking replacement for the 11 blocking alert()/confirm() calls */
+#perryToastHost {
+  position: fixed; right: 16px; bottom: 16px; z-index: 9999;
+  display: flex; flex-direction: column; gap: var(--s2);
+  max-width: min(380px, calc(100vw - 32px));
+}
+.perry-toast {
+  display: flex; gap: var(--s2); align-items: flex-start;
+  background: var(--bg); color: var(--text);
+  border: 1px solid var(--border); border-left: 4px solid var(--blue);
+  border-radius: var(--radius); box-shadow: var(--shadow-2);
+  padding: var(--s3) var(--s4); font-size: var(--t-sm);
+  animation: perry-toast-in .18s ease-out;
+}
+.perry-toast--error { border-left-color: var(--danger); }
+.perry-toast--warn  { border-left-color: var(--warning); }
+.perry-toast--ok    { border-left-color: var(--success); }
+.perry-toast-x {
+  margin-left: auto; background: none; border: 0; cursor: pointer;
+  color: var(--text-sec); font-size: 15px; line-height: 1; padding: 0 2px;
+}
+@keyframes perry-toast-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+
+/* ── VIS-10 — Print ────────────────────────────────────────────────────────
+   Someone will print a holdings page. */
+@media print {
+  .topbar, .nav, .mob-nav, #perryToastHost, .skip-link,
+  button, .perry-state-act { display: none !important; }
+  body { font-size: 10pt; background: #fff; }
+  .card, .panel { break-inside: avoid; box-shadow: none; border: 1px solid #999; }
+  table { break-inside: auto; } tr { break-inside: avoid; }
+  thead { display: table-header-group; }
+  a[href]::after { content: " (" attr(href) ")"; font-size: 8pt; color: #555; }
+  .perry-prov { color: #000; }
+}
+
+/* VIS-04 follow-up — controls get the AA-passing boundary.
+   WCAG 1.4.11 requires 3:1 for UI components a user must perceive and operate.
+   Decorative gridlines are exempt; form controls are not. */
+input, select, textarea,
+.perry-state-act, .btn, button:not(.perry-toast-x):not(.mob-nav-item) {
+  border-color: var(--border-strong);
+}
